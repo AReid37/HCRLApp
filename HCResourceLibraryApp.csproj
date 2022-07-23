@@ -12,7 +12,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="DataHandling\" />
     <Folder Include="Layout\" />
   </ItemGroup>
 

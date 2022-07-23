@@ -1,0 +1,33 @@
+##[ H I G H   C O N T R A S T   R E S O U R C E   L I B R A R Y   A P P   -   D E S I G N   D O C S ]##
+##	DEVELOPMENT DEVIATIONS LOG	##
+==================================
+Syntax:		{Num}# {DeviationStatus} {DeviationDescription}
+	{Num}
+		A incrementing whole number starting from zero that denotes the order in which the deviations were made.
+	{DeviationStatus}
+		Uses square brackets separated with a space. Use a space character (' ') within brackets if deviation is implemented in development, and an 'X' if the deviation reverted to the original plan.
+	{Deviation Description}
+		A description of the deviation made. It must include the reason for deviation, what it is deviating from (reference the original plan), and what the deviation is.
+		Format
+			{DeviationDesc}				<- What the deviation is (describe)
+				- {OriginalPlan}		<- Deviating from what? Original goal
+				+ {DeviationPlan}		<- Goal of the deviation
+	Ex.
+		0# [ ] 
+		Spilled paint on the computer.
+			- Meant to paint a symbol on computer.
+			+ Made a splash effect on computer with paint.
+		
+
+
+Logs Below
+===============
+0# [ ]
+Project is using .NET 5.0 (unsupported) with ConsoleFormat class library.
+	- Planned to create project using compatible version with ConsoleFormat class (.NET 2.1).
+	+ Decided to stick with .NET 5.0 for QoL programming syntax and leave incompatiblity issues up to frequent builds and tests.
+
+1# [ ] 
+Implementing base class for data-handling classes (DataHandlerBase.cs)
+	- Assumed that each class will handle their own data and write to file
+	+ Assists in communication between data-handling classes, handles some repeating elements, and simplifies mono-file management.

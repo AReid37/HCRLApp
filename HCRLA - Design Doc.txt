@@ -1,0 +1,876 @@
+##[ H I G H   C O N T R A S T   R E S O U R C E   L I B R A R Y   A P P   -   D E S I G N   D O C S ]##
+N: High Contrast Texture Library App 2 (HCTLA2)
+
+======
+GOALS OF HCRLA
+	> Document all the content (mostly textures) that have been completed for the resource pack
+		- Store information about content in texture pack from version logs
+	> Serve as a library of information regarding resource pack contents
+	> Additional features
+		- Validate that all completed content has been included in current version of resource pack
+		- Visual customization of the color of text elements (foreground only) and window size
+		- Ability to revert to a previous save (in case of major errors from the latest commits)
+
+
+------
+Application Information:
+	Medium:		Microsoft Console Debugger
+	Pro'Lang: 	.NET C# 
+		>> Must use Netcore 3.1 (or whichever is most compatible with the ConsoleFormat class)
+	Proj'Bckp: 	Github Repository
+	
+	
+	
+	
+======
+G1: DOCUMENT ALL THE CONTENT
+	Objectives of documenting the contents of the resource pack
+		- Obtain information from version logs, review texture / resource information
+		- Save a file containing said information (creating 'the library').
+		Dependencies: 
+			- All version logs must follow a specific format; the review allows a person to verify all information was retreived.
+
+	-----
+	1# Obtaining and sorting information from version logs
+		> Obtaining the info requires an established design (template) of each version log (established very early in the development of 'HCAutoLogger'). Using the format of the template, the system may easily make additions to the library by reading directly from the version logs.
+			NOTE
+			- The information from version logs are obtained by providing the program with a pathway to the log file, which the program will then read through and decode. The file must be a text file (.txt) or be in the text file format.
+			
+		
+		>> Reviewing.the.Template
+			Based on C:\Users\ntrc2\OneDrive\Pictures\High Contrast Textures\Completed\_Logs\Info\_TemplateFixed_.txt
+			
+		.	[Version]
+			Syntax 		[Version: N.n]
+			Ex. 		[Version: 1.10]
+				{REQUIRED} A tag describing the version the log associates with, where 'N' is the major verison number, and 'n' is minor version number.				
+				
+		.	[ADDED]
+			Syntax		##|{InternalName}-({shortItemID}; {shortRelatedIds})
+			Ex. 		1 |One Item			-(i1; t0 p3,4)
+				Tag denoting table of added content. Locates majority of the information for each version (added items, related content). Each line of new content must follow after the 'ADDED' tag unbroken by newlines.
+				. {InternalName} - Name given to the content being added (Ex. Egg Block)
+				. {shortItemID} - Using the legend, specify Data Id (Ex. "Item_67" as "i67")
+				. {shortRelatedIDs}	- Using the legend, specify contents with Data Ids that are associated with added content ("Tiles_89 Projectile_14" as "t69 p14")
+			Syntax		[ADDED: <ph>,<substitute>; <ph>,<substitute>]
+			Ex.			[ADDED: $,Money; g*,Gray Star]
+				Within the 'ADDED' tag brackets, these symbols are used to shorten and simplify logging the information of added content, replaced later through the HCAutoLogger. Especially useful where multiple content have the same word(s).
+				. <ph> - Unique character(s) that identify a place for related substitutes
+				. <substitue> - Word(s) that will replace its placeholder
+				
+		.	[ADDITIONAL]
+			Syntax		> {Opt.Name} ({Data ID}) - {RelatedInternalName} ({RelatedDataID})
+			Ex.			> Mashed Potato (t32) - Potato (i34)
+						> t116 - Gravel (i20)
+				Tag denoting addition of contents that cannot be adjoined with items in 'ADDED'. Another major section that provides info on contents. Each line of additional content must follow after the 'ADDITIONAL' tag unbroken by newlines.
+				. {Opt.Name} - An optional name to describe the additional contents
+				. {DataID} - The extra (additional) content(s) being added (usually those that cannot be directly tied to a content' name, such as backgrounds and dusts)
+				. {RelatedInternalName} - Name of content to associate additional content to 
+				. {RelatedDataID} - Data ID of the content to associate additional content to
+		
+		.	[TTA]
+			Syntax		[TTA: #]
+			Ex.			[TTA: 38]
+				Tag denoting a tally of the number of content added in the specified version of the resource pack. This number only accounts for the contents tally under "ADDED" and "ADDITIONAL".
+					- It may stand for "Total Textures Added", but it includes the count of ALL contents added.
+		
+		.	[UPDATED]
+			Syntax		> {InternalName} ({RelatedDataID}) - {change description}
+			Ex. 		> Spoiled Potato (i38) - Recolored to look less appetizing.
+				Tag denoting changes that are made to existing content. The information written would be appended as a history of changes made to the existing content.
+				. {InternalName} - The name of the content being updated
+				. {RelatedDataID} - The data ID relevant to the named content being updated
+				. {change description} - A description of the change(s) made to given 
+		
+		.	[LEGEND]
+			Syntax		> {Key} - {Keyname}
+			Ex.			> i - Item
+				{REQUIRED} This tag translates directly to the auto logger, denoting a definition of the symbols / keys used to describe the additions and changes made in the version through the previous 3 tags (ADDED, ADDITIONAL, and UPDATED).
+				
+		.	-- (omit)
+				Used by the HCAutoLogger; lines starting with this key are omitted from the information parsing, ie. the decoding system will ignore these lines of text except for [SUMMARY].
+				
+		.	[SUMMARY]
+			Syntax		-- [SUMMARY: <summaryPart1> // <summaryPart2>]
+			Ex. 		-- [SUMMARY: Potatoes, Carrots, Onions, Money and Coins // Gravel, Dirt, Some Sedimentary Rocks, Igneous Rocks]
+				{NEW TAG}
+				This tag allows the addition of a summary of the contents contained from a version log where '//' is used to seperate lines of summarizing text. This line must start with '--' as not to interfere with functions of the HCAutoLogger program. All information must be on the same line.
+				
+		
+				
+		> Sorting the information is the translation of version log's contents being parsed into temporary system memory. The parsed information is then displayed to the user in a more legible and cleaner format, including highlights of information that may be missed. Sorting is the parsing and reviewing of the information obtained from a log.
+		
+		>> Sorted.review.concepts
+			A conceptualization of how the obtained and sorted info will be displayed for review.
+			
+			..........................................
+			Version Number: 1.02
+			
+			ADDED
+			#1 Peanut	i78	p54 t114
+			#2 Walnut	i79	t115
+			#3 Almond	i77 t113
+			#4 Large Macedonia i80 t117 t118
+			
+			ADDITIONAL 
+			> Grains Biome Backgrounds 	b5 b11` b13
+			> Turnip Dusts (d6 d7) - Turnip (i14) 
+			
+			TTA: 15
+			
+			UPDATED 
+			> Mashed Potato		t32
+				Redesigned to look more creamy.
+			> Spoiled Potato	i38
+				Recolored to look less appetizing. 
+			
+			LEGEND
+			i/Item
+			t/Tile
+			b/Background
+			`/LOTB
+	
+			SUMMARY
+			- Nuts, Mash Potato redesign, Spoiled Potato redesign
+			- Grains Biome Backgrounds
+			..........................................			
+			
+		>> Explain Contents Review Concept (above)
+		.	"Version Number: 1.00" - The version number of the log is plainly listed.
+		.	"ADDED..." - Each new piece of content is numbered (from 1 upwards) and listed in the syntax: {ContentName}{ContentDataIds}
+				> {ContentName} is the name given to the added content.
+				> {ContentDataIds} are the Data Ids associated with the added content. According to key recognizing the type of data, the Ids are listed alphanumerically. 
+					Note that ranges of data IDs will be separated into individuals enclosed in parentheses beside the range. 
+						Ex.		a3~a6 (a3 a4 a5 a6)
+								g9`~g11` (g9` g10` g11`) 
+		.	"ADDITIONAL..." - Each additional piece of content is indented with a '>' (unordered), followed by the syntax: {AdditionalNameAndDataIds}{RelatedAdditionalNameAndID}
+				Morphing the syntax directly from the log, the review syntax would be: {Opt.Name}{DataID} {RelatedInternalName}{RelatedDataID}
+				> {RelatedAdditionalNameAndID} - The relative name and ids to associate with the additional contents. May not always have a value.
+				> {AdditionalNameAndDataIds} - The additional content ids and an optional name to describe them.
+		.	"UPDATED..." - The changes made to existing content following the syntax: {RelatedInternalName}{DataId}\n{ChangeDescription}
+				> {RelatedInternalName} - The name of the content added.
+				> {DataId} - The Data Id of the content added.
+				> \n{ChangedDescription} - On a newline, a description of the change made to the data ID. This changes is attributed to the Data ID.
+		.	"LEGEND..." - The definitions for the keys used in the version log. The legend keys are documented by the system along with all other information. 
+				> Syntax is similar to that of the log (the characters ' - ' are replaced with '/').
+		. 	"SUMMARY..." - The summary of all the additions and changes that have taken place in the version log being reviewed.
+
+		.. OTHER REVIEW RULES ..
+			> n/a			
+		
+	-----
+	2# Method of storing content information
+		> Storage of content information encompasses the association of info from version logs to the correct pieces of content in the resource pack, and developing a file-saving format to store this information corrrectly. 
+		
+		>> Content association 
+		.	Consider the pieces of information that can be tied to every piece of content. What of the content is primary to identification respective of the version logs?
+					Key content: 	Content Name
+					Attributes:		Related Data ID(s), Additional Related Content (sub-content name and Data IDs), Update information and changes, Version added / updated.
+					Other: 			Legend (not directly associated but is used; not directly shown but may be referenced to).
+				> The content name not only includes the associated Data IDs, but also serves as a pivot point for other related content and information.
+				
+		.	Revision of the information related to content and rules. 
+				> Content Name
+					Required; Primary Key; Singular Value; 80 characters limit;
+					Identifies the content by name. 
+					Information sourced from: 		"ADDED -> {InternalName}"; "ADDITIONAL -> {Opt.Name}"
+				> Related Data IDs
+					Required; Multiple Values; 30 characters limit each;
+					Data IDs or file names that are associated to the named content.
+					Information sourced from: 		"ADDED -> {shortItemID}, {shortRelatedIds}"; "ADDITIONAL -> {DataID}"
+				> Additional Related Content
+					Multiple Values; 30 characters limit each;
+					Additional contents that are related to the named content.
+					Information sourced from: 		"ADDITIONAL -> {Opt.Name}, {DataID}, {RelatedDataID}"; "VERSION -> N.n"
+				> Update information and changes
+					Multiple Values; 250 characters limit each;
+					Information concerning changes that have been made to any contents listed within the "Related Data IDs" section of the named content.
+					Information sourced from:		"UPDATED -> {InternalName}, ({RelatedDataID}), {change description}"; "VERSION -> N.n"
+				> Version
+					Required; Singular Value; 10 characters limit;
+					Denotes the version of the resource pack in which the additions and changes to the named content took place.
+					Information sourced from:		"VERSION -> N.n"
+				
+			>> Example.And.Labelling
+				.......................................
+				[v1.3] Garlic Clove		
+					d11 i69 t46 t47
+				
+					++	[v1.3] t47 >> Stripped Garlic Clove Dust (d12)					
+					^^	[v1.5] d11 - Brightened the shadows of the texture.
+					^^  [v1.6] Stripped Garlic Clove Dust (d12) - Brightened the shadows of the texture.
+				.......................................				
+				
+				.......................................
+				{aaa} {bbb}		
+					{ccc ccc}
+				
+					++ {aaa} {ddd}					
+					^^ {eee} {fff}
+					^^ {eee} {fff}
+				.......................................
+					"aaa"		Verison (added version)
+					"bbb"		Content Name
+					"ccc"		Related Data IDs (separated by spaces; sorted order)
+					"ddd"		Additional Related Content
+					"eee"		Version (updated version)
+					"fff"		Update information and changes
+		
+		
+		> The important contents of information and their anchor have been identified and defined. Now to delve into the file-saving organization and syntax of individual contents of the resource pack.
+		
+		>> Information organization and grouping, and the file-encoding syntax. Organization and grouping of the content information includes pairing pieces of information together, preliminary to forming a detail file-encoding syntax.
+		.	First group: Version (added), Content Name, Related Data ID(s)
+		.	Second group: Additional Related Content(s)
+		.	Third group: Version (updated), Update Information and Changes
+				
+		>> File-encoding syntax
+		.	First group: Version (added), Content Name, Related Data ID(s)
+			Syntax:		{VersionAdded}*{ContentName}*{RelatedDataIDs}
+			Ex.			1.10*Apple Sauce Block*i67,t68
+						1.3*Garlic Clove*d11,i69,t46
+			
+				> {VersionAdded}
+					[REQUIRED] string value as "a.bb"
+					"a" represents major version number
+					"bb" represents minor version number
+					May not contain the '*' symbol
+				> {ContentName}
+					[REQUIRED] string value 
+					May not contain the '*' symbol
+				> {RelatedDataIDs}
+					[REQUIRED] comma-separated string values 
+					No spacing between different Data IDs
+					May not contain the '*' symbol
+				NOTES
+					- {VersionAdded} denotes the version in which the new content was added
+		.	Second group: Additional Related Content(s)
+			Syntax:		{VersionAddit}*{RelatedDataId}*{Opt.Name}*{DataID}***
+			Ex.			1.11*i67**AppleSauce_Chunks
+						1.4*i69*Garlic Stem*t49,d18***1.5*i76*Onion Shell*t56
+				> {VersionAddit}
+					[REQUIRED] string value as "a.bb"
+					"a" represents major version number
+					"bb" represents minor version number
+					May not contain the '*' symbol
+				> {RelatedDataID}
+					[REQUIRED] string value
+					May not contain '*' symbol
+				> {Opt.Name}
+					string value
+				> {DataID}
+					[REQUIRED] comma-separated string values
+					No spacing between different Data IDs
+					May not contain the '*' symbol
+				NOTES
+					- Multiple additional contents information must be separated with '***'
+					- {VersionAddit} denotes the version in which additional content was added
+		.	Third group: Version (updated), Updated Information and Changes
+			Syntax:		{VersionUpd}*{InternalName}*{RelatedDataID}*{ChangeDesc}***
+			Ex.			v1.8*Asparagus Shelf*i109*Added more sprigs to texture.
+				> {VersionUpd}
+					[REQUIRED] string value as "a.bb"
+					"a" represents major version number
+					"bb" represents minor version number
+					May not contain the '*' symbol
+				> {InternalName}
+					[REQUIRED] string value
+					May not contain '*' symbol
+				> {RelatedDataID}
+					[REQUIRED] string value
+					May not contain '*' symbol
+				> {ChangeDesc}
+					[REQUIRED] string value
+					May not contain '*' symbol
+				NOTES
+					- Multiple updates contents information must be separated with '***'
+		.	Review
+			File-encoding of information for content reqires three (3) lines:
+				L1| {VersionAdded}*{ContentName}*{RelatedDataIDs}
+				L2|	{VersionAddit}*{RelatedDataId}*{Opt.Name}*{DataID}***
+				L3| {VersionUpd}*{InternalName}*{RelatedDataID}*{ChangeDesc}***
+				
+				
+		> Other stored contents
+		.	Legend
+				Information sourced from:		"LEGEND -> {Key}, {Keyname}"
+				Syntax:		'{key}',{keynames}***
+				Ex.			'i',Item***'`',LOTB,Layer Of Translucent Black***'*',PrevUpd
+					> {key}
+						[REQUIRED] string value
+					> {keynames}
+						[REQUIRED] comma-separated string values
+						May not contain '*' symbol
+					NOTES
+						- Multiple legend keys and keynames must be separated with '***'
+					
+		. 	Version Summaries and Total Textures Added
+				Information sourced from:	"SUMMARY"; "VERSION -> N.n"; "TTA -> #"
+				Syntax:		{Version}*{tta}*{summaryParts}
+				Ex.			1.19*51*Starfruits, Lychees, Coconuts; their walls and tiles
+							1.2*38*Cherries and Mangoes*Updated some prexisting sprites
+					> {Version}
+						[REQUIRED] string value as "a.bb"
+						"a" represents major version number
+						"bb" represents minor version number
+						May not contain the '*' symbol
+					> {tta}
+						[REQUIRED] integer value
+						technically should satisfy rule: x > 0.
+					> {summaryParts}
+						[REQUIRED] asterik-separated string values
+						Each string value may not contain '*' symbol
+					NOTES
+						- {summaryParts} has no limit of separated summary parts, but must at least have one summary part. If only one string, an asterik (*) does not need to follow.
+						- {tta} may not be less than or equal to 0, but this is a rule that can be broken (not strict in program; only warnings).
+#End.G1
+
+
+
+=====	
+G2: SERVE AS A LIBRARY
+	Objectives of using collected information as a library
+		- Browse the collected information as a tool for reviewing information regarding the version logs and resource contents.
+		
+		-----
+		1# Browsing the collected information
+			> For the ability to browse the library, its information has to be categorized and labelled. Identifying the categories of information that exist in the library provides a blueprint to the design of the program.
+			
+			>> Identifying.the.categories
+				The main categories of information that will exist in the library are: Resource Pack Contents, Log Legend, Version Summaries
+			
+			.	Resource Pack Contents
+					The largest category that consists of all the information concerning the contents of the resource pack.					
+					Usage: 
+						Specific contents can be searched up by using their name, the Data IDs that relate to them, or their version number (whether added or updated)
+			.	Log Legend
+					This category consists of the legend keys and definitions that are used throughout the version log files.
+					Usage:
+						The collection of legend keys and definitions are all displayed on a single page. It's a like the Glossary of a book					
+			.	Version Summaries
+					This category consists of the version summaries for each version log.
+					Usage: 
+						The summaries can be filtered by searching using their respective version number.			
+			
+			
+			>> Identified.categories.display.example.and.labelling
+			..	Resource Pack Contents
+				-> Structure
+					......................................
+					Search :: {aaa}	({bbb})
+					
+					{ccc} [{ddd}] {eee} 
+					{ccc} [{ddd}] {fff} {ggg}
+					......................................
+						"aaa"	Search keywords
+						"bbb"	(Number of) Returned Results
+						"ccc"	Result Relevance Number
+						"ddd"	Result Source Description Key
+						"eee"	Relevant Content Name
+ 						"fff"	Excerpt from Relevant Content
+						"ggg"	Content Name relating to Excerpt from Relevant Content 
+			
+				-> NOTES
+				.	Search Keywords
+						AKA - Keyword, Keywords
+						The characters to match information in any content with as a filter. Support alphanumeric characters and symbols using UTF-8 encoding. The character limit for keywords is 30.
+						
+				.	Returned Results 
+						AKA - Results
+						Displays the number of results returned that matched in anyway with the keyword through any information from content available in the library. There can only be up to 50 results gathered at once. There are four outcomes when stating results returned:
+							0 returned: "no results"
+							1 returned: "showing 1 result"
+							2+ returned: "showing {x} results"
+								Where {x} represents the number of results shown on a page.
+							too many returned: "showing {a}~{b} of {x} results"
+								Too many results is a condition where the number of matching results are too much to be showed on one page. So then the results will be shown in groups of a set number (10 for example). {a} is the relevance number of the result at the top of the page, and {b} the relevance number of the results at the bottom of the page.
+						
+				.	Result Relevance Number
+						AKA - Relevance Number (RelNum)
+						A whole number starting from one (1) that indicates the relevancy of the results of the search. The range of the RelNum is tied to the number of results: 1 to 50. 
+						How is relevance determined? Two factors determine relevance: Keyword matching exactly or contained within, and the RSDK relevance.				
+							Keyword match Relevance:
+								1st - Exact match with keyword
+								2nd - Containing keyword
+							RSDK relevance can be found under its section.
+						ALSO
+						- Besides ordering through relevance, the RelNum is also determined through alphanumeric order (symbols > numbers > letters) and grouping based on individual content (All results pertaining to a content, are grouped under each other rather then being scattered about).
+							
+					
+				.	Result Source Description Key
+						AKA - RSDK
+						The RSDK is a three-character identifier used to describe where the information relevant to the search result is pulled from regarding any content. The keys and definitions are as follows:
+							Nam: Content Name 
+							RDI: Related Data IDs
+							ARC: Additional Related Content
+							Upd: Updated information and changes
+							Ver: Version Number, generalized
+						ALSO
+						- The order of the RSDKs as listed also determing their relevance. [Nam] has greater prevalance over all other RSDKs, and [Ver] has least prevalance under all RSDKs.
+					
+				.	Relevant Content Name
+						AKA - Source Name
+						The name of the content that is related to the keyword in search. Only Content Name information is plainly displayed in a search.
+						
+				.	Excerpt from Relevant Content
+						AKA - Excerpt (RelEx)
+						When a keyword matches information under a named content (and not the content's name itself), the keyword followed by information from the section of information provides context to where this matching information was found. This excerpt may take on a few formats:
+							Context: keyword followed by a few other words from source
+							Single: only the word that matches or contains keyword
+							Combo: the 'Single' info followed by quoted 'Context' info
+						ALSO
+						- All RelEx is followed by an Excerpt Source.
+						- If the Context info is too lengthy, it is parsed and denoted to be so with the '~' character afterwards.
+						
+				.	Content Name relating to Excerpt from Relevant Content
+						AKA - Excerpt Source (SourceEx)
+						The associated Source Name that indicates where information for the preceding Excerpt is sourced. The Source Name may not be shortened. There is only one format for the SourceEx: 
+							(from '{ContentName}')
+							
+			
+				> Search using letters
+					......................................
+					Search :: tomato 	(showing 6 results)
+					
+					1 [Nam]	Tomato
+					2 [ARC]	Tomato Stem Dust (from 'Tomato')
+					3 [Upd]	tomato more delici~ (from 'Tomato')
+					4 [Nam]	Canned Tomato
+					5 [Nam]	Steamed Tomato				
+					6 [Upd]	tomato soggier loo~ (from 'Steamed Tomato')				
+					......................................					
+					
+				> Search using numbers
+				.	Ex1 (plain number)
+					......................................
+					Search :: 14		(showing 5 results)
+					
+					1 [RDI]	t14 (from 'Rice')
+					2 [RDI]	i14 (from 'Turnip')
+					3 [RDI]	i214 (from 'Lettuce')
+					4 [Ver]	1.14 (from 'Lettuce')
+					5 [RDI]	t114 (from 'Peanut')					
+					......................................				
+				
+				.	Ex2 (version number)
+					......................................
+					Search :: 1.1		(showing 6 results)
+					
+					1 [Ver]	1.1 (from 'Apple')
+					2 [Ver]	1.1 (from 'Blueberry')
+					3 [Ver]	1.1 (from 'Passion Fruit')
+					4 [Upd]	1.1 "Increased the contra~" (from 'Strawberry')
+					5 [Ver]	1.10 (from 'Apple Sauce Block')
+					6 [ARC]	1.11 "AppleSauce_Chunks" (from 'Apple Sauce Block')
+					......................................
+					NOTES
+						- The syntax varies slightly, where the version number is unbracketed, and the exceprt (quoted) and source name exists within the same parentheses.
+						- Results #4 and #6 are version numbers retreived from the 'Update information and changes' and 'Additional Related Content' sections respectively.
+
+				> Search using alphanumeric characters
+					......................................
+					Search :: t4		(showing 3 results)
+					
+					1 [RDI]	t46 (from 'Garlic Clove')
+					2 [RDI]	t47 (from 'Garlic Clove')
+					3 [ARC]	t49 "Garlic Stem" (from 'Garlic Clove')
+					......................................
+					
+			..	Log Legend
+				-> Structure
+					.................................
+					VERSION LOG GLOSSARY (Legend)
+					----
+					{aaa} :: {bbb}
+					{aaa} :: {bbb}
+					.................................
+						"aaa"	Legend key
+						"bbb"	Key Definitions
+						
+				->	NOTES
+				.	Legend Key
+						AKA - Key
+						The character(s) contained within (usually) Data IDs of content to be described. The keys and their following definitions are sorted alphanumerically (symbols at the bottom) within the version log glossary.
+						
+				.	Key Definitions
+						AKA - Definitions
+						A word or phrase that represents the usage of the associated legend key. Multiple defintions are seperated by ' // '. In the unusual case that the listed definitions exceed the line limit, the program will cut off the final definitions and place '...' at the end.
+						ALSO 
+						- For verifying integrity of resource pack, when replacing legend keys with their definition, each separated definition will be used, and the program will search for a match between the multiple results until verified.
+							Ex. 'b21' parsed as 'Backgrounds_21' and 'Background_21'.
+						
+				> Example Log Glossary Display
+					.................................
+					VERSION LOG GLOSSARY (Legend)
+					----
+					ar	:: Armor
+					b 	:: Backgrounds // Background
+					i 	:: Item
+					p 	:: Projectile
+					t 	:: Tiles
+					w 	:: Wall
+					~ 	:: NumRng // Number Range
+					` 	:: LOTB // Layer of Translucent Black
+					* 	:: Previous Update // PrevUpd					
+					.................................
+			
+			..	Version Summaries
+				-> Structure
+					..................................
+					SUMMARY OF VERSION {aaa}
+					- {bbb}
+					- {bbb}
+						[{ccc}] contents added
+					..................................
+						"aaa"	Summary version number
+						"bbb"	Summary Parts (descriptions)
+						"ccc"	TTA number
+					
+				-> 	NOTES
+				.	Summary Version Number
+						AKA - SVN
+						The version log number to associate with the summary.
+					
+				.	Summary Parts (description) 
+						AKA - SumDesc
+						The summary parts that describe the additions and changes made within the numbered version. Each summary part is placed on a new line and preceded with '- '.
+					
+				.	TTA number
+						The number of contents added in the associated version log.
+						
+				> Example Version Summary Display
+					..................................
+					SUMMARY OF VERSION 1.02
+					- Nuts, Mash Potato redesign, Spoiled Potato redesign
+					- Grains Biome Backgrounds
+						[15] contents added
+					..................................
+#End.G2
+
+
+
+=====
+G3: ADDITIONAL FEATURES
+	Objectives of the Additional features
+		- Validate and verify the integrity of the resource pack; ensurance that all contents that are to be included in the given version of the pack are infact there
+		- Allow minimal customization of program window and style for comfortability
+		- Provides a back up of the previous save of the library information. If a fatal error or conflict occurs to the new version and it was saved, the program can cycle backwards to the previous save of the library.
+
+	-----
+	1# Verify integrity of resource pack contents
+		> Verifying the integrity of the resource pack ensures that required contents of a version of the resource pack are present. A utitlity that provides assurance of the resource pack's entirety.
+		
+		>> Verifying.Integrity
+			Verification of integrity requires information of the all contents that should be included and where to verify that the contents exist.
+			
+		.	Contents information
+			Source ::	"ADDED -> {shortItemID},{shortRelatedIDs}"; "ADDITIONAL -> {DataID}"
+				The Data IDs (from the sources specified above) from every content in the library will be collected and converted into their expanded forms and organized using the Legend (symbols are not parsed using the legend; they are removed or remain as they are).
+					Ex.
+					Step1	i20 Shr_Donut i24 t31 t18`
+					Step2	Item_20 Item_24 Shr_Donut Tiles_18 Tiles_31
+				
+		.	Verification Location
+			Source :: 	Is provided externally; directory paths of folders containing content.
+				A verification location is the path to directory containing the content of the resource pack. When provided multiple verification locations, the program will check through all directories when verifying the integrity of the files. 
+				ALSO
+					Verification also includes listing the file extensions required to locate the exact content and verify that it exists. For example, if ".png" and ".mp3" are provided (respectively) as file extensions, the system will run a check for each type of file until to find a match:
+						{DirectoryPath}{ContentExpandedName}{AppropriateFileExtension}
+				
+		
+		..	The Verification Process
+				With provided verification locations and a library of contents to verify, the program will directly report on the contents within their categories as it checks for the existing resource pack contents. Only the number of the Data ID from contents are listed under their relative category, all separated only be space characters. There are three ways in which this information may be displayed:
+				- Expanded Form
+					Every Data ID is listed; there are no ranges among sequential groups of Data IDs. If a content was verified to exist their text will have a certain dark (or normal) color attributed to them. If a content doesn't exist a bright (or highlight) color will be attributed to them.
+				- Compact Form
+					Every Data ID is listed and there are ranges among sequential groups of Data IDs. The color coding for non-sequential content are the same as that in 'Expanded Form'. If a sequence of Data IDs are missing contents, the missing Data IDs within the sequence are listed and bracketed (unspaced) beside the range, and the sequence and listed missing contents are highlighted.
+				- Focused Form
+					Only Data IDs that were not verified to exist within the resource pack contents are listed. There are no ranges among sequential groups.	
+			
+			> Display Examples
+			.	Focused Form
+				...................................
+				[Item]
+				9 45 78 79 80 115
+				
+				[Miscellaneous]
+				AppleSauce_Chunks Dust
+				
+				[Projectiles]
+				5 6
+				
+				[Tiles]
+				114
+				...................................
+				
+			.	Verification Location Review (snippet)
+				...................................
+				Relative Paths
+				1 |~ Games\Terraria\ResourcePacks\High Contrast\Content				
+				2 |~Terraria\ResourcePacks\High Contrast\Content\Images
+				
+				File Extensions In Use
+				1 |.png
+				2 |.mp3
+				3 |.xnb				
+				...................................				
+	
+	-----
+	2# Visual customization of foreground and window dimensions
+		> Customization of the foreground elements and the window dimensions provides the user with options to make operation of the program comfortable and personalized.
+		
+		>> Window dimensions
+			The dimension of the program window may be adjusted through a set of discrete values that determine the width and height of the program window.
+			
+		.	Discrete Dimensions
+				% Dim	: Height	: Width 
+				--------:-----------:-------------
+				20		: Squished	: Thin
+				40		: Short		: Slim
+				60		: Normal	: Normal
+				80		: Tall		: Broad
+				100		: Fill		: Fill
+			NOTES
+				- '% Dim' is shorthand for 'Percent of Maximum Dimension Value'
+				- The words within the Height and Width columns are used to describte the '% Dim' respective to the dimension being changed
+				- Default dimensions are "Normal Normal" (as "Height Width")	
+		
+		
+		>> Foreground elements customization
+			Foreground elements consist of any text, their colors, and how they are used within the program. 			
+				
+		.	Foreground Element Categories
+				There are 8 categories of foreground elements used in the program: Normal, Highlight, Accent, Correction, Incorrection, Warning, Heading 1, Heading 2
+				
+				Normal			
+					This foreground element is the most common used element. Used displaying any general content
+				Highlight
+					Highlighted foreground elements are meant to stand out among normal text. Used to emphasize certain texts contained within general content.
+				Accent
+					Accented foreground elements are relatively small scale texts that separate themselves from normal and highlighted texts but are used in conjuction with those elements. Examples of usage are list bullets and numbers, table dividing lines, underlines.
+				Correction
+					Foreground elements that relay confirmation of success of a process.
+				Incorrection
+					Foreground elements that relay failure of a process.
+				Warning
+					Foreground elements that give notice of an issue or action that alters stored information and may be potentially destructive and/or irreversible. Usually precedes Correction or Incorrection elements, posed mostly as a question.
+				Heading 1
+					AKA - Title
+					A foreground element that describes what the other elements are displaying. Used to label and describe large sections of displayed contents, often styled in full capitals. Generally, only one is displayed at a any given time.
+				Heading 2
+					AKA - Subtitle
+					A foreground element that describes what other elements are displaying in further detail than Heading 1 would. Used to label smaller sections of displayed contents. There may be more than one of these elements at a time.
+					
+		.	Foreground Element Colors
+			> The colors available to foreground elements are as follows (abides by the colors available on the Console):
+				White, Gray, Dark Gray, Red, Dark Red (Maroon), Yellow, Dark Yellow (Orange), Green, Dark Green (Forest), Cyan, Dark Cyan (Teal), Blue, (Navy) Blue, Magenta, Dark Magenta (Purple).
+				NOTE
+					- The color 'Black' is attributed to the background color, and therefore may not be an option.
+					- Multiple foreground elements can have the same color.
+				
+			> All foreground elements have a default color:
+				Normal :: Gray
+				Highlight :: Yellow
+				Accent :: Dark Gray
+				Correction :: Green
+				Incorrection :: Red
+				Warning :: Yellow
+				Heading 1 :: White
+				Heading 2 :: Gray	
+	
+	-----
+	3# Revert to a previous save
+		> The ability to revert to a previous save allows the user to undo a significantly destructive change. 
+
+		>> Save.Reversion
+			To revert to a previous save, first there needs to be an existing backup file with the information of the previous save and a save file of the current save state.
+			
+		.	Save States
+				A save state describes the condition of the program's save file in terms of size and what information exists. A save state differs from another when the quantity or form of information changes. A save state is triggered under a few conditions: 
+					- When a new version log's information is added to the library
+					- When changes to personalization / customization settings are made
+				When a new save state is created, the current save state is copied to another file becoming the previous save state information, and the current save state will be overwritten with the incoming save file information.
+		.	State Reversion
+				The only thing required for a reversion of save states if access to two files: the 'previous save state' file (PSSF) and the 'current save state' file (CSSF). When reverting the program's save state, information in the PSSF will overwrite the information in the CSSF, then the PSSF info will be erased. 
+				NOTE
+					- The program will need to restart when reverting save states
+					- The user will be provided with a double-confirmation warning message before continuing to revert the save file.
+					
+		>> Soft.Reversion
+			The soft reversion is a form of deletion that removes any library content that is associated with a given version number.	
+#End.G3
+	
+	
+	
+=====
+PROGRAM DATA AND INTERFACE DESIGN
+	Objectives of program data and interface design
+		- Enter development with an outlined structure code design to efficiently and properly program the project in the effort of minimizing bugs through a comprehensive build.
+		- Conceptualize the design of the layout of foreground elements in given situations; user interface design.
+	
+	-----
+	1# Code Design Planning
+		>> Determining Structures
+			> Code Design Structure
+				-------------------------------------------------------
+				Program
+					DataHandling [fd]
+						LogDecoder
+						ResourceLibrary (ResLibrary)
+							ResourceContents (ResContents)
+								ContentBaseGroup
+								ContentAdditionals
+								ContentChanges
+							LegendData
+							SummaryData
+						Preferences
+						ContentVerificationSystem
+						ReversionHandler
+					Tools (Extensions)						
+					Layout [fd]
+						PageBase (Page)					
+				-------------------------------------------------------
+					"fd"		Folder
+					
+				-> NOTES
+				..	Program 
+						Refers to the Console Debugger, where the application starts and ends.
+				.	Data Handling
+					> Log Decoder :: For decoding version log files into program data
+					> ResourceLibrary :: Contains all data from version logs
+					.	ResourceContents: Represents individual content
+						> ContentBaseGroup - Represents the first data group of content
+						> ContentAdditionals - Represent the second data group of content
+						> ContentChanges - Represent the third data group of content
+					.	LegendData:	Contains all data relating to the legend from version logs
+					.	SummaryData: Contains all the data relating to version summaries from version logs
+					> Preferences :: Contians information regarding visual customizations 
+					> ContentVerificationSystem :: Handles the content integrity verification process
+					> ReversionHandler :: Handles the reversion of save states and version-based deletions
+				.	Tools
+						A class (or a few classes) with functions that assist all aspects of the program
+				.	Layout
+					> PageBase :: A base class from which page layouts on the program derive
+			
+			
+			> Program Layout Structure
+				-------------------------------------------------------
+				-> Title Page*
+				Main Menu
+					Logs Submission Page
+					Library Search Page
+						Content View Page~
+					Log Legend View Page
+					Version Summaries Search Page
+						Summary Viewer~
+					Settings Page
+						Preferences Page
+							Window Dimensions Editor
+							Foreground Elements Editor
+						Content Integrity Verification Page
+						Reversion
+				<-	Quit~
+				-------------------------------------------------------
+					"->"	Program usage starts
+					"<-"	Program usage ends
+					"*"		This page can only be accessed once during program runtimes
+					"~"		A partial page
+						
+	-----
+	2# Layout Design Concepts
+		>> Other unicode characters available to use
+				The following characters can be used to enhance visual design
+					\x2591 ░	Light Shade
+					\x2592 ▒	Medium Shade
+					\x2593 ▓	Dark Shade
+					\x2590 ▐	Right Half Block
+					\x258c ▌	Left Half Block
+					\x2580 ▀ 	Top Half Block
+					\x2584 ▄	Bottom Half Block
+					
+	
+		>> Navigation
+			> Table Form
+				..............................................
+				MENU
+				====
+				[1] Option1				[2] Option2
+				[3] Option3				[4] Option4
+					Select >> 1~4			
+				..............................................
+				
+			> List Form
+				..............................................
+				MENU
+				====
+				a.Option1				
+				b.Option2
+				c.Option3				
+				d.Option4					
+					Select >> a~d			
+				..............................................
+				
+			> Navigation Bar
+				..............................................
+				  [(<) Previous | (^) Back | (#) Select | (>) Next]
+					Navigation >> __
+				..............................................
+				
+				
+		>> Version Log Submission
+			.......................................................
+			VERSION LOG SUBMISSION
+			Provided path to log ::
+				C:\Users\username\Pictures\HCT\Completed\_Logs\v1-23Log.txt
+				
+				Confirm Submission? 
+					Yes / No >> __
+			.......................................................
+			
+				
+		>> Visual customizations
+			> Window dimensions 
+				..............................................................
+				Current Window Dimensions (HxW): Normal Normal (60% 60%)
+				
+				Dimension Values Table
+					%	| Height		| Width
+					---------------------------------------
+					20	| [1] Squished	| [a] Thin
+					40	| [2] Short		| [b] Slim
+					60	| [3] Normal	| [c] Normal
+					80	| [4] Tall		| [d] Broad
+					100	| [5] Fill		| [e] Fill
+				A restart is required after changing the window dimensions.
+				Change dimension >> __
+				..............................................................
+			
+			> Foreground Element Colors
+				..............................................................
+				FOREGROUND PREVIEW
+				-------------------------------
+				HEADING 1
+				* Normal highlight normal.
+				
+				Heading 2				
+				Warning Message? Confirm / Deny
+				-------------------------------
+				
+				1|▓| Normal			2|▓| Highlight			3|▓| Accent
+				4|▓| Correction		5|▓| Incorrection		6|▓| Warning
+				7|▓| Heading 1		8|▓| Heading 2
+					Change Foreground Element Color >> #__
+				..............................................................
+				
+				
+		>> Program Icon Image Ideas
+			No ideas yet...	
+#End
+	
+	
+	
+=====
+Associated Development Text Files
+	- Version Log Example 1
+	- Version Log Example 2
+	- Development Deviations Log
