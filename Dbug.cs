@@ -40,6 +40,13 @@ namespace HCResourceLibraryApp
             sessionName = null;
         }
 
+        public static void SingleLog(string logSessionName, string log)
+        {
+            SetIndent(0);
+            Debug.WriteLine($"Sg| @{logSessionName} :: {log}");
+            SetIndent(-1);
+        }
+
         public static void SetIndent(int level)
         {
             // start and end logs are always on level 0. All other text are level 1 and above
@@ -52,14 +59,17 @@ namespace HCResourceLibraryApp
         ///<summary>Stores partial logs that will be flushed together with the new logged line after using <see cref="Log(string)"/>.</summary>
         public static void LogPart(string log)
         {
-            if (log.HasValue())
-                if (partialLog == null)
-                    partialLog = log;
-                else partialLog += log;
+            if (relayDbugLogs)
+            {
+                if (log.HasValue())
+                    if (partialLog == null)
+                        partialLog = log;
+                    else partialLog += log;
+            }
         }
         public static void Log(string log)
         {
-            if (log.HasValue())
+            if (log.HasValue() && relayDbugLogs)
             {
                 if (partialLog.HasValue())
                     log = partialLog + log;

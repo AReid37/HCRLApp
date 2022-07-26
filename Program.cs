@@ -1,5 +1,6 @@
 ﻿using System;
 using ConsoleFormat;
+using HCResourceLibraryApp.DataHandling;
 
 namespace HCResourceLibraryApp
 {
@@ -10,6 +11,10 @@ namespace HCResourceLibraryApp
         {
             Tools.DisableWarnError = DisableWE.None;
             Base.TextLine("Hello, High Contrast Resource Library App!");
+
+            DataHandlerBase datahandler = new DataHandlerBase();
+            Preferences prefs = new Preferences();
+            datahandler.SaveToFile(prefs);
         }
     }
 }

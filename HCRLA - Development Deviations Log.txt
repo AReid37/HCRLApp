@@ -28,6 +28,6 @@ Project is using .NET 5.0 (unsupported) with ConsoleFormat class library.
 	+ Decided to stick with .NET 5.0 for QoL programming syntax and leave incompatiblity issues up to frequent builds and tests.
 
 1# [ ] 
-Implementing base class for data-handling classes (DataHandlerBase.cs)
+Implemented base class for data-handling classes (DataHandlerBase.cs)
 	- Assumed that each class will handle their own data and write to file
 	+ Assists in communication between data-handling classes, handles some repeating elements, and simplifies mono-file management.

@@ -663,7 +663,7 @@ G3: ADDITIONAL FEATURES
 					
 		.	Foreground Element Colors
 			> The colors available to foreground elements are as follows (abides by the colors available on the Console):
-				White, Gray, Dark Gray, Red, Dark Red (Maroon), Yellow, Dark Yellow (Orange), Green, Dark Green (Forest), Cyan, Dark Cyan (Teal), Blue, (Navy) Blue, Magenta, Dark Magenta (Purple).
+				White, Gray, Dark Gray, Red, Dark Red (Maroon), Yellow, Dark Yellow (Orange), Green, Dark Green (Forest), Cyan, Dark Cyan (Teal), Blue, (Navy Blue) Blue, Magenta, Dark Magenta (Purple).
 				NOTE
 					- The color 'Black' is attributed to the background color, and therefore may not be an option.
 					- Multiple foreground elements can have the same color.
