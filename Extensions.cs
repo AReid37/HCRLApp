@@ -7,7 +7,7 @@ namespace HCResourceLibraryApp
     public static class Extensions
     {
         /// <summary>Checks if a string value is not null, empty, or whitespaced.</summary>
-        public static bool HasValue(this string s)
+        public static bool IsNotNEW(this string s)
         {
             bool hasVal = false;
             if (s != null)
@@ -17,6 +17,16 @@ namespace HCResourceLibraryApp
             //System.Diagnostics.Debug.WriteLine($"'{s}' has value? {hasVal}");
             return hasVal;
         }
+        /// <summary>Checks if a string value is not null or empty.</summary>
+        public static bool IsNotNE(this string s)
+        {
+            bool hasVal = false;
+            if (s != null)
+                if (s != "")
+                    hasVal = true;
+            return hasVal;
+        }
+        /// <summary>Checks if a collection (array, list) is not null and has at least one element.</summary>
         public static bool HasElements(this ICollection col)
         {
             bool hasElements = false;
@@ -54,7 +64,7 @@ namespace HCResourceLibraryApp
         {
             bool parsed = false;
             c = Color.Black;
-            if (s.HasValue())
+            if (s.IsNotNEW())
             {
                 Color[] colors = (Color[])Enum.GetValues(typeof(Color));
                 if (colors.HasElements())

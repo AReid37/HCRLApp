@@ -20,7 +20,7 @@ namespace HCResourceLibraryApp.DataHandling
             Base.SetFileLocation(FileLocation);
         }
         
-        
+        /// <summary>Handles file saving of all data-handling subclasses passed as parameters.</summary>
         public virtual bool SaveToFile(params DataHandlerBase[] dataHandlers)
         {
             bool noIssues = true;
@@ -65,25 +65,25 @@ namespace HCResourceLibraryApp.DataHandling
 
         public DataLine(string filetag, string infoline)
         {
-            fileTag = filetag.HasValue() ? filetag : null;
-            infoLine = infoline.HasValue() ? infoline : null;
+            fileTag = filetag.IsNotNEW() ? filetag : null;
+            infoLine = infoline.IsNotNEW() ? infoline : null;
         }
         public void SetFileTag(string filetag)
         {
-            fileTag = filetag.HasValue() ? filetag : null;
+            fileTag = filetag.IsNotNEW() ? filetag : null;
         }
         public void SetInfoLine(string infoline)
         {
-            infoLine = infoline.HasValue() ? infoline : null;
+            infoLine = infoline.IsNotNEW() ? infoline : null;
         }
 
         public bool HasTag()
         {
-            return fileTag.HasValue();
+            return fileTag.IsNotNEW();
         }
         public bool HasInfo()
         {
-            return infoLine.HasValue();
+            return infoLine.IsNotNEW();
         }
 
         public override string ToString()

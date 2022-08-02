@@ -23,7 +23,7 @@ namespace HCResourceLibraryApp
             relayDbugLogs = true;
             SetIndent(-1);
             Debug.WriteLine("\n--------------------"); // 20x '-'
-            if (logSessionName.HasValue())
+            if (logSessionName.IsNotNEW())
             {
                 sessionName = logSessionName;
                 Debug.WriteLine($"## {logSessionName.ToUpper()} ##");
@@ -33,7 +33,7 @@ namespace HCResourceLibraryApp
         public static void EndLogging()
         {
             SetIndent(-1);
-            if (sessionName.HasValue() && relayDbugLogs)
+            if (sessionName.IsNotNEW() && relayDbugLogs)
                 Debug.WriteLine($"## END :: {sessionName.ToUpper()} ##");
 
             relayDbugLogs = false;
@@ -61,7 +61,7 @@ namespace HCResourceLibraryApp
         {
             if (relayDbugLogs)
             {
-                if (log.HasValue())
+                if (log.IsNotNEW())
                     if (partialLog == null)
                         partialLog = log;
                     else partialLog += log;
@@ -69,9 +69,9 @@ namespace HCResourceLibraryApp
         }
         public static void Log(string log)
         {
-            if (log.HasValue() && relayDbugLogs)
+            if (log.IsNotNEW() && relayDbugLogs)
             {
-                if (partialLog.HasValue())
+                if (partialLog.IsNotNEW())
                     log = partialLog + log;
                 
                 partialLog = null;

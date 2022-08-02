@@ -7,8 +7,8 @@ namespace HCResourceLibraryApp.DataHandling
     public class Preferences : DataHandlerBase
     {
         #region props / fields
-        const Color defNormal = Color.Gray, defHighlight = Color.Yellow, defAccent = Color.DarkGray, defCorrection = Color.Green, defIncorrection = Color.Red, defWarning = Color.Yellow, defHeading1 = Color.White, defHeading2 = Color.Gray;
-        Color _normal, _highlight, _accent, _correction, _incorrection, _warning, _heading1, _heading2;
+        const Color defNormal = Color.Gray, defHighlight = Color.Yellow, defAccent = Color.DarkGray, defCorrection = Color.Green, defIncorrection = Color.Red, defWarning = Color.Yellow, defHeading1 = Color.White, defHeading2 = Color.Gray, defInput = Color.Yellow;
+        Color _normal, _highlight, _accent, _correction, _incorrection, _warning, _heading1, _heading2, _input;
 
         // PROPS
         // -- colors --
@@ -52,6 +52,11 @@ namespace HCResourceLibraryApp.DataHandling
             get => _heading2;
             set => _heading2 = value.Equals(Color.Black) ? defHeading2 : value;
         }
+        public Color Input
+        {
+            get => _input;
+            set => _input = value.Equals(Color.Black) ? defInput : value;
+        }
         #endregion
 
         public Preferences() : base()
@@ -74,7 +79,7 @@ namespace HCResourceLibraryApp.DataHandling
         //
         //  Colors Syntax
         //      tag ->  {commontag}
-        //      line -> {nor}*{hig}*{acc}*{cor}*{inc}*{war}*{hd1}*{hd2}
+        //      line -> {nor}*{hig}*{acc}*{cor}*{inc}*{war}*{hd1}*{hd2}*{inp}
         //  Dimensions Syntax
         //      tag ->  {commontag}
         //      line -> ??
@@ -85,7 +90,7 @@ namespace HCResourceLibraryApp.DataHandling
 
             // compile the data
             /// color
-            prefDataLines.Add($"{Normal.Encode()} {Highlight.Encode()} {Accent.Encode()} {Correction.Encode()} {Incorrection.Encode()} {Warning.Encode()} {Heading1.Encode()} {Heading2.Encode()}".Replace(" ", AstSep));
+            prefDataLines.Add($"{Normal.Encode()} {Highlight.Encode()} {Accent.Encode()} {Correction.Encode()} {Incorrection.Encode()} {Warning.Encode()} {Heading1.Encode()} {Heading2.Encode()} {Input.Encode()}".Replace(" ", AstSep));
             /// dimensions
             /// tbd...
 
