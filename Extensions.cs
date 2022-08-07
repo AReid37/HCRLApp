@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections;
 using ConsoleFormat;
+using HCResourceLibraryApp.DataHandling;
 
 namespace HCResourceLibraryApp
 {
     public static class Extensions
     {
+        // GENERAL
         /// <summary>Checks if a string value is not null, empty, or whitespaced.</summary>
         public static bool IsNotNEW(this string s)
         {
@@ -26,6 +28,10 @@ namespace HCResourceLibraryApp
                     hasVal = true;
             return hasVal;
         }
+        public static bool IsNotNull(this char c)
+        {
+            return c != '\0';
+        }
         /// <summary>Checks if a collection (array, list) is not null and has at least one element.</summary>
         public static bool HasElements(this ICollection col)
         {
@@ -35,7 +41,35 @@ namespace HCResourceLibraryApp
                     hasElements = true;
             return hasElements;
         }
+        public static float GetScaleFactorH(this DimHeight dh)
+        {
+            float heightScale = dh switch
+            {
+                DimHeight.Squished => 0.2f,
+                DimHeight.Short => 0.4f,
+                DimHeight.Normal => 0.6f,
+                DimHeight.Tall => 0.8f,
+                DimHeight.Fill => 1.0f,
+                _ => 0.0f
+            };
+            return heightScale;
+        }
+        public static float GetScaleFactorW(this DimWidth dw)
+        {
+            float widthScale = dw switch
+            {
+                DimWidth.Thin => 0.2f,
+                DimWidth.Slim => 0.4f,
+                DimWidth.Normal => 0.6f,
+                DimWidth.Broad => 0.8f,
+                DimWidth.Fill => 1.0f,
+                _ => 0.0f
+            };
+            return widthScale;
+        }
 
+
+        // PRERFERENCES
         public static string Encode(this Color c)
         {
             /// IS THIS REALLY OKAY?

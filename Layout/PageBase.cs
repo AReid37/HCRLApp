@@ -31,23 +31,32 @@ namespace HCResourceLibraryApp.Layout
           
            Text.formatting
             > Format(text, formatType) 
-            > Highlight(text, highlightedText)
-            > ChooseColorMenu(...)
+            > Highlight(str text, params str highlightedText)
+            > ChooseColorMenu(...) [number-based]
+                >> (bool compactQ, params Col exclude)
+                << (ret Col color)
+                
             
            Menu.builds
             > Table Form Menu(...) [number-based]
-                >> (str titleText, str titleUnderline, bl clearPageQ, params str options) 
+                >> (str titleText, chr titleUnderline, bool titleSpanWidthQ, str prompt, str placeholder, shr optionColumns, params str options) 
                 << (ret bl valid // out shr resultNum)
             > List Form Menu(...) [string-based]
-                >> (str titleText, str titleUnderline, bl clearPageQ, params str options)
+                >> (str titleText, chr titleUnderline, str prompt, str placeholder, bl indentOptsQ, params str options)
                 << (ret bl valid // out str resultKey)
             > Navigation Bar(...)
         */
 
         #region fields / props
+        // PRIVATE \ PROTECTED
         static Preferences _preferencesRef;
         static readonly string FormatUsageKey = "`";
+        const char DefaultTitleUnderline = cTHB;
+        static string _menuMessage;
+        static bool _isMenuMessageInQueue, _isWarningMenuMessageQ;
 
+
+        // PUBLIC
         /// <summary>Light Shade (░).</summary>
         public const char cLS = '\x2591';
         /// <summary>Medium Shade (▒).</summary>
@@ -63,14 +72,40 @@ namespace HCResourceLibraryApp.Layout
         /// <summary>Bottom Half Block (▄).</summary>
         public const char cBHB = '\x2584';
 
+
+        // PROPERTIES
         public static bool VerifyFormatUsage { private get; set; }
         #endregion
 
 
         // -- Text Formatting --
-        public static void ApplyPreferencesReference(Preferences preference)
+        public static void GetPreferencesReference(Preferences preference)
         {
             _preferencesRef = preference;
+        }
+
+        #region Suppressant for Window Size and Buffer Size Edits to Console
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Interoperability", "CA1416:Validate platform compatibility", Justification = "<Pending>")]
+        #endregion
+        public static void ApplyPreferences()
+        {
+            if (_preferencesRef != null)
+            {
+                // window dimensions customization
+                /// tbd...
+                _preferencesRef.GetScreenDimensions(out int tHeight, out int tWidth);
+                Console.SetWindowSize(tWidth, tHeight);
+                Console.SetBufferSize(tWidth, 9001);
+                //Console.SetWindowSize(120, 30);
+                //Console.SetBufferSize(120, 9001);
+
+                // minimal customization
+                CustomizeMinimal(MinimalMethod.List, _preferencesRef.Normal, _preferencesRef.Accent);
+                CustomizeMinimal(MinimalMethod.Important, _preferencesRef.Heading1, _preferencesRef.Accent);
+                CustomizeMinimal(MinimalMethod.Table, _preferencesRef.Normal, _preferencesRef.Accent);
+                CustomizeMinimal(MinimalMethod.Title, _preferencesRef.Heading1, _preferencesRef.Accent);
+                CustomizeMinimal(MinimalMethod.HorizontalRule, _preferencesRef.Accent, _preferencesRef.Accent);
+            }
         }
         public static Color GetForeColor(ForECol fftype)
         {
@@ -125,7 +160,11 @@ namespace HCResourceLibraryApp.Layout
             if (text.IsNotNE())
             {
                 if (VerifyFormatUsage)
+                {
                     Text(FormatUsageKey, Color.DarkGray);
+                    if (text.Contains("\n"))
+                        text = text.Replace("\n", $"\n{FormatUsageKey}");
+                }
                 Text(text, GetForeColor(foreElementCol));
             }
         }
@@ -134,7 +173,11 @@ namespace HCResourceLibraryApp.Layout
             if (text.IsNotNE())
             {
                 if (VerifyFormatUsage)
+                {
                     Text(FormatUsageKey, Color.DarkGray);
+                    if (text.Contains("\n"))
+                        text = text.Replace("\n", $"\n{FormatUsageKey}");
+                }
                 TextLine(text, GetForeColor(foreElementCol));
             }
         }
@@ -250,9 +293,125 @@ namespace HCResourceLibraryApp.Layout
             }
             Dbug.EndLogging();
         }
-        /// ChooseColorMenu(...)
         
 
         // -- Menu Builds --
+        /// <summary>
+        ///     number-based; always returns characters where xER >= 0
+        /// </summary>
+        /// <param name="resultNum"></param>
+        /// <param name="titleText"></param>
+        /// <param name="titleUnderline"></param>
+        /// <param name="clearPageQ"></param>
+        /// <param name="options"></param>
+        /// <returns></returns>
+        public static bool TableFormMenu(out short resultNum, string titleText, char titleUnderline, params string[] options)
+        {
+            resultNum = 0;
+            bool valid = false;
+            return valid;
+        }
+        /// <summary>
+        ///     Creates an options menu in the form of a list. Includes menu validation.
+        /// </summary>
+        /// <param name="resultKey">String-based result key. Is <c>null</c> if the selected option is invalid.</param>
+        /// <param name="titleText">REQUIRED.</param>
+        /// <param name="titleUnderline">If <c>null</c>, will use the <see cref="cTHB"/> ('▀') as an underline.</param>
+        /// <param name="prompt">Prompt line to urge selection of an opiton. If <c>null</c>, will use a default prompt.</param>
+        /// <param name="placeholder">Pretext denoting the desired input or ushering for an input. If <c>null</c>, will use a default placeholder. Limit of 50 characters.</param>
+        /// <param name="indentOptsQ">Whether to indent the list optitons.</param>
+        /// <param name="clearPageQ"></param>
+        /// <param name="options">REQUIRED.</param>
+        /// <returns>A boolean representing the validation of the option selected from the list menu.</returns>
+        public static bool ListFormMenu(out string resultKey, string titleText, char? titleUnderline, string prompt, string placeholder, bool indentOptsQ,  params string[] options)
+        {
+            resultKey = null;
+            bool valid = false;
+
+            Dbug.StartLogging("List Form Menu Debug");
+            if (options.HasElements() && titleText.IsNotNE())
+            {
+                // build menu keys
+                Dbug.Log($"Recieved --> '{options.Length}' options; '{titleText}' as menu title; '{titleUnderline}' as underline; '{prompt}' as prompt; '{placeholder}' as placeholder.");
+                string optKeys = "";
+                int countInvalidOpts = 0;
+                List<string> optionsFltrd = new List<string>();
+                for (int i = 0; i < options.Length; i++)
+                {
+                    if (options[i].IsNotNEW())
+                    {
+                        optionsFltrd.Add(options[i].Trim());
+                        optKeys += $"{IntToAlphabet(i - countInvalidOpts).ToString().ToLower()} ";
+                    }
+                    else countInvalidOpts++;
+                }
+
+                // filter and prep data
+                optKeys = optKeys.Trim();
+                Dbug.LogPart($"Prep --> Filtered options count is '{optionsFltrd.Count}'; Generated option keys [{optKeys}]; Edited placeholder? ");
+                if (placeholder.IsNotNEW())
+                {
+                    Dbug.LogPart($"{placeholder.Length > 50}");
+                    if (placeholder.Length > 50)
+                        placeholder = placeholder.Remove(51);
+                }
+                Dbug.Log(";");
+
+
+                // print menu & validate menu options
+                Dbug.LogPart("Printing --> ");
+                if (optionsFltrd.HasElements())
+                {
+                    Dbug.LogPart($"Indent List Options? {indentOptsQ}; Using default prompt? {!prompt.IsNotNEW()}  //  ");
+
+                    // print menu
+                    Title(titleText, titleUnderline.HasValue ? titleUnderline.Value : DefaultTitleUnderline);
+                    MenuMessageTrigger();
+
+                    if (!indentOptsQ)
+                        HoldNextListOrTable();
+                    List(OrderType.Ordered_Alphabetical_LowerCase, optionsFltrd.ToArray());
+                    if (!indentOptsQ)
+                        Format(LatestListPrintText.Replace("\t",""), ForECol.Normal);
+
+                    Format(prompt.IsNotNEW() ? prompt : $"{Ind24}Select option >> ", ForECol.Normal);
+
+                    // validate menu options
+                    valid = MenuOptions(Input(placeholder, GetForeColor(ForECol.InputColor)), out resultKey, optKeys.Split(' '));
+                    Dbug.LogPart($"Input recieved [{LastInput}] (colored in '{GetForeColor(ForECol.InputColor)}');  Valid [{valid}];  Result Key [{resultKey}]");
+                }
+                Dbug.Log(" --> DONE");
+            }
+            Dbug.EndLogging();
+            return valid;
+        }
+        public static void MenuMessageQueue(bool trueCondition, bool isWarning, string incorrectionMessage)
+        {
+            if (trueCondition)
+            {
+                if (!incorrectionMessage.IsNotNEW() && !isWarning)
+                    incorrectionMessage = "Invalid option selected.";
+
+                if (incorrectionMessage.IsNotNEW())
+                {
+                    _isMenuMessageInQueue = true;
+                    _isWarningMenuMessageQ = isWarning;
+                    if (isWarning)
+                        _menuMessage = "[!] ";
+                    else _menuMessage = "[X] ";
+                    _menuMessage += incorrectionMessage.Trim();
+                }
+            }
+        }
+        static void MenuMessageTrigger()
+        {
+            if (_isMenuMessageInQueue)
+            {
+                FormatLine(_menuMessage, _isWarningMenuMessageQ ? ForECol.Warning: ForECol.Incorrection);
+                _isMenuMessageInQueue = false;
+                _isWarningMenuMessageQ = false;
+                _menuMessage = null;
+            }
+        }
     }
 }

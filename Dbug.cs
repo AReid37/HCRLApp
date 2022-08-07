@@ -7,6 +7,8 @@ namespace HCResourceLibraryApp
     /// </summary>
     public static class Dbug
     {
+        // IDEA -- Give Dbug.cs file-writing ability so that debug's can be logged and viewed outside of IDE
+        //          ^^ only if a file does not exist with this functionality
         static bool relayDbugLogs;
         static string sessionName;
         static string partialLog;

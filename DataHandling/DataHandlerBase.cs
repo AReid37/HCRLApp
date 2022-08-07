@@ -26,6 +26,7 @@ namespace HCResourceLibraryApp.DataHandling
             bool noIssues = true;
             if (dataHandlers.HasElements())
             {
+                Base.SetFileLocation(FileLocation);
                 noIssues = RestartMainEncoding();
                 for (int i = 0; i < dataHandlers.Length && noIssues; i++)
                 {
