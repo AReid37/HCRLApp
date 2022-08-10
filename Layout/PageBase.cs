@@ -4,6 +4,7 @@ using static ConsoleFormat.Base;
 using static ConsoleFormat.Minimal;
 using ConsoleFormat;
 using HCResourceLibraryApp.DataHandling;
+using System.Diagnostics;
 
 namespace HCResourceLibraryApp.Layout
 {
@@ -52,7 +53,7 @@ namespace HCResourceLibraryApp.Layout
         static Preferences _preferencesRef;
         static readonly string FormatUsageKey = "`";
         const char DefaultTitleUnderline = cTHB;
-        static string _menuMessage;
+        static string _menuMessage, _incorrectionMessage;
         static bool _isMenuMessageInQueue, _isWarningMenuMessageQ;
 
 
@@ -196,7 +197,6 @@ namespace HCResourceLibraryApp.Layout
 
                 //List<short> insertIndexes = new List<short>();
                 short highlightIndex = 0;
-                //Dbug.SetIndent(1);
                 foreach (string highText in highlightedTexts)
                 {
                     Dbug.LogPart($".  |highlightedText (@ index #{highlightIndex}) --> ");
@@ -213,7 +213,6 @@ namespace HCResourceLibraryApp.Layout
                     else Dbug.Log("null or empty highlightedText~");
                     highlightIndex++;
                 }
-                //Dbug.SetIndent(0);
 
                 string[] textWords = text.Split(' ');
                 for (int c = 0; c < textWords.Length; c++)
@@ -293,7 +292,90 @@ namespace HCResourceLibraryApp.Layout
             }
             Dbug.EndLogging();
         }
-        
+        /// <summary>Input placeholder character limit: 50 characters. <br></br>Placeholder color cannot be changed.</summary>
+        public static string StyledInput(string placeholder)
+        {
+            string input = Input(placeholder, _preferencesRef.Input);
+            return input;
+        }
+
+        // -- -- Validations -- --
+        /// <summary>Queues an incorrection message for input validations</summary>
+        /// <param name="message">If <c>null</c>, will clear incorrection messages.</param>
+        public static void IncorrectionMessageQueue(string message)
+        {
+            if (message.IsNEW())
+                _incorrectionMessage = null;
+            else _incorrectionMessage = message;
+        }
+        /// <summary>Triggers a queued incorection message for input validation.</summary>
+        /// <param name="pretext">Precedes the incorrection message.</param>
+        public static void IncorrectionMessageTrigger(string pretext)
+        {
+            if (_incorrectionMessage.IsNotNEW())
+            {
+                if (pretext.IsNotNEW())
+                    Format($"{pretext}{_incorrectionMessage}", ForECol.Incorrection);
+                else Format(_incorrectionMessage, ForECol.Incorrection);
+                Pause();
+            }
+        }
+        /// <summary>A confirmation prompt for yes and no</summary>
+        /// <param name="prompt"></param>
+        /// <param name="yesNo">Is <c>true</c> if "yes" to prompt, and is <c>false</c> if "no" to prompt.</param>
+        /// <param name="yesMsg">A confirmation message following after user's "yes" input.</param>
+        /// <param name="noMsg">A confirmation message following after user's "no" input.</param>
+        /// <returns>A bool stating whether the recieved input was valid.</returns>
+        public static bool Confirmation(string prompt, bool longPlaceholder, out bool yesNo, string yesMsg, string noMsg)
+        {
+            bool validInput = false;
+            yesNo = false;
+
+            if (prompt.IsNEW())
+                prompt = $"{Ind24}Are you certain of your choice?";
+
+            Format($"{prompt}", ForECol.Warning);
+            string input = StyledInput(!longPlaceholder ? "y/n" : "yes/no");
+
+            if (input.IsNotNEW())
+            {
+                if (input.Equals("yes") || input.Equals("y"))
+                {
+                    yesNo = true;
+                    validInput = true;
+                }
+                if (input.Equals("no") || input.Equals("n"))
+                {
+                    yesNo = false;
+                    validInput = true;
+                }
+            }
+
+            if (validInput && yesMsg.IsNotNEW() && noMsg.IsNotNEW())
+            {
+                Format(yesNo ? yesMsg : noMsg, yesNo ? ForECol.Correction : ForECol.Incorrection);
+                Pause();
+            }
+
+            return validInput;
+        }
+        public static bool Confirmation(string prompt, bool longPlaceholder, out bool yesNo)
+        {
+            bool validInput = Confirmation(prompt, longPlaceholder, out yesNo, null, null);
+            return validInput;
+        }
+        public static void ConfirmationResult(bool yesNoCondition, string pretext, string yesMsg, string noMsg)
+        {
+            if (yesMsg.IsNEW())
+                yesMsg = $"{Ind34}Program action confirmed.";
+            if (noMsg.IsNEW())
+                noMsg = $"{Ind34}Program action denied.";
+
+            Format($"{pretext}{(yesNoCondition ? yesMsg : noMsg)}", yesNoCondition ? ForECol.Correction : ForECol.Incorrection);
+            Pause();
+        }
+      
+
 
         // -- Menu Builds --
         /// <summary>
@@ -412,6 +494,23 @@ namespace HCResourceLibraryApp.Layout
                 _isWarningMenuMessageQ = false;
                 _menuMessage = null;
             }
+        }
+
+
+
+        // -- Other --
+        /// <summary>Halts program for some time [Range 0, 10].</summary>
+        public static void Wait(float seconds)
+        {
+            int milliSeconds = (int)(seconds.Clamp(0, 10) * 1000);
+            //Dbug.StartLogging("PageBase.Wait()");
+            Dbug.LogPart($"Waiting for {milliSeconds}ms // ");
+
+            Stopwatch watch = Stopwatch.StartNew();
+            Dbug.LogPart($"Start time: {watch.Elapsed.TotalMilliseconds}ms");
+            while (watch.ElapsedMilliseconds < milliSeconds)
+                ;
+            Dbug.Log($"-- End time: {watch.Elapsed.TotalMilliseconds}ms // Waiting complete.");
         }
     }
 }

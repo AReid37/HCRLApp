@@ -9,12 +9,16 @@ using HCResourceLibraryApp.Layout;
 namespace HCResourceLibraryApp
 {
     // THE ENTRANCE POINT, THE CONTROL ROOM
-    class Program
+    public class Program
     {
+        static string consoleTitle = "High Contrast Resource Library App [v1.0.4]";
         static bool runTest = false;
-        static Tests testToRun = Tests.PageBase_ListFormMenu;
+        static Tests testToRun = Tests.PageBase_Wait;
 
         #region fields / props
+        static bool _programRestartQ;
+        public static bool AllowProgramRestart { get => _programRestartQ; private set => _programRestartQ = value; }
+
         static DataHandlerBase dataHandler;
         static Preferences preferences;
         #endregion
@@ -25,17 +29,20 @@ namespace HCResourceLibraryApp
         static void Main()
         {
             // Lvl.0 - program launch
-            bool restartProgram = false;
+            bool restartProgram;
             do
             {
+                Clear();
+                AllowProgramRestart = false;
                 TextLine("Hello, High Contrast Resource Library App!", Color.DarkGray);
 
                 // setup
                 /// data
                 dataHandler = new DataHandlerBase();
                 preferences = new Preferences();
+                LoadData();
                 /// program function
-                Console.Title = "High Contrast Resource Library App [v1.0.3]";
+                Console.Title = consoleTitle;
                 Tools.DisableWarnError = DisableWE.None;
                 /// --v priting and pages
                 VerifyFormatUsage = true;          
@@ -97,28 +104,57 @@ namespace HCResourceLibraryApp
                             // quit
                             else
                             {
-                                TextLine("\n\nExiting Program");
-                                Pause();
-
+                                TextLine("\n\nExiting Program (also saving data .. temp)");
+                                SaveData();
                                 TextLine("\n\n**REMEMBER** Test the published version of the application frequently!!".ToUpper(), Color.White);
                                 mainMenuQ = false;
                             }
                         }
 
-                    } while (mainMenuQ);
+                    } while (mainMenuQ && !AllowProgramRestart);
                 }
 
+                restartProgram = AllowProgramRestart;
+                if (AllowProgramRestart)
+                {
+                    Clear();
+                    NewLine(10);
+                    HorizontalRule(cLS);
+                    Title(" Restarting Program ", cMS, 0);
+                    HorizontalRule(cLS, 2);
+
+                    Format("\tPlease wait a few seconds...", ForECol.Accent);
+                    Wait(3);
+                }
             }
             while (restartProgram);
         }
 
+        public static void RequireRestart()
+        {
+            // for now
+            SaveData();
+
+            AllowProgramRestart = true;
+        }
+
+        // Global Data handling resources
+        public static void SaveData()
+        {
+            dataHandler.SaveToFile(preferences);
+        }
+        public static void LoadData()
+        {
+            dataHandler.LoadFromFile(preferences);
+        }
 
         // testing stuff
         enum Tests
         {
             PageBase_HighlightMethod,
             PageBase_ListFormMenu,
-            PageBase_TableFormMenu,
+            PageBase_Wait,
+            //PageBase_TableFormMenu,
             //PageBase_ColorMenu,
             //PageBase_NavigationBar
         }
@@ -127,6 +163,7 @@ namespace HCResourceLibraryApp
             if (runTest)
             {
                 // tests title
+                Clear();
                 Title("Running Test", cMS, 0);
                 string testName = "";
                 foreach (char c in testToRun.ToString())
@@ -165,7 +202,17 @@ namespace HCResourceLibraryApp
                     while (!valid)
                         valid = ListFormMenu(out optKey, "Other Example Menu", '=', $"{Ind24}Custom selection prompt >> ", "~~~~", true, "Option5,Option6,Option7,Option8,,Option9".Split(','));
                 }
+                else if (testToRun == Tests.PageBase_Wait)
+                {
+                    Text("Testing wait (for 1 second)");
+                    Wait(1);
+                    Text("Testing wait (for 0.25 second)");
+                    Wait(0.25f);
+                    Text("Testing wait (for 4 second)");
+                    Wait(4);
+                    Text("Testing end.");
 
+                }
 
                 if (hasDebugQ)
                     TextLine("\n\n## Debug(s) to output have been ran ##", Color.Maroon);

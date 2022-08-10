@@ -28,6 +28,16 @@ namespace HCResourceLibraryApp
                     hasVal = true;
             return hasVal;
         }
+        /// <summary>Checks if a string value is null or empty.</summary>
+        public static bool IsNE(this string s)
+        {
+            return !s.IsNotNE();
+        }
+        /// <summary>Checks if a string value is null, empty, or whitespaced.</summary>
+        public static bool IsNEW(this string s)
+        {
+            return !s.IsNotNEW();
+        }
         public static bool IsNotNull(this char c)
         {
             return c != '\0';
@@ -45,8 +55,8 @@ namespace HCResourceLibraryApp
         {
             float heightScale = dh switch
             {
-                DimHeight.Squished => 0.2f,
-                DimHeight.Short => 0.4f,
+                DimHeight.Squished => 0.4f,
+                DimHeight.Short => 0.5f,
                 DimHeight.Normal => 0.6f,
                 DimHeight.Tall => 0.8f,
                 DimHeight.Fill => 1.0f,
@@ -58,14 +68,26 @@ namespace HCResourceLibraryApp
         {
             float widthScale = dw switch
             {
-                DimWidth.Thin => 0.2f,
-                DimWidth.Slim => 0.4f,
+                DimWidth.Thin => 0.4f,
+                DimWidth.Slim => 0.5f,
                 DimWidth.Normal => 0.6f,
                 DimWidth.Broad => 0.8f,
                 DimWidth.Fill => 1.0f,
                 _ => 0.0f
             };
             return widthScale;
+        }
+        public static int Clamp(this int i, int valueA, int valueB)
+        {
+            return valueA <= valueB ? Math.Clamp(i, valueA, valueB) : Math.Clamp(i, valueB, valueA);
+        }
+        public static short Clamp(this short s, short valueA, short valueB)
+        {
+            return valueA <= valueB ? Math.Clamp(s, valueA, valueB) : Math.Clamp(s, valueB, valueA);
+        }
+        public static float Clamp(this float f, float valueA, float valueB)
+        {
+            return valueA <= valueB ? Math.Clamp(f, valueA, valueB) : Math.Clamp(f, valueB, valueA);
         }
 
 
@@ -112,7 +134,7 @@ namespace HCResourceLibraryApp
                 }
             }
 
-            Dbug.SingleLog("Extensions.Decode(this s, out c)", $"Parsed [{parsed}]; string [{s}], returned color [{c}]");
+            //Dbug.SingleLog("Extensions.Decode(this s, out c)", $"Parsed [{parsed}]; string [{s}], returned color [{c}]");
             return parsed;
         }
     }

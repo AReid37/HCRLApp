@@ -39,22 +39,42 @@ namespace HCResourceLibraryApp.DataHandling
             
             return noIssues;
         }
+        /// <summary>Handles file loading of all data-handling subclasses passed as parameters.</summary>
+        public virtual bool LoadFromFile(params DataHandlerBase[] dataHandlers)
+        {
+            bool noIssues = true;
+            if (dataHandlers.HasElements())
+            {
+                Base.SetFileLocation(FileLocation);
+                for (int i = 0; i < dataHandlers.Length && noIssues; i++)
+                {
+                    if (dataHandlers[i] != null)
+                        noIssues = dataHandlers[i].DecodeFromSharedFile();
+                }
+                if (!noIssues)
+                    Dbug.SingleLog("DataHandlerBase.LoadFromFile()", $"Issue [Error]: {Tools.GetRecentWarnError(false, true)}");
+            }
 
+            return noIssues;
+        }
         /// <summary>Clears information from main file.</summary>
         private bool RestartMainEncoding()
         {
             return Base.FileWrite(true, null, "HCRLA-datafile");
         }
+
+
         // same as "Save to File"
-        internal virtual bool EncodeToSharedFile()
+        protected virtual bool EncodeToSharedFile()
         {
             // write using CF class library and info from dataLines
             return false;
         }
         // same as "Load from File"
-        internal virtual void DecodeFromSharedFile()
+        protected virtual bool DecodeFromSharedFile()
         {
             // read using CF class library and datakey
+            return false;
         }
     }
 

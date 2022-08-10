@@ -34,6 +34,7 @@ namespace HCResourceLibraryApp.DataHandling
     public class Preferences : DataHandlerBase
     {
         #region props / fields
+        Preferences previousSelf;
         const Color defNormal = Color.Gray, defHighlight = Color.Yellow, defAccent = Color.DarkGray, defCorrection = Color.Green, defIncorrection = Color.Red, defWarning = Color.Yellow, defHeading1 = Color.White, defHeading2 = Color.Gray, defInput = Color.Yellow;
         Color _normal, _highlight, _accent, _correction, _incorrection, _warning, _heading1, _heading2, _input;
         DimHeight _dimHeightScale;
@@ -117,6 +118,8 @@ namespace HCResourceLibraryApp.DataHandling
             Input = Color.Black;
             HeightScale = defHeightScale;
             WidthScale = defWidthScale;
+
+            previousSelf = (Preferences)this.MemberwiseClone();
         }
 
         // FILE SYNTAX - PREFERENCES
@@ -130,7 +133,7 @@ namespace HCResourceLibraryApp.DataHandling
         //      tag ->  {commontag}
         //      line -> {hei}*{wid}
 
-        internal override bool EncodeToSharedFile()
+        protected override bool EncodeToSharedFile()
         {
             List<string> prefDataLines = new List<string>();
 
@@ -143,6 +146,190 @@ namespace HCResourceLibraryApp.DataHandling
             // encode data
             return Base.FileWrite(false, commonFileTag, prefDataLines.ToArray());
         }
+        protected override bool DecodeFromSharedFile()
+        {
+            Dbug.StartLogging("Preferences.DecodeFromSharedFile()");
+            bool decodedPrefsDataQ = Base.FileRead(commonFileTag, out string[] prefsDataLines);
+
+            Dbug.Log($"Fetching file data (using tag '{commonFileTag}')  //  Successfully read from file? {decodedPrefsDataQ};  {nameof(prefsDataLines)} has elements? {prefsDataLines.HasElements()}");
+            if (decodedPrefsDataQ && prefsDataLines.HasElements())
+            {
+                for (int line = 0; line < prefsDataLines.Length && decodedPrefsDataQ; line++)
+                {
+                    string dataLine = prefsDataLines[line];
+                    Dbug.Log($"Decoding  L{line + 1}| {dataLine}");
+                    Dbug.SetIndent(1);
+
+                    switch (line)
+                    {
+                        // color
+                        case 0:
+                            Dbug.LogPart(">> Decoding Color -->  ");
+                            string[] colorsText = dataLine.Split(AstSep);
+                            if (colorsText.HasElements())
+                            {
+                                for (int ctIx = 0; ctIx < colorsText.Length && decodedPrefsDataQ; ctIx++)
+                                {
+                                    string clsTxt = colorsText[ctIx];
+                                    bool parsedColor = clsTxt.Decode(out Color foreColor);
+
+                                    string foreColName = ctIx switch
+                                    {
+                                        0 => "Normal",
+                                        1 => "Highlight",
+                                        2 => "Accent",
+                                        3 => "Correction",
+                                        4 => "Incorrection",
+                                        5 => "Warning",
+                                        6 => "Heading1",
+                                        7 => "Heading2",
+                                        8 => "Input",
+                                        _ => null
+                                    };
+
+                                    Dbug.Log($"Parsed color for '{foreColName}'? {parsedColor} [got '{foreColor}']");
+                                    if (parsedColor)
+                                    {
+                                        switch (ctIx)
+                                        {
+                                            case 0:
+                                                Normal = foreColor;
+                                                break;
+
+                                            case 1:
+                                                Highlight = foreColor;
+                                                break;
+
+                                            case 2:
+                                                Accent = foreColor;
+                                                break;
+
+                                            case 3:
+                                                Correction = foreColor;
+                                                break;
+
+                                            case 4:
+                                                Incorrection = foreColor;
+                                                break;
+
+                                            case 5:
+                                                Warning = foreColor;
+                                                break;
+
+                                            case 6:
+                                                Heading1 = foreColor;
+                                                break;
+
+                                            case 7:
+                                                Heading2 = foreColor;
+                                                break;
+
+                                            case 8:
+                                                Input = foreColor;
+                                                break;
+                                        }
+                                    }
+                                    decodedPrefsDataQ = parsedColor;
+                                }
+                            }
+                            Dbug.Log("<< End Decoding Color");
+                            break;
+
+                        // dimensions
+                        case 1:
+                            Dbug.Log(">> Decoding Window Dims -->  ");
+                            string[] dimsText = dataLine.Split(AstSep);
+                            if (dimsText.HasElements())
+                            {
+                                for (int dimIx = 0; dimIx < dimsText.Length; dimIx++)
+                                {
+                                    string dimText = dimsText[dimIx];
+                                    Dbug.Log($"Parsing for '{(dimIx == 0 ? "Height" : "Width")} Scale' -->  Recieved value '{dimText}'");
+
+                                    if (dimText.IsNotNEW())
+                                    {
+                                        // height 
+                                        if (dimIx == 0)
+                                        {
+                                            DimHeight[] dimsH = (DimHeight[])Enum.GetValues(typeof(DimHeight));
+                                            if (dimsH.HasElements())
+                                            {
+                                                bool parseHeight = false;
+                                                for (int dh = 0; dh < dimsH.Length && !parseHeight; dh++)
+                                                {
+                                                    parseHeight = dimText == dimsH[dh].ToString();
+                                                    if (parseHeight)
+                                                        HeightScale = dimsH[dh];
+
+                                                    Dbug.LogPart($"-> '{dimsH[dh]}'? [{(parseHeight ? "T": "f")}];  ");
+                                                }
+                                            }
+                                        }
+                                        // width
+                                        if (dimIx == 1)
+                                        {
+                                            DimWidth[] dimsW = (DimWidth[])Enum.GetValues(typeof(DimWidth));
+                                            if (dimsW.HasElements())
+                                            {
+                                                bool parsedWidth = false;
+                                                for (int dw = 0; dw < dimsW.Length && !parsedWidth; dw++)
+                                                {
+                                                    parsedWidth = dimText == dimsW[dw].ToString();
+                                                    if (parsedWidth)
+                                                        WidthScale = dimsW[dw];
+
+                                                    Dbug.LogPart($"-> '{dimsW[dw]}'? [{(parsedWidth ? "T" : "f")}];  ");
+                                                }
+                                            }
+                                        }
+                                    }
+                                    Dbug.Log($" .. End parsing for '{(dimIx == 0 ? "Height" : "Width")} Scale'");
+                                }
+                            }
+                            Dbug.Log("<< End Decoding Window Dims");
+                            break;
+                    }
+                    Dbug.SetIndent(0);
+                }
+
+                
+            }
+            Dbug.Log($"End decoding for Preferences -- successful decoding? {decodedPrefsDataQ}");
+            Dbug.EndLogging();
+            return decodedPrefsDataQ;
+        }
+        // decodeFromSharedFile --> previousSelf must become a new MemberwiseClone from decoded data
+
+        public bool ChangesMade()
+        {
+            // detecting "changes made" could just be a comparision between values of two different Preferences objects
+            bool endChecks = false;
+            bool changesMade = false;
+            for (int checkNum = 0; !endChecks; checkNum++)
+            {
+                changesMade = checkNum switch
+                {
+                    0 => Normal != previousSelf.Normal,
+                    1 => Highlight != previousSelf.Highlight,
+                    2 => Accent != previousSelf.Accent,
+                    3 => Correction != previousSelf.Correction,
+                    4 => Incorrection != previousSelf.Incorrection,
+                    5 => Warning != previousSelf.Warning,
+                    6 => Heading1 != previousSelf.Heading1,
+                    7 => Heading2 != previousSelf.Heading2,
+                    8 => Input != previousSelf.Input,
+                    9 => HeightScale != previousSelf.HeightScale,
+                    10 => WidthScale != previousSelf.WidthScale,
+                    _ => false
+                };
+
+                if (changesMade || checkNum >= 10)
+                    endChecks = true;
+            }
+            return changesMade;
+        }
+
+
         public void GetScreenDimensions(out int trueHeight, out int trueWidth)
         {
             int maxHeight = Console.LargestWindowHeight;
@@ -152,8 +339,14 @@ namespace HCResourceLibraryApp.DataHandling
             trueHeight = (int)(maxHeight * heightScale);
             trueWidth = (int)(maxWidth * widthScale);
         }
-        // public void GetScreenDimensions (out int, out int, DimHeight, DimWidth)
+        public static void GetScreenDimensions(out int trueHeight, out int trueWidth, DimHeight height, DimWidth width)
+        {
+            int maxHeight = Console.LargestWindowHeight;
+            int maxWidth = Console.LargestWindowWidth;
 
-        // detecting "changes made" could just be a comparision between values of two different Preferences objects
+            trueHeight = (int)(maxHeight * height.GetScaleFactorH());
+            trueWidth = (int)(maxWidth * width.GetScaleFactorW());
+        }
+
     }
 }
