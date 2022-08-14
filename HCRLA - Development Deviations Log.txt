@@ -35,7 +35,7 @@ Implemented base class for data-handling classes (DataHandlerBase.cs).
 2# [ ]
 Added a ninth Foreground Element Color to Preferences for the user's input color.
 	- There originally were only eight colors, neither denoted for the user's input.
-	+ Just an extra customization option for Foreground elements.
+	+ Just an extra customization option for Foreground elements. Changes also made to Visual customization example for Foreground Element Colors (minor additions).
 
 3# [ ]
 Changed the percentages on the first two options for both Height and Width window dimensions.

@@ -45,6 +45,74 @@ namespace HCResourceLibraryApp.DataHandling
 
         // PROPS
         // -- colors --
+        /// <summary>
+        ///     A quick way of getting and setting the foreground element colors by their index.
+        /// </summary>
+        /// <param name="colIndex">Foreground element indicies ::  0,Nor - 1,Hig - 2,Acc - 3,Cor - 4,Inc - 5,War - 6,He1 - 7,He2 - 8,Inp.</param>
+        /// <returns>The color of the appropriate foreground element.</returns>
+        public Color this[int colIndex]
+        {
+            get
+            {
+                colIndex = colIndex.Clamp(0, 8);
+                Color elementColor = colIndex switch
+                {
+                    0 => Normal,
+                    1 => Highlight,
+                    2 => Accent,
+                    3 => Correction,
+                    4 => Incorrection,
+                    5 => Warning,
+                    6 => Heading1,
+                    7 => Heading2,
+                    8 => Input,
+                    _ => Color.Black // should never be hit
+                };
+                return elementColor;
+            }
+            set
+            {
+                colIndex = colIndex.Clamp(0, 8);
+                switch (colIndex)
+                {
+                    case 0:
+                        Normal = value;
+                        break;
+
+                    case 1:
+                        Highlight = value;
+                        break;
+
+                    case 2:
+                        Accent = value;
+                        break;
+
+                    case 3:
+                        Correction = value;
+                        break;
+
+                    case 4:
+                        Incorrection = value;
+                        break;
+
+                    case 5:
+                        Warning = value;
+                        break;
+
+                    case 6:
+                        Heading1 = value;
+                        break;
+
+                    case 7:
+                        Heading2 = value;
+                        break;
+
+                    case 8:
+                        Input = value;
+                        break;
+                }
+            }
+        }
         public Color Normal
         {
             get => _normal;
@@ -294,11 +362,15 @@ namespace HCResourceLibraryApp.DataHandling
 
                 
             }
+
+            // decodeFromSharedFile --> previousSelf must become a new MemberwiseClone from decoded data
+            previousSelf = (Preferences)this.MemberwiseClone();
+            Dbug.Log($"Cloned preferences data to 'previousSelf'; Confirmed to be the same? {!ChangesMade()}");
+
             Dbug.Log($"End decoding for Preferences -- successful decoding? {decodedPrefsDataQ}");
             Dbug.EndLogging();
             return decodedPrefsDataQ;
         }
-        // decodeFromSharedFile --> previousSelf must become a new MemberwiseClone from decoded data
 
         public bool ChangesMade()
         {
@@ -328,7 +400,41 @@ namespace HCResourceLibraryApp.DataHandling
             }
             return changesMade;
         }
+        /// <summary>Compares another <see cref="Preferences"/> instance to this instance for similarity in values.</summary>
+        /// <returns>A boolean representing whether the values of the compared preferences matches those of this instance.</returns>
+        public bool Compare(Preferences other)
+        {
+            bool endChecks = false;
+            int countNoMatch = 0;
+            for (int checkMatch = 0; !endChecks; checkMatch++)
+            {
+                bool match = checkMatch switch
+                {
+                    0 => Normal == other.Normal,
+                    1 => Highlight == other.Highlight,
+                    2 => Accent == other.Accent,
+                    3 => Correction == other.Correction,
+                    4 => Incorrection == other.Incorrection,
+                    5 => Warning == other.Warning,
+                    6 => Heading1 == other.Heading1,
+                    7 => Heading2 == other.Heading2,
+                    8 => Input == other.Input,
+                    9 => HeightScale == other.HeightScale,
+                    10 => WidthScale == other.WidthScale,
+                    _ => false
+                };
+                if (!match)
+                    countNoMatch++;
 
+                if (checkMatch >= 10)
+                    endChecks = true;
+            }
+            return countNoMatch == 0;
+        }
+        public Preferences ShallowCopy()
+        {
+            return (Preferences)this.MemberwiseClone();
+        }
 
         public void GetScreenDimensions(out int trueHeight, out int trueWidth)
         {

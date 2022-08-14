@@ -17,9 +17,6 @@ namespace HCResourceLibraryApp.Layout
         }
         public static void OpenPage()
         {
-            //TextLine("\nSettings Page has been opened");
-            //Pause();
-
             bool exitSettingsMain = false;
             do
             {
@@ -49,13 +46,19 @@ namespace HCResourceLibraryApp.Layout
                     }
                 }
             }
-            while (!exitSettingsMain && !Program.AllowProgramRestart);            
+            while (!exitSettingsMain && !Program.AllowProgramRestart);
+
+            // auto-save preferences
+            if (_preferencesRef.ChangesMade())
+                Program.SaveData();
         }
 
+        // done
         static void SubPage_Preferences()
         {
             bool exitSetPrefsMenu = false;
             string activeMenuKey = null;
+            Preferences newForeCols = _preferencesRef.ShallowCopy();
             do
             {
                 // settings - preferences main menu
@@ -85,11 +88,10 @@ namespace HCResourceLibraryApp.Layout
                     Clear();
                     Title(titleText, subMenuUnderline, 2);
 
+
                     // window dimensions editor
                     if (setPrefsKey.Equals("a"))
                     {
-                        //TextLine("Accessing Window Dimensions Editor\n");
-
                         DimHeight currHeightScale = _preferencesRef.HeightScale;
                         DimWidth currWidthScale = _preferencesRef.WidthScale;
                         string dimsPercents = $"{currHeightScale.GetScaleFactorH() * 100:0}% {currWidthScale.GetScaleFactorW() * 100:0}%";
@@ -230,13 +232,197 @@ namespace HCResourceLibraryApp.Layout
                             endActiveMenuKey = true;
                     }
 
-
                     // foreground elements (color) editor
                     else if (setPrefsKey.Equals("b"))
                     {
-                        TextLine("Accessing Foreground Elements Editor");
-                        endActiveMenuKey = true;
-                        Pause();
+                        // foreground preview visual
+                        #region foreground preview
+                        Title("Foreground Preview");
+                        const string previewDiv = "---------------------------------------";
+
+                        FormatLine(previewDiv, ForECol.Accent);
+                        TextLine("Heading 1".ToUpper(), newForeCols.Heading1);
+                        TextLine("=========", newForeCols.Accent);
+
+                        Text("* ", newForeCols.Accent);
+                        Text("Normal", newForeCols.Normal);
+                        Text(" highlight", newForeCols.Highlight);
+                        TextLine(" normal.", newForeCols.Normal);
+                        NewLine();
+
+                        //Text("# ", newForeCols.Accent);
+                        TextLine("Heading 2", newForeCols.Heading2);
+                        Text("Warning Message? ", newForeCols.Warning);
+                        TextLine("Input", newForeCols.Input);
+
+                        Text($"{Ind24}Confirm", newForeCols.Correction);
+                        Text(" / ", newForeCols.Accent);
+                        TextLine("Deny", newForeCols.Incorrection);
+                        FormatLine(previewDiv, ForECol.Accent);
+                        #endregion
+                        NewLine();
+                        ShowPrefsColors(newForeCols);                        
+                        FormatLine("0|Reset to defaults", ForECol.Normal);
+                        NewLine();
+
+                        // Menu validation and actions
+                        FormatLine($"{Ind24}A restart is required after changing the foreground element colors.", ForECol.Accent);
+                        Format($"{Ind24}Select an option (0~9) >> #", ForECol.Normal);
+                        bool menuPass = MenuOptions(StyledInput(null), out short tableOptNumber, "0 1 2 3 4 5 6 7 8 9".Split(' '));
+                        if (menuPass)
+                        {
+                            string[] foreColOptions =
+                            {
+                                "Reset to Defaults", "Normal", "Highlight", "Accent", "Correction", "Incorrection", "Warning", "Heading 1", "Heading 2", "Input"
+                            };
+                            string foreOption = tableOptNumber == 0 ? foreColOptions[tableOptNumber] : $"Edit {foreColOptions[tableOptNumber]} Color";
+
+                            // edit colors
+                            if (tableOptNumber != 0)
+                            {
+                                Clear();
+                                HorizontalRule(subMenuUnderline);
+                                //Important(foreOption);
+
+                                int fecIndex = tableOptNumber - 1;
+                                Color exemptCol = newForeCols[fecIndex];
+                                bool valid = exemptCol == Color.Black ? ColorMenu(foreOption, out Color fecNewCol) : ColorMenu(foreOption, out fecNewCol, exemptCol);
+                                if (valid)
+                                {
+                                    string forElement = foreColOptions[tableOptNumber];
+                                    string prompt = fecNewCol == Color.Black ? $"Reset the '{forElement}' foreground element color to its default? " : $"Change the '{forElement}' foreground element color from '{newForeCols[fecIndex]}' to '{fecNewCol}'? ";
+
+                                    NewLine();
+                                    Confirmation($"{Ind24}{prompt}", false, out bool yesNo, $"{Ind34}Color of '{forElement}' foreground element will be changed to '{fecNewCol}'.", $"{Ind34}Color of '{forElement}' foreground element will not be changed.");
+                                    if (yesNo)
+                                        newForeCols[fecIndex] = fecNewCol;
+                                }
+                                else
+                                {
+                                    Format($"{Ind34}No option selected from color menu.", ForECol.Incorrection);
+                                    Pause();
+                                }
+                            }
+                            
+                            // reset to defaults
+                            else
+                            {
+                                NewLine(2);
+                                Title(foreOption);
+                                Confirmation($"{Ind24}Do you wish to reset the foreground element colors to their defaults? ", false, out bool yesNo, $"{Ind34}Resetting foreground element colors to their defaults.", $"{Ind34}Foreground element colors will not be reset.");
+                                
+                                if (yesNo)
+                                    newForeCols = new Preferences();
+                            }
+                        }
+
+                        // review and finally confirm changes before exiting
+                        else
+                        {
+                            if (!_preferencesRef.Compare(newForeCols))
+                            {
+                                Clear();
+                                Title("Confirm Foreground Element Color Edits", '.', 0);
+                                FormatLine("Below are comparisons between the current and edited foreground preferences.", ForECol.Accent);
+                                
+                                FormatLine("Current Foreground Colors:".ToUpper(), ForECol.Heading2);
+                                ShowPrefsColors(_preferencesRef);
+                                NewLine();
+                                FormatLine("Edited Foreground Colors:".ToUpper(), ForECol.Heading2);
+                                ShowPrefsColors(newForeCols);
+
+                                NewLine(2);
+                                Confirmation($"{Ind24}Do you confirm the changes to foreground element colors? ", true, out bool yesNo, $"{Ind34}Foreground element colors will be updated.", $"{Ind34}Foreground element colors will remain as they were.");
+
+                                if (yesNo)
+                                {
+                                    NewLine();
+                                    FormatLine($"{Ind14}NOTICE ::\n{Ind24}Without a restart, foreground elements will be a messy mix of the new and old!", ForECol.Warning);
+                                    Confirmation($"{Ind24}Do you wish to restart the program now? ", true, out bool restartQ, $"{Ind34}Program will restart...", $"{Ind34}Program will not restart.");
+
+                                    // ask to restart
+                                    if (restartQ)
+                                        Program.RequireRestart();
+
+                                    _preferencesRef.Normal = newForeCols.Normal;
+                                    _preferencesRef.Highlight = newForeCols.Highlight;
+                                    _preferencesRef.Accent = newForeCols.Accent;
+                                    _preferencesRef.Correction = newForeCols.Correction;
+                                    _preferencesRef.Incorrection = newForeCols.Incorrection;
+                                    _preferencesRef.Warning = newForeCols.Warning;
+                                    _preferencesRef.Heading1 = newForeCols.Heading1;
+                                    _preferencesRef.Heading2 = newForeCols.Heading2;
+                                    _preferencesRef.Input = newForeCols.Input;
+                                }
+                                else
+                                    newForeCols = _preferencesRef.ShallowCopy();
+                            }
+                            else
+                            {
+                                NewLine();
+                                Format($"{Ind24}No changes were made to the foreground element colors.", ForECol.Normal);
+                                Pause();
+                            }
+                            endActiveMenuKey = true;
+                        }
+
+
+                        // colors visual method
+                        static void ShowPrefsColors(Preferences prefs)
+                        {
+                            /// get colors
+                            Color[,] prefCols = new Color[3, 3]
+                            {
+                                { prefs.Normal, prefs.Highlight, prefs.Accent },
+                                { prefs.Correction, prefs.Incorrection, prefs.Warning },
+                                { prefs.Heading1, prefs.Heading2, prefs.Input }
+                            };
+
+                            /// print table of colors
+                            for (int fecIx = 0; fecIx < 3; fecIx++)
+                            {
+                                HoldNextListOrTable();
+                                const char div = '%', tableDiv = ' ', exChar = cDS; // exChar meaning "example (representational) character"
+                                switch (fecIx)
+                                {
+                                    // normal, highlight, accent
+                                    case 0:
+                                        Table(Table3Division.Even, $"1{div} Normal", tableDiv, $"2{div} Highlight", $"3{div} Accent");
+                                        break;
+
+                                    // correction, incorrection, warning
+                                    case 1:
+                                        Table(Table3Division.Even, $"4{div} Correction", tableDiv, $"5{div} Incorrection", $"6{div} Warning");
+                                        break;
+
+                                    // heading 1, heading 2, input
+                                    case 2:
+                                        Table(Table3Division.Even, $"7{div} Heading 1", tableDiv, $"8{div} Heading 2", $"9{div} Input");
+                                        break;
+                                }
+
+                                if (LatestTablePrintText.IsNotNEW())
+                                    if (LatestTablePrintText.Contains(div.ToString()))
+                                    {
+                                        string[] tableDatas = LatestTablePrintText.Split(div);
+                                        if (tableDatas.HasElements())
+                                            if (tableDatas.Length >= 4)
+                                            {
+                                                // this might be messy
+                                                for (int partIx = 0; partIx < 4; partIx++)
+                                                {
+                                                    string tableData = tableDatas[partIx].Replace("\n", "");
+                                                    if (partIx + 1 < 4)
+                                                    {
+                                                        Format($"{tableData}|", ForECol.Normal);
+                                                        Text(exChar.ToString(), prefCols[fecIx, partIx]);
+                                                    }
+                                                    else FormatLine(tableData, ForECol.Normal);
+                                                }
+                                            }
+                                    }
+                            }
+                        }
                     }
 
                     // end auto-return
@@ -248,6 +434,7 @@ namespace HCResourceLibraryApp.Layout
             }
             while (!exitSetPrefsMenu && !Program.AllowProgramRestart);
         }
+        // not done...
         static void SubPage_ContentIntegrity()
         {
             Minimal.HorizontalRule(subMenuUnderline, 2);
@@ -255,6 +442,7 @@ namespace HCResourceLibraryApp.Layout
             Minimal.List(OrderType.Unordered, "Display Contents in Library (Data IDs only)", "Verify Content Integrity", " Content Locations and File Types", " Run Verification Integrity");
             Pause();
         }
+        // not done...
         static void SubPage_Reversion()
         {
             Minimal.HorizontalRule(subMenuUnderline, 2);

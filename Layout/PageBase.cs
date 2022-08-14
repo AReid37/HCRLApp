@@ -34,8 +34,8 @@ namespace HCResourceLibraryApp.Layout
             > Format(text, formatType) 
             > Highlight(str text, params str highlightedText)
             > ChooseColorMenu(...) [number-based]
-                >> (bool compactQ, params Col exclude)
-                << (ret Col color)
+                >> (str titleText)
+                << (ret bl valid // out Col color)
                 
             
            Menu.builds
@@ -102,13 +102,13 @@ namespace HCResourceLibraryApp.Layout
 
                 // minimal customization
                 CustomizeMinimal(MinimalMethod.List, _preferencesRef.Normal, _preferencesRef.Accent);
-                CustomizeMinimal(MinimalMethod.Important, _preferencesRef.Heading1, _preferencesRef.Accent);
-                CustomizeMinimal(MinimalMethod.Table, _preferencesRef.Normal, _preferencesRef.Accent);
+                CustomizeMinimal(MinimalMethod.Important, _preferencesRef.Heading2, _preferencesRef.Accent);
+                CustomizeMinimal(MinimalMethod.Table, _preferencesRef.Normal, _preferencesRef.Normal);
                 CustomizeMinimal(MinimalMethod.Title, _preferencesRef.Heading1, _preferencesRef.Accent);
                 CustomizeMinimal(MinimalMethod.HorizontalRule, _preferencesRef.Accent, _preferencesRef.Accent);
             }
         }
-        public static Color GetForeColor(ForECol fftype)
+        public static Color GetPrefsForeColor(ForECol fftype)
         {
             Preferences prefs = _preferencesRef == null ? new Preferences() : _preferencesRef;
             Color col;
@@ -166,7 +166,7 @@ namespace HCResourceLibraryApp.Layout
                     if (text.Contains("\n"))
                         text = text.Replace("\n", $"\n{FormatUsageKey}");
                 }
-                Text(text, GetForeColor(foreElementCol));
+                Text(text, GetPrefsForeColor(foreElementCol));
             }
         }
         public static void FormatLine(string text, ForECol foreElementCol)
@@ -179,7 +179,7 @@ namespace HCResourceLibraryApp.Layout
                     if (text.Contains("\n"))
                         text = text.Replace("\n", $"\n{FormatUsageKey}");
                 }
-                TextLine(text, GetForeColor(foreElementCol));
+                TextLine(text, GetPrefsForeColor(foreElementCol));
             }
         }
         /// <summary>
@@ -325,6 +325,7 @@ namespace HCResourceLibraryApp.Layout
         /// <param name="yesNo">Is <c>true</c> if "yes" to prompt, and is <c>false</c> if "no" to prompt.</param>
         /// <param name="yesMsg">A confirmation message following after user's "yes" input.</param>
         /// <param name="noMsg">A confirmation message following after user's "no" input.</param>
+        /// <param name="longPlaceholder">If <c>true</c>, will use "yes/no" as the placeholder instead of "y/n".</param>
         /// <returns>A bool stating whether the recieved input was valid.</returns>
         public static bool Confirmation(string prompt, bool longPlaceholder, out bool yesNo, string yesMsg, string noMsg)
         {
@@ -359,6 +360,11 @@ namespace HCResourceLibraryApp.Layout
 
             return validInput;
         }
+        /// <summary>A confirmation prompt for yes and no</summary>
+        /// <param name="prompt"></param>
+        /// <param name="yesNo">Is <c>true</c> if "yes" to prompt, and is <c>false</c> if "no" to prompt.</param>
+        /// <param name="longPlaceholder">If <c>true</c>, will use "yes/no" as the placeholder instead of "y/n".</param>
+        /// <returns>A bool stating whether the recieved input was valid.</returns>
         public static bool Confirmation(string prompt, bool longPlaceholder, out bool yesNo)
         {
             bool validInput = Confirmation(prompt, longPlaceholder, out yesNo, null, null);
@@ -387,10 +393,105 @@ namespace HCResourceLibraryApp.Layout
         /// <param name="clearPageQ"></param>
         /// <param name="options"></param>
         /// <returns></returns>
-        public static bool TableFormMenu(out short resultNum, string titleText, char titleUnderline, params string[] options)
+        public static bool TableFormMenu(out short resultNum, string titleText, char? titleUnderline, bool titleSpanWidthQ, string prompt, string placeholder, short optionColumns, params string[] options)
         {
             resultNum = 0;
             bool valid = false;
+
+            Dbug.StartLogging("Table Form Menu Debug");
+            if (options.HasElements() && titleText.IsNotNEW())
+            {
+                // build menu keys
+                Dbug.Log($"Recieved --> '{options.Length}' options; '{titleText}' as menu title; '{titleUnderline}' as underline; '{prompt}' as prompt; '{placeholder}' as placeholder; '{optionColumns}' as number of option columns");
+                string optNumKeys = "";
+                int countInvalidOpts = 0;
+                List<string> optionsFltrd = new List<string>();
+                for (int t = 0; t < options.Length; t++)
+                {
+                    if (options[t].IsNotNEW())
+                    {
+                        optionsFltrd.Add(options[t].Trim());
+                        optNumKeys += $"{t + 1 - countInvalidOpts} ";
+                    }
+                    else countInvalidOpts++;
+                }
+
+                // filter and prep data
+                optNumKeys = optNumKeys.Trim();
+                Dbug.LogPart($"Prep --> Filtered options count is '{optionsFltrd.Count}'; Generated option keys [{optNumKeys}]; Edited placeholder? ");
+                if (placeholder.IsNotNEW())
+                {
+                    Dbug.LogPart($"{placeholder.Length > 50}");
+                    if (placeholder.Length > 50)
+                        placeholder = placeholder.Remove(50);
+                }
+                Dbug.LogPart($"; Edited number of option columns? {!optionColumns.IsWithin(2, 4)} [{optionColumns} -> {optionColumns.Clamp(2, 4)}]");
+                if (!optionColumns.IsWithin(2, 4))
+                    optionColumns = optionColumns.Clamp(2, 4);
+                Dbug.Log(";");
+
+                // print menu & validate menu options
+                Dbug.LogPart("Printing --> ");
+                if (optionsFltrd.HasElements())
+                {
+                    Dbug.Log($"Title spans window width? {titleSpanWidthQ}; No. option columns: {optionColumns}; Using default prompt? {prompt.IsNEW()} ");
+
+                    if (titleSpanWidthQ)
+                        Title(titleText, titleUnderline.IsNotNull() ? titleUnderline.Value : DefaultTitleUnderline, 0);
+                    else Title(titleText, titleUnderline.IsNotNull() ? titleUnderline.Value : DefaultTitleUnderline);
+                    MenuMessageTrigger();
+
+                    // table here
+                    string[] tableInfo = new string[optionColumns];
+                    Dbug.Log("Building options table");
+                    Dbug.SetIndent(1);
+                    for (int tbIx = 0; tbIx < optionsFltrd.Count; tbIx++)
+                    {
+                        int tbIxPlus1 = tbIx + 1;
+                        bool endOpts = tbIxPlus1 >= optionsFltrd.Count;
+                        bool printTable = tbIxPlus1 % optionColumns == 0; // 1%2 2%2; 
+                        Dbug.LogPart($"Opt#{tbIx} -->  End? {endOpts};  Print Table? {printTable} [{tbIxPlus1 % optionColumns}]  //  ");
+
+                        string columnOption = $"[{tbIxPlus1}] {optionsFltrd[tbIx]}";
+                        tableInfo[tbIx % optionColumns] = columnOption;
+                        Dbug.Log($"Setting {nameof(tableInfo)}[ix-{tbIx % optionColumns}] to option '{columnOption}'");
+
+                        if (printTable || endOpts)
+                        {
+                            const char tableDiv = ' ';
+                            switch (optionColumns)
+                            {
+                                case 2:
+                                    Table(Table2Division.Even, tableInfo[0], tableDiv, tableInfo[1]);
+                                    break;
+
+                                case 3:
+                                    Table(Table3Division.Even, tableInfo[0], tableDiv, tableInfo[1], tableInfo[2]);
+                                    break;
+
+                                case 4:
+                                    Table(Table4Division.Even, tableInfo[0], tableDiv, tableInfo[1], tableInfo[2], tableInfo[3]);
+                                    break;
+                            }
+
+                            tableInfo = new string[optionColumns];
+                            Dbug.Log($".. Printed table with [{optionColumns}] columns. Reset {nameof(tableInfo)}  //  Cause --> Print Table? {printTable};  Options End? {endOpts}");
+                        }
+                    }
+                    Dbug.SetIndent(0);
+
+                    Format(prompt.IsNotNEW() ? prompt : $"{Ind24}Select option >> ", ForECol.Normal);
+
+                    /// validate menu opts
+                    valid = MenuOptions(StyledInput(placeholder), out resultNum, optNumKeys.Split(' '));
+                    resultNum += 1;
+
+                    Dbug.LogPart($"Input recieved [{LastInput}] (colored in '{GetPrefsForeColor(ForECol.InputColor)}');  Valid [{valid}];  Result Number [{resultNum}]");
+                }
+                Dbug.Log(" --> DONE");
+            }
+            Dbug.EndLogging();
+
             return valid;
         }
         /// <summary>
@@ -410,8 +511,8 @@ namespace HCResourceLibraryApp.Layout
             resultKey = null;
             bool valid = false;
 
-            Dbug.StartLogging("List Form Menu Debug");
-            if (options.HasElements() && titleText.IsNotNE())
+            //Dbug.StartLogging("List Form Menu Debug");
+            if (options.HasElements() && titleText.IsNotNEW())
             {
                 // build menu keys
                 Dbug.Log($"Recieved --> '{options.Length}' options; '{titleText}' as menu title; '{titleUnderline}' as underline; '{prompt}' as prompt; '{placeholder}' as placeholder.");
@@ -444,10 +545,10 @@ namespace HCResourceLibraryApp.Layout
                 Dbug.LogPart("Printing --> ");
                 if (optionsFltrd.HasElements())
                 {
-                    Dbug.LogPart($"Indent List Options? {indentOptsQ}; Using default prompt? {!prompt.IsNotNEW()}  //  ");
+                    Dbug.LogPart($"Indent List Options? {indentOptsQ}; Using default prompt? {prompt.IsNEW()}  //  ");
 
                     // print menu
-                    Title(titleText, titleUnderline.HasValue ? titleUnderline.Value : DefaultTitleUnderline);
+                    Title(titleText, titleUnderline.IsNotNull() ? titleUnderline.Value : DefaultTitleUnderline);
                     MenuMessageTrigger();
 
                     if (!indentOptsQ)
@@ -459,8 +560,8 @@ namespace HCResourceLibraryApp.Layout
                     Format(prompt.IsNotNEW() ? prompt : $"{Ind24}Select option >> ", ForECol.Normal);
 
                     // validate menu options
-                    valid = MenuOptions(Input(placeholder, GetForeColor(ForECol.InputColor)), out resultKey, optKeys.Split(' '));
-                    Dbug.LogPart($"Input recieved [{LastInput}] (colored in '{GetForeColor(ForECol.InputColor)}');  Valid [{valid}];  Result Key [{resultKey}]");
+                    valid = MenuOptions(StyledInput(placeholder), out resultKey, optKeys.Split(' '));
+                    Dbug.LogPart($"Input recieved [{LastInput}] (colored in '{GetPrefsForeColor(ForECol.InputColor)}');  Valid [{valid}];  Result Key [{resultKey}]");
                 }
                 Dbug.Log(" --> DONE");
             }
@@ -494,6 +595,86 @@ namespace HCResourceLibraryApp.Layout
                 _isWarningMenuMessageQ = false;
                 _menuMessage = null;
             }
+        }
+        public static bool ColorMenu(string titleText, out Color color, params Color[] exempt)
+        {
+            Dbug.StartLogging("PageBase.ColorMenu");
+
+            // prep
+            Dbug.LogPart($"Using default menu title? {titleText.IsNEW()}; Exempting any options? {exempt.HasElements()} // ");
+            const char tDiv = '*';
+            const string exemptKey = "-", nRep = "%%";// "nRep" meaning "number Replace" \\ replaced by optionBullet "#|"
+            const string colBlackRename = "Default";
+            if (titleText.IsNEW())
+                titleText = $"Color Menu";
+            Color[,] tableCols =
+            {
+                { Color.Red, Color.Yellow, Color.Green, Color.White },
+                { Color.Maroon, Color.Orange, Color.Forest, Color.Gray },
+                { Color.Cyan, Color.Blue, Color.Magenta, Color.DarkGray },
+                { Color.Teal, Color.NavyBlue, Color.Purple, Color.Black }
+            };
+
+            // build table menu
+            string menuOptions = "";
+            Title(titleText, '.', 1);
+            FormatLine("Choose a color or option by their associated number from the table below.", ForECol.Accent);
+            for (int rowIx = 0; rowIx < tableCols.GetLength(0) && true; rowIx++)
+            {
+                HoldNextListOrTable();
+                Table(Table4Division.Even, $"{nRep}{tableCols[rowIx, 0]}", tDiv, $"{nRep}{tableCols[rowIx, 1]}", $"{nRep}{tableCols[rowIx, 2]}", $"{nRep}{tableCols[rowIx, 3]}");
+                if (LatestTablePrintText.IsNotNEW())
+                {
+                    string[] tableData = LatestTablePrintText.Split($"  {tDiv}  "); /// extra spaces because of Table()'s formatting
+                    if (tableData.HasElements())
+                        if (tableData.Length >= 4)
+                        {
+                            for (int clmIx = 0; clmIx < 4; clmIx++)
+                            {
+                                Color optCol = tableCols[rowIx, clmIx];
+                                string optBulletChar = $"{rowIx * 4 + clmIx + 1}";
+                                if (exempt.HasElements())
+                                {
+                                    foreach(Color exemptedCol in exempt)
+                                        if (exemptedCol == optCol)
+                                        {
+                                            optBulletChar = exemptKey;
+                                        }
+                                }
+
+                                string optionBullet = $"{optBulletChar, -2}|";
+                                menuOptions += optionBullet.Remove(2).Trim() + " ";
+                                string cTxt = $"{cLHB}{tableData[clmIx].Replace(nRep, "")}";
+
+                                if (optCol == Color.Black)
+                                {
+                                    optCol = GetPrefsForeColor(ForECol.Normal);
+                                    cTxt = cTxt.Replace("Black", colBlackRename).Replace(cLHB, '\0');
+                                }
+
+                                Format(optionBullet, ForECol.Normal);
+                                Text(cTxt, optCol);
+                            }
+                        }
+                }
+                //NewLine();
+            }
+            
+            menuOptions = menuOptions.Trim();
+            Format($"{Ind24}Selection >> #", ForECol.Normal);
+            string input = StyledInput(null);
+            Dbug.Log($"Table built, resulting menu options [{menuOptions}]");
+
+            // menu validation
+            if (input.Contains(exemptKey))
+                input = tDiv.ToString();
+            bool valid = MenuOptions(input, out short optNum, menuOptions.Split(' '));
+            int ix1 = optNum / 4, ix2 = optNum % 4;
+            color = valid? tableCols[ix1, ix2] : Color.Black;
+            Dbug.Log($"Recieved input [{input}]; Valid input? {valid};  Result Color [#{optNum} ({ix1}, {ix2}) -> '{color}'{(color == Color.Black ? $" ({colBlackRename})" : "")}]");
+            Dbug.EndLogging();
+
+            return valid;
         }
 
 

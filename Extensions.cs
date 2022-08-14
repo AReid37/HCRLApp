@@ -42,6 +42,13 @@ namespace HCResourceLibraryApp
         {
             return c != '\0';
         }
+        public static bool IsNotNull(this char? c)
+        {
+            bool notNull = c.HasValue;
+            if (notNull)
+                notNull = c != '\0';
+            return notNull;
+        }
         /// <summary>Checks if a collection (array, list) is not null and has at least one element.</summary>
         public static bool HasElements(this ICollection col)
         {
@@ -89,7 +96,20 @@ namespace HCResourceLibraryApp
         {
             return valueA <= valueB ? Math.Clamp(f, valueA, valueB) : Math.Clamp(f, valueB, valueA);
         }
-
+        public static bool IsWithin(this int i, int valueA, int valueB)
+        {
+            // A greater than B ?  ret (A >= i >= B)  else  ret(A <= i <= B)
+            return valueA >= valueB ? (valueA >= i && i >= valueB) : (valueA <= i && i <= valueB);
+        }
+        public static bool IsWithin(this short s, short valueA, short valueB)
+        {
+            return valueA >= valueB ? (valueA >= s && s >= valueB) : (valueA <= s && s <= valueB);
+        }
+        public static int Random(int rangeA, int rangeB)
+        {
+            Random rnd = new Random();
+            return rangeA <= rangeB ? rnd.Next(rangeA, rangeB) : rnd.Next(rangeB, rangeA);
+        }
 
         // PRERFERENCES
         public static string Encode(this Color c)

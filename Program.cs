@@ -11,9 +11,7 @@ namespace HCResourceLibraryApp
     // THE ENTRANCE POINT, THE CONTROL ROOM
     public class Program
     {
-        static string consoleTitle = "High Contrast Resource Library App [v1.0.4]";
-        static bool runTest = false;
-        static Tests testToRun = Tests.PageBase_Wait;
+        static string consoleTitle = "High Contrast Resource Library App [v1.0.5]";        
 
         #region fields / props
         static bool _programRestartQ;
@@ -105,7 +103,6 @@ namespace HCResourceLibraryApp
                             else
                             {
                                 TextLine("\n\nExiting Program (also saving data .. temp)");
-                                SaveData();
                                 TextLine("\n\n**REMEMBER** Test the published version of the application frequently!!".ToUpper(), Color.White);
                                 mainMenuQ = false;
                             }
@@ -133,29 +130,41 @@ namespace HCResourceLibraryApp
         public static void RequireRestart()
         {
             // for now
-            SaveData();
-
+            //SaveData();
             AllowProgramRestart = true;
         }
 
         // Global Data handling resources
-        public static void SaveData()
+        public static bool SaveData()
         {
-            dataHandler.SaveToFile(preferences);
+            bool savedDataQ = dataHandler.SaveToFile(preferences);
+            string saveIcon = "▐▀▀▄▄▌";
+
+            NewLine(2);
+            Format($"{saveIcon}\t", ForECol.Accent);
+            if (savedDataQ)
+                Format("Auto-saving data ... success.", ForECol.Correction);
+            else Format("Auto-saving data ... failed.", ForECol.Incorrection);
+               
+            Wait(savedDataQ ? 1 : 3);
+            return savedDataQ;
         }
         public static void LoadData()
         {
             dataHandler.LoadFromFile(preferences);
         }
 
-        // testing stuff
+
+        // TESTING STUFF
+        static bool runTest = false;
+        static Tests testToRun = Tests.PageBase_ColorMenu;
         enum Tests
         {
             PageBase_HighlightMethod,
             PageBase_ListFormMenu,
             PageBase_Wait,
-            //PageBase_TableFormMenu,
-            //PageBase_ColorMenu,
+            PageBase_TableFormMenu,
+            PageBase_ColorMenu,
             //PageBase_NavigationBar
         }
         static void RunTests()
@@ -213,6 +222,32 @@ namespace HCResourceLibraryApp
                     Text("Testing end.");
 
                 }
+                else if (testToRun == Tests.PageBase_TableFormMenu)
+                {
+                    short optNum;
+                    bool valid = false;
+                    TextLine("TableFormMenu(out optNum, \"Example Menu\", null, false, null, null, 0, \"OptionA,,OptionB,OptionC,OptionD\".Split(','))", Color.Blue);
+                    while (!valid)
+                        valid = TableFormMenu(out optNum, "Example Menu", null, false, null, null, 0, "OptionA, ,OptionB,,OptionC,OptionD".Split(','));
+                    NewLine(5);
+
+                    valid = false;
+                    TextLine("TableFormMenu(out optNum, \"Example Menu\", '=', true, $\"{Ind24}Choose choice >> \", \"~~~\", 4, \"OptionA,OptionB,OptionC,OptionD,OptionE,OptionF,OptionG\".Split(','));", Color.Blue);
+                    while (!valid)
+                        valid = TableFormMenu(out optNum, "Example Menu", '=', true, $"{Ind24}Choose choice >> ", "~~~", 4, "OptionA,OptionB,OptionC,OptionD,OptionE,OptionF,OptionG".Split(','));
+                }
+                else if (testToRun == Tests.PageBase_ColorMenu)
+                {
+                    bool valid = false;
+                    int attempts = 4;
+                    while (!valid || attempts > 0)
+                    {
+                        Color cToExempt = (Color)Extensions.Random(1, 15);
+                        valid = ColorMenu("example menu", out Color col, cToExempt);
+                        attempts--;
+                        NewLine(3);
+                    }
+                }
 
                 if (hasDebugQ)
                     TextLine("\n\n## Debug(s) to output have been ran ##", Color.Maroon);
@@ -222,5 +257,11 @@ namespace HCResourceLibraryApp
                 Clear();
             }
         }
+
+
+        // THOUGHTS...
+        // I am able to set the Cursor position within the console window
+        // With this, maybe I can truly create the kind of search page I have only dreamed about!
+        // Console.CursorLeft and Console.CursorTop
     }
 }
