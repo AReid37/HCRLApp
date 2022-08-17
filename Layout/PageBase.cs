@@ -72,6 +72,8 @@ namespace HCResourceLibraryApp.Layout
         public const char cTHB = '\x2580';
         /// <summary>Bottom Half Block (▄).</summary>
         public const char cBHB = '\x2584';
+        public const string exitPagePhrase = "Return to Main Menu";
+        public const string exitSubPagePhrase = "Return";
 
 
         // PROPERTIES
@@ -298,6 +300,16 @@ namespace HCResourceLibraryApp.Layout
             string input = Input(placeholder, _preferencesRef.Input);
             return input;
         }
+        public static void Heading2(string headingText, bool toLower)
+        {
+            if (headingText.IsNotNEW())
+            {
+                if (!toLower)
+                    headingText = headingText.ToUpper();
+                else headingText = headingText.ToLower();
+                FormatLine(headingText, ForECol.Heading2);
+            }
+        }
 
         // -- -- Validations -- --
         /// <summary>Queues an incorrection message for input validations</summary>
@@ -380,18 +392,21 @@ namespace HCResourceLibraryApp.Layout
             Format($"{pretext}{(yesNoCondition ? yesMsg : noMsg)}", yesNoCondition ? ForECol.Correction : ForECol.Incorrection);
             Pause();
         }
-      
+
 
 
         // -- Menu Builds --
         /// <summary>
-        ///     number-based; always returns characters where xER >= 0
+        ///     Creates an options menu in the form of a table. Includes menu validation.
         /// </summary>
-        /// <param name="resultNum"></param>
-        /// <param name="titleText"></param>
-        /// <param name="titleUnderline"></param>
-        /// <param name="clearPageQ"></param>
-        /// <param name="options"></param>
+        /// <param name="resultNum">Number-based result key matching the bracketed number preceding a selected option. Is <c>-1</c> if the selected option is invalid.</param>
+        /// <param name="titleText">REQUIRED.</param>
+        /// <param name="titleUnderline">If <c>null</c>, will use the <see cref="cTHB"/> ('▀') as an underline.</param>
+        /// <param name="titleSpanWidthQ">If <c>true</c>, will have the title of the menu span the width of the program window.</param>
+        /// <param name="prompt">Prompt line to urge selection of an option. If <c>null</c>, will use a default prompt.</param>
+        /// <param name="placeholder">Pretext denoting the desired input or ushering for an input. If <c>null</c>, will use a default placeholder. Limit of 50 characters.</param>
+        /// <param name="optionColumns">Determines how many columns the table will be divided into for the menu options. Range [2, 4].</param>
+        /// <param name="options">REQUIRED.</param>
         /// <returns></returns>
         public static bool TableFormMenu(out short resultNum, string titleText, char? titleUnderline, bool titleSpanWidthQ, string prompt, string placeholder, short optionColumns, params string[] options)
         {
@@ -484,7 +499,8 @@ namespace HCResourceLibraryApp.Layout
 
                     /// validate menu opts
                     valid = MenuOptions(StyledInput(placeholder), out resultNum, optNumKeys.Split(' '));
-                    resultNum += 1;
+                    if (valid)
+                        resultNum += 1;
 
                     Dbug.LogPart($"Input recieved [{LastInput}] (colored in '{GetPrefsForeColor(ForECol.InputColor)}');  Valid [{valid}];  Result Number [{resultNum}]");
                 }
@@ -497,10 +513,10 @@ namespace HCResourceLibraryApp.Layout
         /// <summary>
         ///     Creates an options menu in the form of a list. Includes menu validation.
         /// </summary>
-        /// <param name="resultKey">String-based result key. Is <c>null</c> if the selected option is invalid.</param>
+        /// <param name="resultKey">Lowercase, alphabetic-based result key matching the bulleted letter preceding an option. Is <c>null</c> if the selected option is invalid.</param>
         /// <param name="titleText">REQUIRED.</param>
         /// <param name="titleUnderline">If <c>null</c>, will use the <see cref="cTHB"/> ('▀') as an underline.</param>
-        /// <param name="prompt">Prompt line to urge selection of an opiton. If <c>null</c>, will use a default prompt.</param>
+        /// <param name="prompt">Prompt line to urge selection of an option. If <c>null</c>, will use a default prompt.</param>
         /// <param name="placeholder">Pretext denoting the desired input or ushering for an input. If <c>null</c>, will use a default placeholder. Limit of 50 characters.</param>
         /// <param name="indentOptsQ">Whether to indent the list optitons.</param>
         /// <param name="clearPageQ"></param>

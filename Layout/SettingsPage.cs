@@ -9,7 +9,7 @@ namespace HCResourceLibraryApp.Layout
     public static class SettingsPage
     {
         static Preferences _preferencesRef;
-        static char subMenuUnderline = '=';
+        static readonly char subMenuUnderline = '=';
 
         public static void GetPreferencesReference(Preferences preferences)
         {
@@ -21,7 +21,11 @@ namespace HCResourceLibraryApp.Layout
             do
             {
                 Clear();
-                bool validMenuKey = ListFormMenu(out string setMenuKey, "Settings Menu", null, null, "a~d", true, "Preferences,Content Integrity Verification,Reversion,Quit".Split(','));
+                Title("Application Settings", cTHB, 1);
+                FormatLine($"{Ind24}Facilitates customization of visual preferences, and has additional tools for content verification and save state reversions.", ForECol.Accent);
+                NewLine(2);
+
+                bool validMenuKey = ListFormMenu(out string setMenuKey, "Settings Menu", null, null, "a~d", true, $"Preferences,Content Integrity Verification,Reversion,{exitPagePhrase}".Split(','));
                 MenuMessageQueue(!validMenuKey, false, null);
 
                 if (validMenuKey)
@@ -65,7 +69,7 @@ namespace HCResourceLibraryApp.Layout
                 Clear();
                 FormatLine("NOTE :: Changes made to these settings will require a program restart.\n", ForECol.Accent);
 
-                string[] prefMenuOpts = {"Window Dimensions Editor", "Foreground Elements Editor", "Quit [Enter]"};
+                string[] prefMenuOpts = {"Window Dimensions Editor", "Foreground Elements Editor", $"{exitSubPagePhrase} [Enter]"};
                 bool validKey = false, quitMenuQ = false;
                 string setPrefsKey = null;
                 if (activeMenuKey.IsNE())
@@ -290,7 +294,7 @@ namespace HCResourceLibraryApp.Layout
                                 if (valid)
                                 {
                                     string forElement = foreColOptions[tableOptNumber];
-                                    string prompt = fecNewCol == Color.Black ? $"Reset the '{forElement}' foreground element color to its default? " : $"Change the '{forElement}' foreground element color from '{newForeCols[fecIndex]}' to '{fecNewCol}'? ";
+                                    string prompt = fecNewCol == Color.Black ? $"Reset the '{forElement}' element color to its default? " : $"Change '{forElement}' element color from '{newForeCols[fecIndex]}' to '{fecNewCol}'? ";
 
                                     NewLine();
                                     Confirmation($"{Ind24}{prompt}", false, out bool yesNo, $"{Ind34}Color of '{forElement}' foreground element will be changed to '{fecNewCol}'.", $"{Ind34}Color of '{forElement}' foreground element will not be changed.");
@@ -308,7 +312,7 @@ namespace HCResourceLibraryApp.Layout
                             else
                             {
                                 NewLine(2);
-                                Title(foreOption);
+                                Important(foreOption);
                                 Confirmation($"{Ind24}Do you wish to reset the foreground element colors to their defaults? ", false, out bool yesNo, $"{Ind34}Resetting foreground element colors to their defaults.", $"{Ind34}Foreground element colors will not be reset.");
                                 
                                 if (yesNo)
@@ -450,5 +454,7 @@ namespace HCResourceLibraryApp.Layout
             Minimal.List(OrderType.Unordered, "Version Reversion -or- File save reversion (same page)");
             Pause();
         }
+
+        // consider...  FullReset (clear ALL data)
     }
 }

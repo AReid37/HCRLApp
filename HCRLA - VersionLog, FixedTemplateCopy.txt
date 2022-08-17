@@ -1,0 +1,49 @@
+﻿-- Lines of text starting with '--' are ignored by logger
+[Version : N.n]
+
+[ADDED: x,t89; #,Item]
+-- 0 |<InternalName>-(<shortItemID>; <shortRelatedIds: tiles, projectiles, walls, etc.>)
+Ex.
+1 |One Item 		-(i1; t0)
+2 |This #		-(i5; t2,x)
+3 |Some #		-(i6; t344,344_2; w290)
+4 |
+...
+25| Maximum items per update. Effective until no more items to add.  
+`x` will be replaced with 't89' in auto-logging. Seperate many variables with `;`
+
+
+
+[ADDITIONAL]
+-- > <Opt.Name> (DataID) - <RelatedInternalName> (RelatedDataID)
+Ex.
+> Tile Zero (t0) - Other Something (i23)
+> t1 - Something Else
+
+[TTA : n]
+
+
+
+[UPDATED]
+-- > <InternalName> (<RelatedDataId>) - change description
+Ex.
+> UFO (t23) - Laser color was incorrect.
+> UFO (t24) - Ship chasis' border was missing.
+
+
+
+[LEGEND]
+-- Must be written as 'key - Keyname'
+-- Available: i(item), t(tiles), p(projectile) w(wall), tt(treeTop), tb(treeBranch), ~(numRange), *(prevVer), `(LOTB), g(glow), a(accessory), ar(armor), gr(gore), d(dust), u(useStyle), b(background)
+i - Item
+t - Tile
+w - Wall
+
+
+
+-- [SUMMARY: <infoP1> // <infoP2>]
+
+
+
+-- Link to Steam Text Formatting --
+-- https://steamcommunity.com/comment/Guide/formattinghelp

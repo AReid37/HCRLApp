@@ -1,0 +1,56 @@
+﻿-- ## [HIGH CONTRAST RESOURCE LIBRARY APP - Version Log Example Log #1] ## --
+-- PURPOSE :: This verion log example tests for the regular function of the Log Decoder with the correct information entered within version log sections. Very little or no garbage data; looking for ideal, flawless function.
+
+-- ========== ---
+[Version: 1.00]
+
+[ADDED: t>,Tomato; p>,Potato]
+1 |OneItem			-(i1; t0 p3,4)
+2 |EggBlock		-(i67; t89 p14)
+3 |p>				-(i34)
+4 |Gravel			-(i20; t116)
+5 |Spoiled p>		-(i38)
+6 |Peanut			-(i78; p54 t114)
+7 |Walnut			-(i79; t115)
+8 |Almond			-(i77; t113)
+9 |Large Macadamia Nut-(i80; t117,118)
+10|Garlic Clove		-(i69; d11 t46,47)
+11|Turnip			-(i14; p1 d6,7)
+12|AppleSauce Block-(i68; t68)
+13|Onion			-(i76)
+14|Asparagus Shelf	-(i109; t72)
+15|t>				-(i101; t93)
+16|Canned t>		-(i102; t94)
+17|Steamed t>		-(i103; t95)
+18|Rice				-(i9; t14 p5)
+19|Lettuce			-(i214; t172)
+20|Apple			-(i24; t18`)
+21|Bluberry			-(i42; t29 p6)
+22|Passion Fruit	-(i43; t31)
+22|Strawberry		-(i115; t128)
+
+[ADDITIONAL]
+> Mashed Potato (t32) - Potato (i34)
+> Stripped Garlic Clove Dust (d12) - t47
+> Garlic Stem (t49 d18) - GarlicClove (t46)
+> b5,11`,13,21 - Grains Biome Backgrounds
+> AppleSauce_Chunks - i68
+> OnionShell (t56) - i76
+> Tomato Stem Dust(d29) - t93
+
+[TTA: 65]
+
+[UPDATED]
+
+[LEGEND]
+i - Item
+t - Tiles
+p - Projectile
+d - Dust
+` - Layer of Translucent Black
+
+-- [SUMMARY: <infoP1> // <infoP2>]
+-- ========== ---
+
+-- Fun fact: This example originates from example contents in the Design Doc.
+

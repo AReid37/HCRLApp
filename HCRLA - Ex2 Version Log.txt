@@ -1,0 +1,18 @@
+﻿-- ## [HIGH CONTRAST RESOURCE LIBRARY APP - Version Log Example Log #1] ## --
+-- PURPOSE :: This verion log example tests for...
+
+-- ========== ---
+[VERSION : 1.01]
+
+[ADDED]
+
+[ADDITIONAL]
+
+[UPDATED]
+
+[LEGEND]
+
+-- [SUMMARY: // ]
+-- ========== ---
+
+-- WIP

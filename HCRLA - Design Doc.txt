@@ -51,7 +51,7 @@ G1: DOCUMENT ALL THE CONTENT
 				Tag denoting table of added content. Locates majority of the information for each version (added items, related content). Each line of new content must follow after the 'ADDED' tag unbroken by newlines.
 				. {InternalName} - Name given to the content being added (Ex. Egg Block)
 				. {shortItemID} - Using the legend, specify Data Id (Ex. "Item_67" as "i67")
-				. {shortRelatedIDs}	- Using the legend, specify contents with Data Ids that are associated with added content ("Tiles_89 Projectile_14" as "t69 p14")
+				. {shortRelatedIDs}	- Using the legend, specify contents with Data Ids that are associated with added content ("Tiles_89 Projectile_14" as "t89 p14")
 			Syntax		[ADDED: <ph>,<substitute>; <ph>,<substitute>]
 			Ex.			[ADDED: $,Money; g*,Gray Star]
 				Within the 'ADDED' tag brackets, these symbols are used to shorten and simplify logging the information of added content, replaced later through the HCAutoLogger. Especially useful where multiple content have the same word(s).
@@ -110,7 +110,7 @@ G1: DOCUMENT ALL THE CONTENT
 			#1 Peanut	i78	p54 t114
 			#2 Walnut	i79	t115
 			#3 Almond	i77 t113
-			#4 Large Macedonia i80 t117 t118
+			#4 Large Macadamia Nut	i80 t117 t118
 			
 			ADDITIONAL 
 			> Grains Biome Backgrounds 	b5 b11` b13

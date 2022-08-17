@@ -57,33 +57,7 @@ namespace HCResourceLibraryApp
                 if (col.Count != 0)
                     hasElements = true;
             return hasElements;
-        }
-        public static float GetScaleFactorH(this DimHeight dh)
-        {
-            float heightScale = dh switch
-            {
-                DimHeight.Squished => 0.4f,
-                DimHeight.Short => 0.5f,
-                DimHeight.Normal => 0.6f,
-                DimHeight.Tall => 0.8f,
-                DimHeight.Fill => 1.0f,
-                _ => 0.0f
-            };
-            return heightScale;
-        }
-        public static float GetScaleFactorW(this DimWidth dw)
-        {
-            float widthScale = dw switch
-            {
-                DimWidth.Thin => 0.4f,
-                DimWidth.Slim => 0.5f,
-                DimWidth.Normal => 0.6f,
-                DimWidth.Broad => 0.8f,
-                DimWidth.Fill => 1.0f,
-                _ => 0.0f
-            };
-            return widthScale;
-        }
+        }        
         public static int Clamp(this int i, int valueA, int valueB)
         {
             return valueA <= valueB ? Math.Clamp(i, valueA, valueB) : Math.Clamp(i, valueB, valueA);
@@ -105,10 +79,11 @@ namespace HCResourceLibraryApp
         {
             return valueA >= valueB ? (valueA >= s && s >= valueB) : (valueA <= s && s <= valueB);
         }
+        /// <remarks>Inclusive of both Ranges (<paramref name="rangeA"/> and <paramref name="rangeB"/>)</remarks>
         public static int Random(int rangeA, int rangeB)
         {
             Random rnd = new Random();
-            return rangeA <= rangeB ? rnd.Next(rangeA, rangeB) : rnd.Next(rangeB, rangeA);
+            return rangeA <= rangeB ? rnd.Next(rangeA, rangeB + 1) : rnd.Next(rangeB, rangeA + 1);
         }
 
         // PRERFERENCES
@@ -156,6 +131,32 @@ namespace HCResourceLibraryApp
 
             //Dbug.SingleLog("Extensions.Decode(this s, out c)", $"Parsed [{parsed}]; string [{s}], returned color [{c}]");
             return parsed;
+        }
+        public static float GetScaleFactorH(this DimHeight dh)
+        {
+            float heightScale = dh switch
+            {
+                DimHeight.Squished => 0.4f,
+                DimHeight.Short => 0.5f,
+                DimHeight.Normal => 0.6f,
+                DimHeight.Tall => 0.8f,
+                DimHeight.Fill => 1.0f,
+                _ => 0.0f
+            };
+            return heightScale;
+        }
+        public static float GetScaleFactorW(this DimWidth dw)
+        {
+            float widthScale = dw switch
+            {
+                DimWidth.Thin => 0.4f,
+                DimWidth.Slim => 0.5f,
+                DimWidth.Normal => 0.6f,
+                DimWidth.Broad => 0.8f,
+                DimWidth.Fill => 1.0f,
+                _ => 0.0f
+            };
+            return widthScale;
         }
     }
 }

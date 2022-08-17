@@ -11,14 +11,16 @@ namespace HCResourceLibraryApp
     // THE ENTRANCE POINT, THE CONTROL ROOM
     public class Program
     {
-        static string consoleTitle = "High Contrast Resource Library App [v1.0.5]";        
-
+        static string consoleTitle = "High Contrast Resource Library App [v1.0.6]";
         #region fields / props
+        // PRIVATE \ PROTECTED
+        static string saveIcon = "▐▀▀▄▄▌";
         static bool _programRestartQ;
-        public static bool AllowProgramRestart { get => _programRestartQ; private set => _programRestartQ = value; }
-
         static DataHandlerBase dataHandler;
         static Preferences preferences;
+
+        // PUBLIC
+        public static bool AllowProgramRestart { get => _programRestartQ; private set => _programRestartQ = value; }
         #endregion
 
         #region Suppressant for Window Size and Buffer Size Edits to Console
@@ -59,7 +61,7 @@ namespace HCResourceLibraryApp
                 Title("  Resource Library  App  ", cTHB, 3);
                 //Title("High Contrast Resource Library App", cBHB, 3);
                 Format($"{Ind24}Press [Enter] to continue >> ", Layout.ForECol.Normal);
-                Input("__", preferences.Highlight);
+                StyledInput("__");
                 
                 /// main menu
                 if (!LastInput.IsNotNE())
@@ -85,11 +87,12 @@ namespace HCResourceLibraryApp
                             // other options
                             if (!mainMenuOptKey.Contains('f'))
                             {
+                                // logs submission page
+                                if (mainMenuOptKey.Equals("a"))
+                                    LogSubmissionPage.OpenPage();
                                 // settings page
-                                if (mainMenuOptKey.Equals("e"))
-                                {
+                                else if (mainMenuOptKey.Equals("e"))
                                     SettingsPage.OpenPage();
-                                }
 
 
                                 else
@@ -102,8 +105,7 @@ namespace HCResourceLibraryApp
                             // quit
                             else
                             {
-                                TextLine("\n\nExiting Program (also saving data .. temp)");
-                                TextLine("\n\n**REMEMBER** Test the published version of the application frequently!!".ToUpper(), Color.White);
+                                TextLine("\n\nExiting Program");
                                 mainMenuQ = false;
                             }
                         }
@@ -125,6 +127,9 @@ namespace HCResourceLibraryApp
                 }
             }
             while (restartProgram);
+
+            TextLine("\n\n**REMEMBER** Test the published version of the application frequently!!\n\tVersion last tested: v1.0.2".ToUpper(), Color.White);
+
         }
 
         public static void RequireRestart()
@@ -138,7 +143,6 @@ namespace HCResourceLibraryApp
         public static bool SaveData()
         {
             bool savedDataQ = dataHandler.SaveToFile(preferences);
-            string saveIcon = "▐▀▀▄▄▌";
 
             NewLine(2);
             Format($"{saveIcon}\t", ForECol.Accent);
@@ -174,6 +178,7 @@ namespace HCResourceLibraryApp
                 // tests title
                 Clear();
                 Title("Running Test", cMS, 0);
+                //Important("Running Test", cMS);
                 string testName = "";
                 foreach (char c in testToRun.ToString())
                 {
