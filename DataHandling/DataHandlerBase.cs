@@ -9,9 +9,11 @@ namespace HCResourceLibraryApp.DataHandling
     {
         #region fields / props
         protected const string AstSep = "*"; // asterik (seperator character)
+        public const string FileDirectory = @"C:\Users\ntrc2\OneDrive\Pictures\High Contrast Textures\HCToolApps\HCRLA\hcd-tests\"; // public for Dbug.cs
+        const string FileName = "hcrlaData.txt"; // change '.txt' to '.hcd' at end of development? Nn....NnnAahhh!
         // OG = @"hcd\hcrlaData.txt"
         // DBG = @"C:\Users\ntrc2\OneDrive\Pictures\High Contrast Textures\HCToolApps\HCRLA\hcd-tests\hcrlaData.txt"
-        protected const string FileLocation = @"C:\Users\ntrc2\OneDrive\Pictures\High Contrast Textures\HCToolApps\HCRLA\hcd-tests\hcrlaData.txt";
+        protected const string FileLocation = FileDirectory + FileName;
         protected string commonFileTag;
         #endregion
 
@@ -21,38 +23,57 @@ namespace HCResourceLibraryApp.DataHandling
         }
         
         /// <summary>Handles file saving of all data-handling subclasses passed as parameters.</summary>
-        public virtual bool SaveToFile(params DataHandlerBase[] dataHandlers)
+        public bool SaveToFile(params DataHandlerBase[] dataHandlers)
         {
             bool noIssues = true;
             if (dataHandlers.HasElements())
             {
-                Base.SetFileLocation(FileLocation);
-                noIssues = RestartMainEncoding();
+                // refresh file
+                noIssues = Base.SetFileLocation(FileLocation);
+                if (noIssues)
+                    noIssues = RestartMainEncoding();
+
+                // other data
                 for (int i = 0; i < dataHandlers.Length && noIssues; i++)
                 {
+                    string underlyingType = "<None>";
                     if (dataHandlers[i] != null)
+                    {
+                        underlyingType = dataHandlers[i].GetType().UnderlyingSystemType.ToString();
+                        //noIssues = Base.SetFileLocation(FileLocation);
+                        //if (noIssues)
                         noIssues = dataHandlers[i].EncodeToSharedFile();
-                }
-                if (!noIssues)
-                    Dbug.SingleLog("DataHandlerBase.SaveToFile()", $"Issue [Error]: {Tools.GetRecentWarnError(false, true)}");
+                    }
+                    else noIssues = false;
+
+                    if (!noIssues)
+                        Dbug.SingleLog("DataHandlerBase.SaveToFile()", $"Underlying type: {underlyingType}  //  Issue [Error]: {Tools.GetRecentWarnError(false, true)}");
+                }                
             }
             
             return noIssues;
         }
         /// <summary>Handles file loading of all data-handling subclasses passed as parameters.</summary>
-        public virtual bool LoadFromFile(params DataHandlerBase[] dataHandlers)
+        public bool LoadFromFile(params DataHandlerBase[] dataHandlers)
         {
             bool noIssues = true;
             if (dataHandlers.HasElements())
             {
-                Base.SetFileLocation(FileLocation);
                 for (int i = 0; i < dataHandlers.Length && noIssues; i++)
                 {
+                    string underlyingType = "<None>";
                     if (dataHandlers[i] != null)
-                        noIssues = dataHandlers[i].DecodeFromSharedFile();
+                    {
+                        underlyingType = dataHandlers[i].GetType().UnderlyingSystemType.ToString();
+                        noIssues = Base.SetFileLocation(FileLocation);
+                        if (noIssues)
+                            noIssues = dataHandlers[i].DecodeFromSharedFile();
+                    }
+                    else noIssues = false;
+
+                    if (!noIssues)
+                        Dbug.SingleLog("DataHandlerBase.LoadFromFile()", $"Underlying type: {underlyingType}  //  Issue [Error]: {Tools.GetRecentWarnError(false, true)}");
                 }
-                if (!noIssues)
-                    Dbug.SingleLog("DataHandlerBase.LoadFromFile()", $"Issue [Error]: {Tools.GetRecentWarnError(false, true)}");
             }
 
             return noIssues;
@@ -76,40 +97,9 @@ namespace HCResourceLibraryApp.DataHandling
             // read using CF class library and datakey
             return false;
         }
-    }
-
-
-    public struct DataLine
-    {
-        internal string fileTag;
-        internal string infoLine;
-
-        public DataLine(string filetag, string infoline)
+        public virtual bool ChangesMade()
         {
-            fileTag = filetag.IsNotNEW() ? filetag : null;
-            infoLine = infoline.IsNotNEW() ? infoline : null;
-        }
-        public void SetFileTag(string filetag)
-        {
-            fileTag = filetag.IsNotNEW() ? filetag : null;
-        }
-        public void SetInfoLine(string infoline)
-        {
-            infoLine = infoline.IsNotNEW() ? infoline : null;
-        }
-
-        public bool HasTag()
-        {
-            return fileTag.IsNotNEW();
-        }
-        public bool HasInfo()
-        {
-            return infoLine.IsNotNEW();
-        }
-
-        public override string ToString()
-        {
-            return base.ToString();
+            return false;
         }
     }
 }

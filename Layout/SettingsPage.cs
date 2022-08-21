@@ -52,9 +52,10 @@ namespace HCResourceLibraryApp.Layout
             }
             while (!exitSettingsMain && !Program.AllowProgramRestart);
 
-            // auto-save preferences
+            // auto-saves:
+            //      -> preferences
             if (_preferencesRef.ChangesMade())
-                Program.SaveData();
+                Program.SaveData(false);
         }
 
         // done

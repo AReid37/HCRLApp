@@ -372,7 +372,7 @@ namespace HCResourceLibraryApp.DataHandling
             return decodedPrefsDataQ;
         }
 
-        public bool ChangesMade()
+        public override bool ChangesMade()
         {
             // detecting "changes made" could just be a comparision between values of two different Preferences objects
             bool endChecks = false;

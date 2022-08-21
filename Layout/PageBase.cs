@@ -527,7 +527,8 @@ namespace HCResourceLibraryApp.Layout
             resultKey = null;
             bool valid = false;
 
-            //Dbug.StartLogging("List Form Menu Debug");
+            Dbug.IgnoreNextLogSession();
+            Dbug.StartLogging("List Form Menu Debug");
             if (options.HasElements() && titleText.IsNotNEW())
             {
                 // build menu keys
@@ -700,14 +701,16 @@ namespace HCResourceLibraryApp.Layout
         public static void Wait(float seconds)
         {
             int milliSeconds = (int)(seconds.Clamp(0, 10) * 1000);
-            //Dbug.StartLogging("PageBase.Wait()");
+            Dbug.IgnoreNextLogSession();
+            Dbug.StartLogging("PageBase.Wait()");            
             Dbug.LogPart($"Waiting for {milliSeconds}ms // ");
 
             Stopwatch watch = Stopwatch.StartNew();
             Dbug.LogPart($"Start time: {watch.Elapsed.TotalMilliseconds}ms");
             while (watch.ElapsedMilliseconds < milliSeconds)
-                ;
+                /* Do nothing but loop, kek */;
             Dbug.Log($"-- End time: {watch.Elapsed.TotalMilliseconds}ms // Waiting complete.");
+            Dbug.EndLogging();
         }
     }
 }

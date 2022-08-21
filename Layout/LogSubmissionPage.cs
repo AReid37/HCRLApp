@@ -81,14 +81,30 @@ namespace HCResourceLibraryApp.Layout
                         // 1 - provide file path
                         if (stageNum == 1)
                         {
+                            string placeHolder = @"C:\__\__.__";
+                            const string recentDirectoryKey = @"RDir\";
+                            /// if recent directory exists
+                            if (LogDecoder.RecentDirectory.IsNotNEW())
+                            {
+                                Format($"The directory of the last submitted file was saved. To use this directory, precede the name of the submitted file with", ForECol.Normal);
+                                Highlight(true, $"'{recentDirectoryKey}'.", recentDirectoryKey);
+                                Highlight(true, $"{recentDirectoryKey} :: {LogDecoder.RecentDirectory}", LogDecoder.RecentDirectory);
+                                placeHolder += $"  -or-  {recentDirectoryKey}__.__";
+                                NewLine();
+                            }
                             FormatLine("Please enter the file path to the version log being submitted below. The file should be of type 'text file' (.txt) or any similar text-only file type.", ForECol.Normal);
                             Format($"{Ind14}Path >> ", ForECol.Normal);
-                            string inputPath = StyledInput(@"C:\__\__.__");
+                            string inputPath = StyledInput(placeHolder);
 
                             /// file path verification
                             bool validPath = false;
                             if (inputPath.IsNotNEW())
                             {
+                                // substitute if using recent directory
+                                if (inputPath.Contains(recentDirectoryKey) && LogDecoder.RecentDirectory.IsNotNEW())
+                                    inputPath = inputPath.Replace(recentDirectoryKey, LogDecoder.RecentDirectory);
+
+                                // validation
                                 if (inputPath.Contains(":\\"))
                                 {
                                     if (inputPath.Replace(":\\","").Contains("\\"))
@@ -135,6 +151,8 @@ namespace HCResourceLibraryApp.Layout
                                 if (yesNo)
                                 {                                    
                                     pathToVersionLog = inputPath;
+                                    SetFileLocation(pathToVersionLog);
+                                    LogDecoder.RecentDirectory = Directory;
                                     stagePass = true;
                                 }
                                 ConfirmationResult(yesNo, $"{Ind34}", "Version log file path accepted.", "Path to version log denied.");
@@ -144,11 +162,15 @@ namespace HCResourceLibraryApp.Layout
                         // 2 - original log review (raw)
                         else if (stageNum == 2)
                         {
+                            SetFileLocation(pathToVersionLog);
                             bool fetchedLogData = FileRead(null, out string[] logLines);
                             if (fetchedLogData)
                             {
                                 if (logLines.HasElements())
                                 {
+                                    FormatLine($"Below sourced from :: \n{Ind14}{pathToVersionLog}", ForECol.Accent);
+                                    NewLine();
+
                                     // display file info
                                     for (int lx = 0; lx < logLines.Length; lx++)
                                     {
@@ -181,13 +203,22 @@ namespace HCResourceLibraryApp.Layout
                         // 3 - processed log review (decoded)
                         else if (stageNum == 3)
                         {
+                            LogDecoder logDecoder = new LogDecoder();
+                            SetFileLocation(pathToVersionLog);
+                            if (FileRead(null, out string[] fileData))
+                            {
+                                logDecoder.DecodeLogInfo(fileData);
+                            }
+                            else
+                            {
+                                // some kinda of warning.... or error
+                            }
+
                             Pause();
                             stagePass = true;
                         }
 
-
-                        /// move to next stage
-                        stageNum += stagePass ? 1 : 0;
+                                                
                         /// pause and continue
                         if (stageNum < 3 && stagePass)
                         {
@@ -201,12 +232,20 @@ namespace HCResourceLibraryApp.Layout
                             if (stopSubmission)
                                 pathToVersionLog = null;
                         }
+
+                        /// move to next stage
+                        stageNum += stagePass ? 1 : 0;
                     }
                 }
                 else exitSubmissionPage = true;
             }
             while (!exitSubmissionPage);
-        
+
+            // auto-saves: 
+            //      -> LogDecoder recentDirectory
+            //      -> ResLibrary <new data>
+            if (LogDecoder.ChangesMade())
+                Program.SaveData(true);
         }
     }
 }

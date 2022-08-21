@@ -11,13 +11,14 @@ namespace HCResourceLibraryApp
     // THE ENTRANCE POINT, THE CONTROL ROOM
     public class Program
     {
-        static string consoleTitle = "High Contrast Resource Library App [v1.0.6]";
+        static string consoleTitle = "High Contrast Resource Library App [v1.0.7]";
         #region fields / props
         // PRIVATE \ PROTECTED
-        static string saveIcon = "▐▀▀▄▄▌";
+        const string saveIcon = "▐▀▀▄▄▌";
         static bool _programRestartQ;
         static DataHandlerBase dataHandler;
         static Preferences preferences;
+        static LogDecoder logDecoder;
 
         // PUBLIC
         public static bool AllowProgramRestart { get => _programRestartQ; private set => _programRestartQ = value; }
@@ -36,14 +37,15 @@ namespace HCResourceLibraryApp
                 AllowProgramRestart = false;
                 TextLine("Hello, High Contrast Resource Library App!", Color.DarkGray);
 
-                // setup
-                /// data
-                dataHandler = new DataHandlerBase();
-                preferences = new Preferences();
-                LoadData();
+                // setup                
                 /// program function
                 Console.Title = consoleTitle;
                 Tools.DisableWarnError = DisableWE.None;
+                /// data
+                dataHandler = new DataHandlerBase();
+                preferences = new Preferences();
+                logDecoder = new LogDecoder();
+                LoadData();
                 /// --v priting and pages
                 VerifyFormatUsage = true;          
                 GetPreferencesReference(preferences);
@@ -128,7 +130,7 @@ namespace HCResourceLibraryApp
             }
             while (restartProgram);
 
-            TextLine("\n\n**REMEMBER** Test the published version of the application frequently!!\n\tVersion last tested: v1.0.2".ToUpper(), Color.White);
+            TextLine("\n\n**REMEMBER** Test the published version of the application frequently!!\n\tVersion last tested: mid-v1.0.7".ToUpper(), Color.White);
 
         }
 
@@ -140,22 +142,22 @@ namespace HCResourceLibraryApp
         }
 
         // Global Data handling resources
-        public static bool SaveData()
+        public static bool SaveData(bool discreteQ)
         {
-            bool savedDataQ = dataHandler.SaveToFile(preferences);
+            bool savedDataQ = dataHandler.SaveToFile(preferences, logDecoder);
 
             NewLine(2);
             Format($"{saveIcon}\t", ForECol.Accent);
             if (savedDataQ)
-                Format("Auto-saving data ... success.", ForECol.Correction);
-            else Format("Auto-saving data ... failed.", ForECol.Incorrection);
+                FormatLine(discreteQ? "auto-save: S." : "Auto-saving data ... success.", discreteQ? ForECol.Accent : ForECol.Correction);
+            else FormatLine(discreteQ? "auto-save: F." : "Auto-saving data ... failed.", discreteQ ? ForECol.Accent : ForECol.Incorrection);
                
             Wait(savedDataQ ? 1 : 3);
             return savedDataQ;
         }
         public static void LoadData()
         {
-            dataHandler.LoadFromFile(preferences);
+            dataHandler.LoadFromFile(preferences, logDecoder);
         }
 
 

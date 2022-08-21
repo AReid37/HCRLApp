@@ -148,8 +148,8 @@ G1: DOCUMENT ALL THE CONTENT
 				> {RelatedAdditionalNameAndID} - The relative name and ids to associate with the additional contents. May not always have a value.
 				> {AdditionalNameAndDataIds} - The additional content ids and an optional name to describe them.
 		.	"UPDATED..." - The changes made to existing content following the syntax: {RelatedInternalName}{DataId}\n{ChangeDescription}
-				> {RelatedInternalName} - The name of the content added.
-				> {DataId} - The Data Id of the content added.
+				> {RelatedInternalName} - The name of the content updated.
+				> {DataId} - The Data Id of the content updated.
 				> \n{ChangedDescription} - On a newline, a description of the change made to the data ID. This changes is attributed to the Data ID.
 		.	"LEGEND..." - The definitions for the keys used in the version log. The legend keys are documented by the system along with all other information. 
 				> Syntax is similar to that of the log (the characters ' - ' are replaced with '/').

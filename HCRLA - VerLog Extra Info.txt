@@ -23,12 +23,24 @@ Example 1 Version Log
 		- Identification of legend key and definitions
 	. SUMMARY
 		- Identification and partitioning of summary parts
-	
+
+
+
 
 ----------
 Example 2 Version Log
 	PURPOSE ::
 		...
+	TESTING OBJECTIVES
+	. ...
+
+
+
+
+----------
+Example 3 Version Log
+	PURPOSE ::
+		See how the log decoder reacts to garbage data, then to reassess and develop the decoder to resolve or mitigate the issues that arise.
 	TESTING OBJECTIVES
 	. ...
 
