@@ -12,62 +12,137 @@ namespace HCResourceLibraryApp
     {
         // IDEA -- Give Dbug.cs file-writing ability so that debug's can be logged and viewed outside of IDE
         //          ^^ only if a file does not exist with this functionality ... Checked >> FILE DOES NOT EXIST
-        const int indentSize = 4;
-        static bool relayDbugLogs, ignoreNextSessionQ;
-        static string sessionName;
+        const int indentSize = 4, nestLimitNum = 2;
+        static bool relayDbugLogs, ongoingNestedLogsQ, ignoreNextSessionQ;
+        static string sessionName, nestedSessionName;
         static string partialLog;
+        static int countSessions = 0, nestedBaseIndentLevel = 0;
 
         // fileSaving
         static Stopwatch dbugWatch;
         static bool firstFlushOfSessionQ = true;
         static int flushIndentLevel = 0;
         static List<string> logSessionFlush = new List<string>();
-        const string DbugLogTag = "Dbg| ";
+        const string DbugLogTag = "Dbg| ", NestedLogTag = ">|  ", StartNestedTag = "``\n", EndNestedTag = "`\n";
         const string FileName = "hcrla-dbugFlush.txt";
         const string FileSaveLocation = DataHandlerBase.FileDirectory + FileName;
 
         public static void StartLogging()
-        {
-            if (!ignoreNextSessionQ)
-                relayDbugLogs = true;
-            else ignoreNextSessionQ = false;
+        {            
+            countSessions++;
+            ongoingNestedLogsQ = countSessions > 1;
 
-            SetIndent(-1);
-            if (relayDbugLogs)
-                Debug.WriteLine("\n--------------------"); // 20x '-'
-            AddToLogFlusher("\n--------------------");
-            SetIndent(0);
+            if (IsWithinNestedLimit())
+            {
+                if (!ignoreNextSessionQ)
+                    relayDbugLogs = true;
+                else ignoreNextSessionQ = false;
+
+                if (!ongoingNestedLogsQ)
+                {
+                    SetIndent(-1);
+                    if (relayDbugLogs)
+                        Debug.WriteLine("\n--------------------"); // 20x '-'
+                    AddToLogFlusher("\n--------------------");
+                    SetIndent(0);
+                }
+                else
+                {
+                    NudgeIndent(true);
+                    nestedBaseIndentLevel = Debug.IndentLevel;
+                    if (relayDbugLogs)
+                    {
+                        Debug.WriteLine(StartNestedTag);
+                        Debug.WriteLine(">> -------------------- <<");
+                    }
+                    AddToLogFlusher(StartNestedTag);
+                    AddToLogFlusher(">> -------------------- <<");
+                }
+            }            
         }
         public static void StartLogging(string logSessionName)
-        {
-            if (!ignoreNextSessionQ)
-                relayDbugLogs = true;
-            else ignoreNextSessionQ = false;
+        {            
+            countSessions++;
+            ongoingNestedLogsQ = countSessions > 1;
 
-            SetIndent(-1);
-            if (relayDbugLogs)
-                Debug.WriteLine("\n--------------------"); // 20x '-'
-            AddToLogFlusher("\n--------------------");
-            if (logSessionName.IsNotNEW())
+            if (IsWithinNestedLimit())
             {
-                sessionName = logSessionName;
-                if (relayDbugLogs)
-                    Debug.WriteLine($"## {logSessionName.ToUpper()} ##");
-                AddToLogFlusher($"## {logSessionName.ToUpper()} ##");
+                if (!ignoreNextSessionQ)
+                    relayDbugLogs = true;
+                else ignoreNextSessionQ = false;
+
+                if (!ongoingNestedLogsQ)
+                {
+                    SetIndent(-1);
+                    if (relayDbugLogs)
+                        Debug.WriteLine("\n--------------------"); // 20x '-'
+                    AddToLogFlusher("\n--------------------");
+                    if (logSessionName.IsNotNEW())
+                    {
+                        sessionName = logSessionName;
+                        if (relayDbugLogs)
+                            Debug.WriteLine($"## {logSessionName.ToUpper()} ##");
+                        AddToLogFlusher($"## {logSessionName.ToUpper()} ##");
+                    }
+                    SetIndent(0);
+                }
+                else
+                {
+                    NudgeIndent(true);
+                    nestedBaseIndentLevel = Debug.IndentLevel;
+                    if (relayDbugLogs)
+                    {
+                        Debug.WriteLine(StartNestedTag);
+                        Debug.WriteLine(">> -------------------- <<");
+                    }
+                    AddToLogFlusher(StartNestedTag);
+                    AddToLogFlusher(">> -------------------- <<");
+
+                    if (logSessionName.IsNotNEW())
+                    {
+                        nestedSessionName = logSessionName;
+                        if (relayDbugLogs)
+                            Debug.WriteLine($"## {logSessionName.ToUpper()} ##");
+                        AddToLogFlusher($"## {logSessionName.ToUpper()} ##");
+                    }
+                }
             }
-            SetIndent(0);
         }
         public static void EndLogging()
         {
-            SetIndent(-1);
-            if (sessionName.IsNotNEW() && relayDbugLogs)
-                Debug.WriteLine($"## END :: {sessionName.ToUpper()} ##");
-            AddToLogFlusher($"## END :: {(sessionName.IsNotNEW()? sessionName : "...")} ##");
-            NoteRunTime();
+            if (!ongoingNestedLogsQ)
+            {
+                SetIndent(-1);
+                if (sessionName.IsNotNEW() && relayDbugLogs)
+                    Debug.WriteLine($"## END :: {sessionName.ToUpper()} ##");
+                AddToLogFlusher($"## END :: {(sessionName.IsNotNEW() ? sessionName : "...")} ##");
+                NoteRunTime();
 
-            FlushAndSave();
-            relayDbugLogs = false;
-            sessionName = null;
+                FlushAndSave();
+                relayDbugLogs = false;
+                sessionName = null;
+            }
+            else
+            {
+                if (nestedSessionName.IsNotNEW() && relayDbugLogs)
+                {
+                    Debug.WriteLine($"## END :: {nestedSessionName.ToUpper()} ##");
+                    Debug.WriteLine(EndNestedTag);
+                }
+                AddToLogFlusher($"## END :: {(nestedSessionName.IsNotNEW() ? nestedSessionName : "...")} ##");
+                AddToLogFlusher(EndNestedTag);
+                NoteRunTime();
+                NudgeIndent(false);
+
+                ongoingNestedLogsQ = false;
+                nestedSessionName = null;
+            }
+
+            if (!IsWithinNestedLimit())
+                countSessions = nestLimitNum;
+
+            if (countSessions >= 1)
+                countSessions--;
         }
         /// <summary>Place before any <see cref="StartLogging"/> to skip logging this session into the Debug Ouput window.</summary>
         public static void IgnoreNextLogSession()
@@ -83,8 +158,80 @@ namespace HCResourceLibraryApp
             NoteRunTime();
             //SetIndent(-1);
         }
+        
+        /// <summary>Increments or decrement the indentation level based on <paramref name="isIncrement"/>'s value.</summary>
+        public static void NudgeIndent(bool isIncrement)
+        {
+            if (IsWithinNestedLimit())
+            {
+                int trueLevel = Debug.IndentLevel - 1;
 
-        public static void SetIndent(int level)
+                // if (decrement) // if (increment)
+                if (!isIncrement && trueLevel > 0)
+                    trueLevel -= 1;
+                if (isIncrement)
+                    trueLevel += 1;
+
+                SetIndent(trueLevel);
+            }
+        }
+        ///<summary>Stores partial logs that will be flushed together with the new logged line after using <see cref="Log(string)"/>.</summary>
+        public static void LogPart(string log)
+        {
+            if (IsWithinNestedLimit())
+            {
+                if (log.IsNotNEW())
+                    if (partialLog == null)
+                        partialLog = log;
+                    else partialLog += log;
+            }
+        }
+        public static void Log(string log)
+        {
+            if (IsWithinNestedLimit())
+            {
+                if (log.IsNotNEW())
+                {
+                    if (partialLog.IsNotNEW())
+                        log = partialLog + log;
+                    partialLog = null;
+
+                    if (ongoingNestedLogsQ)
+                    {
+                        int currIndentLvl = Debug.IndentLevel;
+                        Debug.IndentLevel = nestedBaseIndentLevel;
+                        flushIndentLevel = nestedBaseIndentLevel;
+
+                        string spaceTexts = "";
+                        int inds = currIndentLvl - nestedBaseIndentLevel;
+
+                        for (int i = 0; i < inds; i++)
+                            spaceTexts += $"{Ind24}";
+                        log = $"{NestedLogTag}{spaceTexts}{log}";
+
+                        if (relayDbugLogs)
+                            Debug.WriteLine($"{log}");
+                        AddToLogFlusher($"{log}");
+
+                        Debug.IndentLevel = currIndentLvl;
+                        flushIndentLevel = currIndentLvl;
+                    }
+                    else
+                    {
+                        if (relayDbugLogs)
+                            Debug.WriteLine($"{log}");
+                        AddToLogFlusher($"{log}");
+                    }
+
+                    //if (ongoingNestedLogsQ)
+                    //    log = NestedLogTag + log;
+
+
+                }
+            }
+        }
+
+        static void SetIndent(int level)
         {
             // start and end logs are always on level 0. All other text are level 1 and above
             if (Debug.IndentSize != 4)
@@ -96,42 +243,11 @@ namespace HCResourceLibraryApp
                 flushIndentLevel = level + 1;
             }
         }
-        /// <summary>Increments or decrement the indentation level based on <paramref name="isIncrement"/>'s value.</summary>
-        public static void NudgeIndent(bool isIncrement)
+        static bool IsWithinNestedLimit()
         {
-            int trueLevel = Debug.IndentLevel - 1;
-            
-            // if (decrement) // if (increment)
-            if (!isIncrement && trueLevel > 0)
-                trueLevel -= 1;
-            if (isIncrement)
-                trueLevel += 1;
+            return countSessions <= nestLimitNum;
+        }        
 
-            SetIndent(trueLevel);
-        }
-        ///<summary>Stores partial logs that will be flushed together with the new logged line after using <see cref="Log(string)"/>.</summary>
-        public static void LogPart(string log)
-        {
-            if (log.IsNotNEW())
-                if (partialLog == null)
-                    partialLog = log;
-                else partialLog += log;
-        }
-        public static void Log(string log)
-        {
-            if (log.IsNotNEW())
-            {
-                if (partialLog.IsNotNEW())
-                    log = partialLog + log;
-                partialLog = null;
-
-                if (relayDbugLogs)
-                    Debug.WriteLine($"{log}");
-                AddToLogFlusher($"{log}");
-            }
-        }
-
-        
         // File saving
         static void FlushAndSave()
         {
@@ -168,10 +284,11 @@ namespace HCResourceLibraryApp
         }
         static void NoteRunTime()
         {
-            if (dbugWatch != null)
+            if (dbugWatch != null && IsWithinNestedLimit())
             {
                 string timeStamp = $"{(int)dbugWatch.Elapsed.TotalHours}h {(int)dbugWatch.Elapsed.TotalMinutes % 60:0}m {(int)dbugWatch.Elapsed.TotalSeconds % 60:00}s";
-                logSessionFlush.Add($"{DbugLogTag}Rtn: {timeStamp}");
+                //logSessionFlush.Add($"{DbugLogTag}Rtn: {timeStamp}");
+                AddToLogFlusher($"{DbugLogTag}Rtn: {timeStamp}");
             }
         }
     }

@@ -11,10 +11,10 @@ namespace HCResourceLibraryApp
     // THE ENTRANCE POINT, THE CONTROL ROOM
     public class Program
     {
-        static string consoleTitle = "High Contrast Resource Library App [v1.0.7]";
+        static string consoleTitle = "High Contrast Resource Library App [v1.0.8]";
         #region fields / props
         // PRIVATE \ PROTECTED
-        const string saveIcon = "▐▀▀▄▄▌";
+        const string saveIcon = "▐▄▐▌"; //  1▐▀▀▄▄▌;    2▐▄▐▌;  3 ▐▄▄▌
         static bool _programRestartQ;
         static DataHandlerBase dataHandler;
         static Preferences preferences;
@@ -162,8 +162,8 @@ namespace HCResourceLibraryApp
 
 
         // TESTING STUFF
-        static bool runTest = false;
-        static Tests testToRun = Tests.PageBase_ColorMenu;
+        static bool runTest = true;
+        static Tests testToRun = Tests.LogDecoder_DecodeLogInfo;
         enum Tests
         {
             PageBase_HighlightMethod,
@@ -171,7 +171,11 @@ namespace HCResourceLibraryApp
             PageBase_Wait,
             PageBase_TableFormMenu,
             PageBase_ColorMenu,
-            //PageBase_NavigationBar
+            //PageBase_NavigationBar,
+
+            Extensions_SortWords,
+            LogDecoder_DecodeLogInfo,
+            Dbug_NestedSessions,
         }
         static void RunTests()
         {
@@ -194,9 +198,9 @@ namespace HCResourceLibraryApp
                 Title($"{testName.Trim()}", cLS, 3);
 
 
-
                 // tests branches
                 bool hasDebugQ = true;
+                /// PageBase tests
                 if (testToRun == Tests.PageBase_HighlightMethod)
                 {
                     Highlight(false, "Highlight me you fool!");
@@ -254,6 +258,172 @@ namespace HCResourceLibraryApp
                         attempts--;
                         NewLine(3);
                     }
+                }
+                /// Extensions tests
+                else if (testToRun == Tests.Extensions_SortWords)
+                {
+                    TextLine("Below is a summary of the tests ran:", Color.DarkGray);
+                    List(OrderType.Ordered_RomanNumerals, "Verifying correct scoring for all characters", "Rigid testing (hit all sort-decision paths)", "General testing (scoring & sorting algorithm)");
+                    NewLine(3);
+
+                    // test 1 - verify character scorings
+                    string[] testWords =
+                    {
+                        "\0~`!@#$%^&* _-+=()[]{}<>\\|/;:'\".,?", 
+                        "~0 1 2 3 4 5 6 7 8 9".Replace(" ", "."),
+                        "abcdefghijklmnopqrstuvwxyz",
+                        $"{cLS}{cMS}{cDS}{cTHB}{cRHB}{cBHB}{cLHB}"
+                    };
+                    ShowTestWords("Test I words - not sorted");
+                    testWords = testWords.SortWords().ToArray();
+                    ShowTestWords("Test I sorted words");
+                    NewLine(2);
+
+                    // test 2 - rigid testing (hit all paths)
+                    testWords = new string[]
+                    {
+                        /// EXPECTED SORTING PATH HITS
+                        /// focus A paths :: 
+                        ///     [1] 100|80.5
+                        ///     [2] 80.5|zebra
+                        ///     [3] zinc|zit
+                        /// focus B paths :: {can never be hit!}
+                        /// focus C paths ::
+                        ///     [1] 90|@gump
+                        ///     [2] 90|100
+                        ///     [3] arts|80.5
+                        ///     [4] zit|zebra   90|80.5
+                        ///
+                        
+                        "zebra", "zit", "zinc", "80.5", "100", "@gump", "90", "arts"
+
+                        /** RESULTS (BASED ON ABOVE)
+                        Results
+                            Path	Ran?	True?	1st Compared:
+                            ----    ----    ----    ----
+                            A1	    Y	    Y	    100|80.5	
+                            A2	    Y	    Y	    80.5|zebra
+                            A3	    Y	    Y	    zinc|zit
+                            B1	    N       Y       -
+                            B2	    N       Y       -
+                            C1	    Y	    Y	    90|@gump
+                            C2	    Y	    Y	    90|100
+                            C3	    Y	    Y	    arts|80.5
+                            C4	    Y	    Y	    zit|zebra
+                        
+                        
+                        Path definitions
+                        A. (tS<oS)
+                        1 | tS==vc (oS<tVcNm) {nxt}
+                        2 | tS==vc (oS>=tVcNm) {ins}
+                        3 | tS!=vc {ins}
+
+                        B. (tS==oS)
+                        1 | tS==vc (tVcNm<oVcNm) {ins}
+                        2 | tS==vc (tVcNm>oVcNm) {nxt}
+
+                        C. (tS>oS)
+                        1 | tS==vc {nxt}
+                        2 | tS!=vc (oS==vc (tS<oVcNm)) {ins}
+                        3 | tS!=vc (oS==vc (tS>=oVcNm)) {nxt}
+                        4 | tS!=vc (oS!=vc) {nxt}
+                         */
+                    };
+                    ShowTestWords("Test II words - not sorted");
+                    testWords = testWords.SortWords().ToArray();
+                    ShowTestWords("Test II sorted words");
+                    NewLine(2);
+
+                    // test 3 - general testing                    
+                    testWords = new string[]
+                    {
+                        "625", "apple sauce", "apple_sauce", "$3.50", "8a7c", "86ab", 
+                        "4", "212", "3at gr@pes", "(0n$vm3!", "sma taster", "Smat-ester?", 
+                        "u34", "u9.3", "u28", "j10d468", "j11a162"
+                    };
+                    ShowTestWords("Test III words - not sorted");
+                    testWords = testWords.SortWords().ToArray();
+                    ShowTestWords("Test III sorted words");
+
+                    void ShowTestWords(string titleText)
+                    {
+                        if (testWords.HasElements())
+                        {
+                            if (titleText.IsNEW())
+                                titleText = "Showing Test Words";
+                            Title(titleText);
+                            int bufferWidth = Console.BufferWidth;
+                            int remainingBufferWidth = bufferWidth;
+                            int w = 0;
+                            foreach (string word in testWords)
+                            {        
+                                if (word.IsNotNEW())
+                                {
+                                    int wordLen = word.Length;
+                                    if (remainingBufferWidth - wordLen - 2 <= 0)
+                                    {
+                                        NewLine();
+                                        remainingBufferWidth = bufferWidth;
+                                    }
+
+                                    Text($"{word}", w % 2 == 0 ? Color.Green : Color.Yellow);
+                                    Text(" ", Color.DarkGray);
+                                    remainingBufferWidth -= (wordLen + 2);
+                                    w++;
+                                }
+                            }
+                            NewLine();
+                        }
+                    }
+                }
+                /// Log Decoder
+                else if (testToRun == Tests.LogDecoder_DecodeLogInfo)
+                {
+                    TextLine("The results of this test are recorded through Dbug.cs. Nothing to preview here...", Color.DarkGray);
+                    if (SetFileLocation(@"C:\Users\ntrc2\source\repos\HCResourceLibraryApp\HCRLA - Ex1 Version Log.txt"))
+                        if (FileRead(null, out string[] testLogData))
+                            logDecoder.DecodeLogInfo(testLogData);
+                }
+                /// Dbug
+                else if (testToRun == Tests.Dbug_NestedSessions)
+                {
+                    TextLine("The results of this test are recorded through Dbug.cs. Nothing to preview here...", Color.DarkGray);
+                    Dbug.StartLogging("Base debug session");
+                    Dbug.Log("base line 1");
+                    Dbug.NudgeIndent(true);
+                    Dbug.Log("base line 2");
+                    Dbug.NudgeIndent(false);
+                    Dbug.LogPart("base line 3  //  ");
+                    Dbug.Log("base line 4");
+                    Dbug.SingleLog("Baseless log", "baseless line A");
+
+                    // nested start
+                    Dbug.StartLogging("Nested debug session");
+                    Dbug.Log("nested line 1");
+                    Dbug.NudgeIndent(true);
+                    Dbug.Log("nested line 2");
+                    Dbug.NudgeIndent(false);
+                    Dbug.LogPart("nested line 3  //  ");
+                    Dbug.Log("nested line 4");
+                    Dbug.SingleLog("Baseless log", "baseless line B");
+                    Dbug.EndLogging();
+                    // nested end
+
+                    Dbug.Log("base line 5");
+                    Dbug.EndLogging();
+
+                    Dbug.StartLogging("Base 1");
+                    Dbug.Log("Allowed log line a");
+                    Dbug.StartLogging("Nest 1");
+                    Dbug.Log("Allowed nested line a");
+                    Dbug.StartLogging("(Unallow) Nest 2");
+                    Dbug.Log("Uallowed nested line b");
+                    Dbug.EndLogging();
+                    Dbug.Log("Allowed log line b");
+                    Dbug.EndLogging();
+
+                    Dbug.StartLogging();
+                    Dbug.EndLogging();
                 }
 
                 if (hasDebugQ)

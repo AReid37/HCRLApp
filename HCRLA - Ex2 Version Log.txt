@@ -1,4 +1,4 @@
-﻿-- ## [HIGH CONTRAST RESOURCE LIBRARY APP - Version Log Example Log #1] ## --
+﻿-- ## <HIGH CONTRAST RESOURCE LIBRARY APP - Version Log Example Log #1> ## --
 -- PURPOSE :: This verion log example tests for...
 
 -- ========== ---

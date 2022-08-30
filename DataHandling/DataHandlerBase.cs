@@ -8,7 +8,8 @@ namespace HCResourceLibraryApp.DataHandling
     public class DataHandlerBase
     {
         #region fields / props
-        protected const string AstSep = "*"; // asterik (seperator character)
+        /// <summary>Separator character in file encoding/decoding.</summary>
+        protected const string Sep = "%"; // percentage symbol (seperator character; also dissallowed in HCAutoLogger)  [old seperator character --> * asterik (but is used in LEGEND...facepalm)]
         public const string FileDirectory = @"C:\Users\ntrc2\OneDrive\Pictures\High Contrast Textures\HCToolApps\HCRLA\hcd-tests\"; // public for Dbug.cs
         const string FileName = "hcrlaData.txt"; // change '.txt' to '.hcd' at end of development? Nn....NnnAahhh!
         // OG = @"hcd\hcrlaData.txt"

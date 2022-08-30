@@ -194,27 +194,26 @@ namespace HCResourceLibraryApp.Layout
                                 }                                
                             }
                             else
-                            {
-                                FormatLine($"{Ind14}Could not read data from log file!", ForECol.Incorrection);
-                                Format($"{Ind24}If the file is open or locked, please close and enable access to the file and try again.", ForECol.Warning);
-                                Pause();
-                            }
+                                DataReadingIssue();
+
                         }
                         // 3 - processed log review (decoded)
                         else if (stageNum == 3)
                         {
                             LogDecoder logDecoder = new LogDecoder();
                             SetFileLocation(pathToVersionLog);
-                            if (FileRead(null, out string[] fileData))
+                            if (FileRead(null, out string[] fileData) && false)
                             {
+                                /// small section relaying how decoding went
                                 logDecoder.DecodeLogInfo(fileData);
+                                
+                                /// large section showing how decoding went
+                                NewLine(2);
+                                FormatLine("Completed decoding of version log...preview here", ForECol.Correction);
+                                Pause();
                             }
                             else
-                            {
-                                // some kinda of warning.... or error
-                            }
-
-                            Pause();
+                                DataReadingIssue();
                             stagePass = true;
                         }
 
@@ -235,6 +234,14 @@ namespace HCResourceLibraryApp.Layout
 
                         /// move to next stage
                         stageNum += stagePass ? 1 : 0;
+
+
+                        static void DataReadingIssue()
+                        {
+                            FormatLine($"{Ind14}Could not read data from log file!", ForECol.Incorrection);
+                            Format($"{Ind14}If the file is open or locked, please close and enable access to the file and try again.", ForECol.Warning);
+                            Pause();
+                        }
                     }
                 }
                 else exitSubmissionPage = true;

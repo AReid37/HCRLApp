@@ -459,7 +459,7 @@ namespace HCResourceLibraryApp.Layout
                     // table here
                     string[] tableInfo = new string[optionColumns];
                     Dbug.Log("Building options table");
-                    Dbug.SetIndent(1);
+                    Dbug.NudgeIndent(true);
                     for (int tbIx = 0; tbIx < optionsFltrd.Count; tbIx++)
                     {
                         int tbIxPlus1 = tbIx + 1;
@@ -493,7 +493,7 @@ namespace HCResourceLibraryApp.Layout
                             Dbug.Log($".. Printed table with [{optionColumns}] columns. Reset {nameof(tableInfo)}  //  Cause --> Print Table? {printTable};  Options End? {endOpts}");
                         }
                     }
-                    Dbug.SetIndent(0);
+                    Dbug.NudgeIndent(false);
 
                     Format(prompt.IsNotNEW() ? prompt : $"{Ind24}Select option >> ", ForECol.Normal);
 

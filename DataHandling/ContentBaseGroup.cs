@@ -54,5 +54,21 @@ namespace HCResourceLibraryApp.DataHandling
             - bool ChangesDetected()
                 Compares itself against an orignal copy of itself for changes
         ***/
+
+        #region fields / props
+        // private
+        ContentBaseGroup _previousSelf;
+        VerNum _versionNumber;
+        string _contentName;
+        List<string> _dataIDs;
+        
+        // public
+
+        #endregion
+
+
+        public ContentBaseGroup() { }
+        
+
     }
 }

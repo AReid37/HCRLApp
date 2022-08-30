@@ -41,3 +41,8 @@ Added a ninth Foreground Element Color to Preferences for the user's input color
 Changed the percentages on the first two options for both Height and Width window dimensions.
 	- The orignal percentages for the Height and Width window dimensions were 20% and 40%. 20% is way too small for the program to operate.
 	+ The original 20% will be changed to 40%, and the original 40% changed to 50%. Both are changes to accomadate for program window operation requirements.
+
+4# [ ]
+Changed the seperating character from asterik (*) to percentage (%).
+	- The original separator character overlooked the fact that the Legend and some Data IDs will contain the '*' as a key.
+	+ The % character will replace the * character in file interactions. Additionally, this character is forbidden by the HCAutoLogger.

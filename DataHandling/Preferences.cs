@@ -207,9 +207,9 @@ namespace HCResourceLibraryApp.DataHandling
 
             // compile the data
             /// color
-            prefDataLines.Add($"{Normal.Encode()} {Highlight.Encode()} {Accent.Encode()} {Correction.Encode()} {Incorrection.Encode()} {Warning.Encode()} {Heading1.Encode()} {Heading2.Encode()} {Input.Encode()}".Replace(" ", AstSep));
+            prefDataLines.Add($"{Normal.Encode()} {Highlight.Encode()} {Accent.Encode()} {Correction.Encode()} {Incorrection.Encode()} {Warning.Encode()} {Heading1.Encode()} {Heading2.Encode()} {Input.Encode()}".Replace(" ", Sep));
             /// dimensions
-            prefDataLines.Add($"{HeightScale}{AstSep}{WidthScale}");
+            prefDataLines.Add($"{HeightScale}{Sep}{WidthScale}");
 
             // encode data
             return Base.FileWrite(false, commonFileTag, prefDataLines.ToArray());
@@ -226,14 +226,14 @@ namespace HCResourceLibraryApp.DataHandling
                 {
                     string dataLine = prefsDataLines[line];
                     Dbug.Log($"Decoding  L{line + 1}| {dataLine}");
-                    Dbug.SetIndent(1);
+                    Dbug.NudgeIndent(true);
 
                     switch (line)
                     {
                         // color
                         case 0:
                             Dbug.LogPart(">> Decoding Color -->  ");
-                            string[] colorsText = dataLine.Split(AstSep);
+                            string[] colorsText = dataLine.Split(Sep);
                             if (colorsText.HasElements())
                             {
                                 for (int ctIx = 0; ctIx < colorsText.Length && decodedPrefsDataQ; ctIx++)
@@ -306,7 +306,7 @@ namespace HCResourceLibraryApp.DataHandling
                         // dimensions
                         case 1:
                             Dbug.Log(">> Decoding Window Dims -->  ");
-                            string[] dimsText = dataLine.Split(AstSep);
+                            string[] dimsText = dataLine.Split(Sep);
                             if (dimsText.HasElements())
                             {
                                 for (int dimIx = 0; dimIx < dimsText.Length; dimIx++)
@@ -357,7 +357,7 @@ namespace HCResourceLibraryApp.DataHandling
                             Dbug.Log("<< End Decoding Window Dims");
                             break;
                     }
-                    Dbug.SetIndent(0);
+                    Dbug.NudgeIndent(false);
                 }
 
                 

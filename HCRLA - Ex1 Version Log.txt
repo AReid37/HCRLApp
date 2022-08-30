@@ -1,4 +1,4 @@
--- ## [HIGH CONTRAST RESOURCE LIBRARY APP - Version Log Example Log #1] ## --
+-- ## <HIGH CONTRAST RESOURCE LIBRARY APP - Version Log Example Log #1> ## --
 -- PURPOSE :: This verion log example tests for the regular function of the Log Decoder with the correct information entered within version log sections. Very little or no garbage data; looking for ideal, flawless function.
 
 -- ========== ---
