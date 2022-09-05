@@ -11,7 +11,7 @@ namespace HCResourceLibraryApp
     // THE ENTRANCE POINT, THE CONTROL ROOM
     public class Program
     {
-        static string consoleTitle = "High Contrast Resource Library App [v1.0.8]";
+        static string consoleTitle = "High Contrast Resource Library App [v1.0.9]";
         #region fields / props
         // PRIVATE \ PROTECTED
         const string saveIcon = "▐▄▐▌"; //  1▐▀▀▄▄▌;    2▐▄▐▌;  3 ▐▄▄▌
@@ -269,7 +269,7 @@ namespace HCResourceLibraryApp
                     // test 1 - verify character scorings
                     string[] testWords =
                     {
-                        "\0~`!@#$%^&* _-+=()[]{}<>\\|/;:'\".,?", 
+                        "\0~`!@#$%^&* _-+=()[]{}<>\\|/;:'\".,?",
                         "~0 1 2 3 4 5 6 7 8 9".Replace(" ", "."),
                         "abcdefghijklmnopqrstuvwxyz",
                         $"{cLS}{cMS}{cDS}{cTHB}{cRHB}{cBHB}{cLHB}"
@@ -337,13 +337,31 @@ namespace HCResourceLibraryApp
                     // test 3 - general testing                    
                     testWords = new string[]
                     {
-                        "625", "apple sauce", "apple_sauce", "$3.50", "8a7c", "86ab", 
-                        "4", "212", "3at gr@pes", "(0n$vm3!", "sma taster", "Smat-ester?", 
+                        "625", "apple sauce", "apple_sauce", "$3.50", "8a7c", "86ab",
+                        "4", "212", "3at gr@pes", "(0n$vm3!", "sma taster", "Smat-ester?",
                         "u34", "u9.3", "u28", "j10d468", "j11a162"
                     };
                     ShowTestWords("Test III words - not sorted");
                     testWords = testWords.SortWords().ToArray();
                     ShowTestWords("Test III sorted words");
+                    Text("\nextra...");
+                    Pause();
+
+                    NewLine(10);                
+                    testWords = new string[]
+                    {
+                        /** SORT HIGH CONTRAST OST NAMES!
+                        High Contrast Theme, Alt High Contrast Theme, Saturate Expedition, Saturate Expedition Alt, Synthwave Sunburn, Surface Day, Alternate Surface Day, Surface Night, Alt Caves Below, Caves Below, Infliction, Infection, Luminance, Sands, Rehptihlian Temple, Labyrinth of the Cadaverous, Navy Horizons, Navy Horizons Night, Outer World, Outer World Day, Bioluminescent Fungus, World Down Under, Wilderness, Wilderness Night, Tundra, Wilderness Below, Tundra Below, Deep Infliction, Deep Infection, Deep Illumination, Sunken Sands, Vacant Tombs, Shadow of the Moon, Downpour, Thunderstorm, Haunting Hour, Army of Goblins, Plundering Mob, Xenophobia, Lunar Descent, Village Day, Village Night, Icey Blue Moon, Crooked Smiling Moon, Gales, Morning Dew, Battalions of the Old One, Gelatinous Downpour, Roiling Sands, First Encounter, Zealous Terminator, Mecha Madness, Buzzed and Brutal, Wrath of Luminosity, Matriarch of Gelatin, Mother of all Plants, Gargantuan Idol, Oceanic Horror, Lunar Judgement
+
+                        "High Contrast Theme", "Alt High Contrast Theme", "Saturate Expedition", "Saturate Expedition Alt", "Synthwave Sunburn", "Surface Day", "Alternate Surface Day", "Surface Night", "Alt Caves Below", "Caves Below", "Infliction", "Infection", "Luminance", "Sands", "Rehptihlian Temple", "Labyrinth of the Cadaverous", "Navy Horizons", "Navy Horizons Night", "Outer World", "Outer World Day", "Bioluminescent Fungus", "World Down Under", "Wilderness", "Wilderness Night", "Tundra", "Wilderness Below", "Tundra Below", "Deep Infliction", "Deep Infection", "Deep Illumination", "Sunken Sands", "Vacant Tombs", "Shadow of the Moon", "Downpour", "Thunderstorm", "Haunting Hour", "Army of Goblins", "Plundering Mob", "Xenophobia", "Lunar Descent", "Village Day", "Village Night", "Icey Blue Moon", "Crooked Smiling Moon", "Gales", "Morning Dew", "Battalions of the Old One", "Gelatinous Downpour", "Roiling Sands", "First Encounter", "Zealous Terminator", "Mecha Madness", "Buzzed and Brutal", "Wrath of Luminosity", "Matriarch of Gelatin", "Mother of all Plants", "Gargantuan Idol", "Oceanic Horror", "Lunar Judgement"
+                        */
+                        "High Contrast Theme", "Alt High Contrast Theme", "Saturate Expedition", "Saturate Expedition Alt", "Synthwave Sunburn", "Surface Day", "Alternate Surface Day", "Surface Night", "Alt Caves Below", "Caves Below", "Infliction", "Infection", "Luminance", "Sands", "Rehptihlian Temple", "Labyrinth of the Cadaverous", "Navy Horizons", "Navy Horizons Night", "Outer World", "Outer World Day", "Bioluminescent Fungus", "World Down Under", "Wilderness", "Wilderness Night", "Tundra", "Wilderness Below", "Tundra Below", "Deep Infliction", "Deep Infection", "Deep Illumination", "Sunken Sands", "Vacant Tombs", "Shadow of the Moon", "Downpour", "Thunderstorm", "Haunting Hour", "Army of Goblins", "Plundering Mob", "Xenophobia", "Lunar Descent", "Village Day", "Village Night", "Icey Blue Moon", "Crooked Smiling Moon", "Gales", "Morning Dew", "Battalions of the Old One", "Gelatinous Downpour", "Roiling Sands", "First Encounter", "Zealous Terminator", "Mecha Madness", "Buzzed and Brutal", "Wrath of Luminosity", "Matriarch of Gelatin", "Mother of all Plants", "Gargantuan Idol", "Oceanic Horror", "Lunar Judgement"
+                    };
+                    ShowTestWords("Test IV words - not sorted, HC.OST names");
+                    Pause();
+                    NewLine(2);
+                    testWords = testWords.SortWords().ToArray();
+                    ShowTestWords("Test IV words - sorted, HC.OST names");
 
                     void ShowTestWords(string titleText)
                     {
@@ -397,7 +415,7 @@ namespace HCResourceLibraryApp
                     Dbug.Log("base line 4");
                     Dbug.SingleLog("Baseless log", "baseless line A");
 
-                    // nested start
+                    /// nested start
                     Dbug.StartLogging("Nested debug session");
                     Dbug.Log("nested line 1");
                     Dbug.NudgeIndent(true);
@@ -407,7 +425,7 @@ namespace HCResourceLibraryApp
                     Dbug.Log("nested line 4");
                     Dbug.SingleLog("Baseless log", "baseless line B");
                     Dbug.EndLogging();
-                    // nested end
+                    /// nested end
 
                     Dbug.Log("base line 5");
                     Dbug.EndLogging();
@@ -420,9 +438,20 @@ namespace HCResourceLibraryApp
                     Dbug.Log("Uallowed nested line b");
                     Dbug.EndLogging();
                     Dbug.Log("Allowed log line b");
+                    Dbug.IgnoreNextLogSession();
+                    Dbug.StartLogging("Nest 2 (ignored)");
+                    Dbug.Log("Ignored nested line I");
+                    Dbug.NudgeIndent(true);
+                    Dbug.Log("Ignored nested line II");
+                    Dbug.NudgeIndent(false);
+                    Dbug.LogPart("Ignored nested line III // ");
+                    Dbug.Log("Ignored nested line IV");
+                    Dbug.EndLogging();
+                    Dbug.Log("Allowed log line c");
                     Dbug.EndLogging();
 
-                    Dbug.StartLogging();
+                    Dbug.IgnoreNextLogSession();
+                    Dbug.StartLogging("Ignored Base 2");
                     Dbug.EndLogging();
                 }
 

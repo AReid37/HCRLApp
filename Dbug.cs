@@ -13,7 +13,7 @@ namespace HCResourceLibraryApp
         // IDEA -- Give Dbug.cs file-writing ability so that debug's can be logged and viewed outside of IDE
         //          ^^ only if a file does not exist with this functionality ... Checked >> FILE DOES NOT EXIST
         const int indentSize = 4, nestLimitNum = 2;
-        static bool relayDbugLogs, ongoingNestedLogsQ, ignoreNextSessionQ;
+        static bool relayDbugLogs, ongoingNestedLogsQ, ignoreNextSessionQ, ignoreNestedSessionQ;
         static string sessionName, nestedSessionName;
         static string partialLog;
         static int countSessions = 0, nestedBaseIndentLevel = 0;
@@ -36,7 +36,13 @@ namespace HCResourceLibraryApp
             {
                 if (!ignoreNextSessionQ)
                     relayDbugLogs = true;
-                else ignoreNextSessionQ = false;
+                else
+                {
+                    if (ongoingNestedLogsQ)
+                        ignoreNestedSessionQ = true;
+                    else ignoreNestedSessionQ = false;
+                    ignoreNextSessionQ = false;
+                }
 
                 if (!ongoingNestedLogsQ)
                 {
@@ -46,7 +52,7 @@ namespace HCResourceLibraryApp
                     AddToLogFlusher("\n--------------------");
                     SetIndent(0);
                 }
-                else
+                else if (!ignoreNestedSessionQ)
                 {
                     NudgeIndent(true);
                     nestedBaseIndentLevel = Debug.IndentLevel;
@@ -69,7 +75,12 @@ namespace HCResourceLibraryApp
             {
                 if (!ignoreNextSessionQ)
                     relayDbugLogs = true;
-                else ignoreNextSessionQ = false;
+                else
+                {
+                    if (ongoingNestedLogsQ)
+                        ignoreNestedSessionQ = true;
+                    ignoreNextSessionQ = false;
+                }
 
                 if (!ongoingNestedLogsQ)
                 {
@@ -86,7 +97,7 @@ namespace HCResourceLibraryApp
                     }
                     SetIndent(0);
                 }
-                else
+                else if (!ignoreNestedSessionQ)
                 {
                     NudgeIndent(true);
                     nestedBaseIndentLevel = Debug.IndentLevel;
@@ -124,19 +135,25 @@ namespace HCResourceLibraryApp
             }
             else
             {
-                if (nestedSessionName.IsNotNEW() && relayDbugLogs)
+                if (!ignoreNestedSessionQ)
                 {
-                    Debug.WriteLine($"## END :: {nestedSessionName.ToUpper()} ##");
-                    Debug.WriteLine(EndNestedTag);
+                    if (nestedSessionName.IsNotNEW() && relayDbugLogs)
+                    {
+                        Debug.WriteLine($"## END :: {nestedSessionName.ToUpper()} ##");
+                        Debug.WriteLine(EndNestedTag);
+                    }
+                    AddToLogFlusher($"## END :: {(nestedSessionName.IsNotNEW() ? nestedSessionName : "...")} ##");
+                    AddToLogFlusher(EndNestedTag);
+                    NoteRunTime();
+
+                    SetIndent(nestedBaseIndentLevel - 2);
+                    //NudgeIndent(false); // nested - 1 (- 1 for Nudge, doesn't work if not within nested limit)
                 }
-                AddToLogFlusher($"## END :: {(nestedSessionName.IsNotNEW() ? nestedSessionName : "...")} ##");
-                AddToLogFlusher(EndNestedTag);
-                NoteRunTime();
-                NudgeIndent(false);
+                else ignoreNestedSessionQ = false;
 
                 ongoingNestedLogsQ = false;
                 nestedSessionName = null;
-            }
+            }            
 
             if (!IsWithinNestedLimit())
                 countSessions = nestLimitNum;
@@ -147,7 +164,7 @@ namespace HCResourceLibraryApp
         /// <summary>Place before any <see cref="StartLogging"/> to skip logging this session into the Debug Ouput window.</summary>
         public static void IgnoreNextLogSession()
         {
-            ignoreNextSessionQ = true;
+            ignoreNextSessionQ = true;            
         }
 
         public static void SingleLog(string logSessionName, string log)
@@ -180,10 +197,13 @@ namespace HCResourceLibraryApp
         {
             if (IsWithinNestedLimit())
             {
-                if (log.IsNotNEW())
-                    if (partialLog == null)
-                        partialLog = log;
-                    else partialLog += log;
+                if (!ignoreNestedSessionQ)
+                {
+                    if (log.IsNotNEW())
+                        if (partialLog == null)
+                            partialLog = log;
+                        else partialLog += log;
+                }
             }
         }
         public static void Log(string log)
@@ -192,29 +212,35 @@ namespace HCResourceLibraryApp
             {
                 if (log.IsNotNEW())
                 {
-                    if (partialLog.IsNotNEW())
-                        log = partialLog + log;
-                    partialLog = null;
+                    if (!ignoreNestedSessionQ)
+                    {
+                        if (partialLog.IsNotNEW())
+                            log = partialLog + log;
+                        partialLog = null;
+                    }
 
                     if (ongoingNestedLogsQ)
                     {
-                        int currIndentLvl = Debug.IndentLevel;
-                        Debug.IndentLevel = nestedBaseIndentLevel;
-                        flushIndentLevel = nestedBaseIndentLevel;
+                        if (!ignoreNestedSessionQ)
+                        {
+                            int currIndentLvl = Debug.IndentLevel;
+                            Debug.IndentLevel = nestedBaseIndentLevel;
+                            flushIndentLevel = nestedBaseIndentLevel;
 
-                        string spaceTexts = "";
-                        int inds = currIndentLvl - nestedBaseIndentLevel;
+                            string spaceTexts = "";
+                            int inds = currIndentLvl - nestedBaseIndentLevel;
 
-                        for (int i = 0; i < inds; i++)
-                            spaceTexts += $"{Ind24}";
-                        log = $"{NestedLogTag}{spaceTexts}{log}";
+                            for (int i = 0; i < inds; i++)
+                                spaceTexts += $"{Ind24}";
+                            log = $"{NestedLogTag}{spaceTexts}{log}";
 
-                        if (relayDbugLogs)
-                            Debug.WriteLine($"{log}");
-                        AddToLogFlusher($"{log}");
+                            if (relayDbugLogs)
+                                Debug.WriteLine($"{log}");
+                            AddToLogFlusher($"{log}");
 
-                        Debug.IndentLevel = currIndentLvl;
-                        flushIndentLevel = currIndentLvl;
+                            Debug.IndentLevel = currIndentLvl;
+                            flushIndentLevel = currIndentLvl;
+                        }
                     }
                     else
                     {

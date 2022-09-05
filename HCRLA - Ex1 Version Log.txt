@@ -14,7 +14,7 @@
 7 |Walnut			-(i79; t115)
 8 |Almond			-(i77; t113)
 9 |Large Macadamia Nut-(i80; t117,118)
-10|Garlic Clove		-(i69; d11 t46,47)
+10|Garlic Clove		-(i69; d11 t46~48)
 11|Turnip			-(i14; p1 d6,7)
 12|AppleSauce Block-(i68; t68)
 13|Onion			-(i76)
@@ -27,16 +27,16 @@
 20|Apple			-(i24; t18`)
 21|Bluberry			-(i42; t29 p6)
 22|Passion Fruit	-(i43; t31)
-22|Strawberry		-(i115; t128)
+23|Strawberry		-(i115; t128)
 
 [ADDITIONAL]
 > Mashed Potato (t32) - Potato (i34)
-> Stripped Garlic Clove Dust (d12) - t47
+> Stripped Garlic Clove Dust (d12) - (t47)
 > Garlic Stem (t49 d18) - GarlicClove (t46)
-> b5,11`,13,21 - Grains Biome Backgrounds
-> AppleSauce_Chunks - i68
-> OnionShell (t56) - i76
-> Tomato Stem Dust(d29) - t93
+> (b5,11`,13,19~21) - Grains Biome Backgrounds
+> (AppleSauce_Chunks) - (i68)
+> OnionShell (t56) - (i76)
+> Tomato Stem Dust(d29~30) - (t93)
 
 [TTA: 65]
 
@@ -48,6 +48,7 @@ t - Tiles
 p - Projectile
 d - Dust
 ` - Layer of Translucent Black
+~ - Range of Numbers
 
 -- [SUMMARY: <infoP1> // <infoP2>]
 -- ========== ---

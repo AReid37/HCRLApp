@@ -216,6 +216,7 @@ namespace HCResourceLibraryApp.DataHandling
         }
         protected override bool DecodeFromSharedFile()
         {
+            Dbug.IgnoreNextLogSession();
             Dbug.StartLogging("Preferences.DecodeFromSharedFile()");
             bool decodedPrefsDataQ = Base.FileRead(commonFileTag, out string[] prefsDataLines);
 

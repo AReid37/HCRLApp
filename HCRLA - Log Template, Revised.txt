@@ -1,0 +1,40 @@
+﻿[VERSION : a.bb]
+
+
+[ADDED : x,t89; #,Item]
+-- # |<InternalName>-(<shortItemID>; <shortRelatedIds>)
+Ex.
+1 |One Item 		-(i1; t0)
+2 |This #		-(i5; t2,x)
+3 |Some #		-(i6; t344,344_2 w290)
+4 |Final #		-(i4)
+...
+25| Maximum items per update. Effective until no more items to add.  
+
+
+[ADDITIONAL]
+
+[TTA : n]
+
+
+
+
+
+
+
+
+-- Lines of text starting with '--' are ignored by logger and HCRLA decoder. Avoid using square brackets '[]' within these lines
+-- Avoid utilizing the '%' character within this log file.
+
+-- EXTRA INFORMATION
+-- Version :: 'a' as major number, 'bb' as minor number. (Ex. 1.0, 1.01, 1.24)
+-- Added (header) :: set placeholders and substitution phrases to replace them for easier logging (only applies to 'Added' section). Syntax: ph,sub (separate multiple placeholder/substitutions groups with ';')
+-- Added :: <shortItemID> only 'Item' data IDs may go here;  <shortRelatedIds> other related, non-wordy data Ids (tiles, projectiles, walls, ...). Multiple of the same type are comma separated (x21,22), different types separated with spaces (x21 y22)
+-- Additional ::
+-- TTA :: 
+-- Update ::
+-- Legend :: 
+-- Summary :: 
+
+-- Link to Steam Text Formatting --
+-- https://steamcommunity.com/comment/Guide/formattinghelp

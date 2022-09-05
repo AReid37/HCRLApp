@@ -215,7 +215,8 @@ namespace HCResourceLibraryApp
                 if (filteredWords.HasElements())
                 {
                     // filtered words to score arrays
-                    Dbug.Log($"Creating words scoring list for [{filteredWords.Count}] words at [{lengthiestWordLength}] maximum array length each");
+                    const char replaceNullScore = '`';
+                    Dbug.Log($"Creating words scoring list for [{filteredWords.Count}] words at [{lengthiestWordLength}] maximum array length each [where {replaceNullScore} is null score {CharScore('\0')}]");
                     Dbug.NudgeIndent(true);
                     const int vacancyScore = -1;
                     List<int[]> scoredWords = new List<int[]>(filteredWords.Count);
@@ -308,7 +309,7 @@ namespace HCResourceLibraryApp
 
                             // set score to array
                             //Dbug.LogPart($" {cScore}|{(c.IsNotNull()? c : ' ')} ");
-                            Dbug.LogPart($"{cScore} ");
+                            Dbug.LogPart($"{(cScore == CharScore('\0') ? replaceNullScore.ToString() : cScore.ToString())} ");
                             scoredWordArr[cIx] = cScore;
                         }
                         scoredWords.Add(scoredWordArr);

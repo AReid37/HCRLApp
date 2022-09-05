@@ -61,7 +61,7 @@ G1: DOCUMENT ALL THE CONTENT
 		.	[ADDITIONAL]
 			Syntax		> {Opt.Name} ({Data ID}) - {RelatedInternalName} ({RelatedDataID})
 			Ex.			> Mashed Potato (t32) - Potato (i34)
-						> t116 - Gravel (i20)
+						> (t116) - Gravel (i20)
 				Tag denoting addition of contents that cannot be adjoined with items in 'ADDED'. Another major section that provides info on contents. Each line of additional content must follow after the 'ADDITIONAL' tag unbroken by newlines.
 				. {Opt.Name} - An optional name to describe the additional contents
 				. {DataID} - The extra (additional) content(s) being added (usually those that cannot be directly tied to a content' name, such as backgrounds and dusts)
