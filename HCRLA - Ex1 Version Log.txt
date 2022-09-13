@@ -41,6 +41,10 @@
 [TTA: 65]
 
 [UPDATED]
+-- The following for testing purposes, at the moment...
+> Mashed potato(t32) - Redesigned to look more creamy.
+> (d11) - Brightened the shadows of the texture
+> StrippedGarlicDust (d12) - Brightened the shadows of the texture.
 
 [LEGEND]
 i - Item
@@ -49,8 +53,18 @@ p - Projectile
 d - Dust
 ` - Layer of Translucent Black
 ~ - Range of Numbers
+-- The following for testting purposes, at the moment...
+` - LOTB
+~ - Num Range
 
--- [SUMMARY: <infoP1> // <infoP2>]
--- ========== ---
+[SUMMARY]
+- <infoP1>
+- <infoP2>
 
--- Fun fact: This example originates from example contents in the Design Doc.
+-- ============= ---
+
+-- !open --
+Fun fact: 
+	This example originates from example contents in the Design Doc.
+-- this should be excellent ... and it was!
+-- !close --

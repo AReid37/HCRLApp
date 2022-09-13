@@ -15,8 +15,8 @@ namespace HCResourceLibraryApp.DataHandling
         Fields / Props
             - ResLib previousSelf
             - List<ResCon> contents (prv set;)
-            - LgD legendData (prv set; get;)
-            - SmryD summaryData (prv set; get;)
+            - List<LegDt> legendData (prv set; get;)
+            - List<SmryD> summaryData (prv set; get;)
             - ResCon this[int] (get -> contents[])
             - ResCon this[str] (get -> contents[] "compare by name")
 

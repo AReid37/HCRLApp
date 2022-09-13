@@ -158,9 +158,11 @@ namespace HCResourceLibraryApp.DataHandling
             }
 			return areEquals;
         }
+		/// <summary>Has this instance of <see cref="ContentChanges"/> been initialized with the appropriate information?</summary>
+		/// <returns>A boolean stating whether the version changed, related data ID, and change description has been given values.</returns>
 		public bool IsSetup()
         {
-			return _versionChanged.HasValue() && _internalName.IsNotNEW() && _relatedDataID.IsNotNEW() && _changeDesc.IsNotNEW();
+			return _versionChanged.HasValue() && /*_internalName.IsNotNEW() &&*/ _relatedDataID.IsNotNEW() && _changeDesc.IsNotNEW();
         }
 
         public override string ToString()

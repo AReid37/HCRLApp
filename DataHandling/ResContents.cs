@@ -6,6 +6,14 @@ using System.Threading.Tasks;
 
 namespace HCResourceLibraryApp.DataHandling
 {
+    public enum RCFetchSource
+    {
+        None,
+        ConBaseGroup,
+        ConAdditionals,
+        ConChanges
+    }
+
     /// <summary>Short-hand for "ResourceContents".</summary>
     public class ResContents
     {
@@ -45,6 +53,7 @@ namespace HCResourceLibraryApp.DataHandling
             - bl ChangesDetected()
             - bl Equals(ResCon)
             - bl IsSetup()
+            - ovr str ToString()
         ***/
 
         #region fields / props
@@ -74,21 +83,13 @@ namespace HCResourceLibraryApp.DataHandling
         }
         public List<ContentAdditionals> ConAddits
         {
-            get => _conAddits;
-            private set
-            {
-                if (value.HasElements())
-                    _conAddits = value;
-            }
+            get => _conAddits;                    
+            private set => _conAddits = value;
         }
         public List<ContentChanges> ConChanges
         {
             get => _conChanges;
-            private set
-            {
-                if (value.HasElements())
-                    _conChanges = value;
-            }
+            private set => _conChanges = value;
         }
         public string ContentName
         {
@@ -106,6 +107,7 @@ namespace HCResourceLibraryApp.DataHandling
         public ResContents()
         {
             ShelfID = noShelfNum;
+            ConBase = new ContentBaseGroup();
             _previousSelf = (ResContents)this.MemberwiseClone();
         }      
         public ResContents(int? shelfID, ContentBaseGroup conBase)
@@ -194,7 +196,53 @@ namespace HCResourceLibraryApp.DataHandling
             }
         }
         // List<string> FetchSimilarDataIDs(string piece, out RCFetchSource source) {} // later...
-        // bool ContainsDataID(string dataIDtoFind, out RCFetchSource source) {} // tbd later...
+        public bool ContainsDataID(string dataIDtoFind, out RCFetchSource source, out ContentAdditionals conAddSource)
+        {
+            bool containsDIDq = false;
+            source = RCFetchSource.None;
+            conAddSource = new ContentAdditionals();
+
+            if (IsSetup() && dataIDtoFind.IsNotNEW())
+            {
+                for (int cdx = 0; cdx < 3 && !containsDIDq; cdx++)
+                    switch (cdx)
+                    {
+                        case 0:
+                            source = RCFetchSource.ConBaseGroup;
+                            if (ConBase != null)
+                                if (ConBase.IsSetup())
+                                    containsDIDq = ConBase.ContainsDataID(dataIDtoFind);
+                            break;
+
+                        case 1:
+                            source = RCFetchSource.ConAdditionals;
+                            if (ConAddits.HasElements())
+                                for (int cax = 0; cax < ConAddits.Count && !containsDIDq; cax++)
+                                {
+                                    containsDIDq = ConAddits[cax].ContainsDataID(dataIDtoFind);
+                                    if (containsDIDq)
+                                        conAddSource = ConAddits[cax];
+                                }
+                            break;
+
+                            /// technically speaking, this should never be hit; ContentChanges always refer to a DataID that already exists within either ConBase or ConAddits
+                            //case 2:
+                            //    if (ConChanges.HasElements())
+                            //        for (int ccx = 0; ccx < ConChanges.Count && !containsDIDq; ccx++)
+                            //            containsDIDq = ConChanges[ccx].RelatedDataID == dataIDtoFind;
+                            //    break;
+                    }
+            }
+            if (!containsDIDq)
+                source = RCFetchSource.None;
+            return containsDIDq;
+        }
+        public bool ContainsDataID(string dataIDtoFind, out RCFetchSource source)
+        {
+            bool containsDIDq = ContainsDataID(dataIDtoFind, out source, out _);
+            return containsDIDq;
+        }
+
         //public string[] EncodeGroup() { }
         public bool ChangedDetected()
         {
@@ -246,9 +294,26 @@ namespace HCResourceLibraryApp.DataHandling
             }
             return areEquals;
         }
+        /// <summary>Has this instance of <see cref="ResContents"/> been initialized with the appropriate information?</summary>
+        /// <returns>A boolean stating whether the shelf ID and <see cref="ContentBaseGroup"/> has been given values, at minimum.</returns>
         public bool IsSetup()
         {
             return ShelfID != noShelfNum && ConBase.IsSetup();
+        }
+
+        public override string ToString()
+        {
+            string resConToStr = $"(RC) #{(ShelfID == noShelfNum ? "_" : ShelfID)}; ";
+            if (ConBase != null)
+            {
+                if (ConBase.IsSetup())
+                    resConToStr += $" {ConBase.ContentName}";
+            }
+            if (ConAddits.HasElements())
+                resConToStr += $", [{ConAddits.Count}] adts";
+            if (ConChanges.HasElements())
+                resConToStr += $", [{ConChanges.Count}] upds";
+            return resConToStr.Trim(); 
         }
         #endregion
     }

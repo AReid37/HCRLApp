@@ -294,12 +294,13 @@ G1: DOCUMENT ALL THE CONTENT
 		> Other stored contents
 		.	Legend
 				Information sourced from:		"LEGEND -> {Key}, {Keyname}"
-				Syntax:		'{key}',{keynames}***
-				Ex.			'i',Item***'`',LOTB,Layer Of Translucent Black***'*',PrevUpd
+				Syntax:		{key}*{keynames}***
+				Ex.			i,Item***`,LOTB,Layer Of Translucent Black***~,NumRange
 					> {key}
 						[REQUIRED] string value
+						May not contain '*' symbol or comma (',')
 					> {keynames}
-						[REQUIRED] comma-separated string values
+						[REQUIRED] seperator-separated string values
 						May not contain '*' symbol
 					NOTES
 						- Multiple legend keys and keynames must be separated with '***'

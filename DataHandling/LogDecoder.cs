@@ -69,58 +69,95 @@ namespace HCResourceLibraryApp.DataHandling
                 short nextSectionNumber = 0, currentSectionNumber = 0;
                 const string secVer = "Version", secAdd = "Added", secAdt = "Additional", secTTA = "TTA", secUpd = "Updated", secLeg = "Legend", secSum = "Summary";
                 const string omit = "--", secBracL = "[", secBracR = "]";
+                const string omitBlockOpen = "-- !open --", omitBlockClose = "-- !close --";
+                /** LINE OMISSION RULES
+                    ...........................
+                    Single Line Omission: (--)
+                        The single line omission key must be placed before any comments to be omitted by the decoder.
+                        Ex.
+                            -- Ignored, individual line 1
+                            --Ignored, individual line 2
+                    
+                    ...........................
+                    Block Line Omission: (-- !open --) and (-- !close --)
+                        The 'open' and 'close' omission blocks must be on their own line to function. All comments within these block lines will be omitted by the decoder.
+                        Ex.
+                            -- !open --
+                            Ignored, group line 1
+                            Ignored, group line 2
+                            -- Ignored, group line 3
+                            -- !close --                        
+                 **/
                 const char legRangeKey = '~';
-                const int dataKeyMaxLength = 3;
+                const int dataKeyMaxLength = 3, newResConShelfNumber = 0, maxSectionsCount = 7;
                 string[] logSections =
                 {
                     secVer, secAdd, secAdt, secTTA, secUpd, secLeg, secSum
                 };
-                int[] countSectionIssues = new int[8];
-                bool withinASectionQ = false;
+                bool withinASectionQ = false, withinOmitBlock = false;
                 string currentSectionName = null;
+                int[] countSectionIssues = new int[8];
+                List<DecodeInfo> decodingInfoDock = new();
 
                 #region ToBeReplacedWithAppropriateDataTypes
+                bool endFileReading = false;
                 List<string[]> addedPholderNSubTags = new();
 
                 // vv to be integrated into library later vv
                 VerNum logVersion = VerNum.None;
-                //List<ContentBaseGroup> addedContents = new();
                 List<ResContents> resourceContents = new();
+                List<LegendData> legendDatas = new();
+                SummaryData summaryData = new();
+                int ttaNumber = 0;
                 #endregion
 
 
                 // -- reading version log file --
                 Dbug.NudgeIndent(true);
-                for (int llx = 0; llx < logData.Length; llx++)
+                for (int llx = 0; llx < logData.Length && !endFileReading; llx++)
                 {
                     /// setup
                     int lineNum = llx + 1;
                     string logDataLine = logData[llx];
                     string nextSectionName = nextSectionNumber.IsWithin(0, (short)(logSections.Length - 1)) ? logSections[nextSectionNumber] : "";
 
-                    if (!withinASectionQ)
+                    if (!withinASectionQ && !withinOmitBlock)
                     {
                         Dbug.LogPart($"Searching for Sec#{nextSectionNumber + 1} ({nextSectionName})  //  ");
-                        Dbug.Log($"L{lineNum,-2}| {ConditionalText(logDataLine.IsNEW(), $"<null>{(withinASectionQ ? $" ... ({nameof(withinASectionQ)} set to false)" : "")}", logDataLine)}");
-                    }
-                        
+                        endFileReading = nextSectionNumber >= maxSectionsCount;
+                        //Dbug.Log($"L{lineNum,-2}| {ConditionalText(logDataLine.IsNEW(), $"<null>{(withinASectionQ ? $" ... ({nameof(withinASectionQ)} set to false)" : "")}", logDataLine)}");
+                    }                        
 
                     Dbug.NudgeIndent(true);
-                    if (logDataLine.IsNotNEW())
+                    if (logDataLine.IsNotNEW() && !endFileReading)
                     {
                         logDataLine = logDataLine.Trim();
                         bool invalidLine = logDataLine.Contains(Sep);
 
-                        /// imparsable line
-                        bool omitThisLine = false;
-                        if (logDataLine.StartsWith(omit))
+                        /// imparsable group (block omit)
+                        if (logDataLine.Equals(omitBlockOpen) && !withinOmitBlock)
                         {
-                            if (!logDataLine.Contains(secBracL) && !logDataLine.Contains(secBracR))
+                            Dbug.Log($"Line contained '{omitBlockOpen}' :: starting omission block; ");
+                            Dbug.LogPart("Block Omitting Lines :: ");
+                            withinOmitBlock = true;
+                        }
+                        else if (logDataLine.Equals(omitBlockClose) && withinOmitBlock)
+                        {
+                            withinOmitBlock = false;
+                            Dbug.Log("; ");
+                            Dbug.LogPart($"Line contained '{omitBlockClose}' :: ending omission block; ");
+                        }
+
+                        /// imparsable line (single omit)
+                        bool omitThisLine = false;                        
+                        if (logDataLine.StartsWith(omit) && !withinOmitBlock)
+                        {
+                            //if (!logDataLine.Contains(secBracL) && !logDataLine.Contains(secBracR))
                                 omitThisLine = true;
                         }
 
                         /// if {parsable line} else {imparsable issue message}
-                        if (!omitThisLine && !invalidLine)
+                        if (!omitThisLine && !invalidLine && !withinOmitBlock)
                         {
                             // find a section
                             if (!withinASectionQ)
@@ -141,6 +178,7 @@ namespace HCResourceLibraryApp.DataHandling
                             // parse section's data
                             if (withinASectionQ)
                             {
+                                DecodeInfo decodeInfo = new DecodeInfo($"L{lineNum,-2}| {logDataLine}", currentSectionName);
                                 Dbug.Log($"{{{(currentSectionName.Length > 5 ? currentSectionName.Remove(5) : currentSectionName)}}}  L{lineNum,-2}| {logDataLine}");
                                 Dbug.NudgeIndent(true);
                                 bool sectionIssueQ = false;
@@ -166,11 +204,11 @@ namespace HCResourceLibraryApp.DataHandling
 
                                     Dbug.LogPart("Version Data  //  ");
                                     logDataLine = RemoveSquareBrackets(logDataLine);
-                                    if (logDataLine.Contains(":"))
+                                    if (logDataLine.Contains(":") && logDataLine.CountOccuringCharacter(':') == 1)
                                     {
                                         Dbug.LogPart($"Contains ':', raw data ({logDataLine}); ");
                                         string[] verSplit = logDataLine.Split(':');
-                                        if (verSplit.HasElements(2) && logDataLine.CountOccuringCharacter(':') == 1)
+                                        if (verSplit.HasElements(2))
                                         {
                                             Dbug.LogPart($"Has sufficent elements after split; ");
                                             if (verSplit[1].IsNotNEW())
@@ -180,18 +218,34 @@ namespace HCResourceLibraryApp.DataHandling
                                                 if (parsed)
                                                 {
                                                     Dbug.LogPart($"--> Obtained {nameof(VerNum)} instance [{verNum}]");
+                                                    decodeInfo.NoteResult($"{nameof(VerNum)} instance --> {verNum}");
                                                     logVersion = verNum;
                                                     sectionIssueQ = false;
                                                 }
+                                                else
+                                                {
+                                                    Dbug.LogPart($"{nameof(VerNum)} instance could not be parsed");
+                                                    decodeInfo.NoteIssue($"{nameof(VerNum)} instance could not be parsed");
+                                                }
                                             }
                                             else
+                                            {
                                                 Dbug.LogPart("No data in split @ix1");
+                                                decodeInfo.NoteIssue("No data provided for version number");
+                                            }
+                                        }                                        
+                                    }
+                                    else
+                                    {
+                                        if (logDataLine.Contains(':'))
+                                        {
+                                            Dbug.LogPart("This line has too many ':'");
+                                            decodeInfo.NoteIssue("This line has too many ':'");
                                         }
                                         else
                                         {
-                                            if (verSplit.HasElements(2))
-                                                Dbug.LogPart("This line has too many ':'");
-                                            else Dbug.LogPart("This line is missing ':'");
+                                            Dbug.LogPart("This line is missing ':'");
+                                            decodeInfo.NoteIssue("This line is missing ':'");
                                         }
                                     }
                                     Dbug.Log($"  //  End version");
@@ -266,7 +320,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                                 }
                                                             }
                                                     }
-                                                    else if (splitAddHeader[1].Contains(':'))
+                                                    else if (splitAddHeader[1].Contains(','))
                                                     {
                                                         Dbug.LogPart($"Only one ph/sub group: {splitAddHeader[1]}");
                                                         addedPhSubs.Add(splitAddHeader[1]);
@@ -284,7 +338,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                             /// x  <-->  t21
                                                             /// y  <-->  p84
                                                             if (phs.Contains(","))
-                                                            {                                                                
+                                                            {
                                                                 string[] phSub = phs.Split(',');
                                                                 if (phSub.HasElements(2))
                                                                 {
@@ -293,16 +347,24 @@ namespace HCResourceLibraryApp.DataHandling
                                                                     else if (phSub[0].IsNotNEW() && phSub[1].IsNotNEW())
                                                                     {
                                                                         Dbug.LogPart($" --> Obtained placeholder and substitute :: Sub '{phSub[0].Trim()}' for '{phSub[1].Trim()}'");
-                                                                        addedPholderNSubTags.Add(new string[] { phSub[0].Trim(), phSub[1].Trim() }); // multiple tags? screw it.. first come, first serve
-                                                                        sectionIssueQ = false;
+                                                                        // multiple tags within tags? screw it.. first come, first serve
+                                                                        addedPholderNSubTags.Add(new string[] { phSub[0].Trim(), phSub[1].Trim() });                                                                         sectionIssueQ = false;
                                                                     }
                                                                 }
                                                             }
                                                             Dbug.Log(";  ");
                                                         }
+
+                                                        string phSubs = "Got placeholder/substitute groups (as ph/'sub') :: ";
+                                                        foreach (string[] phsubgroup in addedPholderNSubTags)
+                                                            if (phsubgroup.HasElements(2))
+                                                                phSubs += $"{phsubgroup[0]}/'{phsubgroup[1]}'; ";
+                                                        decodeInfo.NoteResult(phSubs.Trim());
                                                     }
+                                                    else decodeInfo.NoteIssue("Recieved no placeholder/substitute groups");
                                                 }
                                         }
+                                        else decodeInfo.NoteIssue("Missing ':'");
                                         Dbug.Log("  //  End added (section tag)");
                                     }
 
@@ -439,21 +501,39 @@ namespace HCResourceLibraryApp.DataHandling
                                                                                             Dbug.LogPart($"{dataID} - ");
                                                                                         }
                                                                                     }
-                                                                                    else Dbug.LogPart("Both range values cannot be the same");
+                                                                                    else
+                                                                                    {
+                                                                                        Dbug.LogPart("Both range values cannot be the same");
+                                                                                        decodeInfo.NoteIssue("Both range values cannot be the same");
+                                                                                    }
                                                                                 }
                                                                                 else
                                                                                 {
                                                                                     if (parseRngA)
+                                                                                    {
                                                                                         Dbug.LogPart($"Right range value '{dataIdRng[1]}' was an invalid number");
-                                                                                    else Dbug.LogPart($"Left range value '{dataIdRng[0]}' was an invalid number");
+                                                                                        decodeInfo.NoteIssue($"Right range value '{dataIdRng[1]}' was an invalid number");
+                                                                                    }
+                                                                                    else
+                                                                                    {
+                                                                                        Dbug.LogPart($"Left range value '{dataIdRng[0]}' was an invalid number");
+                                                                                        decodeInfo.NoteIssue($"Left range value '{dataIdRng[0]}' was an invalid number");
+                                                                                    }
                                                                                 }
                                                                             }
                                                                         }
                                                                         else
                                                                         {
                                                                             if (dataIdRng.HasElements())
+                                                                            {
                                                                                 Dbug.LogPart($"This range group has too many '{legRangeKey}'");
-                                                                            else Dbug.LogPart($"This range is missing values or missing '{legRangeKey}'");
+                                                                                decodeInfo.NoteIssue($"This range group has too many '{legRangeKey}'");
+                                                                            }
+                                                                            else
+                                                                            {
+                                                                                Dbug.LogPart($"This range is missing values or missing '{legRangeKey}'");
+                                                                                decodeInfo.NoteIssue($"This range is missing values or missing '{legRangeKey}'");
+                                                                            }
                                                                         }
                                                                         Dbug.Log("; ");
                                                                     }
@@ -469,21 +549,39 @@ namespace HCResourceLibraryApp.DataHandling
                                                             addedDataIDs = addedDataIDs.ToArray().SortWords();
                                                             Dbug.LogPart("Sorted data IDs; ");
                                                         }
-                                                        else Dbug.LogPart("Data IDs line contains too many ';'");
+                                                        else
+                                                        {
+                                                            Dbug.LogPart("Data IDs line contains too many ';'");
+                                                            decodeInfo.NoteIssue("Data IDs line contains too many ';'");
+                                                        }
                                                 }
                                                 else
                                                 {
-                                                    if (splitAddedLine[1].Contains('-'))
+                                                    if (splitAddedLine[1].Contains('-')) 
+                                                    {
                                                         Dbug.LogPart("Item line contains too many '-'");
-                                                    else Dbug.LogPart("Item line is missing '-'");
+                                                        decodeInfo.NoteIssue("Item line contains too many '-'");
+                                                    }
+                                                    else 
+                                                    {
+                                                        Dbug.LogPart("Item line is missing '-'");
+                                                        decodeInfo.NoteIssue("Item line is missing '-'");
+                                                    }
                                                 }
                                             }
                                         }
                                         else
                                         {
                                             if (logDataLine.Contains('|'))
+                                            {
                                                 Dbug.LogPart("This line contains too many '|'");
-                                            else Dbug.LogPart("This line is missing '|'");
+                                                decodeInfo.NoteIssue("This line contains too many '|'");
+                                            }
+                                            else
+                                            {
+                                                Dbug.LogPart("This line is missing '|'");
+                                                decodeInfo.NoteIssue("This line is missing '|'");
+                                            }
                                         }
 
                                         // complete (Dbug revision here)
@@ -495,13 +593,14 @@ namespace HCResourceLibraryApp.DataHandling
                                             Dbug.LogPart("); ");
 
                                             // generate a content base group (and repeat info using overriden CBG.ToString())
-                                            ContentBaseGroup newContent = new ContentBaseGroup(logVersion, addedContentName, addedDataIDs.ToArray());
-                                            resourceContents.Add(new ResContents(null, newContent));
+                                            ContentBaseGroup newContent = new(logVersion, addedContentName, addedDataIDs.ToArray());                                            
+                                            resourceContents.Add(new ResContents(newResConShelfNumber, newContent));
                                             //addedContents.Add(newContent);
-                                            Dbug.LogPart($"Generated ContentBaseGroup :: {newContent};");
+                                            Dbug.LogPart($"Generated {nameof(ContentBaseGroup)} :: {newContent};");
+                                            decodeInfo.NoteResult($"Generated {nameof(ContentBaseGroup)} :: {newContent}");
 
                                             sectionIssueQ = false;
-                                        }                                        
+                                        }
                                         Dbug.Log("  //  End added (data)");
                                     }
                                 }
@@ -516,7 +615,7 @@ namespace HCResourceLibraryApp.DataHandling
                                         -- > <Opt.Name> (DataID) - <RelatedInternalName> (RelatedDataID)
                                         Ex.
                                         > Tile Zero (t0) - Other Something (i23)
-                                        > t1 - Something Else
+                                        > t1 - Something Else (i42)
                                     
 
                             
@@ -534,6 +633,9 @@ namespace HCResourceLibraryApp.DataHandling
                                      */
 
                                     sectionIssueQ = true;
+                                    /// additional header (imparsable, but not an issue)
+                                    if (logDataLine.Contains(secBracL) && logDataLine.Contains(secBracR))
+                                        sectionIssueQ = false;
 
                                     /// additional contents
                                     if (logDataLine.StartsWith('>'))
@@ -544,7 +646,7 @@ namespace HCResourceLibraryApp.DataHandling
                                         /// Mackrel Chunks (r230,231 y192) - Mackrel (x300)
                                         logDataLine = logDataLine.Replace(">", "");
                                         Dbug.LogPart("Identified additional data; ");
-                                        if (logDataLine.Contains('-'))
+                                        if (logDataLine.Contains('-') && logDataLine.CountOccuringCharacter('-') == 1)
                                         {
                                             /// SardineTins (u41,42)  <-->  Sardines (x89)
                                             /// (q41~44)  <-->  (x104)
@@ -552,8 +654,7 @@ namespace HCResourceLibraryApp.DataHandling
                                             /// Mackrel Chunks (r230,231 y192) <--> Mackrel (x300)
                                             Dbug.LogPart("Contains '-'; ");
                                             string[] splitAdditLine = logDataLine.Split('-');
-                                            if (splitAdditLine.HasElements(2) && logDataLine.CountOccuringCharacter('-') == 1)
-                                            {
+                                            if (splitAdditLine.HasElements(2))                                            
                                                 if (splitAdditLine[0].IsNotNEW() && splitAdditLine[1].IsNotNEW())
                                                 {
                                                     splitAdditLine[0] = splitAdditLine[0].Trim();
@@ -649,7 +750,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                                         }                                                                            
 
                                                                         // data IDs with numbers
-                                                                        /// 
+                                                                        /// q21 x24`
                                                                         if (!invalidDataKey)
                                                                         {
                                                                             /// q41~44
@@ -694,20 +795,38 @@ namespace HCResourceLibraryApp.DataHandling
                                                                                                 Dbug.LogPart($"{dataID} - ");
                                                                                             }
                                                                                         }
-                                                                                        else Dbug.LogPart("Both range values cannot be the same");
+                                                                                        else
+                                                                                        {
+                                                                                            Dbug.LogPart("Both range values cannot be the same");
+                                                                                            decodeInfo.NoteIssue("Both range values cannot be the same");
+                                                                                        }
                                                                                     }
                                                                                     else
                                                                                     {
                                                                                         if (parseRngA)
+                                                                                        {
                                                                                             Dbug.LogPart($"Right range value '{dataIdRng[1]}' was an invalid number");
-                                                                                        else Dbug.LogPart($"Left range value '{dataIdRng[0]}' was an invalid number");
+                                                                                            decodeInfo.NoteIssue($"Right range value '{dataIdRng[1]}' was an invalid number");
+                                                                                        }
+                                                                                        else 
+                                                                                        {
+                                                                                            Dbug.LogPart($"Left range value '{dataIdRng[0]}' was an invalid number");
+                                                                                            decodeInfo.NoteIssue($"Left range value '{dataIdRng[0]}' was an invalid number");
+                                                                                        }
                                                                                     }
                                                                                 }
                                                                                 else
                                                                                 {
                                                                                     if (dataIdRng.HasElements())
+                                                                                    {
                                                                                         Dbug.LogPart($"This range group has too many '{legRangeKey}'");
-                                                                                    else Dbug.LogPart($"This range is missing values or missing '{legRangeKey}'");
+                                                                                        decodeInfo.NoteIssue($"This range group has too many '{legRangeKey}'");
+                                                                                    }
+                                                                                    else 
+                                                                                    {
+                                                                                        Dbug.LogPart($"This range is missing values or missing '{legRangeKey}'");
+                                                                                        decodeInfo.NoteIssue($"This range is missing values or missing '{legRangeKey}'");
+                                                                                    }
                                                                                 }
                                                                             }
                                                                             /// u41 u42 q41...
@@ -730,6 +849,12 @@ namespace HCResourceLibraryApp.DataHandling
                                                                     }
                                                                     Dbug.NudgeIndent(false);
                                                                 }
+                                                                else
+                                                                {
+                                                                    Dbug.LogPart("Data group had no values for data IDs");
+                                                                    decodeInfo.NoteIssue("Data group had no values for data IDs");
+                                                                }
+
                                                             }           
                                                             
                                                             /// q41~44
@@ -773,21 +898,39 @@ namespace HCResourceLibraryApp.DataHandling
                                                                                     Dbug.LogPart($"{dataID} - ");
                                                                                 }
                                                                             }
-                                                                            else Dbug.LogPart("Both range values cannot be the same");
+                                                                            else
+                                                                            {
+                                                                                Dbug.LogPart("Both range values cannot be the same");
+                                                                                decodeInfo.NoteIssue("Both range values cannot be the same");
+                                                                            }
                                                                         }
                                                                         else
                                                                         {
                                                                             if (parseRngA)
+                                                                            {
                                                                                 Dbug.LogPart($"Right range value '{dataIdRng[1]}' was an invalid number");
-                                                                            else Dbug.LogPart($"Left range value '{dataIdRng[0]}' was an invalid number");
+                                                                                decodeInfo.NoteIssue($"Right range value '{dataIdRng[1]}' was an invalid number");
+                                                                            }
+                                                                            else
+                                                                            {
+                                                                                Dbug.LogPart($"Left range value '{dataIdRng[0]}' was an invalid number");
+                                                                                decodeInfo.NoteIssue($"Left range value '{dataIdRng[0]}' was an invalid number");
+                                                                            }
                                                                         }
                                                                     }
                                                                 }
                                                                 else
                                                                 {
                                                                     if (dataIdRng.HasElements())
+                                                                    {
                                                                         Dbug.LogPart($"This range group has too many '{legRangeKey}'");
-                                                                    else Dbug.LogPart($"This range is missing values or missing '{legRangeKey}'");
+                                                                        decodeInfo.NoteIssue($"This range group has too many '{legRangeKey}'");
+                                                                    }
+                                                                    else
+                                                                    {
+                                                                        Dbug.LogPart($"This range is missing values or missing '{legRangeKey}'");
+                                                                        decodeInfo.NoteIssue($"This range is missing values or missing '{legRangeKey}'");
+                                                                    }
                                                                 }
                                                             }
                                                             
@@ -810,11 +953,15 @@ namespace HCResourceLibraryApp.DataHandling
                                                                 continueToNextAdtSubSectionQ = true;
                                                             }
                                                         }
-                                                        else Dbug.LogPart("Missing content's data ID group");
+                                                        else
+                                                        {
+                                                            Dbug.LogPart("Missing content's data ID group");
+                                                            decodeInfo.NoteIssue("Missing content's data ID group");
+                                                        }
                                                     }
 
                                                     /// Sardines  <-->  (x89)
-                                                    /// x104
+                                                    /// (x104)
                                                     /// CodFish  <-->  (x132)
                                                     // parse and find related contents
                                                     if (continueToNextAdtSubSectionQ)
@@ -856,29 +1003,48 @@ namespace HCResourceLibraryApp.DataHandling
                                                                     else
                                                                     {
                                                                         if (!adtRelatedDataID.Contains(legRangeKey))
+                                                                        {
                                                                             Dbug.LogPart("There can only be one related Data ID (contains ',')");
-                                                                        else Dbug.LogPart($"There can only be one related Data ID (contains range key '{legRangeKey}')");
+                                                                            decodeInfo.NoteIssue("There can only be one related Data ID (contains ',')");
+                                                                        }
+                                                                        else
+                                                                        {
+                                                                            Dbug.LogPart($"There can only be one related Data ID (contains range key '{legRangeKey}')");
+                                                                            decodeInfo.NoteIssue($"There can only be one related Data ID (contains range key '{legRangeKey}')");
+                                                                        }
                                                                         adtRelatedDataID = null;
                                                                     }
                                                                 }
                                                                 Dbug.Log("..");
 
-                                                                adtRelatedName = adtRelatedName.IsNEW() ? "<none>" : adtRelatedName;
-                                                                adtRelatedDataID = adtRelatedDataID.IsNEW() ? "<none>" : adtRelatedDataID;
+                                                                //adtRelatedName = adtRelatedName.IsNEW() ? "<none>" : adtRelatedName;
+                                                                //adtRelatedDataID = adtRelatedDataID.IsNEW() ? "<none>" : adtRelatedDataID;
 
+                                                                // if (has relDataID, find related ConBase) else (only relName, create new ConBase)
                                                                 if (okayRelName || okayRelDataID)
                                                                 {
-                                                                    Dbug.Log($" --> Complete related contents;  Related Name ({adtRelatedName}) and Related Data ID ({adtRelatedDataID}); ");
+                                                                    Dbug.Log($" --> Complete related contents;  Related Name ({(adtRelatedName.IsNEW() ? "<none>" : adtRelatedName)}) and Related Data ID ({(adtRelatedDataID.IsNEW() ? "<none>" : adtRelatedDataID)}); ");
                                                                     continueToNextAdtSubSectionQ = true;
                                                                 }
-                                                                else Dbug.Log("At least one of the two - Related Name or Related Data ID - must have a value; ");
+                                                                else
+                                                                {
+                                                                    Dbug.Log("At least one of the two - Related Name or Related Data ID - must have a value; ");
+                                                                    decodeInfo.NoteIssue("At least one of the two - Related Name or Related Data ID - must have a value; ");
+                                                                }
                                                             }
                                                         }
                                                         else
                                                         {
                                                             if (splitAdditLine[1].CountOccuringCharacter('(') <= 1)
+                                                            {
                                                                 Dbug.LogPart("This related content contains too many ')'");
-                                                            else Dbug.LogPart("This related content contains too many '('");
+                                                                decodeInfo.NoteIssue("This related content contains too many ')'");
+                                                            }
+                                                            else
+                                                            {
+                                                                Dbug.LogPart("This related content contains too many '('");
+                                                                decodeInfo.NoteIssue("This related content contains too many '('");
+                                                            }
                                                         }
                                                     }
 
@@ -889,29 +1055,583 @@ namespace HCResourceLibraryApp.DataHandling
                                                         /// 2nd: find a ResCon with appropriate ConBase to attach additional instance to
                                                         ///        (related dataID is main matcher, having related name is double-verification; use both where feasible and applicable)
                                                         /// -- or --
-                                                        ///      create new ConBase if there is no ConBase to associate with
-                                                        
+                                                        ///      create new ConBase if there is no ConBase to associate with through the data ID
+                                                        if (adtContentName.IsNEW() && adtRelatedDataID.IsNEW())
+                                                        {
+                                                            // Exchanged addit content name for related (optional) name
+                                                            // Exchanged content name for related (opt) name
+                                                            // Using related name as content name
+                                                            Dbug.LogPart("Using related name as content name; ");
+                                                            adtContentName = adtRelatedName;
+                                                        }
 
+                                                        // generate additional content instance
+                                                        ContentAdditionals newAdditCon = new ContentAdditionals(logVersion, adtRelatedDataID, adtContentName, adtConDataIDs.ToArray());
+                                                        Dbug.LogPart($"Generated ContentAdditionals :: {newAdditCon}; Searching for matching ConBase; ");
+
+                                                        ResContents matchingResCon = null;
+                                                        if (resourceContents.HasElements() && newAdditCon.RelatedDataID != null)
+                                                        {
+                                                            // matching with contents in current log decode
+                                                            Dbug.LogPart(" -- 1)in 'Decoded Library'");
+                                                            foreach (ResContents resCon in resourceContents)
+                                                                if (resCon.ContainsDataID(newAdditCon.RelatedDataID, out RCFetchSource source))
+                                                                {
+                                                                    if (source.Equals(RCFetchSource.ConBaseGroup))
+                                                                    {
+                                                                        /// id only: save match, keep searching
+                                                                        /// id and name: save match, end searching
+                                                                        bool matchedNameQ = false;
+
+                                                                        Dbug.LogPart($"; Got match ('{newAdditCon.RelatedDataID}'");
+                                                                        if (resCon.ContentName == adtRelatedName)
+                                                                        {
+                                                                            Dbug.LogPart($", plus matched name '{resCon.ContentName}'");
+                                                                            matchedNameQ = true;
+                                                                        }
+                                                                        Dbug.LogPart(")");
+                                                                        matchingResCon = resCon;
+
+                                                                        if (matchedNameQ)
+                                                                        {
+                                                                            Dbug.LogPart("; Search end");
+                                                                            break;
+                                                                        }
+                                                                        else Dbug.LogPart("; Search continue");
+                                                                    }
+                                                                }
+
+
+                                                            // matching with contents within library
+                                                            if (matchingResCon == null)
+                                                            {
+                                                                Dbug.LogPart($" -- 2)in 'Existing Library' [TO BE DONE]");
+                                                            }
+                                                        }
+                                                        //else Dbug.LogPart("No Related Data ID provided");
+                                                        Dbug.Log("; ");
+
+                                                        // if (has relDataID, find related ConBase) else if (only relName, create new ConBase)
+                                                        bool completedFinalStepQ = false;
+                                                        if (newAdditCon.RelatedDataID.IsNotNE())
+                                                        {
+                                                            if (matchingResCon != null)
+                                                            {
+                                                                matchingResCon.StoreConAdditional(newAdditCon);
+                                                                Dbug.LogPart($"Completed connection of ConAddits ({newAdditCon}) to ConBase ({matchingResCon.ConBase}) [through ID '{newAdditCon.RelatedDataID}']; ");
+                                                                decodeInfo.NoteResult($"Connected ConAddits ({newAdditCon}) to ({matchingResCon.ConBase}) [by ID '{newAdditCon.RelatedDataID}']");
+                                                                completedFinalStepQ = true;
+                                                            }
+                                                        }
+                                                        else if (newAdditCon.OptionalName.IsNotNE())
+                                                        {
+                                                            Dbug.LogPart("No Related Data ID, no match with existing ResContents; ");
+                                                            ContentBaseGroup adtAsNewContent = new(logVersion, newAdditCon.OptionalName, adtConDataIDs.ToArray());
+                                                            resourceContents.Add(new ResContents(newResConShelfNumber, adtAsNewContent));
+                                                            Dbug.LogPart($"Generated new ConBase from ConAddits info :: {adtAsNewContent}");
+                                                            decodeInfo.NoteResult($"Generated ConBase from ConAddits info :: {adtAsNewContent}");
+                                                            completedFinalStepQ = true;
+                                                        }
+
+                                                        sectionIssueQ = !completedFinalStepQ;
                                                     }
                                                 }
                                                 else
                                                 {
                                                     if (splitAdditLine[0].IsNotNEW())
+                                                    {
                                                         Dbug.LogPart("Line is missing information for 'related content';");
-                                                    Dbug.LogPart("Line is missing information for 'additional content';");
-                                                }
+                                                        decodeInfo.NoteIssue("Line is missing information for 'related content';");
+                                                    }
+                                                    else
+                                                    {
+                                                        Dbug.LogPart("Line is missing information for 'additional content';");
+                                                        decodeInfo.NoteIssue("Line is missing information for 'additional content';");
+                                                    }
+                                                }                               
+                                        }
+                                        else
+                                        {
+                                            if (logDataLine.Contains('-'))
+                                            {
+                                                Dbug.LogPart("This line contains too many '-'");
+                                                decodeInfo.NoteIssue("This line contains too many '-'");
                                             }
                                             else
                                             {
-                                                if (splitAdditLine.HasElements(2))
-                                                    Dbug.LogPart("This line contains too many '-'");
-                                                else Dbug.LogPart("This line is missing '-'");
+                                                Dbug.LogPart("This line is missing '-'");
+                                                decodeInfo.NoteIssue("This line is missing '-'");
                                             }
                                         }
                                         Dbug.Log("  //  End additional");
                                     }
                                 }
 
+                                /// TOTAL TEXTURES ADDED
+                                if (currentSectionName == secTTA)
+                                {
+                                    /** TOTAL TEXTURES ADDED [TTA] (Log Template & Design Doc)
+                                        LOG TEMPLATE
+                                        --------------------
+                                        [TTA : n]
+
+                            
+                                        DESIGN DOC
+                                        --------------------
+                                    .	[TTA]
+			                            Syntax		[TTA: #]
+			                            Ex.			[TTA: 38]
+				                            Tag denoting a tally of the number of content added in the specified version of the resource pack. This number only accounts for the contents tally under "ADDED" and "ADDITIONAL".
+					                            - It may stand for "Total Textures Added", but it includes the count of ALL contents added.
+                                    */
+
+                                    sectionIssueQ = true;
+
+                                    Dbug.LogPart("TTA Data  //  ");
+                                    logDataLine = RemoveSquareBrackets(logDataLine);
+                                    if (logDataLine.Contains(':') && logDataLine.CountOccuringCharacter(':') == 1)
+                                    {
+                                        Dbug.LogPart($"Contains ':', raw data ({logDataLine}); ");
+                                        string[] splitLogData = logDataLine.Split(':');
+                                        if (splitLogData.HasElements())
+                                            if (splitLogData[1].IsNotNEW())
+                                            {
+                                                Dbug.Log($"Has sufficent elements after split -- parsing; ");
+                                                if (int.TryParse(splitLogData[1], out int ttaNum))
+                                                {
+                                                    if (ttaNum >= 0)
+                                                    {
+                                                        bool ranVerificationCountQ = false, checkVerifiedQ = false;
+                                                        int countedTTANum = 0;
+                                                        if (resourceContents.HasElements())
+                                                        {
+                                                            // only counts within the recently decoded contents
+                                                            foreach (ResContents resCon in resourceContents)
+                                                            {
+                                                                if (resCon != null)
+                                                                {
+                                                                    // count from content base group
+                                                                    if (resCon.ConBase != null)
+                                                                        if (resCon.ConBase.IsSetup())
+                                                                            countedTTANum += resCon.ConBase.CountIDs;
+
+                                                                    // count from additional contents
+                                                                    if (resCon.ConAddits.HasElements())
+                                                                        foreach (ContentAdditionals conAddit in resCon.ConAddits)
+                                                                        {
+                                                                            if (conAddit != null)
+                                                                                if (conAddit.IsSetup())
+                                                                                    countedTTANum += conAddit.CountIDs;
+                                                                        }
+                                                                }
+                                                            }
+                                                            ranVerificationCountQ = true;
+                                                        }
+
+                                                        Dbug.LogPart($"--> Obtained TTA number '{ttaNum}'");
+                                                        if (ranVerificationCountQ)
+                                                        {
+                                                            if (countedTTANum == ttaNum)
+                                                            {
+                                                                Dbug.LogPart(" [Verified!]");
+                                                                checkVerifiedQ = true;
+                                                            }
+                                                            else
+                                                            {
+                                                                Dbug.LogPart($" [Check counted '{countedTTANum}' instead]");
+                                                                decodeInfo.NoteIssue($"TTA verification counted '{countedTTANum}' instead of obtained number '{ttaNum}'");
+                                                            }
+                                                        }
+                                                        decodeInfo.NoteResult($"Got TTA number '{ttaNum}'");
+
+                                                        ttaNumber = ttaNum;
+                                                        sectionIssueQ = !checkVerifiedQ;
+                                                    }
+                                                    else
+                                                    {
+                                                        Dbug.LogPart("TTA number is less than zero (0)");
+                                                        decodeInfo.NoteIssue("TTA number cannot be less than zero (0)");
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    Dbug.LogPart("TTA number could not be parsed");
+                                                    decodeInfo.NoteIssue("TTA number could not be parsed");
+                                                }
+                                            }
+                                            else
+                                            {
+                                                Dbug.LogPart("No data in split @ix1");
+                                                decodeInfo.NoteIssue("No data provied for TTA number");
+                                            }
+                                    }
+                                    else
+                                    {
+                                        if (logDataLine.Contains(':'))
+                                        {
+                                            Dbug.LogPart("This line has too many ':'");
+                                            decodeInfo.NoteIssue("This line has too many ':'");
+                                        }
+                                        else
+                                        {
+                                            Dbug.LogPart("This line is missing ':'");
+                                            decodeInfo.NoteIssue("This line is missing ':'");
+                                        }
+                                    }
+                                    Dbug.Log("  //  End tta");
+                                }
+
+                                /// UPDATED 
+                                if (currentSectionName == secUpd)
+                                {
+                                    /** UPDATED (Log Template & Design Doc)
+                                        LOG TEMPLATE
+                                        --------------------
+                                        [UPDATED]
+                                        -- > <InternalName> (<RelatedDataId>) - change description
+                                        Ex.
+                                        > UFO (t23) - Laser color was incorrect.
+                                        > UFO (t24) - Ship chasis' border was missing.                         
+
+
+                            
+                                        DESIGN DOC
+                                        --------------------
+                                    .	[UPDATED]
+			                            Syntax		> {InternalName} ({RelatedDataID}) - {change description}
+			                            Ex. 		> Spoiled Potato (i38) - Recolored to look less appetizing.
+				                            Tag denoting changes that are made to existing content. The information written would be appended as a history of changes made to the existing content.
+				                            . {InternalName} - The name of the content being updated
+				                            . {RelatedDataID} - The data ID relevant to the named content being updated
+				                            . {change description} - A description of the change(s) made to given
+                                    */
+
+                                    sectionIssueQ = true;
+
+                                    /// updated header (imparsable, but not an issue)
+                                    if (logDataLine.Contains(secBracL) && logDataLine.Contains(secBracR))
+                                        sectionIssueQ = false;
+
+                                    /// updated contents
+                                    if (logDataLine.StartsWith('>'))
+                                    {
+                                        /// Taco Sauce (y32) - Fixed to look much saucier
+                                        /// (q42) - Redesigned to look cooler
+                                        logDataLine = logDataLine.Replace(">", "");
+                                        Dbug.LogPart("Identified updated data; ");
+                                        if (logDataLine.Contains('-') && logDataLine.CountOccuringCharacter('-') == 1)
+                                        {
+                                            /// Taco Sauce (y32)  <-->  Fixed to look much saucier
+                                            /// (q42)  <-->  Redesigned to look cooler
+                                            Dbug.LogPart("Contains '-'; ");
+                                            string[] splitLogLine = logDataLine.Split('-');
+                                            if (splitLogLine.HasElements(2))
+                                                if (splitLogLine[0].IsNotNEW() && splitLogLine[1].IsNotNEW())
+                                                {
+                                                    Dbug.Log($"Got updated content info ({splitLogLine[0]}) and change description ({splitLogLine[1]}); ");
+
+                                                    // updated contents info
+                                                    Dbug.LogPart("Content Parts: ");
+                                                    string updtContentName = "", updtDataID = "", updtChangeDesc = "";
+                                                    splitLogLine[0] = splitLogLine[0].Replace("(", " (").Replace(")", ") ");
+                                                    string[] updtConData = splitLogLine[0].Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                                                    for (int ux = 0; ux < updtConData.Length; ux++)
+                                                    {
+                                                        string updtDataPart = updtConData[ux];
+                                                        if (updtDataPart.Contains('(') && updtDataPart.Contains(')') && updtDataID.IsNE())
+                                                            updtDataID = updtDataPart;
+                                                        else updtContentName += $"{updtDataPart} ";
+                                                        Dbug.LogPart($"{updtDataPart}{(ux + 1 == updtConData.Length? "" : "|")}");
+                                                    }
+                                                    Dbug.LogPart("; ");
+                                                    updtDataID = RemoveParentheses(updtDataID);
+                                                    updtContentName = FixContentName(updtContentName);
+                                                    Dbug.Log("..");
+
+                                                    bool okayDataIDQ = true;
+                                                    if (updtDataID.Contains(',') || updtDataID.Contains(legRangeKey))
+                                                    {
+                                                        Dbug.LogPart("Only one updated ID may be referenced per update description");
+                                                        if (updtDataID.Contains(','))
+                                                        {
+                                                            Dbug.LogPart(" (contains ',')");
+                                                            decodeInfo.NoteIssue($"Only one updated ID can be referenced per description (no data groups; contained ',')");
+                                                        }
+                                                        else
+                                                        {
+                                                            Dbug.LogPart($" (contains '{legRangeKey}'");
+                                                            decodeInfo.NoteIssue($"Only one updated ID can be referenced per description (no ranges; contained '{legRangeKey}')");
+                                                        }
+                                                        okayDataIDQ = false;
+                                                    }
+                                                    else Dbug.Log($"Completed updated contents: Updated Name ({(updtContentName.IsNEW()? "<null>" : updtContentName)}) and Data ID ({updtDataID}); ");
+
+                                                    // updated description
+                                                    if (okayDataIDQ)
+                                                        updtChangeDesc = FullstopCheck(splitLogLine[1]);
+
+                                                    // generate ContentChanges, connect to ConBase or ConAddits, then attach to ResCon
+                                                    if (okayDataIDQ)
+                                                    {
+                                                        ContentChanges newConChanges = new(logVersion, updtContentName, updtDataID, updtChangeDesc);
+                                                        Dbug.Log($"Generated {nameof(ContentChanges)} instance :: {newConChanges}; ");
+                                                        Dbug.LogPart("Searching for connection in 'Existing Library'** -- ");
+
+                                                        ResContents matchingResCon = null;
+                                                        ContentAdditionals subMatchConAdd = new();
+                                                        /// should only be checking with existing library; can't update something that was just added
+                                                        if (resourceContents != null)
+                                                        {
+                                                            if (resourceContents.HasElements())
+                                                                foreach (ResContents resCon in resourceContents)
+                                                                {
+                                                                    if (resCon.ContainsDataID(updtDataID, out RCFetchSource source, out ContentAdditionals conAddix))
+                                                                    {
+                                                                        subMatchConAdd = conAddix;
+                                                                        matchingResCon = resCon;
+
+                                                                        /// id only: save match, keep searching
+                                                                        /// id and name: save match, end searching
+                                                                        bool matchedNameQ = false;
+
+                                                                        Dbug.LogPart($" Got match ('{newConChanges.RelatedDataID}' from source '{source}'");
+                                                                        if (source.Equals(RCFetchSource.ConBaseGroup))
+                                                                        {
+                                                                            if (resCon.ContentName == updtContentName)
+                                                                            {
+                                                                                Dbug.LogPart($", plus matched name '{resCon.ContentName}'");
+                                                                                matchedNameQ = true;
+                                                                            }
+                                                                        }
+                                                                        else if (subMatchConAdd.IsSetup() && source.Equals(RCFetchSource.ConAdditionals))
+                                                                        {
+                                                                            if (subMatchConAdd.OptionalName == updtContentName)
+                                                                            {
+                                                                                Dbug.LogPart($", plus matched name '{subMatchConAdd.OptionalName}'");
+                                                                                matchedNameQ = true;
+                                                                            }
+                                                                        }
+                                                                        Dbug.LogPart(")");
+
+                                                                        if (matchedNameQ)
+                                                                        {
+                                                                            Dbug.LogPart("; Search end");
+                                                                            break;
+                                                                        }
+                                                                        else Dbug.LogPart("; Search continue");
+                                                                    }
+                                                                }
+                                                            Dbug.Log("; ");
+                                                        }
+
+                                                        if (matchingResCon != null)
+                                                        {
+                                                            matchingResCon.StoreConChanges(newConChanges);
+                                                            Dbug.LogPart($"Completed connection of ConChanges ({newConChanges}) using ");
+                                                            if (subMatchConAdd.IsSetup())
+                                                                Dbug.LogPart($"ConAddits ({subMatchConAdd})");
+                                                            else Dbug.LogPart($"ConBase ({matchingResCon.ConBase})");
+                                                            Dbug.Log($" [through ID '{newConChanges.RelatedDataID}']");
+                                                            decodeInfo.NoteResult($"Connected ConChanges ({newConChanges}) to {(subMatchConAdd.IsSetup() ? $"ConAddits ({subMatchConAdd})" : $"ConBase {matchingResCon.ConBase}")} [by ID '{newConChanges.RelatedDataID}'");
+
+                                                            sectionIssueQ = false;
+                                                        }
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    if (splitLogLine[0].IsNotNEW())
+                                                    {
+                                                        Dbug.LogPart("This line is missing data for 'updated content'");
+                                                        decodeInfo.NoteIssue("This line is missing data for 'updated content'");
+                                                    }
+                                                    else
+                                                    {
+                                                        Dbug.LogPart("This line is missing data for 'change description'");
+                                                        decodeInfo.NoteIssue("This line is missing data for 'change description'");
+                                                    }
+                                                }
+                                        }
+                                        else
+                                        {
+                                            if (logDataLine.Contains('-'))
+                                            {
+                                                Dbug.LogPart("This line contains too many '-'");
+                                                decodeInfo.NoteIssue("This line contains too many '-'");
+                                            }
+                                            else
+                                            {
+                                                Dbug.LogPart("This line is missing '-'");
+                                                decodeInfo.NoteIssue("This line is missing '-'");
+                                            }
+                                        }
+                                        Dbug.Log("  //  End updated");
+                                    }
+                                }
+
+                                /// LEGEND
+                                if (currentSectionName == secLeg)
+                                {
+                                    /** LEGEND (Log Template & Design Doc)
+                                        LOG TEMPLATE
+                                        --------------------
+                                        -- Must be written as 'key - Keyname'
+                                        ...
+
+                            
+
+                                        DESIGN DOC
+                                        --------------------
+                                    .	[LEGEND]
+			                            Syntax		> {Key} - {Keyname}
+			                            Ex.			> i - Item
+				                            {REQUIRED} This tag translates directly to the auto logger, denoting a definition of the symbols / keys used to describe the additions and changes made in the version through the previous 3 tags (ADDED, ADDITIONAL, and UPDATED).
+                                    */
+
+                                    sectionIssueQ = true;
+                                    bool isHeader = false;
+
+                                    /// legend header (imparsable, but not an issue)
+                                    if (logDataLine.Contains(secBracL) && logDataLine.Contains(secBracR))
+                                    {
+                                        sectionIssueQ = false;
+                                        isHeader = true;
+                                    }
+
+                                    /// legend data
+                                    if (!isHeader) 
+                                    {
+                                        if (logDataLine.Contains('-') && logDataLine.CountOccuringCharacter('-') == 1)
+                                        {
+                                            Dbug.LogPart("Identified legend data; Contains '-'; ");
+                                            string[] splitLegKyDef = logDataLine.Split('-');
+                                            if (splitLegKyDef.HasElements(2))
+                                                if (splitLegKyDef[0].IsNotNEW() && splitLegKyDef[1].IsNotNEW())
+                                                {
+                                                    splitLegKyDef[0] = splitLegKyDef[0].Trim();
+                                                    splitLegKyDef[1] = splitLegKyDef[1].Trim();
+                                                    Dbug.LogPart($"Trimmed data; ");
+
+
+                                                    LegendData newLegData = new(splitLegKyDef[0], splitLegKyDef[1]);
+                                                    Dbug.Log($"Generated new {nameof(LegendData)} :: {newLegData.ToStringLengthy()}; ");
+                                                    decodeInfo.NoteResult($"Generated {nameof(LegendData)} :: {newLegData.ToStringLengthy()}");
+
+                                                    if (legendDatas.HasElements())
+                                                    {
+                                                        Dbug.LogPart("Searching for existing key; ");
+                                                        LegendData matchingLegDat = null;
+                                                        foreach (LegendData legDat in legendDatas)
+                                                        {
+                                                            if (legDat.IsSetup())
+                                                                if (legDat.Key == newLegData.Key)
+                                                                {
+                                                                    Dbug.LogPart($"Found matching key ({newLegData.Key}) in ({legDat}); ");
+                                                                    matchingLegDat = legDat;
+                                                                    break;
+                                                                }
+                                                        }
+
+                                                        if (matchingLegDat != null)
+                                                        {
+                                                            bool addedDef = matchingLegDat.AddKeyDefinition(newLegData[0]);
+                                                            if (addedDef)
+                                                            {
+                                                                Dbug.LogPart($"Expanded legend data :: {matchingLegDat.ToStringLengthy()}");
+                                                                decodeInfo.NoteResult($"Edited existing legend data (new definition) :: {matchingLegDat.ToStringLengthy()}");
+                                                            }
+                                                            else
+                                                            {
+                                                                Dbug.LogPart("New definition could not be added to existing LegData instance");
+                                                                decodeInfo.NoteIssue("New definition could not be added to existing LegData instance");
+                                                            }
+                                                        }
+                                                        else
+                                                        {
+                                                            Dbug.LogPart("No similar key exists; ");
+                                                            legendDatas.Add(newLegData);
+                                                            Dbug.LogPart("Added new legend data to decode library");
+                                                        }
+                                                    }
+                                                    else
+                                                    {
+                                                        legendDatas.Add(newLegData);
+                                                        Dbug.LogPart("Added new legend data to decode library");
+                                                    }                                                    
+                                                    //Dbug.LogPart("; ");
+
+                                                    sectionIssueQ = false;
+                                                }
+                                                else
+                                                {
+                                                    if (splitLegKyDef[0].IsNotNEW())
+                                                    {
+                                                        Dbug.LogPart("This line is missing data for 'legend key'");
+                                                        decodeInfo.NoteIssue("This line is missing data for 'legend key'");
+                                                    }
+                                                    else
+                                                    {
+                                                        Dbug.LogPart("This line is missing data for 'key definition'");
+                                                        decodeInfo.NoteIssue("This line is missing data for 'key definition'");
+                                                    }
+                                                }
+                                            //Dbug.Log("  //  End legend");
+                                        }
+                                        else
+                                        {
+                                            if (logDataLine.Contains('-'))
+                                            {
+                                                Dbug.LogPart("This line contains too many '-'");
+                                                decodeInfo.NoteIssue("This line contains too many '-'");
+                                            }
+                                            else
+                                            {
+                                                Dbug.LogPart("This line is missing '-'");
+                                                decodeInfo.NoteIssue("This line is missing '-'");
+                                            }
+                                        }
+                                        Dbug.Log("  //  End legend");
+                                    }
+
+                                }
+
+                                /// SUMMARY 
+                                if (currentSectionName == secSum)
+                                {
+                                    // tbd...ltr
+                                }
+
+
+                                /** <SecName> (Log Template & Design Doc)
+                                        LOG TEMPLATE
+                                        --------------------
+                                        ...                            
+
+                            
+                                        DESIGN DOC
+                                        --------------------
+                                        ...
+                                */
+
+
+
+                                // ---   ---   ---   ---   ---                               
+                                /// DecodeInfo checklist
+                                ///     SECTION             DONE?
+                                ///     ----                ----
+                                ///     Version             Y
+                                ///     Added (header)      Y
+                                ///     Added (content)     Y
+                                ///     Additional          Y
+                                ///     TTA                 Y
+                                ///     Updated             Y
+                                ///     Legend              Y
+                                ///     Summary
+                                ///     
+
+
+                                if (decodeInfo.IsSetup())
+                                    decodingInfoDock.Add(decodeInfo);
 
                                 if (sectionIssueQ)
                                     if (currentSectionNumber.IsWithin(0, (short)(countSectionIssues.Length - 1)))
@@ -922,15 +1642,28 @@ namespace HCResourceLibraryApp.DataHandling
                         }
                         else
                         {
-                            if (invalidLine)
+                            if (withinOmitBlock)
+                            {
+                                //Dbug.Log($"Omitting L{lineNum} --> Block Omission: currently within line omission block.");
+                                Dbug.LogPart($"{lineNum} ");
+                            }
+                            else if (invalidLine)
+                            {
+                                /// report invalid key issue
+                                DecodeInfo diMain = new($"L{lineNum}| {logDataLine}", "Main Decoding");
+                                diMain.NoteIssue($"The '{Sep}' character is an invalid character and may not be placed within decodable log lines.");
+                                decodingInfoDock.Add(diMain);
+
                                 Dbug.Log($"Skipping L{lineNum} --> Contains invalid character: '{Sep}'");
-                            else Dbug.Log($"Omitting L{lineNum} --> Imparsable: Line contains '{omit}' and does not contain '{secBracL}' or '{secBracR}'");
+                            }
+                            else Dbug.Log($"Omitting L{lineNum} --> Imparsable: Line contains '{omit}'");
+                            //else Dbug.Log($"Omitting L{lineNum} --> Imparsable: Line contains '{omit}' and does not contain '{secBracL}' or '{secBracR}'");
                         }
                     }
                     Dbug.NudgeIndent(false);
                     
                     // aka 'else'
-                    if (logDataLine.IsNEW())
+                    if (logDataLine.IsNEW() && !endFileReading)
                     {
                         if (currentSectionNumber.IsWithin(0, (short)(countSectionIssues.Length - 1))) 
                             Dbug.Log($"..  Sec#{currentSectionNumber + 1} '{currentSectionName}' ended with [{countSectionIssues[currentSectionNumber]}] issues;");
@@ -940,8 +1673,20 @@ namespace HCResourceLibraryApp.DataHandling
                         Dbug.Log($"L{lineNum,-2}| {ConditionalText(logDataLine.IsNEW(), $"<null>{(withinASectionQ ? $" ... (no longer within a section)" : "")}", logDataLine)}");
                         withinASectionQ = false;
                     }
+
+                    if (endFileReading)
+                        Dbug.Log(" --> Decoding from file complete ... ending file reading");
                 }
                 Dbug.NudgeIndent(false);
+
+                // -- compile decode library instance --
+                if (endFileReading)
+                {
+                    Dbug.Log("- - - - - - - - - - -");
+                }
+
+                // -- assign result values --
+                hasFullyDecodedLogQ = endFileReading;
             }
             Dbug.EndLogging();
             return hasFullyDecodedLogQ;
@@ -1031,6 +1776,21 @@ namespace HCResourceLibraryApp.DataHandling
                 }
                 return str;
             }
+            /// also partly logs "Checked/Added fullstop; "
+            static string FullstopCheck(string str)
+            {
+                if (str.IsNotNEW())
+                {
+                    if (!str.EndsWith("."))
+                    {
+                        str = $"{str}.";
+                        Dbug.LogPart("Added fullstop; ");
+                    }
+                    else Dbug.LogPart("Checked fullstop; ");
+                    str = str.Trim();
+                }
+                return str;
+            }
         }
-    }
+    }        
 }

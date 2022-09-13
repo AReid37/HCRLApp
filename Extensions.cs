@@ -10,6 +10,7 @@ namespace HCResourceLibraryApp
     public static class Extensions
     {
         // GENERAL  --> STRINGS and CHARS
+        #region general_stringsNChars
         /// <summary>Checks if a string value is not null, empty, or whitespaced.</summary>
         public static bool IsNotNEW(this string s)
         {
@@ -63,6 +64,32 @@ namespace HCResourceLibraryApp
             }
             return counts;
         }
+        /// <summary>Limits the length of a string and uses <paramref name="clampingSuffix"/> to signify this restriction where applicable.</summary>
+        /// <param name="maxLength">Must be greater than or equal to 5.</param>
+        /// <param name="clampingSuffix">Maximum of 3 characters.</param>
+        public static string Clamp(this string s, int maxLength, string clampingSuffix)
+        {
+            const int clampSymMaxLen = 3, minimumClampLength = 5;
+            string fullStr = s;
+            if (s.IsNotNEW() && maxLength >= minimumClampLength)
+            {
+                int clampSymLen = 0;
+                if (clampingSuffix.IsNotNEW())
+                {
+                    if (!clampingSuffix.Length.IsWithin(0, clampSymMaxLen))
+                        clampingSuffix = clampingSuffix.Remove(3);
+                    clampSymLen = clampingSuffix.Length;
+                }
+
+                if (s.Length > maxLength - clampSymLen)
+                {
+                    s = s.Remove(maxLength - clampSymLen);
+                    fullStr = $"{s}{clampingSuffix}";
+                }
+            }
+            return fullStr;
+        }
+        #endregion
 
         // GENERAL --> COLLECTIONS
         /// <summary>Checks if a collection (array, list) is not null and has at least one element.</summary>
@@ -727,6 +754,14 @@ namespace HCResourceLibraryApp
             return widthScale;
         }
 
-
+        // RESOURCE CONTENTS
+        public static bool Equals(this RCFetchSource rcfs, RCFetchSource other)
+        {
+            return rcfs == other;
+        }
+        public static bool IsNone(this RCFetchSource rcfs)
+        {
+            return rcfs == RCFetchSource.None;
+        }
     }
 }

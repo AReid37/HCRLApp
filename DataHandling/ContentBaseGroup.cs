@@ -99,6 +99,16 @@ namespace HCResourceLibraryApp.DataHandling
                 return dataID;
             }            
         }
+        public int CountIDs
+        {
+            get
+            {
+                int idCount = 0;
+                if (_dataIDs.HasElements())
+                    idCount = _dataIDs.Count;
+                return idCount;
+            }
+        }
         #endregion
 
         public ContentBaseGroup()
@@ -172,6 +182,7 @@ namespace HCResourceLibraryApp.DataHandling
             return anyChanges;
         }
         /// <summary>Has this instance of <see cref="ContentBaseGroup"/> been initialized with the appropriate information?</summary>
+		/// <returns>A boolean stating whether the version number, data IDs, and content name has been given values.</returns>
         public bool IsSetup()
         {
             return _dataIDs.HasElements() && _versionNumber.HasValue() && _contentName.IsNotNEW();

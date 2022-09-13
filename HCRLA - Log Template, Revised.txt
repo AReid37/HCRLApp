@@ -1,15 +1,8 @@
 ﻿[VERSION : a.bb]
 
 
-[ADDED : x,t89; #,Item]
--- # |<InternalName>-(<shortItemID>; <shortRelatedIds>)
-Ex.
-1 |One Item 		-(i1; t0)
-2 |This #		-(i5; t2,x)
-3 |Some #		-(i6; t344,344_2 w290)
-4 |Final #		-(i4)
-...
-25| Maximum items per update. Effective until no more items to add.  
+[ADDED]
+-- up to 25 maximum items per update. Effective until no more items to add.  
 
 
 [ADDITIONAL]
@@ -19,22 +12,62 @@ Ex.
 
 
 
+-- A single line log comment starts with '--'.
+-- A multiline log comment stars with '-- !open --' and ends with '-- !close --', each on a line of their own [HCRLA decoder only].
+
+-- !open --
+GUIDELINES
+* Avoid utilizing the '%' character within this log file.
+* Use the following characters with caution as they also play a role in log decoding:
+	Start of lines ::  [  >  -
+	Within lines   ::  [  ]  (  )  -  :  ,  ;  ~
 
 
 
+EXTRA INFORMATION FOR EACH SECTION
+_____
+[Version]
+Syntax: [Version : a.bb]
+'a' as major number, 'bb' as minor number. 
+Ex. 1.0, 1.1, 1.11, 1.24
+Ex. [Version : 1.1]
 
--- Lines of text starting with '--' are ignored by logger and HCRLA decoder. Avoid using square brackets '[]' within these lines
--- Avoid utilizing the '%' character within this log file.
+_____
+[Added] 
+Header :: 
+	set placeholders (ph) and substitution phrases (sub) to replace them for easier logging within header. 
+	~~
+	Syntax: ph,sub (separate multiple placeholder/substitutions groups with ';')
+	Ex.	[Added : $f,Feather Bill; m>,Marshwood; #,x32]
 
--- EXTRA INFORMATION
--- Version :: 'a' as major number, 'bb' as minor number. (Ex. 1.0, 1.01, 1.24)
--- Added (header) :: set placeholders and substitution phrases to replace them for easier logging (only applies to 'Added' section). Syntax: ph,sub (separate multiple placeholder/substitutions groups with ';')
--- Added :: <shortItemID> only 'Item' data IDs may go here;  <shortRelatedIds> other related, non-wordy data Ids (tiles, projectiles, walls, ...). Multiple of the same type are comma separated (x21,22), different types separated with spaces (x21 y22)
--- Additional ::
--- TTA :: 
--- Update ::
--- Legend :: 
--- Summary :: 
+Body :: 
+	Syntax: #| <InternalName> - (<shortItemID>; <shortRelatedIds>)
+	~~
+	# : The number of the item being added ('1' for first item, '2' for second, '3' for third...)
+	<InternalName> : The in-game name given to the added item being described
+	<shortItemID> : only 'Item' data IDs may go here
+	<shortRelatedIds> : other related, non-wordy data Ids (tiles, projectiles, walls, ...).	
+		Multiple of similar type are comma-separated (x21,22), different types space-separated (x21 y22)
+	Ex. 12| PotPie - (i42; t23 p44,52 w31)
 
--- Link to Steam Text Formatting --
--- https://steamcommunity.com/comment/Guide/formattinghelp
+_____
+[Additional]
+
+
+_____
+[TTA]
+
+_____
+[Updated]
+
+_____
+[Legend]
+
+_____
+[Summary]
+
+
+
+LINK TO STEAM TEXT FORMATTING
+https://steamcommunity.com/comment/Guide/formattinghelp
+-- !close --

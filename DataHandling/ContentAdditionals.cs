@@ -3,7 +3,7 @@ using static HCResourceLibraryApp.DataHandling.DataHandlerBase;
 
 namespace HCResourceLibraryApp.DataHandling
 {
-    public class ContentAdditionals
+	public class ContentAdditionals
     {
 		/*** CONTENT ADDITIONALS - PLANS
         Data form of Second group for content file encoding
@@ -112,7 +112,17 @@ namespace HCResourceLibraryApp.DataHandling
 				return dataID;
             }
         }
-        #endregion
+		public int CountIDs
+		{
+			get
+			{
+				int idCount = 0;
+				if (_dataIDs.HasElements())
+					idCount = _dataIDs.Count;
+				return idCount;
+			}
+		}
+		#endregion
 
 		public ContentAdditionals()
         {
@@ -157,6 +167,8 @@ namespace HCResourceLibraryApp.DataHandling
             }
 			return secondEncode;
 		}
+		/// <summary>Has this instance of <see cref="ContentAdditionals"/> been initialized with the appropriate information?</summary>
+		/// <returns>A boolean stating whether the version added, data IDs, and either the optional name or related ID has been given values.</returns>
 		public bool IsSetup()
         {
 			return _versionAdded.HasValue() && (_optionalName.IsNotNEW() || _relatedDataID.IsNotNEW()) && _dataIDs.HasElements();
