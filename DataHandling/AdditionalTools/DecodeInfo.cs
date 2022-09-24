@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace HCResourceLibraryApp.DataHandling
+﻿namespace HCResourceLibraryApp.DataHandling
 {
     /// <summary>Relays information regarding the decoding process of each line from version log files.</summary>
     public struct DecodeInfo

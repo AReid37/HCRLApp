@@ -1,9 +1,8 @@
 ﻿using System.Collections.Generic;
-using static HCResourceLibraryApp.DataHandling.DataHandlerBase;
 
 namespace HCResourceLibraryApp.DataHandling
 {
-    public class LegendData
+    public class LegendData : DataHandlerBase
     {
         /*** LEGEND DATA
         Data form for legend keys and definitions
@@ -37,6 +36,7 @@ namespace HCResourceLibraryApp.DataHandling
         Methods
             - vd AddKeyDefinition(str newDefinition)
             - str Encode()
+            - bl Decode (str info)
             - bl Equals(LD legDat)
             - bl ChangesDetected()
             - bl IsSetup()
@@ -50,7 +50,7 @@ namespace HCResourceLibraryApp.DataHandling
         string _key;
         List<string> _definitions;
 
-        // public
+        // public        
         public string Key
         {
             get => _key;
@@ -74,7 +74,7 @@ namespace HCResourceLibraryApp.DataHandling
                 }
                 return definition;
             }
-        }        
+        }
         #endregion
 
         public LegendData()
@@ -91,6 +91,7 @@ namespace HCResourceLibraryApp.DataHandling
             Key = legKey;
             if (definitions.HasElements())
             {
+                
                 _definitions = new List<string>();
                 foreach (string def in definitions)
                     if (def.IsNotNEW())
@@ -147,6 +148,52 @@ namespace HCResourceLibraryApp.DataHandling
             }
             return fullEncode;
         }
+        public bool Decode(string legInfo)
+        {
+            /**
+             Syntax: {key}*{keynames}***
+
+            FROM DESIGN DOC
+            ..........
+            > {key}
+		        [REQUIRED] string value
+		        May not contain '*' symbol or comma (',')
+	        > {keynames}
+		        [REQUIRED] seperator-separated string values
+		        May not contain '*' symbol
+	        NOTES
+		        - Multiple legend keys and keynames must be separated with '***'
+            ..........             
+             **/
+
+            if (legInfo.IsNotNEW())
+            {
+                if (legInfo.Contains(Sep) && legInfo.CountOccuringCharacter(Sep[0]) >= 1)
+                {
+                    string[] legParts = legInfo.Split(Sep, System.StringSplitOptions.RemoveEmptyEntries);
+                    if (legParts.HasElements())
+                        for (int lix = 0; lix < legParts.Length; lix++)
+                        {
+                            if (legParts[lix].IsNotNEW())
+                            {
+                                /// key
+                                if (lix == 0)
+                                    Key = legParts[lix];
+                                /// definitions
+                                else
+                                {
+                                    if (!_definitions.HasElements())
+                                        _definitions = new List<string>();
+                                    _definitions.Add(legParts[lix]);
+                                }
+                            }
+                        }
+
+                    _previousSelf = (LegendData)this.MemberwiseClone();
+                }
+            }
+            return IsSetup();
+        }
         public bool ChangesDetected()
         {
             return !Equals(_previousSelf);
@@ -186,7 +233,7 @@ namespace HCResourceLibraryApp.DataHandling
             }
             return areEquals;
         }
-        public bool IsSetup()
+        public override bool IsSetup()
         {
             return _key.IsNotNEW() && _definitions.HasElements();
         }

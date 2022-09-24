@@ -1,9 +1,8 @@
 ﻿using System.Collections.Generic;
-using static HCResourceLibraryApp.DataHandling.DataHandlerBase;
 
 namespace HCResourceLibraryApp.DataHandling
 {
-    public class ContentBaseGroup
+    public class ContentBaseGroup : DataHandlerBase
     {
         /*** CONTENT BASE GROUP - PLANS
         Data form of First group for content file encoding
@@ -48,7 +47,8 @@ namespace HCResourceLibraryApp.DataHandling
             - List<str> FetchSimilarDataIDs(str piece)
                 Iterates through dataIDs collection and searches for dataIDs that are exact or contain 'piece'
             - bl ContainsDataID(str dataIDtoFind)
-            - string EncodeFirstGroup()
+            - str EncodeFirstGroup()
+            - bl DecodeFirstGroup(str info)
             - bl ChangesDetected()
                 Compares itself against an orignal copy of itself for changes
             - bl IsSetup()
@@ -152,6 +152,63 @@ namespace HCResourceLibraryApp.DataHandling
             }
             return firstEncode;
         }
+        public bool DecodeFirstGroup(string cbgInfo)
+        {
+            /**
+             Syntax: {VersionAdded}*{ContentName}*{RelatedDataIDs}
+
+            FROM DESIGN DOC
+            ........
+            > {VersionAdded}
+			    [REQUIRED] string value as "a.bb"
+			    "a" represents major version number
+			    "bb" represents minor version number
+			    May not contain the '*' symbol
+		    > {ContentName}
+			    [REQUIRED] string value 
+			    May not contain the '*' symbol
+		    > {RelatedDataIDs}
+			    [REQUIRED] comma-separated string values 
+			    No spacing between different Data IDs
+			    May not contain the '*' symbol
+		    NOTES
+			    - {VersionAdded} denotes the version in which the new content was added
+            ........
+             **/
+
+            if (cbgInfo.IsNotNEW())
+            {
+                if (cbgInfo.Contains(Sep) && cbgInfo.CountOccuringCharacter(Sep[0]) == 2)
+                {
+                    string[] firstParts = cbgInfo.Split(Sep);
+                    /// version
+                    if (firstParts[0].IsNotNEW())
+                    {
+                        if (VerNum.TryParse(firstParts[0], out VerNum cbgVerNum))
+                            VersionNum = cbgVerNum;
+                    }
+                    /// contentName
+                    if (firstParts[1].IsNotNEW())
+                        ContentName = firstParts[1];
+                    /// relatedDataIDs
+                    if (firstParts[2].IsNotNEW())
+                    {
+                        if (firstParts[2].Contains(','))
+                        {
+                            string[] cbgDataIDs = firstParts[2].Split(',', System.StringSplitOptions.RemoveEmptyEntries);
+                            if (cbgDataIDs.HasElements())
+                            {
+                                _dataIDs = new List<string>();
+                                _dataIDs.AddRange(cbgDataIDs);
+                            }
+                        }
+                    }
+
+                    _previousSelf = (ContentBaseGroup)this.MemberwiseClone();
+                }
+            }
+            return IsSetup();
+        }
         public bool ChangesDetected()
         {
             bool anyChanges = false;
@@ -183,7 +240,7 @@ namespace HCResourceLibraryApp.DataHandling
         }
         /// <summary>Has this instance of <see cref="ContentBaseGroup"/> been initialized with the appropriate information?</summary>
 		/// <returns>A boolean stating whether the version number, data IDs, and content name has been given values.</returns>
-        public bool IsSetup()
+        public override bool IsSetup()
         {
             return _dataIDs.HasElements() && _versionNumber.HasValue() && _contentName.IsNotNEW();
         }

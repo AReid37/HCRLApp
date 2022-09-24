@@ -43,9 +43,9 @@ w - Wall
 
 -- Old syntax --> [SUMMARY: <infoP1> // <infoP2>]
 [SUMMARY]
-- <infoP1>
-- <infoP2>
-- ...
+> <infoP1>
+> <infoP2>
+> ...
 
 
 -- Link to Steam Text Formatting --

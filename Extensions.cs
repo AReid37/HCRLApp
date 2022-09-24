@@ -755,10 +755,6 @@ namespace HCResourceLibraryApp
         }
 
         // RESOURCE CONTENTS
-        public static bool Equals(this RCFetchSource rcfs, RCFetchSource other)
-        {
-            return rcfs == other;
-        }
         public static bool IsNone(this RCFetchSource rcfs)
         {
             return rcfs == RCFetchSource.None;

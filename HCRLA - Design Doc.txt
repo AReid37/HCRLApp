@@ -91,10 +91,10 @@ G1: DOCUMENT ALL THE CONTENT
 				Used by the HCAutoLogger; lines starting with this key are omitted from the information parsing, ie. the decoding system will ignore these lines of text except for [SUMMARY].
 				
 		.	[SUMMARY]
-			Syntax		-- [SUMMARY: <summaryPart1> // <summaryPart2>]
-			Ex. 		-- [SUMMARY: Potatoes, Carrots, Onions, Money and Coins // Gravel, Dirt, Some Sedimentary Rocks, Igneous Rocks]
-				{NEW TAG}
-				This tag allows the addition of a summary of the contents contained from a version log where '//' is used to seperate lines of summarizing text. This line must start with '--' as not to interfere with functions of the HCAutoLogger program. All information must be on the same line.
+			Syntax		> <infoPartN>
+			Ex. 		> Potatoes, Carrots, Onions, Money and Coins
+						> Gravel, Dirt, Some Sedimentary Rocks, Igneous Rocks
+				{NEW TAG} This tag allows the addition of a summary of the contents contained from a version log where each line of summarizing text start with '>' below the 'SUMMARY' header tag. This line must start with '--' as not to interfere with functions of the HCAutoLogger program. All information must be on the same line.
 				
 		
 				

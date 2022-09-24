@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace HCResourceLibraryApp.DataHandling
+﻿namespace HCResourceLibraryApp.DataHandling
 {
     /// <summary>Represents a version number data type.</summary>
     public struct VerNum
@@ -75,9 +73,15 @@ namespace HCResourceLibraryApp.DataHandling
             return result.HasValue();
         }
 
+        /// <returns>A string of VerNum values as '<c>v{majNum}.{minNum}</c>'.</returns>
         public override string ToString()
         {
             return $"v{MajorNumber:0}.{MinorNumber:00}";
+        }
+        /// <returns>A string of VerNum values as '<c>{majNum}.{minNum}</c>'.</returns>
+        public string ToStringNumbersOnly()
+        {
+            return $"{MajorNumber:0}.{MinorNumber:00}";
         }
         public bool Equals(VerNum vernum)
         {

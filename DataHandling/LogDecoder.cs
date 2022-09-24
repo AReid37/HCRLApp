@@ -10,7 +10,8 @@ namespace HCResourceLibraryApp.DataHandling
         // Why inherit from DataHandlerBase? 
         //  IDEA: Have the Log Decoder save the last used directory, and make it easier to submit text files (static item)
         // ^^ Last thing to do before next git commit
-        
+
+        readonly bool runSelfUpdatingTest = false, testLibConAddUpdConnectionQ = false;
         static string _prevRecentDirectory, _recentDirectory;
         public static string RecentDirectory
         {
@@ -22,6 +23,7 @@ namespace HCResourceLibraryApp.DataHandling
             }
         }
         public ResLibrary DecodedLibrary { get; private set; }
+        public List<DecodeInfo> DecodeInfoDock;
 
         public LogDecoder()
         {
@@ -103,12 +105,17 @@ namespace HCResourceLibraryApp.DataHandling
                 bool endFileReading = false;
                 List<string[]> addedPholderNSubTags = new();
 
+                List<string> looseInfoRCDataIDs = new();
+                List<ContentAdditionals> looseConAddits = new();
+                List<ContentChanges> looseConChanges = new();
+
                 // vv to be integrated into library later vv
                 VerNum logVersion = VerNum.None;
-                List<ResContents> resourceContents = new();
+                List<ResContents> resourceContents = new();                
                 List<LegendData> legendDatas = new();
                 SummaryData summaryData = new();
                 int ttaNumber = 0;
+                List<string> summaryDataParts = new();
                 #endregion
 
 
@@ -1073,7 +1080,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                         if (resourceContents.HasElements() && newAdditCon.RelatedDataID != null)
                                                         {
                                                             // matching with contents in current log decode
-                                                            Dbug.LogPart(" -- 1)in 'Decoded Library'");
+                                                            Dbug.LogPart(" in 'Decoded Library' -- ");
                                                             foreach (ResContents resCon in resourceContents)
                                                                 if (resCon.ContainsDataID(newAdditCon.RelatedDataID, out RCFetchSource source))
                                                                 {
@@ -1100,13 +1107,6 @@ namespace HCResourceLibraryApp.DataHandling
                                                                         else Dbug.LogPart("; Search continue");
                                                                     }
                                                                 }
-
-
-                                                            // matching with contents within library
-                                                            if (matchingResCon == null)
-                                                            {
-                                                                Dbug.LogPart($" -- 2)in 'Existing Library' [TO BE DONE]");
-                                                            }
                                                         }
                                                         //else Dbug.LogPart("No Related Data ID provided");
                                                         Dbug.Log("; ");
@@ -1115,13 +1115,22 @@ namespace HCResourceLibraryApp.DataHandling
                                                         bool completedFinalStepQ = false;
                                                         if (newAdditCon.RelatedDataID.IsNotNE())
                                                         {
+                                                            /// connect with ConBase from decoded
                                                             if (matchingResCon != null)
                                                             {
                                                                 matchingResCon.StoreConAdditional(newAdditCon);
                                                                 Dbug.LogPart($"Completed connection of ConAddits ({newAdditCon}) to ConBase ({matchingResCon.ConBase}) [through ID '{newAdditCon.RelatedDataID}']; ");
                                                                 decodeInfo.NoteResult($"Connected ConAddits ({newAdditCon}) to ({matchingResCon.ConBase}) [by ID '{newAdditCon.RelatedDataID}']");
-                                                                completedFinalStepQ = true;
                                                             }
+                                                            /// to be connected with ConBase from library
+                                                            else
+                                                            {
+                                                                looseConAddits.Add(newAdditCon);
+                                                                looseInfoRCDataIDs.Add(newAdditCon.RelatedDataID);
+                                                                Dbug.LogPart($"No connection found: storing 'loose' ConAddits ({newAdditCon}) [using ID '{newAdditCon.RelatedDataID}']");
+                                                                decodeInfo.NoteResult($"Stored loose ConAddits ({newAdditCon}) [using ID '{newAdditCon.RelatedDataID}']");
+                                                            }
+                                                            completedFinalStepQ = true;
                                                         }
                                                         else if (newAdditCon.OptionalName.IsNotNE())
                                                         {
@@ -1224,6 +1233,14 @@ namespace HCResourceLibraryApp.DataHandling
                                                                                     countedTTANum += conAddit.CountIDs;
                                                                         }
                                                                 }
+                                                            }
+
+                                                            // also count loose conAddits
+                                                            foreach (ContentAdditionals conAdt in looseConAddits)
+                                                            {
+                                                                if (conAdt != null)
+                                                                    if (conAdt.IsSetup())
+                                                                        countedTTANum += conAdt.CountIDs;
                                                             }
                                                             ranVerificationCountQ = true;
                                                         }
@@ -1375,67 +1392,82 @@ namespace HCResourceLibraryApp.DataHandling
                                                     {
                                                         ContentChanges newConChanges = new(logVersion, updtContentName, updtDataID, updtChangeDesc);
                                                         Dbug.Log($"Generated {nameof(ContentChanges)} instance :: {newConChanges}; ");
-                                                        Dbug.LogPart("Searching for connection in 'Existing Library'** -- ");
 
-                                                        ResContents matchingResCon = null;
-                                                        ContentAdditionals subMatchConAdd = new();
-                                                        /// should only be checking with existing library; can't update something that was just added
-                                                        if (resourceContents != null)
+                                                        /// testing
+                                                        if (runSelfUpdatingTest)
                                                         {
-                                                            if (resourceContents.HasElements())
-                                                                foreach (ResContents resCon in resourceContents)
-                                                                {
-                                                                    if (resCon.ContainsDataID(updtDataID, out RCFetchSource source, out ContentAdditionals conAddix))
+                                                            Dbug.LogPart("[SELF-UPDATING] Searching for connection in 'Decoded Library' -- ");
+
+                                                            ResContents matchingResCon = null;
+                                                            ContentAdditionals subMatchConAdd = new();
+                                                            /// should only be checking with existing library; can't update something that was just added
+                                                            if (resourceContents != null)
+                                                            {
+                                                                if (resourceContents.HasElements())
+                                                                    foreach (ResContents resCon in resourceContents)
                                                                     {
-                                                                        subMatchConAdd = conAddix;
-                                                                        matchingResCon = resCon;
-
-                                                                        /// id only: save match, keep searching
-                                                                        /// id and name: save match, end searching
-                                                                        bool matchedNameQ = false;
-
-                                                                        Dbug.LogPart($" Got match ('{newConChanges.RelatedDataID}' from source '{source}'");
-                                                                        if (source.Equals(RCFetchSource.ConBaseGroup))
+                                                                        if (resCon.ContainsDataID(updtDataID, out RCFetchSource source, out DataHandlerBase conAddix))
                                                                         {
-                                                                            if (resCon.ContentName == updtContentName)
+                                                                            subMatchConAdd = new ContentAdditionals();
+                                                                            if (source == RCFetchSource.ConAdditionals)
+                                                                                subMatchConAdd = (ContentAdditionals)conAddix;
+                                                                            matchingResCon = resCon;
+
+                                                                            /// id only: save match, keep searching
+                                                                            /// id and name: save match, end searching
+                                                                            bool matchedNameQ = false;
+
+                                                                            Dbug.LogPart($" Got match ('{newConChanges.RelatedDataID}' from source '{source}'");
+                                                                            if (source.Equals(RCFetchSource.ConBaseGroup))
                                                                             {
-                                                                                Dbug.LogPart($", plus matched name '{resCon.ContentName}'");
-                                                                                matchedNameQ = true;
+                                                                                if (resCon.ContentName == updtContentName)
+                                                                                {
+                                                                                    Dbug.LogPart($", plus matched name '{resCon.ContentName}'");
+                                                                                    matchedNameQ = true;
+                                                                                }
                                                                             }
-                                                                        }
-                                                                        else if (subMatchConAdd.IsSetup() && source.Equals(RCFetchSource.ConAdditionals))
-                                                                        {
-                                                                            if (subMatchConAdd.OptionalName == updtContentName)
+                                                                            else if (subMatchConAdd.IsSetup() && source.Equals(RCFetchSource.ConAdditionals))
                                                                             {
-                                                                                Dbug.LogPart($", plus matched name '{subMatchConAdd.OptionalName}'");
-                                                                                matchedNameQ = true;
+                                                                                if (subMatchConAdd.OptionalName == updtContentName)
+                                                                                {
+                                                                                    Dbug.LogPart($", plus matched name '{subMatchConAdd.OptionalName}'");
+                                                                                    matchedNameQ = true;
+                                                                                }
                                                                             }
-                                                                        }
-                                                                        Dbug.LogPart(")");
+                                                                            Dbug.LogPart(")");
 
-                                                                        if (matchedNameQ)
-                                                                        {
-                                                                            Dbug.LogPart("; Search end");
-                                                                            break;
+                                                                            if (matchedNameQ)
+                                                                            {
+                                                                                Dbug.LogPart("; Search end");
+                                                                                break;
+                                                                            }
+                                                                            else Dbug.LogPart("; Search continue");
                                                                         }
-                                                                        else Dbug.LogPart("; Search continue");
                                                                     }
-                                                                }
-                                                            Dbug.Log("; ");
+                                                                Dbug.Log("; ");
+                                                            }
+
+                                                            if (matchingResCon != null)
+                                                            {
+                                                                matchingResCon.StoreConChanges(newConChanges);
+                                                                Dbug.LogPart($"Completed connection of ConChanges ({newConChanges}) using ");
+                                                                if (subMatchConAdd.IsSetup())
+                                                                    Dbug.LogPart($"ConAddits ({subMatchConAdd})");
+                                                                else Dbug.LogPart($"ConBase ({matchingResCon.ConBase})");
+                                                                Dbug.Log($" [through ID '{newConChanges.RelatedDataID}']");
+                                                                decodeInfo.NoteResult($"Connected ConChanges ({newConChanges}) to {(subMatchConAdd.IsSetup() ? $"ConAddits ({subMatchConAdd})" : $"ConBase {matchingResCon.ConBase}")} [by ID '{newConChanges.RelatedDataID}'");
+
+                                                            }
                                                         }
 
-                                                        if (matchingResCon != null)
+                                                        if (!runSelfUpdatingTest)
                                                         {
-                                                            matchingResCon.StoreConChanges(newConChanges);
-                                                            Dbug.LogPart($"Completed connection of ConChanges ({newConChanges}) using ");
-                                                            if (subMatchConAdd.IsSetup())
-                                                                Dbug.LogPart($"ConAddits ({subMatchConAdd})");
-                                                            else Dbug.LogPart($"ConBase ({matchingResCon.ConBase})");
-                                                            Dbug.Log($" [through ID '{newConChanges.RelatedDataID}']");
-                                                            decodeInfo.NoteResult($"Connected ConChanges ({newConChanges}) to {(subMatchConAdd.IsSetup() ? $"ConAddits ({subMatchConAdd})" : $"ConBase {matchingResCon.ConBase}")} [by ID '{newConChanges.RelatedDataID}'");
-
-                                                            sectionIssueQ = false;
-                                                        }
+                                                            looseConChanges.Add(newConChanges);
+                                                            looseInfoRCDataIDs.Add(newConChanges.RelatedDataID);
+                                                            Dbug.LogPart($"Storing 'loose' ConChanges [using ID '{newConChanges.RelatedDataID}']");
+                                                            decodeInfo.NoteResult($"Stored loose ConChanges ({newConChanges}) [using ID '{newConChanges.RelatedDataID}']");
+                                                        }              
+                                                        sectionIssueQ = false;
                                                     }
                                                 }
                                                 else
@@ -1598,22 +1630,72 @@ namespace HCResourceLibraryApp.DataHandling
                                 /// SUMMARY 
                                 if (currentSectionName == secSum)
                                 {
-                                    // tbd...ltr
+                                    /** <SecName> (Log Template & Design Doc)
+                                       LOG TEMPLATE
+                                       --------------------
+                                       [SUMMARY]
+                                       > <infoP1>
+                                       > <infoP2>
+                                       > ...                           
+
+                           
+                                       DESIGN DOC
+                                       --------------------
+                                       ...
+                                    .	[SUMMARY]
+			                            Syntax		> <infoPartN>
+			                            Ex. 		> Potatoes, Carrots, Onions, Money and Coins
+						                            > Gravel, Dirt, Some Sedimentary Rocks, Igneous Rocks
+				                            {NEW TAG} This tag allows the addition of a summary of the contents contained from a version log where each line of summarizing text start with '>' below the 'SUMMARY' header tag. 
+                                    */
+
+                                    sectionIssueQ = true;
+                                    bool isHeader = false;
+
+                                    if (logDataLine.Contains(secBracL) && logDataLine.Contains(secBracR))
+                                    {
+                                        sectionIssueQ = false;
+                                        isHeader = true;
+                                    }
+
+                                    if (!isHeader)
+                                    {
+                                        logDataLine = logDataLine.Trim();
+                                        Dbug.LogPart("Identified summary data; ");
+                                        if (logDataLine.StartsWith(">") && logDataLine.CountOccuringCharacter('>') == 1)
+                                        {
+                                            Dbug.LogPart("Start with '>'; ");
+                                            string sumPart = FullstopCheck(logDataLine.Replace(">", ""));
+                                            if (sumPart.IsNotNE())
+                                            {
+                                                summaryDataParts.Add(sumPart);
+                                                Dbug.LogPart($"Obtained summary part :: {sumPart}");
+                                                decodeInfo.NoteResult($"Obtained summary part :: {sumPart}");
+
+                                                sectionIssueQ = false;
+                                            }
+                                            else
+                                            {
+                                                Dbug.LogPart("Missing 'summary part'");
+                                                decodeInfo.NoteIssue("Missing 'summary part' of summary data");
+                                            }
+                                        }
+                                        else
+                                        {
+                                            if (logDataLine.StartsWith(">"))
+                                            {
+                                                Dbug.LogPart("This line contains too many '>'");
+                                                decodeInfo.NoteIssue("This line contains too many '>'");
+                                            }
+                                            else
+                                            {
+                                                Dbug.LogPart("This line is missing '>' at start");
+                                                decodeInfo.NoteIssue("This line is missing '>' at start");
+                                            }
+                                        }
+                                        Dbug.Log("  //  End summary");
+                                    }
                                 }
-
-
-                                /** <SecName> (Log Template & Design Doc)
-                                        LOG TEMPLATE
-                                        --------------------
-                                        ...                            
-
-                            
-                                        DESIGN DOC
-                                        --------------------
-                                        ...
-                                */
-
-
 
                                 // ---   ---   ---   ---   ---                               
                                 /// DecodeInfo checklist
@@ -1683,6 +1765,63 @@ namespace HCResourceLibraryApp.DataHandling
                 if (endFileReading)
                 {
                     Dbug.Log("- - - - - - - - - - -");
+
+                    DecodedLibrary = new ResLibrary();
+                    ResContents looseInfoRC;
+                    Dbug.LogPart("Initialized Decode Library instance");
+
+                    /// create loose ResCon
+                    if (looseConAddits.HasElements() || looseConChanges.HasElements())
+                    {
+                        ContentBaseGroup looseCbg = new(logVersion, ResLibrary.LooseResConName, looseInfoRCDataIDs.ToArray());
+                        looseInfoRC = new(newResConShelfNumber, looseCbg, looseConAddits.ToArray(), looseConChanges.ToArray());
+                        resourceContents.Insert(0, looseInfoRC);
+                        Dbug.LogPart($"; Generated and inserted 'loose' ResCon instance :: {looseInfoRC}");
+                    }
+                    Dbug.Log("; ");
+
+                    if (testLibConAddUpdConnectionQ)
+                    {
+                        Dbug.Log("ENABLED :: [TESTING LIBRARY CONADDITS AND CONCHANGES CONNECTIONS]");
+                        /**
+                        FROM 'HCRLA - EX1 VERSION LOG'
+                        ..  Additional
+                            -- The following for testing purposes, at the moment...
+                            > TwoItem Dust (d2,3) - Two Item (i2)
+                            > (d0) - (i0)
+                        ..  Update
+                            -- The following for testing purposes, at the moment...
+                            > (d0) - Tinier dust particles
+
+
+                        FROM 'HCRLA - VERLOG EXTRA INFO'
+                            ==== ADDED ITEM ====
+                            # |Two Item -(i2; t1,2 d2,3)
+                            # |Zero Item -(i0; d0)
+
+                         **/
+                        ResContents t1RC = new(0, new ContentBaseGroup(new VerNum(0, 0), "Zero Item", "d0", "i0"));
+                        ResContents t2RC = new(0, new ContentBaseGroup(new VerNum(0, 0), "Two Item", "d2", "d3", "i2", "t1", "t2"));
+
+                        DecodedLibrary.AddContent(t1RC, t2RC);
+                    }
+
+                    Dbug.Log($"Transferring decoded ResCons to Decode Library; {(resourceContents.HasElements() ? "" : "No ResCons to transfer to Decode Library; ")}");
+                    if (resourceContents.HasElements())
+                        DecodedLibrary.AddContent(true, resourceContents.ToArray());
+
+                    Dbug.Log($"Transferring decoded Legends to Decode Library; {(legendDatas.HasElements() ? "" : "No Legends to transfer to Decode Library; ")}");
+                    if (legendDatas.HasElements())
+                        DecodedLibrary.AddLegend(legendDatas.ToArray());
+
+                    Dbug.LogPart("Initializing summary data; ");
+                    summaryData = new SummaryData(logVersion, ttaNumber, summaryDataParts.ToArray());
+                    Dbug.Log($"Generated {nameof(SummaryData)} instance :: {summaryData.ToStringShortened()};");
+                    Dbug.Log($"Transferring version summary to Decode Library; {(summaryData.IsSetup() ? "" : "No summary to transfer to Decode Library; ")}");
+                    DecodedLibrary.AddSummary(summaryData);
+
+                    Dbug.Log("Transferring decode dbug info group to Decode Info Dock;");
+                    DecodeInfoDock = decodingInfoDock;
                 }
 
                 // -- assign result values --

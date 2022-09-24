@@ -102,5 +102,9 @@ namespace HCResourceLibraryApp.DataHandling
         {
             return false;
         }
+        public virtual bool IsSetup()
+        {
+            return false;
+        }
     }
 }

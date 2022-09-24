@@ -1,9 +1,8 @@
 ﻿using System.Collections.Generic;
-using static HCResourceLibraryApp.DataHandling.DataHandlerBase;
 
 namespace HCResourceLibraryApp.DataHandling
 {
-    public class SummaryData
+    public class SummaryData : DataHandlerBase
     {
 		/*** SUMMARY DATA
         Data form for version summaries and TTA
@@ -41,6 +40,7 @@ namespace HCResourceLibraryApp.DataHandling
 		Methods
 			- vd AddSummaryPart(str part)	Necessary??
 			- str Encode()
+			- bl Decode(str info)
 			- bl Equals(SD other)
 			- bl ChangedDetected()
 			- bl IsSetup()
@@ -49,12 +49,12 @@ namespace HCResourceLibraryApp.DataHandling
 
 		#region fields / props
 		// private
-		SummaryData _previousSelf;
+        SummaryData _previousSelf;
 		VerNum _summaryVersion;
 		int _ttaNumber;
 		List<string> _summaryParts;
 
-		// public
+        // public
 		public VerNum SummaryVersion
 		{
 			get => _summaryVersion;
@@ -78,9 +78,9 @@ namespace HCResourceLibraryApp.DataHandling
 					_summaryParts = value;
 			}
 		}
-		#endregion
+        #endregion
 
-		public SummaryData()
+        public SummaryData()
 		{
 			_previousSelf = (SummaryData)this.MemberwiseClone();
 		}
@@ -113,7 +113,68 @@ namespace HCResourceLibraryApp.DataHandling
 			}
 			return fullEncode;
 		}
-		public bool Equals(SummaryData sumDat)
+		public bool Decode(string sumInfo)
+		{
+            /**
+			Syntax: {Version}*{tta}*{summaryParts}
+
+			FROM DESIGN DOC
+			..........
+			> {Version}
+				[REQUIRED] string value as "a.bb"
+				"a" represents major version number
+				"bb" represents minor version number
+				May not contain the '*' symbol
+			> {tta}
+				[REQUIRED] integer value
+				technically should satisfy rule: x > 0.
+			> {summaryParts}
+				[REQUIRED] separator-key-separated string values
+				Each string value may not contain '*' symbol
+			NOTES
+				- {summaryParts} has no limit of separated summary parts, but must at least have one summary part. If only one string, an asterik (*) does not need to follow.
+				- {tta} may not be less than or equal to 0, but this is a rule that can be broken (not strict in program; only warnings).
+			..........
+			 **/
+
+			if (sumInfo.IsNotNEW())
+			{
+				if (sumInfo.Contains(Sep) && sumInfo.CountOccuringCharacter(Sep[0]) >= 2)
+				{
+					string[] sumParts = sumInfo.Split(Sep, System.StringSplitOptions.RemoveEmptyEntries);
+					if (sumParts.HasElements())
+						for (int six = 0; six < sumParts.Length; six++)
+						{
+							if (sumParts[six].IsNotNEW())
+							{
+								/// version
+								if (six == 0)
+								{
+									if (VerNum.TryParse(sumParts[six], out VerNum sumVerNum))
+										SummaryVersion = sumVerNum;
+								}
+								/// tta
+								else if (six == 1)
+								{
+									if (int.TryParse(sumParts[six], out int ttaNum))
+										TTANum = ttaNum;
+								}
+								/// summaryParts
+								else
+								{
+									if (!SummaryParts.HasElements())
+										SummaryParts = new List<string>();
+									SummaryParts.Add(sumParts[six]);
+								}
+							}
+						}
+
+					_previousSelf = (SummaryData)this.MemberwiseClone();
+				}
+			}
+			return IsSetup();
+        }
+        public bool Equals(SummaryData sumDat)
 		{
 			bool areEquals = false;
 			if (sumDat != null)
@@ -156,7 +217,7 @@ namespace HCResourceLibraryApp.DataHandling
 		{
 			return !Equals(_previousSelf);
 		}
-		public bool IsSetup()
+		public override bool IsSetup()
 		{
 			return _summaryVersion.HasValue() && _ttaNumber > 0 && _summaryParts.HasElements();
 		}
@@ -165,6 +226,17 @@ namespace HCResourceLibraryApp.DataHandling
 		{
 			return Encode().Replace(Sep, ";");
 		}
+		public string ToStringShortened()
+		{
+            string fullEncode = "";
+            if (IsSetup())
+            {
+                fullEncode = $"{SummaryVersion}{Sep}{TTANum}{Sep}";
+                for (int sx = 0; sx < SummaryParts.Count; sx++)
+                    fullEncode += $"{SummaryParts[sx].Clamp(25, "..")}{(sx + 1 >= SummaryParts.Count ? "" : Sep)}";
+            }
+            return fullEncode.Replace(Sep, ";");
+        }
 		#endregion
 	}
 }

@@ -1,9 +1,8 @@
 ﻿using System.Collections.Generic;
-using static HCResourceLibraryApp.DataHandling.DataHandlerBase;
 
 namespace HCResourceLibraryApp.DataHandling
 {
-	public class ContentAdditionals
+	public class ContentAdditionals : DataHandlerBase
     {
 		/*** CONTENT ADDITIONALS - PLANS
         Data form of Second group for content file encoding
@@ -50,7 +49,8 @@ namespace HCResourceLibraryApp.DataHandling
 				Removes data ids from the dataIDs collection
 			- List<str> FetchSimilarDataIDs(str piece)
                 Iterates through dataIDs collection and searches for dataIDs that are exact or contain 'piece'
-            - string EncodeSecondGroup()
+            - str EncodeSecondGroup()
+			- bl DecodeSecondGroup(str info)
 			- bool ContainsDataID(str dataIDtoFind)
 			- bl ChangesDetected()
                 Compares itself against an orignal copy of itself for changes    
@@ -167,9 +167,72 @@ namespace HCResourceLibraryApp.DataHandling
             }
 			return secondEncode;
 		}
-		/// <summary>Has this instance of <see cref="ContentAdditionals"/> been initialized with the appropriate information?</summary>
-		/// <returns>A boolean stating whether the version added, data IDs, and either the optional name or related ID has been given values.</returns>
-		public bool IsSetup()
+		public bool DecodeSecondGroup(string caInfo)
+		{
+			/**
+			 Syntax: {VersionAddit}*{RelatedDataId}*{Opt.Name}*{DataID}***
+
+			FROM DESIGN DOC
+			.........
+			> {VersionAddit}
+				[REQUIRED] string value as "a.bb"
+				"a" represents major version number
+				"bb" represents minor version number
+				May not contain the '*' symbol
+			> {RelatedDataID}
+				[REQUIRED] string value
+				May not contain '*' symbol
+			> {Opt.Name}
+				string value
+			> {DataID}
+				[REQUIRED] comma-separated string values
+				No spacing between different Data IDs
+				May not contain the '*' symbol
+			NOTES
+				- Multiple additional contents information must be separated with '***'
+				- {VersionAddit} denotes the version in which additional content was added
+			.........
+			 **/
+
+			if (caInfo.IsNotNEW())
+			{
+				if (caInfo.Contains(Sep) && caInfo.CountOccuringCharacter(Sep[0]) == 3)
+				{
+					string[] secondParts = caInfo.Split(Sep);
+					/// version
+					if (secondParts[0].IsNotNEW())
+					{
+						if (VerNum.TryParse(secondParts[0], out VerNum caVerNum))
+							VersionAdded = caVerNum;
+					}
+					/// relatedDataID
+					if (secondParts[1].IsNotNEW())
+						RelatedDataID = secondParts[1];
+					/// opt.name
+					if (secondParts[2].IsNotNEW())
+						OptionalName = secondParts[2];
+					/// dataID(s)
+					if (secondParts[3].IsNotNEW())
+					{
+						if (secondParts[3].Contains(','))
+						{
+							string[] caDataIDs = secondParts[3].Split(',', System.StringSplitOptions.RemoveEmptyEntries);
+							if (caDataIDs.HasElements())
+							{
+                                _dataIDs = new List<string>();
+                                _dataIDs.AddRange(caDataIDs);
+                            }
+                        }
+					}
+
+					_previousSelf = (ContentAdditionals)this.MemberwiseClone();
+				}
+			}
+			return IsSetup();
+        }
+        /// <summary>Has this instance of <see cref="ContentAdditionals"/> been initialized with the appropriate information?</summary>
+        /// <returns>A boolean stating whether the version added, data IDs, and either the optional name or related ID has been given values.</returns>
+        public override bool IsSetup()
         {
 			return _versionAdded.HasValue() && (_optionalName.IsNotNEW() || _relatedDataID.IsNotNEW()) && _dataIDs.HasElements();
 		}

@@ -1,9 +1,6 @@
-﻿using System.Collections.Generic;
-using static HCResourceLibraryApp.DataHandling.DataHandlerBase;
-
-namespace HCResourceLibraryApp.DataHandling
+﻿namespace HCResourceLibraryApp.DataHandling
 {
-    public class ContentChanges
+    public class ContentChanges : DataHandlerBase
     {
 		/*** 
         Data form of Third group for content file encoding
@@ -42,7 +39,8 @@ namespace HCResourceLibraryApp.DataHandling
 			- CC(verNum verNum, str internalName, str relDataID, str description)
 
 		Methods
-			- string EncodeThirdGroup()
+			- str EncodeThirdGroup()
+			- bl DecodeThirdGroup(str info)
 			- bool ChangesDetected()
                 Compares itself against an orignal copy of itself for changes
 			- bl IsSetup()
@@ -114,7 +112,7 @@ namespace HCResourceLibraryApp.DataHandling
 
 
 		#region methods
-		public string EncodeThridGroup()
+		public string EncodeThirdGroup()
         {
 			// Syntax: {VersionUpd}*{InternalName}*{RelatedDataID}*{ChangeDesc}***
 			string thirdEncode = "";
@@ -122,6 +120,59 @@ namespace HCResourceLibraryApp.DataHandling
 				thirdEncode = $"{VersionChanged}{Sep}{InternalName}{Sep}{RelatedDataID}{Sep}{ChangeDesc}";
 			return thirdEncode;
         }
+		public bool DecodeThirdGroup(string ccInfo)
+		{
+            /**
+			 Syntax: {VersionUpd}*{InternalName}*{RelatedDataID}*{ChangeDesc}***
+
+			FROM DESIGN DOC
+			........
+			> {VersionUpd}
+				[REQUIRED] string value as "a.bb"
+				"a" represents major version number
+				"bb" represents minor version number
+				May not contain the '*' symbol
+			> {InternalName}
+				string value
+				May not contain '*' symbol
+			> {RelatedDataID}
+				[REQUIRED] string value
+				May not contain '*' symbol
+			> {ChangeDesc}
+				[REQUIRED] string value
+				May not contain '*' symbol
+			NOTES
+				- Multiple updates contents information must be separated with '***'
+			........
+			**/
+
+			/// multiple CCs (separated with '***' are taken care of in ResContents decoding)
+			if (ccInfo.IsNotNEW())
+			{
+				if (ccInfo.Contains(Sep) && ccInfo.CountOccuringCharacter(Sep[0]) == 3)
+				{				
+					string[] thirdParts = ccInfo.Split(Sep);
+					/// version
+					if (thirdParts[0].IsNotNEW())
+					{
+						if (VerNum.TryParse(thirdParts[0], out VerNum ccVerNum))
+							VersionChanged = ccVerNum;
+					}
+					/// internalName
+					if (thirdParts[1].IsNotNEW())
+						InternalName = thirdParts[1];
+					/// relatedDataID
+					if (thirdParts[2].IsNotNEW())
+						RelatedDataID = thirdParts[2];
+					/// changeDesc
+					if (thirdParts[3].IsNotNEW())
+						ChangeDesc = thirdParts[3];
+
+					_previousSelf = (ContentChanges)this.MemberwiseClone();
+				}
+			}
+			return IsSetup();
+		}
 		public bool ChangesDetected()
         {
 			return !Equals(_previousSelf);
@@ -160,15 +211,19 @@ namespace HCResourceLibraryApp.DataHandling
         }
 		/// <summary>Has this instance of <see cref="ContentChanges"/> been initialized with the appropriate information?</summary>
 		/// <returns>A boolean stating whether the version changed, related data ID, and change description has been given values.</returns>
-		public bool IsSetup()
+		public override bool IsSetup()
         {
 			return _versionChanged.HasValue() && /*_internalName.IsNotNEW() &&*/ _relatedDataID.IsNotNEW() && _changeDesc.IsNotNEW();
         }
 
         public override string ToString()
         {
-			return EncodeThridGroup().Replace(Sep, ";");
+			return EncodeThirdGroup().Replace(Sep, ";");
         }
+		public string ToStringShortened()
+		{
+			return ToString().Clamp(50, "...");
+		}
         #endregion
     }
 }

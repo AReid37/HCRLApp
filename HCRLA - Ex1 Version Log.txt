@@ -1,5 +1,9 @@
--- ## <HIGH CONTRAST RESOURCE LIBRARY APP - Version Log Example Log #1> ## --
--- PURPOSE :: This verion log example tests for the regular function of the Log Decoder with the correct information entered within version log sections. Very little or no garbage data; looking for ideal, flawless function.
+-- !open --   
+## <HIGH CONTRAST RESOURCE LIBRARY APP - Version Log Example Log #1> ##
+PURPOSE :: 
+	This verion log example tests for the regular function of the Log Decoder with the correct information entered within version log sections. 
+	Very little or no garbage data; looking for ideal, flawless function.
+-- !close --
 
 -- ========== ---
 [Version: 1.00]
@@ -37,6 +41,9 @@
 > (AppleSauce_Chunks) - (i68)
 > OnionShell (t56) - (i76)
 > Tomato Stem Dust(d29~30) - (t93)
+-- The following for testing purposes, at the moment...
+> TwoItem Dust (d2,3) - Two Item (i2)
+> (d0) - (i0)
 
 [TTA: 65]
 
@@ -45,6 +52,7 @@
 > Mashed potato(t32) - Redesigned to look more creamy.
 > (d11) - Brightened the shadows of the texture
 > StrippedGarlicDust (d12) - Brightened the shadows of the texture.
+> (d0) - Tinier dust particles
 
 [LEGEND]
 i - Item
@@ -58,8 +66,8 @@ d - Dust
 ~ - Num Range
 
 [SUMMARY]
-- <infoP1>
-- <infoP2>
+> One unknown item, Egg, Potatoes (including spoiled), Gravel, Some nuts, Garlic stuff, Onion
+> Asparagus Shelf, Lettuce, Some fruits and Apple sauce, Rice, Tomatoes (includes Canned and Steamed)
 
 -- ============= ---
 
