@@ -203,13 +203,17 @@ namespace HCResourceLibraryApp.DataHandling
 
         protected override bool EncodeToSharedFile()
         {
+            Dbug.StartLogging("Preferences.EncodeToSharedFile()");
             List<string> prefDataLines = new List<string>();
 
             // compile the data
             /// color
             prefDataLines.Add($"{Normal.Encode()} {Highlight.Encode()} {Accent.Encode()} {Correction.Encode()} {Incorrection.Encode()} {Warning.Encode()} {Heading1.Encode()} {Heading2.Encode()} {Input.Encode()}".Replace(" ", Sep));
+            Dbug.Log($"L1 Enc  //  tag [{commonFileTag}]  //  {prefDataLines[0]}");
             /// dimensions
             prefDataLines.Add($"{HeightScale}{Sep}{WidthScale}");
+            Dbug.Log($"L2 Enc  //  tag [{commonFileTag}]  //  {prefDataLines[1]}");
+            Dbug.EndLogging();
 
             // encode data
             return Base.FileWrite(false, commonFileTag, prefDataLines.ToArray());

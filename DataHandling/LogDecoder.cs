@@ -1,4 +1,5 @@
-﻿using System;
+﻿using ConsoleFormat;
+using System;
 using System.Collections.Generic;
 using static ConsoleFormat.Base;
 
@@ -11,8 +12,28 @@ namespace HCResourceLibraryApp.DataHandling
         //  IDEA: Have the Log Decoder save the last used directory, and make it easier to submit text files (static item)
         // ^^ Last thing to do before next git commit
 
+        /** LINE OMISSION RULES
+        ...........................
+        Single Line Omission: (--)
+            The single line omission key must be placed before any comments to be omitted by the decoder.
+            Ex.
+                -- Ignored, individual line 1
+                --Ignored, individual line 2
+                    
+        ...........................
+        Block Line Omission: (-- !open --) and (-- !close --)
+            The 'open' and 'close' omission blocks must be on their own line to function. All comments within these block lines will be omitted by the decoder.
+            Ex.
+                -- !open --
+                Ignored, group line 1
+                Ignored, group line 2
+                -- Ignored, group line 3
+                -- !close --
+        **/
+        public const string omit = "--", omitBlockOpen = "-- !open --", omitBlockClose = "-- !close --";
         readonly bool runSelfUpdatingTest = false, testLibConAddUpdConnectionQ = false;
         static string _prevRecentDirectory, _recentDirectory;
+        bool _hasDecodedQ;
         public static string RecentDirectory
         {
             get => _recentDirectory.IsNEW() ? null : _recentDirectory;
@@ -24,11 +45,12 @@ namespace HCResourceLibraryApp.DataHandling
         }
         public ResLibrary DecodedLibrary { get; private set; }
         public List<DecodeInfo> DecodeInfoDock;
+        public bool HasDecoded { get => _hasDecodedQ; }
 
         public LogDecoder()
         {
             commonFileTag = "logDec";
-            _recentDirectory = null;
+            //_recentDirectory = null;
         }
 
         // file saving - loading
@@ -45,12 +67,16 @@ namespace HCResourceLibraryApp.DataHandling
             if (FileRead(commonFileTag, out string[] logDecData))
                 if (logDecData.HasElements())
                 {
-                    string decode = logDecData[0].Contains(Sep) ? null : logDecData[0]; 
+                    string decode = logDecData[0].Contains(Sep) ? null : logDecData[0];
                     RecentDirectory = decode;
                     _prevRecentDirectory = RecentDirectory;
-                    Dbug.SingleLog("LogDecoder.EncodeToSharedFile()", $"Log Decoder recieved [{logDecData[0]}], and has loaded recent directory path :: {RecentDirectory}");
+                    Dbug.SingleLog("LogDecoder.DecodeFromSharedFile()", $"Log Decoder recieved [{logDecData[0]}], and has loaded recent directory path :: {RecentDirectory}");
                     fetchedLogDecData = true;
                 }
+
+            if (!fetchedLogDecData)
+                Dbug.SingleLog("LogDecoder.DecodeFromSharedFile()", $"Log Decoder recieved no data for directory path (error: {Tools.GetRecentWarnError(false, false)})");
+
             return fetchedLogDecData;
         }
         public static new bool ChangesMade()
@@ -69,27 +95,17 @@ namespace HCResourceLibraryApp.DataHandling
             {
                 Dbug.Log($"Recieved {logData.Length} lines of log data; proceeding to decode information...");
                 short nextSectionNumber = 0, currentSectionNumber = 0;
-                const string secVer = "Version", secAdd = "Added", secAdt = "Additional", secTTA = "TTA", secUpd = "Updated", secLeg = "Legend", secSum = "Summary";
-                const string omit = "--", secBracL = "[", secBracR = "]";
-                const string omitBlockOpen = "-- !open --", omitBlockClose = "-- !close --";
-                /** LINE OMISSION RULES
-                    ...........................
-                    Single Line Omission: (--)
-                        The single line omission key must be placed before any comments to be omitted by the decoder.
-                        Ex.
-                            -- Ignored, individual line 1
-                            --Ignored, individual line 2
-                    
-                    ...........................
-                    Block Line Omission: (-- !open --) and (-- !close --)
-                        The 'open' and 'close' omission blocks must be on their own line to function. All comments within these block lines will be omitted by the decoder.
-                        Ex.
-                            -- !open --
-                            Ignored, group line 1
-                            Ignored, group line 2
-                            -- Ignored, group line 3
-                            -- !close --                        
-                 **/
+                #region sectionNames
+                // were previously "const" strings
+                string secVer = DecodedSection.Version.ToString();  //"Version"; 
+                string secAdd = DecodedSection.Added.ToString();    //"Added"; 
+                string secAdt = DecodedSection.Additional.ToString(); //"Additional"; 
+                string secTTA = DecodedSection.TTA.ToString();      //"TTA"; 
+                string secUpd = DecodedSection.Updated.ToString();  //"Updated"; 
+                string secLeg = DecodedSection.Legend.ToString();   //"Legend"; 
+                string secSum = DecodedSection.Summary.ToString();  //"Summary";
+                #endregion
+                const string secBracL = "[", secBracR = "]";                 
                 const char legRangeKey = '~';
                 const int dataKeyMaxLength = 3, newResConShelfNumber = 0, maxSectionsCount = 7;
                 string[] logSections =
@@ -101,7 +117,7 @@ namespace HCResourceLibraryApp.DataHandling
                 int[] countSectionIssues = new int[8];
                 List<DecodeInfo> decodingInfoDock = new();
 
-                #region ToBeReplacedWithAppropriateDataTypes
+                #region Decode - Tracking & Temporary Storage
                 bool endFileReading = false;
                 List<string[]> addedPholderNSubTags = new();
 
@@ -128,9 +144,10 @@ namespace HCResourceLibraryApp.DataHandling
                     string logDataLine = logData[llx];
                     string nextSectionName = nextSectionNumber.IsWithin(0, (short)(logSections.Length - 1)) ? logSections[nextSectionNumber] : "";
 
-                    if (!withinASectionQ && !withinOmitBlock)
+                    if (!withinASectionQ)
                     {
-                        Dbug.LogPart($"Searching for Sec#{nextSectionNumber + 1} ({nextSectionName})  //  ");
+                        if (!withinOmitBlock)
+                            Dbug.LogPart($"Searching for Sec#{nextSectionNumber + 1} ({nextSectionName})  //  ");
                         endFileReading = nextSectionNumber >= maxSectionsCount;
                         //Dbug.Log($"L{lineNum,-2}| {ConditionalText(logDataLine.IsNEW(), $"<null>{(withinASectionQ ? $" ... ({nameof(withinASectionQ)} set to false)" : "")}", logDataLine)}");
                     }                        
@@ -185,7 +202,7 @@ namespace HCResourceLibraryApp.DataHandling
                             // parse section's data
                             if (withinASectionQ)
                             {
-                                DecodeInfo decodeInfo = new DecodeInfo($"L{lineNum,-2}| {logDataLine}", currentSectionName);
+                                DecodeInfo decodeInfo = new($"{logDataLine}", currentSectionName);
                                 Dbug.Log($"{{{(currentSectionName.Length > 5 ? currentSectionName.Remove(5) : currentSectionName)}}}  L{lineNum,-2}| {logDataLine}");
                                 Dbug.NudgeIndent(true);
                                 bool sectionIssueQ = false;
@@ -370,8 +387,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                     }
                                                     else decodeInfo.NoteIssue("Recieved no placeholder/substitute groups");
                                                 }
-                                        }
-                                        else decodeInfo.NoteIssue("Missing ':'");
+                                        }                                        
                                         Dbug.Log("  //  End added (section tag)");
                                     }
 
@@ -1134,6 +1150,8 @@ namespace HCResourceLibraryApp.DataHandling
                                                         }
                                                         else if (newAdditCon.OptionalName.IsNotNE())
                                                         {
+                                                            decodeInfo = new DecodeInfo($"{decodeInfo.logLine} [from Additional]", secAdd);
+
                                                             Dbug.LogPart("No Related Data ID, no match with existing ResContents; ");
                                                             ContentBaseGroup adtAsNewContent = new(logVersion, newAdditCon.OptionalName, adtConDataIDs.ToArray());
                                                             resourceContents.Add(new ResContents(newResConShelfNumber, adtAsNewContent));
@@ -1708,7 +1726,7 @@ namespace HCResourceLibraryApp.DataHandling
                                 ///     TTA                 Y
                                 ///     Updated             Y
                                 ///     Legend              Y
-                                ///     Summary
+                                ///     Summary             Y
                                 ///     
 
 
@@ -1756,8 +1774,18 @@ namespace HCResourceLibraryApp.DataHandling
                         withinASectionQ = false;
                     }
 
-                    if (endFileReading)
-                        Dbug.Log(" --> Decoding from file complete ... ending file reading");
+
+                    // end file reading if (forced) else (pre-emptive)
+                    if (llx + 1 >= logData.Length && !endFileReading)
+                    {
+                        endFileReading = true;
+                        Dbug.Log(" --> Decoding from file complete (forced) ... ending file reading");
+                    }
+                    else
+                    {
+                        if (endFileReading)
+                            Dbug.Log(" --> Decoding from file complete ... ending file reading");
+                    }
                 }
                 Dbug.NudgeIndent(false);
 
@@ -1822,10 +1850,11 @@ namespace HCResourceLibraryApp.DataHandling
 
                     Dbug.Log("Transferring decode dbug info group to Decode Info Dock;");
                     DecodeInfoDock = decodingInfoDock;
-                }
 
-                // -- assign result values --
-                hasFullyDecodedLogQ = endFileReading;
+                    // -- relay complete decode --
+                    hasFullyDecodedLogQ = endFileReading;
+                    _hasDecodedQ = hasFullyDecodedLogQ;
+                }                
             }
             Dbug.EndLogging();
             return hasFullyDecodedLogQ;
@@ -1931,5 +1960,41 @@ namespace HCResourceLibraryApp.DataHandling
                 return str;
             }
         }
+        public DecodeInfo GetDecodeInfo(DecodedSection sectionName, int infoIndex, out int sectionIssueCount)
+        {
+            DecodeInfo decInfo = new();
+            sectionIssueCount = 0;
+            if (DecodeInfoDock.HasElements())
+            {
+                // get all section infos
+                List<DecodeInfo> sectionDecInfos = new();
+                /// separate results from issues, then append issues to the end of results
+                List<DecodeInfo> sdi_issues = new();
+                foreach (DecodeInfo dcI in DecodeInfoDock)
+                {
+                    if (dcI.IsSetup())
+                        if (dcI.sectionName == sectionName.ToString())
+                        {                            
+                            if (dcI.NotedIssueQ)
+                            {
+                                sdi_issues.Add(dcI);
+                                sectionIssueCount++;
+                            }
+                            else sectionDecInfos.Add(dcI);
+                        }
+                }
+                if (sdi_issues.HasElements())
+                    sectionDecInfos.AddRange(sdi_issues);
+
+                // get specific decode info
+                if (sectionDecInfos.HasElements())
+                {
+                    if (infoIndex.IsWithin(0, sectionDecInfos.Count - 1))
+                        decInfo = sectionDecInfos[infoIndex];
+                }
+            }
+            return decInfo;
+        }
+
     }        
 }

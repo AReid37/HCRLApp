@@ -49,10 +49,9 @@ namespace HCResourceLibraryApp.DataHandling
 
 		#region fields / props
 		// private
-        SummaryData _previousSelf;
-		VerNum _summaryVersion;
-		int _ttaNumber;
-		List<string> _summaryParts;
+		VerNum _summaryVersion, _prevSummaryVersion;
+		int _ttaNumber, _prevTtaNumber;
+		List<string> _summaryParts, _prevSummaryParts;
 
         // public
 		public VerNum SummaryVersion
@@ -78,12 +77,9 @@ namespace HCResourceLibraryApp.DataHandling
 					_summaryParts = value;
 			}
 		}
-        #endregion
+		#endregion
 
-        public SummaryData()
-		{
-			_previousSelf = (SummaryData)this.MemberwiseClone();
-		}
+		public SummaryData() { }
 		public SummaryData(VerNum summaryVersion, int ttaCount, params string[] summaryParts)
 		{
 			SummaryVersion = summaryVersion;
@@ -95,7 +91,6 @@ namespace HCResourceLibraryApp.DataHandling
 					if (sumPart.IsNotNEW())
 						_summaryParts.Add(sumPart);
 			}
-			_previousSelf = (SummaryData)this.MemberwiseClone();
 		}
 
         #region methods
@@ -162,18 +157,19 @@ namespace HCResourceLibraryApp.DataHandling
 								/// summaryParts
 								else
 								{
-									if (!SummaryParts.HasElements())
-										SummaryParts = new List<string>();
+									if (!_summaryParts.HasElements())
+										_summaryParts = new List<string>();
 									SummaryParts.Add(sumParts[six]);
 								}
 							}
 						}
 
-					_previousSelf = (SummaryData)this.MemberwiseClone();
+					SetPreviousSelf();
 				}
 			}
 			return IsSetup();
         }
+        /// <summary>Compares two instances for similarities against: Setup state, Summary Version, TTA Number, Summary Parts.</summary>
         public bool Equals(SummaryData sumDat)
 		{
 			bool areEquals = false;
@@ -213,10 +209,29 @@ namespace HCResourceLibraryApp.DataHandling
 			}
 			return areEquals;
 		}
-		public bool ChangesDetected()
+		public override bool ChangesMade()
 		{
-			return !Equals(_previousSelf);
+			return !Equals(GetPreviousSelf());
 		}
+		void SetPreviousSelf()
+		{
+			_prevSummaryVersion = _summaryVersion;
+			_prevTtaNumber = _ttaNumber;
+			if (_summaryParts.HasElements())
+			{
+				_prevSummaryParts = new List<string>();
+				_prevSummaryParts.AddRange(_summaryParts.ToArray());
+			}
+		}
+		SummaryData GetPreviousSelf()
+		{
+			string[] prevSummaryParts = null;
+			if (_prevSummaryParts.HasElements())
+				prevSummaryParts = _prevSummaryParts.ToArray();
+			return new SummaryData(_prevSummaryVersion, _prevTtaNumber, prevSummaryParts);
+		}
+		/// <summary>Has this instance of <see cref="ResContents"/> been initialized with the appropriate information?</summary>
+		/// <returns>A boolean stating whether the summary version, tta number, and summary parts have been given values, at minimum.</returns>
 		public override bool IsSetup()
 		{
 			return _summaryVersion.HasValue() && _ttaNumber > 0 && _summaryParts.HasElements();
@@ -233,7 +248,7 @@ namespace HCResourceLibraryApp.DataHandling
             {
                 fullEncode = $"{SummaryVersion}{Sep}{TTANum}{Sep}";
                 for (int sx = 0; sx < SummaryParts.Count; sx++)
-                    fullEncode += $"{SummaryParts[sx].Clamp(25, "..")}{(sx + 1 >= SummaryParts.Count ? "" : Sep)}";
+                    fullEncode += $"{SummaryParts[sx].Clamp(30, "...")}{(sx + 1 >= SummaryParts.Count ? "" : Sep)}";
             }
             return fullEncode.Replace(Sep, ";");
         }

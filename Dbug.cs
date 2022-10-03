@@ -13,7 +13,7 @@ namespace HCResourceLibraryApp
         // IDEA -- Give Dbug.cs file-writing ability so that debug's can be logged and viewed outside of IDE
         //          ^^ only if a file does not exist with this functionality ... Checked >> FILE DOES NOT EXIST
         const int indentSize = 4, nestLimitNum = 2;
-        static bool relayDbugLogs, ongoingNestedLogsQ, ignoreNextSessionQ, ignoreNestedSessionQ;
+        static bool relayDbugLogs, ongoingNestedLogsQ, ignoreNextSessionQ, ignoreNestedSessionQ, deactivateNextSessionQ;
         static string sessionName, nestedSessionName;
         static string partialLog;
         static int countSessions = 0, nestedBaseIndentLevel = 0;
@@ -29,144 +29,166 @@ namespace HCResourceLibraryApp
 
         public static void StartLogging()
         {            
-            countSessions++;
-            ongoingNestedLogsQ = countSessions > 1;
-
-            if (IsWithinNestedLimit())
+            if (!deactivateNextSessionQ)
             {
-                if (!ignoreNextSessionQ)
-                    relayDbugLogs = true;
-                else
-                {
-                    if (ongoingNestedLogsQ)
-                        ignoreNestedSessionQ = true;
-                    else ignoreNestedSessionQ = false;
-                    ignoreNextSessionQ = false;
-                }
+                countSessions++;
+                ongoingNestedLogsQ = countSessions > 1;
 
-                if (!ongoingNestedLogsQ)
+                if (IsWithinNestedLimit())
                 {
-                    SetIndent(-1);
-                    if (relayDbugLogs)
-                        Debug.WriteLine("\n--------------------"); // 20x '-'
-                    AddToLogFlusher("\n--------------------");
-                    SetIndent(0);
-                }
-                else if (!ignoreNestedSessionQ)
-                {
-                    NudgeIndent(true);
-                    nestedBaseIndentLevel = Debug.IndentLevel;
-                    if (relayDbugLogs)
+                    if (!ignoreNextSessionQ)
+                        relayDbugLogs = true;
+                    else
                     {
-                        Debug.WriteLine(StartNestedTag);
-                        Debug.WriteLine(">> -------------------- <<");
+                        if (ongoingNestedLogsQ)
+                            ignoreNestedSessionQ = true;
+                        else ignoreNestedSessionQ = false;
+                        ignoreNextSessionQ = false;
                     }
-                    AddToLogFlusher(StartNestedTag);
-                    AddToLogFlusher(">> -------------------- <<");
+
+                    if (!ongoingNestedLogsQ)
+                    {
+                        SetIndent(-1);
+                        if (relayDbugLogs)
+                            Debug.WriteLine("\n--------------------"); // 20x '-'
+                        AddToLogFlusher("\n--------------------");
+                        SetIndent(0);
+                    }
+                    else if (!ignoreNestedSessionQ)
+                    {
+                        NudgeIndent(true);
+                        nestedBaseIndentLevel = Debug.IndentLevel;
+                        if (relayDbugLogs)
+                        {
+                            Debug.WriteLine(StartNestedTag);
+                            Debug.WriteLine(">> -------------------- <<");
+                        }
+                        AddToLogFlusher(StartNestedTag);
+                        AddToLogFlusher(">> -------------------- <<");
+                    }
                 }
             }            
         }
         public static void StartLogging(string logSessionName)
         {            
-            countSessions++;
-            ongoingNestedLogsQ = countSessions > 1;
-
-            if (IsWithinNestedLimit())
+            if (!deactivateNextSessionQ)
             {
-                if (!ignoreNextSessionQ)
-                    relayDbugLogs = true;
-                else
-                {
-                    if (ongoingNestedLogsQ)
-                        ignoreNestedSessionQ = true;
-                    ignoreNextSessionQ = false;
-                }
+                countSessions++;
+                ongoingNestedLogsQ = countSessions > 1;
 
-                if (!ongoingNestedLogsQ)
+                if (IsWithinNestedLimit())
                 {
-                    SetIndent(-1);
-                    if (relayDbugLogs)
-                        Debug.WriteLine("\n--------------------"); // 20x '-'
-                    AddToLogFlusher("\n--------------------");
-                    if (logSessionName.IsNotNEW())
+                    if (!ignoreNextSessionQ)
+                        relayDbugLogs = true;
+                    else
                     {
-                        sessionName = logSessionName;
-                        if (relayDbugLogs)
-                            Debug.WriteLine($"## {logSessionName.ToUpper()} ##");
-                        AddToLogFlusher($"## {logSessionName.ToUpper()} ##");
+                        if (ongoingNestedLogsQ)
+                            ignoreNestedSessionQ = true;
+                        ignoreNextSessionQ = false;
                     }
-                    SetIndent(0);
-                }
-                else if (!ignoreNestedSessionQ)
-                {
-                    NudgeIndent(true);
-                    nestedBaseIndentLevel = Debug.IndentLevel;
-                    if (relayDbugLogs)
-                    {
-                        Debug.WriteLine(StartNestedTag);
-                        Debug.WriteLine(">> -------------------- <<");
-                    }
-                    AddToLogFlusher(StartNestedTag);
-                    AddToLogFlusher(">> -------------------- <<");
 
-                    if (logSessionName.IsNotNEW())
+                    if (!ongoingNestedLogsQ)
                     {
-                        nestedSessionName = logSessionName;
+                        SetIndent(-1);
                         if (relayDbugLogs)
-                            Debug.WriteLine($"## {logSessionName.ToUpper()} ##");
-                        AddToLogFlusher($"## {logSessionName.ToUpper()} ##");
+                            Debug.WriteLine("\n--------------------"); // 20x '-'
+                        AddToLogFlusher("\n--------------------");
+                        if (logSessionName.IsNotNEW())
+                        {
+                            sessionName = logSessionName;
+                            if (relayDbugLogs)
+                                Debug.WriteLine($"## {logSessionName.ToUpper()} ##");
+                            AddToLogFlusher($"## {logSessionName.ToUpper()} ##");
+                        }
+                        SetIndent(0);
+                    }
+                    else if (!ignoreNestedSessionQ)
+                    {
+                        NudgeIndent(true);
+                        nestedBaseIndentLevel = Debug.IndentLevel;
+                        if (relayDbugLogs)
+                        {
+                            Debug.WriteLine(StartNestedTag);
+                            Debug.WriteLine(">> -------------------- <<");
+                        }
+                        AddToLogFlusher(StartNestedTag);
+                        AddToLogFlusher(">> -------------------- <<");
+
+                        if (logSessionName.IsNotNEW())
+                        {
+                            nestedSessionName = logSessionName;
+                            if (relayDbugLogs)
+                                Debug.WriteLine($"## {logSessionName.ToUpper()} ##");
+                            AddToLogFlusher($"## {logSessionName.ToUpper()} ##");
+                        }
                     }
                 }
             }
         }
         public static void EndLogging()
         {
-            if (!ongoingNestedLogsQ)
+            if (!deactivateNextSessionQ)
             {
-                SetIndent(-1);
-                if (sessionName.IsNotNEW() && relayDbugLogs)
-                    Debug.WriteLine($"## END :: {sessionName.ToUpper()} ##");
-                AddToLogFlusher($"## END :: {(sessionName.IsNotNEW() ? sessionName : "...")} ##");
-                NoteRunTime();
-
-                FlushAndSave();
-                relayDbugLogs = false;
-                sessionName = null;
-            }
-            else
-            {
-                if (!ignoreNestedSessionQ)
+                if (!ongoingNestedLogsQ)
                 {
-                    if (nestedSessionName.IsNotNEW() && relayDbugLogs)
-                    {
-                        Debug.WriteLine($"## END :: {nestedSessionName.ToUpper()} ##");
-                        Debug.WriteLine(EndNestedTag);
-                    }
-                    AddToLogFlusher($"## END :: {(nestedSessionName.IsNotNEW() ? nestedSessionName : "...")} ##");
-                    AddToLogFlusher(EndNestedTag);
+                    SetIndent(-1);
+                    if (sessionName.IsNotNEW() && relayDbugLogs)
+                        Debug.WriteLine($"## END :: {sessionName.ToUpper()} ##");
+                    AddToLogFlusher($"## END :: {(sessionName.IsNotNEW() ? sessionName : "...")} ##");
                     NoteRunTime();
 
-                    SetIndent(nestedBaseIndentLevel - 2);
-                    //NudgeIndent(false); // nested - 1 (- 1 for Nudge, doesn't work if not within nested limit)
+                    FlushAndSave();
+                    relayDbugLogs = false;
+                    sessionName = null;
                 }
-                else ignoreNestedSessionQ = false;
+                else
+                {
+                    if (!ignoreNestedSessionQ)
+                    {
+                        if (nestedSessionName.IsNotNEW() && relayDbugLogs)
+                        {
+                            Debug.WriteLine($"## END :: {nestedSessionName.ToUpper()} ##");
+                            Debug.WriteLine(EndNestedTag);
+                        }
+                        AddToLogFlusher($"## END :: {(nestedSessionName.IsNotNEW() ? nestedSessionName : "...")} ##");
+                        AddToLogFlusher(EndNestedTag);
+                        NoteRunTime();
 
-                ongoingNestedLogsQ = false;
-                nestedSessionName = null;
-            }            
+                        SetIndent(nestedBaseIndentLevel - 2);
+                        //NudgeIndent(false); // nested - 1 (- 1 for Nudge, doesn't work if not within nested limit)
+                    }
+                    else ignoreNestedSessionQ = false;
 
-            if (!IsWithinNestedLimit())
-                countSessions = nestLimitNum;
+                    ongoingNestedLogsQ = false;
+                    nestedSessionName = null;
+                }
 
-            if (countSessions >= 1)
-                countSessions--;
+                if (!IsWithinNestedLimit())
+                    countSessions = nestLimitNum;
+
+                if (countSessions >= 1)
+                    countSessions--;
+            }
+
+            if (deactivateNextSessionQ)
+                deactivateNextSessionQ = false;
         }
         /// <summary>Place before any <see cref="StartLogging"/> to skip logging this session into the Debug Ouput window.</summary>
+        /// <remarks>Must not be used at the same time as <see cref="DeactivateNextLogSession"/>.</remarks>
         public static void IgnoreNextLogSession()
         {
-            ignoreNextSessionQ = true;            
+            if (!deactivateNextSessionQ)
+                ignoreNextSessionQ = true;            
         }
-
+        /// <summary>Place before any <see cref="StartLogging"/> to skip logging this session into Debug File and Debug Output window.</summary>
+        /// <remarks>Must not be used at the same time as <see cref="IgnoreNextLogSession"/>.</remarks>
+        public static void DeactivateNextLogSession()
+        {
+            //ignoreNextSessionQ = true;
+            if (!ignoreNextSessionQ)
+                deactivateNextSessionQ = true;
+        }
+        /// <summary>Unaffected by <see cref="IgnoreNextLogSession"/> and <see cref="DeactivateNextLogSession"/> calls.</summary>
         public static void SingleLog(string logSessionName, string log)
         {
             //SetIndent(0);
@@ -179,7 +201,7 @@ namespace HCResourceLibraryApp
         /// <summary>Increments or decrement the indentation level based on <paramref name="isIncrement"/>'s value.</summary>
         public static void NudgeIndent(bool isIncrement)
         {
-            if (IsWithinNestedLimit())
+            if (IsWithinNestedLimit() && !deactivateNextSessionQ)
             {
                 int trueLevel = Debug.IndentLevel - 1;
 
@@ -195,7 +217,7 @@ namespace HCResourceLibraryApp
         ///<summary>Stores partial logs that will be flushed together with the new logged line after using <see cref="Log(string)"/>.</summary>
         public static void LogPart(string log)
         {
-            if (IsWithinNestedLimit())
+            if (IsWithinNestedLimit() && !deactivateNextSessionQ)
             {
                 if (!ignoreNestedSessionQ)
                 {
@@ -208,7 +230,7 @@ namespace HCResourceLibraryApp
         }
         public static void Log(string log)
         {
-            if (IsWithinNestedLimit())
+            if (IsWithinNestedLimit() && !deactivateNextSessionQ)
             {
                 if (log.IsNotNEW())
                 {

@@ -98,7 +98,7 @@ namespace HCResourceLibraryApp.Layout
                 /// tbd...
                 _preferencesRef.GetScreenDimensions(out int tHeight, out int tWidth);
                 Console.SetWindowSize(tWidth, tHeight);
-                Console.SetBufferSize(tWidth, 9001);
+                Console.SetBufferSize(tWidth, 500);
                 //Console.SetWindowSize(120, 30);
                 //Console.SetBufferSize(120, 9001);
 
@@ -192,6 +192,7 @@ namespace HCResourceLibraryApp.Layout
         /// <param name="highlightedTexts">Cannot be null. Characters, words, or phrases within the text to highlight.</param>
         public static void Highlight(bool newLine, string text, params string[] highlightedTexts)
         {
+            Dbug.DeactivateNextLogSession();
             Dbug.StartLogging("PageBase.Highlight(str, params str[])");
             Dbug.Log($"Recieved --> text (\"{text}\"); highlightedTexts (has elements? {highlightedTexts.HasElements()})");
             if (text.IsNotNEW() && highlightedTexts.HasElements())
@@ -352,6 +353,7 @@ namespace HCResourceLibraryApp.Layout
 
             if (input.IsNotNEW())
             {
+                input = input.ToLower();
                 if (input.Equals("yes") || input.Equals("y"))
                 {
                     yesNo = true;
@@ -413,6 +415,7 @@ namespace HCResourceLibraryApp.Layout
             resultNum = 0;
             bool valid = false;
 
+            Dbug.DeactivateNextLogSession();
             Dbug.StartLogging("Table Form Menu Debug");
             if (options.HasElements() && titleText.IsNotNEW())
             {
@@ -527,7 +530,7 @@ namespace HCResourceLibraryApp.Layout
             resultKey = null;
             bool valid = false;
 
-            Dbug.IgnoreNextLogSession();
+            Dbug.DeactivateNextLogSession();
             Dbug.StartLogging("List Form Menu Debug");
             if (options.HasElements() && titleText.IsNotNEW())
             {
@@ -615,6 +618,7 @@ namespace HCResourceLibraryApp.Layout
         }
         public static bool ColorMenu(string titleText, out Color color, params Color[] exempt)
         {
+            Dbug.DeactivateNextLogSession();
             Dbug.StartLogging("PageBase.ColorMenu");
 
             // prep
@@ -701,7 +705,7 @@ namespace HCResourceLibraryApp.Layout
         public static void Wait(float seconds)
         {
             int milliSeconds = (int)(seconds.Clamp(0, 10) * 1000);
-            Dbug.IgnoreNextLogSession();
+            Dbug.DeactivateNextLogSession();
             Dbug.StartLogging("PageBase.Wait()");            
             Dbug.LogPart($"Waiting for {milliSeconds}ms // ");
 

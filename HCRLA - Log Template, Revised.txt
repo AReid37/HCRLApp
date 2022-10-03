@@ -23,7 +23,6 @@ GUIDELINES
 	Within lines   ::  [  ]  (  )  -  :  ,  ;  ~
 
 
-
 EXTRA INFORMATION FOR EACH SECTION
 _____
 [Version]
@@ -31,37 +30,52 @@ Syntax: [Version : a.bb]
 'a' as major number, 'bb' as minor number. 
 Ex. 1.0, 1.1, 1.11, 1.24
 Ex. [Version : 1.1]
-
 _____
 [Added] 
 Header :: 
-	set placeholders (ph) and substitution phrases (sub) to replace them for easier logging within header. 
+	set placeholders (ph) and substitution phrase (sub) to replace them for easier logging. 
 	~~
 	Syntax: ph,sub (separate multiple placeholder/substitutions groups with ';')
 	Ex.	[Added : $f,Feather Bill; m>,Marshwood; #,x32]
 
 Body :: 
-	Syntax: #| <InternalName> - (<shortItemID>; <shortRelatedIds>)
+	Syntax: ##|{InternalName} - ({shortItemID}; {shortRelatedIds})
 	~~
-	# : The number of the item being added ('1' for first item, '2' for second, '3' for third...)
-	<InternalName> : The in-game name given to the added item being described
-	<shortItemID> : only 'Item' data IDs may go here
-	<shortRelatedIds> : other related, non-wordy data Ids (tiles, projectiles, walls, ...).	
-		Multiple of similar type are comma-separated (x21,22), different types space-separated (x21 y22)
-	Ex. 12| PotPie - (i42; t23 p44,52 w31)
-
+	## : The entry number of the item being added ('1' for first, '2' second, '3' third...).
+	{InternalName} : The in-game name given to the added item being described.
+	{shortItemID} : only 'Item' data IDs may go here.
+	{shortRelatedIds} : other related, non-wordy data Ids (tiles, projectiles, walls, ...).	
+		Multiple of similar type --> (x21,22) or (x32~34); 
+		Different types --> (x21 y22); 
+	Ex. 9 |PotPie - (i42; t23 p44,52 w31~33)
+		13|PiePan - (i40)
 _____
 [Additional]
-
-
+Syntax: > {Opt.Name} ({DataIDs}) - {RelatedInternalName} ({RelatedDataID})
+	{Opt.Name} : Custom name to describe the group of additional data Ids
+	{DataIDs} : The additional Data IDs. Wordy data Ids are added through here.
+	{RelatedInternalName} : Internal name of item / content related with the listed data Ids.
+	{RelatedDataID} : The (item type) data ID of the related item / content.
+	Ex. > Watermelon Chunk (WaterMelonChunk) - Watermelon (i167)
+		> Ambient Pineapple Huts (t152,153)
+		> (w54) - (i34)
 _____
 [TTA]
-
+Syntax: [TTA : #]
+	# : The total tally of items / contents added in this version (positive integers)
 _____
 [Updated]
-
+Syntax: > {InternalName} ({RelatedDataID}) - {ChangeDesc}
+	{InternalName} : The internal name of the item or content edited.
+	{RelatedDataID} : The content / item that has been edited.
+	{ChangeDesc} : A description of the changes made to the specified content.
+	Ex. > PotPie (i42) - Crispier looking surface and creamier filling
+		> PotPie (t23) - Changed texture to match new item design
 _____
 [Legend]
+Syntax: {Key} - {KeyDef}
+	{Key} : The key character used within version log
+	{KeyDef} : A short description of what the key represents
 
 _____
 [Summary]

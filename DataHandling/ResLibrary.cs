@@ -1,5 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Net;
+using System.Runtime.Serialization;
+using ConsoleFormat;
 
 namespace HCResourceLibraryApp.DataHandling
 {
@@ -34,13 +37,16 @@ namespace HCResourceLibraryApp.DataHandling
 
         #region fields / props
         // private
-        public const string LooseResConName = "!LooseContent!";
-        ResLibrary _previousSelf;
-        List<ResContents> _contents;
-        List<LegendData> _legends;
-        List<SummaryData> _summaries;
+        const string legDataTag = "lgd";
+        const string sumDataTag = "sum";
+        const string stampRLSavedData = "ResLibrary Has Saved Data", stampRLSavedDataTag = "RLDS"; 
+        static bool disableAddDbug = false;
+        List<ResContents> _contents, _prevContents;
+        List<LegendData> _legends, _prevLegends;
+        List<SummaryData> _summaries, _prevSummaries;
 
         // public
+        public const string LooseResConName = "!LooseContent!";
         public List<ResContents> Contents
         {
             private set => _contents = value;
@@ -58,10 +64,7 @@ namespace HCResourceLibraryApp.DataHandling
         }
         #endregion
 
-        public ResLibrary()
-        {
-            _previousSelf = (ResLibrary)this.MemberwiseClone();
-        }
+        public ResLibrary() { }
 
 
         #region methods
@@ -70,17 +73,20 @@ namespace HCResourceLibraryApp.DataHandling
             bool addedContentsQ = false;
             if (newContents.HasElements())
             {
+                if (disableAddDbug)
+                    Dbug.DeactivateNextLogSession();
                 Dbug.StartLogging("ResLibrary.AddContent(prms RC[])");
                 Dbug.LogPart($"Recieved [{newContents.Length}] new ResCons for library");
 
                 List<int> shelfNums = new();
                 if (Contents.HasElements())
                 {
-                    Dbug.LogPart("; Fetching existing shelf numbers ::");
+                    Dbug.LogPart("; Fetching existing shelf numbers");
+                    //Dbug.LogPart("; Fetching existing shelf numbers ::");
                     foreach (ResContents resCon in Contents)
                     {
                         shelfNums.Add(resCon.ShelfID);
-                        Dbug.LogPart($" {resCon.ShelfID}");
+                        //Dbug.LogPart($" {resCon.ShelfID}");
                     }
                 }
                 else
@@ -105,7 +111,7 @@ namespace HCResourceLibraryApp.DataHandling
                                 Dbug.Log("Library has pre-existing contents that may serve as connections; ");
 
                                 /// find matching and connect ConAddits
-                                List<ResContents> RCextras = new();
+                                List<string> RCextras = new();
                                 if (newRC.ConAddits.HasElements())
                                 {
                                     Dbug.Log("Making connections :: ConAddits to ConBase");
@@ -129,19 +135,22 @@ namespace HCResourceLibraryApp.DataHandling
                                             if (matchingResCon != null)
                                             {
                                                 Dbug.LogPart($"Found ResCon {{{matchingResCon}}} >> ");
-                                                matchingResCon.StoreConAdditional(looseCa);
-                                                RCextras.Add(matchingResCon);
-                                                Dbug.LogPart($"Connected with ConBase ({matchingResCon.ConBase}) [by ID '{looseCa.RelatedDataID}']");
+                                                if (matchingResCon.StoreConAdditional(looseCa))
+                                                {
+                                                    RCextras.Add(matchingResCon.ToString());
+                                                    Dbug.LogPart($"Connected with ConBase ({matchingResCon.ConBase}) [by ID '{looseCa.RelatedDataID}']");
+                                                }
+                                                else Dbug.LogPart($"Rejected ConAddits");
                                             }
-                                            else Dbug.LogPart("No ConBase connections found");
+                                            else Dbug.LogPart("No ConBase connections found (discarded)");
                                         }
                                         Dbug.Log("; ");
                                     }
                                     Dbug.NudgeIndent(false);
 
                                     if (RCextras.HasElements())
-                                        foreach(ResContents rc in RCextras)
-                                            Dbug.Log($"Edited RC :: {rc}");
+                                        foreach(string rcEdit in RCextras)
+                                            Dbug.Log($". Edited RC :: {rcEdit}");
                                 }
 
                                 /// find matching and connect ConChanges
@@ -175,9 +184,12 @@ namespace HCResourceLibraryApp.DataHandling
                                                         ContentBaseGroup matchCbg = (ContentBaseGroup)dataSource;
                                                         if (matchCbg != null)
                                                         {
-                                                            matchingResCon.StoreConChanges(looseCc);
-                                                            RCextras.Add(matchingResCon);
-                                                            Dbug.LogPart($"Connected with ConBase ({matchCbg}) [by ID '{looseCc.RelatedDataID}']");
+                                                            if (matchingResCon.StoreConChanges(looseCc))
+                                                            {
+                                                                RCextras.Add(matchingResCon.ToString());
+                                                                Dbug.LogPart($"Connected with ConBase ({matchCbg}) [by ID '{looseCc.RelatedDataID}']");
+                                                            }
+                                                            else Dbug.LogPart($"Rejected ConChanges");
                                                         }
                                                     }
                                                     else if (source == RCFetchSource.ConAdditionals)
@@ -185,22 +197,25 @@ namespace HCResourceLibraryApp.DataHandling
                                                         ContentAdditionals matchCa = (ContentAdditionals)dataSource;
                                                         if (matchCa != null)
                                                         {
-                                                            matchingResCon.StoreConChanges(looseCc);
-                                                            RCextras.Add(matchingResCon);
-                                                            Dbug.LogPart($"Connected with ConAddits ({matchCa}) [by ID '{looseCc.RelatedDataID}']");
+                                                            if (matchingResCon.StoreConChanges(looseCc))
+                                                            {
+                                                                RCextras.Add(matchingResCon.ToString());
+                                                                Dbug.LogPart($"Connected with ConAddits ({matchCa}) [by ID '{looseCc.RelatedDataID}']");
+                                                            }
+                                                            else Dbug.LogPart($"Rejected ConChanges");
                                                         }
                                                     }
                                                 }
                                             }
-                                            else Dbug.LogPart("No connections found");
+                                            else Dbug.LogPart("No connections found (discarded)");
                                         }
                                         Dbug.Log("; ");
                                     }
                                     Dbug.NudgeIndent(false);
 
                                     if (RCextras.HasElements())
-                                        foreach (ResContents rc in RCextras)
-                                            Dbug.Log($"Edited RC :: {rc}");
+                                        foreach (string rcEdits in RCextras)
+                                            Dbug.Log($". Edited RC :: {rcEdits}");
                                 }
                             }
                             else
@@ -223,15 +238,18 @@ namespace HCResourceLibraryApp.DataHandling
                         // just add
                         else
                         {
-                            /// get shelf id
-                            newRC.ShelfID = GetNewShelfNum();
-                            shelfNums.Add(newRC.ShelfID);
+                            if (!IsDuplicateInLibrary(newRC))
+                            {
+                                /// get shelf id
+                                newRC.ShelfID = GetNewShelfNum();
+                                shelfNums.Add(newRC.ShelfID);
 
-                            /// add to content library
-                            Contents.Add(newRC);
-                            Dbug.Log($"Added :: {newRC}");
+                                /// add to content library
+                                Contents.Add(newRC);
+                                Dbug.Log($"Added :: {newRC}");
+                            }
+                            else Dbug.Log($"Rejected duplicate :: {newRC}");
                         }
-
                         addedContentsQ = true;
                     }
                 }
@@ -268,63 +286,491 @@ namespace HCResourceLibraryApp.DataHandling
             bool addedLegendQ = false;
             if (newLegends.HasElements())
             {
+                if (disableAddDbug)
+                    Dbug.DeactivateNextLogSession();
+                Dbug.StartLogging("ResLibrary.AddLegend(prms LegData[])");
                 foreach (LegendData leg in newLegends)
                 {
-                    if (leg.IsSetup())
-                    {
-                        bool isDupe = false;
-                        LegendData dupedLegData = null;
-                        if (Legends.HasElements())
+                    if (leg != null)
+                        if (leg.IsSetup())
                         {
-                            foreach (LegendData ogLeg in Legends)
-                                if (ogLeg.Key == leg.Key)
-                                {
-                                    isDupe = true;
-                                    dupedLegData = ogLeg;
-                                    break;
-                                }
-                        }
-                        else Legends = new List<LegendData>();
+                            bool isDupe = false;
+                            LegendData dupedLegData = null;
+                            if (Legends.HasElements())
+                            {
+                                foreach (LegendData ogLeg in Legends)
+                                    if (ogLeg.Key == leg.Key)
+                                    {
+                                        isDupe = true;
+                                        dupedLegData = ogLeg;
+                                        break;
+                                    }
+                            }
+                            else Legends = new List<LegendData>();
 
-                        if (!isDupe)
-                            Legends.Add(leg);
-                        else
-                            dupedLegData.AddKeyDefinition(leg[0]);
-                        addedLegendQ = true;
-                    }
+                            if (!isDupe)
+                            {
+                                Legends.Add(leg);
+                                Dbug.Log($"Added Lgd :: {leg}");
+                            }
+                            else
+                            {
+                                bool edited = dupedLegData.AddKeyDefinition(leg[0]);
+                                if (edited)
+                                    Dbug.Log($"Edited Lgd :: {dupedLegData.ToStringLengthy()}");
+                                else
+                                {
+                                    bool isPartial = leg.ToStringLengthy() != dupedLegData.ToStringLengthy();
+                                    Dbug.Log($"Rejected {(isPartial ? "partial " : "")}duplicate :: {leg}");
+                                }
+                            }
+                            addedLegendQ = true;
+                        }
                 }
+                Dbug.EndLogging();
             }
             return addedLegendQ;
         }
-        public bool AddSummary(SummaryData newSummary)
+        public bool AddSummary(params SummaryData[] newSummaries)
         {
             bool addedSummaryQ = false;
-            if (newSummary != null)
+            if (newSummaries.HasElements())
             {
-                if (newSummary.IsSetup())
+                if (disableAddDbug)
+                    Dbug.DeactivateNextLogSession();
+                Dbug.StartLogging("ResLibrary.AddSummary(SumData[])");
+                foreach (SummaryData sum in newSummaries)
                 {
-                    bool isDupe = false;
-                    if (Summaries.HasElements())
-                    {
-                        foreach (SummaryData sumDat in Summaries)
-                            if (sumDat.Equals(newSummary))
+                    if (sum != null)
+                        if (sum.IsSetup())
+                        {
+                            bool isDupe = false;
+                            if (Summaries.HasElements())
                             {
-                                isDupe = true;
-                                break;
+                                foreach (SummaryData sumDat in Summaries)
+                                    if (sumDat.Equals(sum))
+                                    {
+                                        isDupe = true;
+                                        break;
+                                    }
                             }
-                    }
-                    else Summaries = new List<SummaryData>();
+                            else Summaries = new List<SummaryData>();
 
-                    if (!isDupe)
+                            if (!isDupe)
+                            {
+                                addedSummaryQ = true;
+                                Summaries.Add(sum);
+                                Dbug.Log($"Added Smry :: {sum.ToStringShortened()}");
+                            }
+                            else Dbug.Log($"Rejected duplicate :: {sum.ToStringShortened()}");
+                        }
+                }
+                Dbug.EndLogging();
+            }
+            return addedSummaryQ;
+        }        
+        public void Integrate(ResLibrary other)
+        {
+            Dbug.StartLogging("ResLibrary.Integrate(ResLib)");
+            if (other != null)
+            {
+                Dbug.LogPart("Other ResLibrary is instantiated; ");
+                if (other.IsSetup())
+                {
+                    Dbug.Log("Instance is also setup -- integrating libraries; ");
+
+                    // add resCons
+                    AddContent(other.Contents.ToArray());
+
+                    // add legend
+                    AddLegend(other.Legends.ToArray());
+
+                    // add summary
+                    AddSummary(other.Summaries.ToArray());
+                }
+                else Dbug.Log("Other ResLibrary is not setup; ");
+            }
+            else Dbug.Log("Other ResLibrary is null; ");
+            Dbug.EndLogging();
+        }
+
+        /// <summary>Has this instance of <see cref="ResLibrary"/> been initialized with the appropriate information?</summary>
+        /// <returns>A boolean stating whether the contents, legends, and summaries have elements within them, at minimum.</returns>
+        public override bool IsSetup()
+        {
+            return Contents.HasElements() && Legends.HasElements() && Summaries.HasElements();
+        }
+        /// <summary>Compares two instances for similarities against: Setup state, Contents, Legends, Summaries.</summary>
+        public bool Equals(ResLibrary resLib)
+        {
+            bool areEquals = false;
+            if (resLib != null)
+            {
+                areEquals = true;
+                for (int rlx = 0; rlx < 4 && areEquals; rlx++)
+                {
+                    switch (rlx)
                     {
-                        addedSummaryQ = true;
-                        Summaries.Add(newSummary);
+                        case 0:
+                            areEquals = IsSetup() == resLib.IsSetup();
+                            break;
+
+                        case 1:
+                            if (IsSetup())
+                            {
+                                areEquals = Contents.Count == resLib.Contents.Count;
+                                if (areEquals)
+                                {
+                                    for (int rlcx = 0; rlcx < Contents.Count && areEquals; rlcx++)
+                                        areEquals = Contents[rlcx].Equals(resLib.Contents[rlcx]);
+                                }
+                            }                            
+                            break;
+
+                        case 2:
+                            if (IsSetup())
+                            {
+                                areEquals = Legends.Count == resLib.Legends.Count;
+                                if (areEquals)
+                                {
+                                    for (int rllx = 0; rllx < Legends.Count && areEquals; rllx++)
+                                        areEquals = Legends[rllx].Equals(resLib.Legends[rllx]);
+                                }
+                            }
+                            break;
+
+                        case 3:
+                            if (IsSetup())
+                            {
+                                areEquals = Summaries.Count == resLib.Summaries.Count;
+                                if (areEquals)
+                                {
+                                    for (int rlsx = 0; rlsx < Summaries.Count && areEquals; rlsx++)
+                                        areEquals = Summaries[rlsx].Equals(resLib.Summaries[rlsx]);
+                                }
+                            }
+                            break;
                     }
                 }
             }
-            return addedSummaryQ;
+            return areEquals;
         }
-        // void Integrate(ResLibrary other)
+        public override bool ChangesMade()
+        {
+            return !Equals(GetPreviousSelf());
+        }
+        void SetPreviousSelf()
+        {
+            if (_contents.HasElements())
+            {
+                _prevContents = new List<ResContents>();
+                _prevContents.AddRange(_contents.ToArray());
+            }
+            if (_legends.HasElements())
+            {
+                _prevLegends = new List<LegendData>();
+                _prevLegends.AddRange(_legends.ToArray());
+            }
+            if (_summaries.HasElements())
+            {
+                _prevSummaries = new List<SummaryData>();
+                _prevSummaries.AddRange(_summaries.ToArray());
+            }
+        }
+        ResLibrary GetPreviousSelf()
+        {
+            ResLibrary prevSelf = new();
+            bool prevDADbg = disableAddDbug;
+            disableAddDbug = true;
+
+            if (_prevContents.HasElements())
+                prevSelf.AddContent(_prevContents.ToArray());
+            if (_prevLegends.HasElements())
+                prevSelf.AddLegend(_prevLegends.ToArray());
+            if (_prevSummaries.HasElements())
+                prevSelf.AddSummary(_prevSummaries.ToArray());
+            
+            disableAddDbug = prevDADbg;
+            return prevSelf;
+        }
+        bool IsDuplicateInLibrary(ResContents resCon)
+        {
+            bool foundDupe = false;
+            if (Contents.HasElements() && resCon != null)
+            {
+                if (resCon.IsSetup())
+                {
+                    for (int x = 0; x < Contents.Count && !foundDupe; x++)
+                        foundDupe = Contents[x].Equals(resCon);
+                }
+            }
+            return foundDupe;
+        }                
+        
+
+        // DATA HANDLING METHODS
+        protected override bool EncodeToSharedFile()
+        {
+            Dbug.StartLogging("ResLibrary.EncodeToSharedFile()");
+            bool encodedQ = true;
+            
+            if (IsSetup())
+            {
+                Dbug.LogPart("ResLibrary is setup, creating stamp: ");
+                bool noIssue = true;
+                // 0th verify saving of data
+                if (Base.FileWrite(false, stampRLSavedDataTag, stampRLSavedData))
+                    Dbug.LogPart("[STAMPED]; ");
+                else Dbug.LogPart("[ ? ? ? ] (no stamp); ");
+                Dbug.Log("Proceeding with encoding; ");
+
+                // 1st encode contents
+                Dbug.Log($"Encoding [{Contents.Count}] ResContents; ");
+                for (int rcix = 0; rcix < Contents.Count && noIssue; rcix++)
+                {
+                    ResContents resCon = Contents[rcix];
+                    Dbug.LogPart($"+ Encoding :: {resCon}");
+
+                    if (resCon.IsSetup())
+                    {
+                        noIssue = Base.FileWrite(false, resCon.ShelfID.ToString(), resCon.EncodeGroups());
+                        Dbug.Log($"{Base.ConditionalText(noIssue, "", "[!issue]")}; ");
+
+                        if (noIssue)
+                        {
+                            Dbug.NudgeIndent(true);
+                            foreach (string rcLine in resCon.EncodeGroups())
+                                if (rcLine.IsNotNE())
+                                    Dbug.Log($"tag [{resCon.ShelfID}]| {rcLine}");
+                            Dbug.NudgeIndent(false);
+                        }
+                    }
+                    else Dbug.Log("; Skipped -- Was not setup; ");
+                }
+
+                // 2nd encode legends
+                if (noIssue)
+                {
+                    Dbug.Log($"Encoding [{Legends.Count}] Legend Datas; ");
+                    List<string> resLibLegendsLines = new();
+
+                    Dbug.NudgeIndent(true);
+                    foreach (LegendData legDat in Legends)
+                    {
+                        if (legDat.IsSetup())
+                        {
+                            resLibLegendsLines.Add(legDat.Encode());
+                            Dbug.Log($"{legDat.Encode()}");
+                        }
+                        else Dbug.Log($"Skipped ({legDat}) -- was not setup; ");
+                    }
+                    Dbug.NudgeIndent(false);
+
+                    noIssue = Base.FileWrite(false, legDataTag, resLibLegendsLines.ToArray());
+                    Dbug.Log($"{Base.ConditionalText(noIssue, $"Successfully encoded legend datas (with tag '{legDataTag}')", "Failed to encode legend datas")};");
+                }
+
+                // 3rd encode summaries
+                if (noIssue)
+                {
+                    Dbug.Log($"Encoding [{Summaries.Count}] Summary Datas; ");
+                    List<string> resLibSummaryLines = new();
+
+                    Dbug.NudgeIndent(true);
+                    foreach (SummaryData sumDat in Summaries)
+                    {
+                        if (sumDat.IsSetup())
+                        {
+                            resLibSummaryLines.Add(sumDat.Encode());
+                            Dbug.Log($"{sumDat.Encode()}");
+                        }
+                        else Dbug.Log($"Skipped ({sumDat.ToStringShortened()}) -- was not setup; ");
+                    }
+                    Dbug.NudgeIndent(false);
+
+                    noIssue = Base.FileWrite(false, sumDataTag, resLibSummaryLines.ToArray());
+                    Dbug.Log($"{Base.ConditionalText(noIssue, $"Successfully encoded summary datas (with tag '{sumDataTag}')", "Failed to encode summary datas")};");
+                }
+
+                Dbug.Log($"Encoded ResLibrary? {noIssue}");
+                encodedQ = noIssue;
+            }
+            else Dbug.Log("Not enough data within ResLibrary to proceed with encoding; ");
+            
+            Dbug.EndLogging();
+            return encodedQ;
+        }
+        protected override bool DecodeFromSharedFile()
+        {
+            Dbug.StartLogging("ResLibrary.DecodeFromSharedFile()");
+            bool noDataButIsOkay = true;
+            if (Base.FileRead(stampRLSavedDataTag, out string[] hasDataLine))
+            {
+                if (hasDataLine.HasElements())
+                    noDataButIsOkay = false;
+            }
+
+            /// decode if there is data
+            if (!noDataButIsOkay)
+            {
+                bool expandDecodeDebug = false, showDecodedLine = false;
+
+                // contents decode
+                if (!Contents.HasElements())
+                { /// wrapping
+                    Dbug.Log("Decoding ResContents; ");
+                    Contents = new List<ResContents>();
+
+                    /// if true, will show the full result of decoding the ResCon instance (detailed result output)
+                    const int noDataTimeout = 25;                    
+                    int lastFetchedIx = -1;
+                    int shelfNum = 0;
+                    Dbug.NudgeIndent(true);
+                    for (int lx = 0; lx - noDataTimeout <= lastFetchedIx; lx++)
+                    {
+                        if (Base.FileRead(lx.ToString(), out string[] rawRCData))
+                        {
+                            if (rawRCData.HasElements())
+                            {
+                                if (lastFetchedIx + 1 < lx)
+                                    Dbug.Log("; Timeout restart; ");
+
+                                bool dbugGroupCondition = showDecodedLine || expandDecodeDebug;
+                                if (dbugGroupCondition)
+                                {
+                                    Dbug.Log($"Data with tag [{lx}] retrieved; ");
+                                    Dbug.NudgeIndent(true);
+                                }
+                               
+                                for (int rlx = 0; rlx < rawRCData.Length && showDecodedLine; rlx++)
+                                    Dbug.Log($"L{rlx + 1}| {rawRCData[rlx]}");
+
+                                string[] resConData = new string[3]
+                                {
+                                    rawRCData[0],
+                                    rawRCData.HasElements(2) ? (rawRCData[1].IsNEW() ? null : rawRCData[1]) : null,
+                                    rawRCData.HasElements(3) ? (rawRCData[2].IsNEW() ? null : rawRCData[2]) : null
+                                };
+                                ResContents decodedRC = new();
+                                if (decodedRC.DecodeGroups(shelfNum, resConData))
+                                {
+                                    Contents.Add(decodedRC);
+                                    Dbug.Log($"Decoded ResCon instance :: {decodedRC}; ");
+                                    shelfNum++;
+                                    lastFetchedIx = lx;
+
+                                    if (expandDecodeDebug)
+                                    {
+                                        Dbug.NudgeIndent(true);
+                                        Dbug.Log($">> {decodedRC.ConBase}");
+                                        if (decodedRC.ConAddits.HasElements())
+                                        {
+                                            Dbug.LogPart(">> ");
+                                            for (int xca = 0; xca < decodedRC.ConAddits.Count; xca++)
+                                                Dbug.LogPart($"{decodedRC.ConAddits[xca]}{(xca + 1 < decodedRC.ConAddits.Count ? "  //  " : "")}");
+                                            Dbug.Log("..");
+                                        }
+                                        if (decodedRC.ConChanges.HasElements())
+                                        {
+                                            Dbug.LogPart(">> ");
+                                            for (int xcc = 0; xcc < decodedRC.ConChanges.Count; xcc++)
+                                                Dbug.LogPart($"{decodedRC.ConChanges[xcc]}{(xcc + 1 < decodedRC.ConChanges.Count ? "  //  " : "")}");
+                                            Dbug.Log("  ..");
+                                        }
+                                        Dbug.NudgeIndent(false);
+                                    }
+                                }
+                                else Dbug.Log("ResCon instance could not be decoded; ");
+                                if (dbugGroupCondition) 
+                                    Dbug.NudgeIndent(false);
+                            }
+                            else
+                            {
+                                if (lastFetchedIx + 1 == lx || lastFetchedIx == lx)
+                                    Dbug.LogPart($"No data retrieved; Timing out: {noDataTimeout - (lx - lastFetchedIx)}");
+                                else Dbug.LogPart($" {noDataTimeout - (lx - lastFetchedIx)}");
+                            }
+                        }
+                    }
+                    Dbug.Log("; Timeout end; ");
+                    Dbug.NudgeIndent(false);
+                }
+
+                // legends decode
+                if (!Legends.HasElements())
+                { /// wrapping
+                    Dbug.LogPart("Decoding Legend Data; ");
+                    Legends = new List<LegendData>();
+
+                    if (Base.FileRead(legDataTag, out string[] legendsData))
+                    {
+                        if (legendsData.HasElements())
+                        {
+                            int countLine = 1;
+                            Dbug.Log($"Fetched [{legendsData.Length}] lines of legend data; ");
+                            foreach (string legData in legendsData)
+                            {
+                                if (expandDecodeDebug)
+                                    Dbug.Log($"L{countLine}| {legData}");
+
+                                Dbug.NudgeIndent(true);
+                                LegendData decodedLegd = new();
+                                if (decodedLegd.Decode(legData))
+                                {
+                                    Legends.Add(decodedLegd);
+                                    Dbug.Log($"Decoded Legend :: {decodedLegd.ToStringLengthy()}; ");
+                                }
+                                else Dbug.Log($"Legend Data could not be decoded{(!expandDecodeDebug ? $" :: source ({legData})" : "")};");
+                                Dbug.NudgeIndent(false);
+                                countLine++;
+                            }
+                        }
+                        else Dbug.Log("Recieved no legend data; ");
+                    }
+                    else Dbug.Log($"Could not read from file; Issue :: {Tools.GetRecentWarnError(false, false)}");
+                }
+
+                // summaries decode
+                if (!Summaries.HasElements())
+                { /// wrapping
+                    Dbug.LogPart("Decoding Summary Data; ");
+                    Summaries = new List<SummaryData>();
+
+                    if (Base.FileRead(sumDataTag, out string[] summariesData))
+                    {
+                        if (summariesData.HasElements())
+                        {
+                            Dbug.Log($"Fetched [{summariesData.Length}] lines of summary data;");
+                            int countLine = 1;
+                            foreach (string sumData in summariesData)
+                            {
+                                if (expandDecodeDebug)
+                                    Dbug.Log($"L{countLine}| {sumData}");
+                                
+                                Dbug.NudgeIndent(true);
+                                SummaryData decodedSmry = new();
+                                if (decodedSmry.Decode(sumData))
+                                {
+                                    Summaries.Add(decodedSmry);
+                                    Dbug.Log($"Decoded Summary :: {decodedSmry.ToStringShortened()}; ");
+                                }
+                                else Dbug.Log($"Summary Data could not be decoded{(!expandDecodeDebug ? $" :: source ({sumData})" : "")}; ");
+                                Dbug.NudgeIndent(false);
+
+                                countLine++;
+                            }
+                        }
+                        else Dbug.Log("Recieved no summary data; ");
+                    }
+                    else Dbug.Log($"Could not read from file; Issue :: {Tools.GetRecentWarnError(false, false)}");
+                }
+            }      
+            else Dbug.Log("ResLibrary has no saved data to decode; ");
+            Dbug.EndLogging();
+
+            SetPreviousSelf();
+            return IsSetup() || noDataButIsOkay;
+        }
         #endregion
     }
 }

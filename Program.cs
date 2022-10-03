@@ -11,22 +11,21 @@ namespace HCResourceLibraryApp
     // THE ENTRANCE POINT, THE CONTROL ROOM
     public class Program
     {
-        static string consoleTitle = "High Contrast Resource Library App [v1.1.1]";
+        static readonly string consoleTitle = "High Contrast Resource Library App [v1.1.2]";
         #region fields / props
         // PRIVATE \ PROTECTED
+        static string prevWhereAbouts;
         const string saveIcon = "▐▄▐▌"; //  1▐▀▀▄▄▌;    2▐▄▐▌;  3 ▐▄▄▌
         static bool _programRestartQ;
         static DataHandlerBase dataHandler;
         static Preferences preferences;
         static LogDecoder logDecoder;
+        static ResLibrary resourceLibrary;
 
         // PUBLIC
         public static bool AllowProgramRestart { get => _programRestartQ; private set => _programRestartQ = value; }
         #endregion
 
-        #region Suppressant for Window Size and Buffer Size Edits to Console
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Interoperability", "CA1416:Validate platform compatibility", Justification = "<Pending>")]
-        #endregion
         static void Main()
         {
             // Lvl.0 - program launch
@@ -45,6 +44,7 @@ namespace HCResourceLibraryApp
                 dataHandler = new DataHandlerBase();
                 preferences = new Preferences();
                 logDecoder = new LogDecoder();
+                resourceLibrary = new ResLibrary();                
                 LoadData();
                 /// --v priting and pages
                 VerifyFormatUsage = true;          
@@ -57,11 +57,8 @@ namespace HCResourceLibraryApp
 
 
                 // Lvl.1 - title page and main menu
-                /// home page
-                NewLine(10);
-                Title("H i g h   C o n t r a s t", cBHB, 0);
-                Title("  Resource Library  App  ", cTHB, 3);
-                //Title("High Contrast Resource Library App", cBHB, 3);
+                /// home page               
+                HomePage.OpenPage();
                 Format($"{Ind24}Press [Enter] to continue >> ", Layout.ForECol.Normal);
                 StyledInput("__");
                 
@@ -79,6 +76,7 @@ namespace HCResourceLibraryApp
                         /// ->  Settings Page
                         ///     Quit
 
+                        LogState("Main Menu");
                         Clear();
                         bool isValidMMOpt = ListFormMenu(out string mainMenuOptKey, "Main Menu", null, $"{Ind24}Option >> ", "a~f", true,
                             "Logs Submission, Library Search, Log Legend View, Version Summaries, Settings, Quit".Split(", "));
@@ -91,11 +89,10 @@ namespace HCResourceLibraryApp
                             {
                                 // logs submission page
                                 if (mainMenuOptKey.Equals("a"))
-                                    LogSubmissionPage.OpenPage();
+                                    LogSubmissionPage.OpenPage(resourceLibrary);
                                 // settings page
                                 else if (mainMenuOptKey.Equals("e"))
                                     SettingsPage.OpenPage();
-
 
                                 else
                                 {
@@ -118,6 +115,7 @@ namespace HCResourceLibraryApp
                 restartProgram = AllowProgramRestart;
                 if (AllowProgramRestart)
                 {
+                    LogState("Restarting");
                     Clear();
                     NewLine(10);
                     HorizontalRule(cLS);
@@ -131,8 +129,8 @@ namespace HCResourceLibraryApp
             while (restartProgram);
 
             TextLine("\n\n**REMEMBER** Test the published version of the application frequently!!\n\tVersion last tested: mid-v1.0.7".ToUpper(), Color.White);
-
         }
+
 
         public static void RequireRestart()
         {
@@ -140,30 +138,47 @@ namespace HCResourceLibraryApp
             //SaveData();
             AllowProgramRestart = true;
         }
+        /// <summary>Note as "Page|Subpage" or "State|Substate"</summary>
+        public static void LogState(string whereAbouts)
+        {
+            if (whereAbouts.IsNotNE())
+            {
+                // Program State Log Session Name
+                const string pslsn = "Program State";
+                const string stateDepthKey = "|";
+                if (prevWhereAbouts != whereAbouts)
+                {
+                    Dbug.SingleLog(pslsn, whereAbouts.Replace(stateDepthKey, " --> "));
+                    prevWhereAbouts = whereAbouts;
+                }
+            }
+        }
 
         // Global Data handling resources
         public static bool SaveData(bool discreteQ)
         {
-            bool savedDataQ = dataHandler.SaveToFile(preferences, logDecoder);
-
+            LogState("Saving Data");
+            bool savedDataQ = dataHandler.SaveToFile(preferences, logDecoder, resourceLibrary);
             NewLine(2);
             Format($"{saveIcon}\t", ForECol.Accent);
             if (savedDataQ)
                 FormatLine(discreteQ? "auto-save: S." : "Auto-saving data ... success.", discreteQ? ForECol.Accent : ForECol.Correction);
             else FormatLine(discreteQ? "auto-save: F." : "Auto-saving data ... failed.", discreteQ ? ForECol.Accent : ForECol.Incorrection);
                
-            Wait(savedDataQ ? 1 : 3);
+            Wait(savedDataQ ? 1.5f : 3);
             return savedDataQ;
         }
         public static void LoadData()
         {
-            dataHandler.LoadFromFile(preferences, logDecoder);
+            LogState("Loading Data");
+            dataHandler.LoadFromFile(preferences, logDecoder, resourceLibrary);
         }
+        
 
 
         // TESTING STUFF
-        static bool runTest = true;
-        static Tests testToRun = Tests.LogDecoder_DecodeLogInfo;
+        static readonly bool runTest = false;
+        static readonly Tests testToRun = Tests.Dbug_DeactivateSessions;
         enum Tests
         {
             PageBase_HighlightMethod,
@@ -175,7 +190,9 @@ namespace HCResourceLibraryApp
 
             Extensions_SortWords,
             LogDecoder_DecodeLogInfo,
+            LogSubmissionPage_DisplayLogInfo,
             Dbug_NestedSessions,
+            Dbug_DeactivateSessions
         }
         static void RunTests()
         {
@@ -196,7 +213,7 @@ namespace HCResourceLibraryApp
                         else testName += c;
                 }    
                 Title($"{testName.Trim()}", cLS, 3);
-
+                LogState($"Running Test|{testName.Trim()}");
 
                 // tests branches
                 bool hasDebugQ = true;
@@ -402,6 +419,29 @@ namespace HCResourceLibraryApp
                         if (FileRead(null, out string[] testLogData))
                             logDecoder.DecodeLogInfo(testLogData);
                 }
+                /// Log Submission Page
+                else if (testToRun == Tests.LogSubmissionPage_DisplayLogInfo)
+                {
+                    hasDebugQ = false;
+                    TextLine("Displays information from a log decoder", Color.DarkGray);
+                    if (SetFileLocation(@"C:\Users\ntrc2\source\repos\HCResourceLibraryApp\HCRLA - Ex1 Version Log.txt"))
+                        if (FileRead(null, out string[] testLogData))
+                            if (logDecoder.DecodeLogInfo(testLogData))
+                            {
+                                NewLine(1);
+                                Important("Regular post-decoding preview");
+                                HorizontalRule('.');
+                                LogSubmissionPage.DisplayLogInfo(logDecoder, false);
+                                HorizontalRule('.');
+                                Pause();
+
+                                NewLine(10);
+                                Important("Informative post-decoding preview");
+                                HorizontalRule('.');
+                                LogSubmissionPage.DisplayLogInfo(logDecoder, true);
+                                HorizontalRule('.');
+                            }
+                }
                 /// Dbug
                 else if (testToRun == Tests.Dbug_NestedSessions)
                 {
@@ -452,6 +492,45 @@ namespace HCResourceLibraryApp
 
                     Dbug.IgnoreNextLogSession();
                     Dbug.StartLogging("Ignored Base 2");
+                    Dbug.EndLogging();
+                }
+                else if (testToRun == Tests.Dbug_DeactivateSessions)
+                {
+                    TextLine("The results of this test are recorded through Dbug.cs. Nothing to preview here...", Color.DarkGray);
+                    Dbug.StartLogging("Enabled session 1");
+                    Dbug.Log("Enabled log line A");
+                    Dbug.LogPart("Enabled part-log line B // ");
+                    Dbug.Log("Enabled log line C");
+                    Dbug.EndLogging();
+                    Dbug.DeactivateNextLogSession();
+                    Dbug.StartLogging("Disabled session 1");
+                    Dbug.Log("Disabled log line A");
+                    Dbug.LogPart("Disabled part-log line B // ");
+                    Dbug.Log("Disabled log line C");
+                    Dbug.EndLogging();
+
+
+                    Dbug.StartLogging("Enabled session 1");
+                    Dbug.Log("Enabled log line A");
+                    Dbug.LogPart("Enabled part-log line B // ");
+                    Dbug.Log("Enabled log line C");
+                    /// nested start
+                    Dbug.StartLogging("Enabled nested session 1");
+                    Dbug.Log("Enabled nested log line a");
+                    Dbug.LogPart("Enabled nested part-log line b // ");
+                    Dbug.Log("Enabled nested log line c");
+                    Dbug.EndLogging();
+                    /// nested end
+                    Dbug.Log("Enabled log line D");
+                    /// nested and deactivated start
+                    Dbug.DeactivateNextLogSession();
+                    Dbug.StartLogging("Disabled nested session 1");
+                    Dbug.Log("Disabled nested log line a");
+                    Dbug.LogPart("Disabled nested part-log line b // ");
+                    Dbug.Log("Disabled nested log line c");
+                    Dbug.EndLogging();
+                    /// nested and deactivated end
+                    Dbug.Log("Enabled log line E");
                     Dbug.EndLogging();
                 }
 

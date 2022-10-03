@@ -41,8 +41,6 @@ namespace HCResourceLibraryApp.DataHandling
                     if (dataHandlers[i] != null)
                     {
                         underlyingType = dataHandlers[i].GetType().UnderlyingSystemType.ToString();
-                        //noIssues = Base.SetFileLocation(FileLocation);
-                        //if (noIssues)
                         noIssues = dataHandlers[i].EncodeToSharedFile();
                     }
                     else noIssues = false;

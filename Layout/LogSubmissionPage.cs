@@ -3,6 +3,9 @@ using HCResourceLibraryApp.DataHandling;
 using ConsoleFormat;
 using static ConsoleFormat.Base;
 using static ConsoleFormat.Minimal;
+using System.Collections.Generic;
+using System;
+using System.Text;
 
 namespace HCResourceLibraryApp.Layout
 {
@@ -11,11 +14,12 @@ namespace HCResourceLibraryApp.Layout
         static readonly char subMenuUnderline = '*';
         static string pathToVersionLog = null;
 
-        public static void OpenPage()
+        public static void OpenPage(ResLibrary mainLibrary)
         {
             bool exitLogSubMain = false;
             do
             {
+                Program.LogState("Log Submission");
                 Clear();
                 Title("Version Log Submission", cTHB, 1);
                 FormatLine($"{Ind24}Facilitates the submission of a version log to store content information regarding the resource pack.", ForECol.Accent);
@@ -29,7 +33,7 @@ namespace HCResourceLibraryApp.Layout
                     switch (resNum)
                     {
                         case 1:
-                            SubPage_SubmitLog();
+                            SubPage_SubmitLog(mainLibrary);
                             break;
 
                         case 2:
@@ -41,7 +45,7 @@ namespace HCResourceLibraryApp.Layout
             } while (!exitLogSubMain && !Program.AllowProgramRestart);
         }
 
-        static void SubPage_SubmitLog()
+        static void SubPage_SubmitLog(ResLibrary mainLibrary)
         {
             bool exitSubmissionPage = false;
             do
@@ -51,6 +55,8 @@ namespace HCResourceLibraryApp.Layout
                         - Original version log review (raw)
                         - Processed version log review (decoded)
                  */
+                
+                Program.LogState("Log Submission|Submit A Log");
                 Clear();
                 Title("Submit a Version Log", subMenuUnderline, 1);
                 FormatLine($"{Ind14}There are a few stages to submitting a version log:", ForECol.Normal);
@@ -61,7 +67,8 @@ namespace HCResourceLibraryApp.Layout
                 string input = StyledInput(null);
                 if (input.IsNotNEW())
                 {
-                    bool stopSubmission = false;
+                    LogDecoder logDecoder = new();
+                    bool stopSubmission = false, compactDisplayQ = true;
                     int stageNum = 1;
                     const char minorChar = '-';
                     while (stageNum <= 3 && !stopSubmission)
@@ -73,6 +80,7 @@ namespace HCResourceLibraryApp.Layout
                         string stageName = stageNames[stageNum - 1];
 
                         Clear();
+                        Program.LogState($"Log Submission|Submit A Log|Phase.{stageNum}, {stageName}");
                         Title("Log Submission", subMenuUnderline, 2);
                         Important($"STAGE {stageNum}: {stageName}", subMenuUnderline);
                         HorizontalRule(minorChar, 1);
@@ -172,13 +180,22 @@ namespace HCResourceLibraryApp.Layout
                                     NewLine();
 
                                     // display file info
+                                    bool omitBlock = false;
                                     for (int lx = 0; lx < logLines.Length; lx++)
-                                    {
+                                    {                                        
                                         string line = logLines[lx];
-                                        if (line.Contains("[") && lx != 0)
+                                        /// omit block detect
+                                        if (line.StartsWith(LogDecoder.omitBlockOpen))
+                                            omitBlock = true;
+                                        if (line.StartsWith(LogDecoder.omitBlockClose))
+                                            omitBlock = false;
+                                        /// section detect
+                                        if (line.Contains("[") && lx != 0 && !omitBlock)
                                             NewLine();
-                                        bool omit = line.StartsWith("--") && !line.Contains("[");
-                                        FormatLine(line, omit ? ForECol.Normal : ForECol.Highlight);
+                                        /// omit line detect
+                                        bool omit = line.StartsWith(LogDecoder.omit) && !line.Contains("[");                                        
+
+                                        FormatLine(line, omit || omitBlock ? ForECol.Normal : ForECol.Highlight);
                                     }
                                     HorizontalRule(minorChar, 1);
 
@@ -199,22 +216,75 @@ namespace HCResourceLibraryApp.Layout
                         }
                         // 3 - processed log review (decoded)
                         else if (stageNum == 3)
-                        {
-                            LogDecoder logDecoder = new LogDecoder();
-                            SetFileLocation(pathToVersionLog);
-                            if (FileRead(null, out string[] fileData) && false)
+                        {                            
+                            bool unallowStagePass = false;
+                            if (!logDecoder.HasDecoded)
+                            {
+                                SetFileLocation(pathToVersionLog);
+                                if (FileRead(null, out string[] fileData))
+                                    logDecoder.DecodeLogInfo(fileData);
+                                else DataReadingIssue();
+                            }
+
+                            if (logDecoder.HasDecoded)
                             {
                                 /// small section relaying how decoding went
-                                logDecoder.DecodeLogInfo(fileData);
-                                
+                                if (compactDisplayQ)
+                                    DisplayLogInfo(logDecoder, false);
                                 /// large section showing how decoding went
-                                NewLine(2);
-                                FormatLine("Completed decoding of version log...preview here", ForECol.Correction);
-                                Pause();
+                                else DisplayLogInfo(logDecoder, true);
+
+                                NewLine(3);
+                                HorizontalRule(minorChar, 1);
+                                FormatLine("Plese review the contents retrieved from the log decoder above before proceeding.", ForECol.Highlight);
+                                Format("Press [Enter] to toggle display style, and enter any key to continue >> ", ForECol.Normal);
+                                input = StyledInput(null);
+
+                                // if {view different displays} else {confirm info and add to library}
+                                if (input.IsNE())
+                                {
+                                    unallowStagePass = true;
+                                    compactDisplayQ = !compactDisplayQ;
+                                }
+                                else
+                                {
+                                    NewLine(2);
+                                    Title("Integrate new contents to library");
+                                    Format($"Enter any key to add the new contents to resource library >> ", ForECol.Normal);
+                                    input = StyledInput(null);
+
+                                    /// cancel integration
+                                    if (input.IsNEW())
+                                    {
+                                        FormatLine($"{Ind24}By discontinuing integration of new contents, log submission will end.", ForECol.Accent);
+                                        Confirmation($"{Ind24}Are you sure you wish to cancel content integration? ", true, out bool yesNo);
+                                        if (yesNo)
+                                        {
+                                            Format($"{Ind34}Cancelled integration of new contents.", ForECol.Incorrection);
+                                            stopSubmission = true;
+                                            pathToVersionLog = null;
+                                            Pause();
+                                        }
+                                        else unallowStagePass = true;
+                                    }
+                                    /// integrate into library
+                                    else
+                                    {
+                                        mainLibrary.Integrate(logDecoder.DecodedLibrary);
+                                        Format($"{Ind24}Integrated contents into library.", ForECol.Correction);
+                                        Pause();
+                                        exitSubmissionPage = true;
+                                    }
+                                }
                             }
                             else
-                                DataReadingIssue();
-                            stagePass = true;
+                            {
+                                Format($"The version log could not be decoded.", ForECol.Incorrection);
+                                Pause();
+                            }
+
+                            if (!unallowStagePass)
+                                stagePass = true;
                         }
 
                                                 
@@ -236,6 +306,7 @@ namespace HCResourceLibraryApp.Layout
                         stageNum += stagePass ? 1 : 0;
 
 
+                        // local method
                         static void DataReadingIssue()
                         {
                             FormatLine($"{Ind14}Could not read data from log file!", ForECol.Incorrection);
@@ -251,8 +322,475 @@ namespace HCResourceLibraryApp.Layout
             // auto-saves: 
             //      -> LogDecoder recentDirectory
             //      -> ResLibrary <new data>
-            if (LogDecoder.ChangesMade())
+            if (LogDecoder.ChangesMade() || mainLibrary.ChangesMade())
                 Program.SaveData(true);
         }
+        
+        // public for now, so i may test it
+        public static void DisplayLogInfo(LogDecoder logDecoder, bool showDecodeInfosQ)
+        {
+            /** RELATED INFO FROM DESIGN DOC
+             >> Sorted.review.concepts
+			    A conceptualization of how the obtained and sorted info will be displayed for review.
+			
+			    ..........................................
+			    Version Number: 1.02
+			
+			    ADDED
+			    #1 Peanut	i78	p54 t114
+			    #2 Walnut	i79	t115
+			    #3 Almond	i77 t113
+			    #4 Large Macadamia Nut	i80 t117 t118
+			
+			    ADDITIONAL 
+			    > Grains Biome Backgrounds 	b5 b11` b13
+			    > Turnip Dusts (d6 d7) - Turnip (i14) 
+			
+			    TTA: 15
+			
+			    UPDATED 
+			    > Mashed Potato		t32
+				    Redesigned to look more creamy.
+			    > Spoiled Potato	i38
+				    Recolored to look less appetizing. 
+			
+			    LEGEND
+			    i/Item
+			    t/Tile
+			    b/Background
+			    `/LOTB
+	
+			    SUMMARY
+			    - Nuts, Mash Potato redesign, Spoiled Potato redesign
+			    - Grains Biome Backgrounds
+			    ..........................................			
+			
+		    >> Explain Contents Review Concept (above)
+		    .	"Version Number: 1.00" - The version number of the log is plainly listed.
+		    .	"ADDED..." - Each new piece of content is numbered (from 1 upwards) and listed in the syntax: {ContentName}{ContentDataIds}
+				    > {ContentName} is the name given to the added content.
+				    > {ContentDataIds} are the Data Ids associated with the added content. According to key recognizing the type of data, the Ids are listed alphanumerically. 
+					    Note that ranges of data IDs will be separated into individuals enclosed in parentheses beside the range. 
+						    Ex.		a3~a6 (a3 a4 a5 a6)
+								    g9`~g11` (g9` g10` g11`) 
+		    .	"ADDITIONAL..." - Each additional piece of content is indented with a '>' (unordered), followed by the syntax: {AdditionalNameAndDataIds}{RelatedAdditionalNameAndID}
+				    Morphing the syntax directly from the log, the review syntax would be: {Opt.Name}{DataID} {RelatedInternalName}{RelatedDataID}
+				    > {RelatedAdditionalNameAndID} - The relative name and ids to associate with the additional contents. May not always have a value.
+				    > {AdditionalNameAndDataIds} - The additional content ids and an optional name to describe them.
+		    .	"UPDATED..." - The changes made to existing content following the syntax: {RelatedInternalName}{DataId}\n{ChangeDescription}
+				    > {RelatedInternalName} - The name of the content updated.
+				    > {DataId} - The Data Id of the content updated.
+				    > \n{ChangedDescription} - On a newline, a description of the change made to the data ID. This changes is attributed to the Data ID.
+		    .	"LEGEND..." - The definitions for the keys used in the version log. The legend keys are documented by the system along with all other information. 
+				    > Syntax is similar to that of the log (the characters ' - ' are replaced with '/').
+		    . 	"SUMMARY..." - The summary of all the additions and changes that have taken place in the version log being reviewed.
+
+		    .. OTHER REVIEW RULES ..
+			    > n/a			
+             
+             **/
+
+            /** EDITED CONCEPTUALIZATION FOR SHOWING DECODE INFO     
+                ..........................................
+			    Version Number: 1.02 {!0}
+                  sl [Version : 1.02]
+                  d+ Generated VerNum instance :: v1.02.
+			
+			    ADDED {!0}
+			    #1 Peanut	i78	p54 t114
+                  sl 1 |Peanut -(i78; t114 p54)
+                  d+ Generated ConBase instance :: v1.02;Peanut;i78,p54,t114.
+			    #2 Walnut	i79	t115
+                  ...
+			    #3 Almond	i77 t113
+                  ...
+			    #4 Large Macadamia Nut	i80 t117 t118
+                  ...
+			
+			    ADDITIONAL {!1}
+			    > Grains Biome Backgrounds 	b5 b11` b13
+                  sl > b5,b11`,b13 - Grains Biome Backgrounds
+                  d+ > 
+			    > Turnip Dusts (d6 d7)
+                    related to Turnip (i14)
+                  ...
+                sl > d2, - Grass i32
+                  d- This line is missing 'related Data Id'
+                
+			
+			    TTA: 15 {!1}
+                  sl [TTA : 15]
+                  d- Decoder counted 17 instead of 15
+                  d+ Retrieved value of 15 
+			
+			    UPDATED {!0}
+			    > Mashed Potato		t32
+				    Redesigned to look more creamy.
+                  sl > Mashed Potato (t32) - Redesigned to look more creamy.
+                  d+ Generated ConChanges instance :: v1.02;Mashed Potato;t32;Redesigned to look more creamy.
+			    > Spoiled Potato	i38
+				    Recolored to look less appetizing. 
+                  ...
+			
+			    LEGEND {!0}
+			    i/Item
+                  sl i - Item
+                  d+ Generated Legend instance :: i;Item.
+			    t/Tile
+                  ...
+			    b/Background
+                  ...
+			    `/LOTB
+                  ...
+	
+			    SUMMARY {!0}
+			    - Nuts, Mash Potato redesign, Spoiled Potato redesign
+                  sl > Nuts, Mash Potato redesign, Spoiled Potato redesign
+                  d+ Added summary part :: Nuts, Mash Potato redesign, Spoiled Potato redesign.
+			    - Grains Biome Backgrounds
+                  ...
+			    ..........................................			
+             
+                {!x}    Beside every section name, denotes the number of issues within decoded section (also as '{x issues}') [Col: Warning / Highlight]
+                sl      Source Line (original related line from decoded file) [Col: Accent / Input]
+                d-      The decoder info issue message [Col: Incorrection]
+                d+      The decoder info result (success) message [Col: Correction]
+
+                NOTE 
+                - The legend symbols 'sl', 'd-', and 'd+' are not required to precede their messages within the display. This may only be for this conceptutalization display, color and a separate legend will create the distinctions in the output.       
+                - The above displays the expanded form of display concept. The original copy will inherit only the issue count beside each section name.
+                - When a source line is not accompanied by a line from the content review, it is unindented and the following issues / results are indented after it
+                  Ex. W/ Review Line        W/out Review Line
+                    |review                 |sl
+                    |  sl                   |  d-
+                    |  d-                   |  d+
+                    |  d+
+                
+             **/
+
+            if (logDecoder != null)
+            {
+                if (logDecoder.DecodedLibrary != null)
+                {
+                    if (logDecoder.DecodedLibrary.IsSetup())
+                    {
+                        /** SNIPPET - Related Info from Design Doc
+                        ..........................................
+                        Version Number: 1.02
+                
+                        ADDED
+                        #1 Peanut	i78	p54 t114
+                        #2 Walnut	i79	t115
+                        #3 Almond	i77 t113
+                        #4 Large Macadamia Nut	i80 t117 t118
+                
+                        ADDITIONAL 
+                        > Turnip Dusts (d6 d7) - Turnip (i14)
+                
+                        TTA: 15
+                
+                        UPDATED 
+                        > Mashed Potato		t32
+                            Redesigned to look more creamy.
+                        > Spoiled Potato	i38
+                            Recolored to look less appetizing. 
+                
+                        LEGEND
+                        i/Item
+                        t/Tile
+                        b/Background
+                        `/LOTB
+        
+                        SUMMARY
+                        - Nuts, Mash Potato redesign, Spoiled Potato redesign
+                        - Grains Biome Backgrounds
+                        ..........................................			
+                         **/
+
+                        /// text configuration
+                        ForECol colReviewLine = ForECol.Normal, colIssueNumber = ForECol.Warning;
+                        ForECol colSourceLine = ForECol.Accent, colIssueMsg = ForECol.Incorrection, colResultMsg = ForECol.Correction;
+
+                        ResLibrary decLibrary = logDecoder.DecodedLibrary;
+                        const int sectionNewLines = 1;
+                        const string looseContentIndicator = "{l~}";
+                        DecodedSection[] sections = (DecodedSection[])typeof(DecodedSection).GetEnumValues();
+                        foreach (DecodedSection section in sections)
+                        {
+                            List<string> reviewTexts = new();
+                            string sectionName = section.ToString();
+
+                            // get text to print
+                            /// VERSION 
+                            if (section == DecodedSection.Version)
+                            {
+                                /** VER FORMAT
+                                    Version Number: 1.02
+                                 */
+                                //ResContents anyRC = decLibrary.Contents[0];
+                                //if (anyRC.IsSetup())
+                                //    reviewTexts.Add($"Version Number: {anyRC.ConBase.VersionNum.ToStringNumbersOnly()}");
+                                reviewTexts.Add($"Version Number: {decLibrary.Summaries[0].SummaryVersion.ToStringNumbersOnly()}");
+                            }
+                            /// ADDED
+                            if (section == DecodedSection.Added)
+                            {
+                                /** ADD FORMAT
+                                    ADDED
+                                    #1 Peanut	i78	p54 t114
+                                    #2 Walnut	i79	t115
+                                    #3 Almond	i77 t113
+                                    #4 Large Macadamia Nut	i80 t117 t118
+                                 */
+
+                                reviewTexts.Add(sectionName.ToUpper());
+                                int addedItemNum = 1;
+                                for (int aix = 0; aix < decLibrary.Contents.Count; aix++)
+                                {
+                                    ResContents resCon = decLibrary.Contents[aix];
+                                    if (resCon.IsSetup())
+                                        if (resCon.ContentName != ResLibrary.LooseResConName)
+                                        {
+                                            //const int autoPadNum = 16;
+                                            //int conNameLen = resCon.ContentName.Length;
+                                            //int padFactor = (int)Math.Ceiling((conNameLen) / (float)autoPadNum);
+                                            //reviewTexts.Add($"#{aix, -2} {resCon.ContentName.PadRight(padFactor * autoPadNum)}{Ind14}{resCon.ConBase.DataIDString}");
+
+                                            reviewTexts.Add($"#{addedItemNum} {resCon.ContentName} {Ind14}{resCon.ConBase.DataIDString}");
+                                            addedItemNum++;
+                                        }
+                                }
+                            }
+                            /// ADDITIONAL
+                            if (section == DecodedSection.Additional)
+                            {
+                                /** ADT FORMAT
+                                    ADDITIONAL 
+                                    > Turnip Dusts (d6 d7)
+                                        related to Turnip (i14)
+                                 */
+
+                                // connected ConAddits
+                                reviewTexts.Add(sectionName.ToUpper());
+                                foreach (ResContents resCon in decLibrary.Contents)
+                                {
+                                    if (resCon.IsSetup() && resCon.ContentName != ResLibrary.LooseResConName)
+                                    {
+                                        if (resCon.ConAddits.HasElements())
+                                            foreach (ContentAdditionals rcConAdt in resCon.ConAddits)
+                                            {
+                                                string partRt = $"> {(rcConAdt.OptionalName.IsNotNEW() ? $"{rcConAdt.OptionalName} " : "")}";
+                                                reviewTexts.Add($"{partRt}({rcConAdt.DataIDString}) - {resCon.ContentName} ({rcConAdt.RelatedDataID})");
+                                            }
+                                    }
+                                }
+                                // loose ConAddits
+                                ResContents looseResCon = decLibrary.Contents[0];
+                                if (looseResCon.ContentName == ResLibrary.LooseResConName)
+                                {
+                                    if (looseResCon.ConAddits.HasElements())
+                                        foreach (ContentAdditionals rcConAdt in looseResCon.ConAddits)
+                                        {
+                                            string partRt = $"> {(rcConAdt.OptionalName.IsNotNEW() ? $"{rcConAdt.OptionalName} " : "")}";
+                                            reviewTexts.Add($"{partRt}({rcConAdt.DataIDString}) - ({rcConAdt.RelatedDataID}) {looseContentIndicator}");
+                                        }
+                                }
+                            }
+                            /// TTA
+                            if (section == DecodedSection.TTA)
+                            {
+                                /** TTA FORMAT
+                                    TTA: 15
+                                 */
+                                                                
+                                SummaryData summary = decLibrary.Summaries[0];
+                                reviewTexts.Add($"TTA: {summary.TTANum}");
+                            }
+                            /// UPDATED
+                            if (section == DecodedSection.Updated)
+                            {
+                                /** UPD FORMAT
+                                    UPDATED 
+                                    > Mashed Potato		t32
+                                        Redesigned to look more creamy.
+                                    > Spoiled Potato	i38
+                                        Recolored to look less appetizing. 
+                                 */
+
+                                //reviewTexts.Add($"{sectionName.ToUpper()} [loose]");
+                                reviewTexts.Add(sectionName.ToUpper());
+                                ResContents looseResCon = decLibrary.Contents[0];
+                                if (looseResCon.ContentName == ResLibrary.LooseResConName)
+                                {
+                                    if (looseResCon.ConChanges.HasElements())
+                                        foreach (ContentChanges rcConChg in looseResCon.ConChanges)
+                                        {
+                                            string rtPart1 = $"> {(rcConChg.InternalName.IsNotNEW() ? $"{rcConChg.InternalName}{Ind24}" : "")}{rcConChg.RelatedDataID}";
+                                            string rtPart2 = $"{Ind24}{rcConChg.ChangeDesc}";
+                                            reviewTexts.Add($"{rtPart1}\n{rtPart2} {looseContentIndicator}");
+                                        }
+                                }
+                            }
+                            /// LEGEND
+                            if (section == DecodedSection.Legend)
+                            {
+                                /** LGD FORMAT
+                                    LEGEND
+                                    i/Item
+                                    t/Tile
+                                    b/Background
+                                    `/LOTB
+                                 */
+
+                                reviewTexts.Add(sectionName.ToUpper());
+                                if (decLibrary.Legends.HasElements())
+                                {
+                                    foreach (LegendData legDat in decLibrary.Legends)
+                                    {
+                                        string legDefs = "";
+                                        if (legDat.CountDefinitions > 0)
+                                            for (int i = 0; i < legDat.CountDefinitions; i++)
+                                                legDefs += $"{legDat[i]}" + (i + 1 < legDat.CountDefinitions ? "/" : "");
+                                        reviewTexts.Add($"{legDat.Key}/{legDefs}");
+                                    }
+                                }
+                            }
+                            /// SUMMARY
+                            if (section == DecodedSection.Summary)
+                            {
+                                /** SUM FORMAT
+                                    SUMMARY
+                                    - Nuts, Mash Potato redesign, Spoiled Potato redesign
+                                    - Grains Biome Backgrounds
+                                 */
+                                reviewTexts.Add(sectionName.ToUpper());
+                                SummaryData summary = decLibrary.Summaries[0];
+                                if (summary.IsSetup())
+                                {
+                                    foreach (string sumPart in summary.SummaryParts)
+                                        reviewTexts.Add($"- {sumPart}");
+                                }
+                            }
+
+                            
+                            // text printing
+                            if (reviewTexts.HasElements())
+                            {
+                                /// text printing
+                                bool bypassLoopMax = showDecodeInfosQ == true;
+                                for (int rtx = 0; rtx < reviewTexts.Count || bypassLoopMax; rtx++)
+                                {
+                                    int rtxAdjust = 0;
+                                    if (section != DecodedSection.Version && section != DecodedSection.Added && section != DecodedSection.TTA)
+                                        rtxAdjust--;
+                                    DecodeInfo decodeInfo = logDecoder.GetDecodeInfo(section, rtx + rtxAdjust, out int issueCount);
+
+                                    /// review line
+                                    bool reviewLinePrintedQ = false;
+                                    if (rtx < reviewTexts.Count)
+                                    {
+                                        string rtext = reviewTexts[rtx].ToString();
+                                        Format(rtext, colReviewLine);
+                                        reviewLinePrintedQ = true;
+                                    }
+
+                                    /// section issues count
+                                    if (rtx == 0)
+                                        Format($" {{!{issueCount}}}", colIssueNumber);
+                                    NewLine();
+
+
+                                    if (showDecodeInfosQ)
+                                    {
+                                        if (decodeInfo.IsSetup())
+                                        {
+                                            /// source line
+                                            FormatLine($"{(reviewLinePrintedQ ? Ind14 : "")}{decodeInfo.logLine}", colSourceLine);
+                                            /// decode issue
+                                            if (decodeInfo.NotedIssueQ)
+                                                FormatLine($"{Ind14}{decodeInfo.decodeIssue}", colIssueMsg);
+                                            /// decode result
+                                            if (decodeInfo.NotedResultQ)
+                                                FormatLine($"{Ind14}{decodeInfo.resultingInfo}", colResultMsg);
+                                            //NewLine();
+                                        }
+                                        else
+                                            bypassLoopMax = false;
+                                    }
+                                }
+
+                                /// newline per section
+                                if (section != DecodedSection.Summary)
+                                {
+                                    if (showDecodeInfosQ)
+                                        NewLine(2);
+                                    else NewLine(sectionNewLines);
+                                }
+                            }
+                        }
+
+
+                        // decode legend print
+                        NewLine(2);
+                        Title("Decode Symbols");
+                        for (int i = 0; i < 5; i++)
+                        {
+                            string symbol = "", symDesc = "";
+                            ForECol symCol = ForECol.Normal;
+
+                            /// for issues number
+                            if (i == 0)
+                            {
+                                symbol = "{!x}";
+                                symDesc = "Number of Section Issues";
+                                symCol = colIssueNumber;
+                            }
+                            if (showDecodeInfosQ)
+                            {
+                                /// for source line
+                                if (i == 1)
+                                {
+                                    symbol = "sl";
+                                    symDesc = "Source Line from Version Log";
+                                    symCol = colSourceLine;
+                                }
+
+                                /// for decode issue
+                                if (i == 2)
+                                {
+                                    symbol = "d-";
+                                    symDesc = "Decode issue message";
+                                    symCol = colIssueMsg;
+                                }
+
+                                /// for decode success
+                                if (i == 3)
+                                {
+                                    symbol = "d+";
+                                    symDesc = "Decode result message";
+                                    symCol = colResultMsg;
+                                }
+                            }
+                            /// explains 'loose' contents
+                            if (i == 4)
+                            {
+                                symbol = looseContentIndicator;
+                                symDesc = "Loose Content (not yet connected to base content)";
+                                symCol = colReviewLine;
+                            }
+
+
+                            if (symbol.IsNotNE())
+                            {
+                                Text(Ind14);
+                                Format(symbol.PadRight(6), symCol);
+                                FormatLine(symDesc, ForECol.Normal);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
     }
 }

@@ -1,16 +1,16 @@
 -- !open --   
 ## <HIGH CONTRAST RESOURCE LIBRARY APP - Version Log Example Log #1> ##
 PURPOSE :: 
-	This verion log example tests for the regular function of the Log Decoder with the correct information entered within version log sections. 
+	This verion log example tests for the regular function of the Log Decoder with the correct information entered within version log sections.
 	Very little or no garbage data; looking for ideal, flawless function.
 -- !close --
 
 -- ========== ---
-[Version: 1.00]
+[Version: 1.0]
 
 [ADDED: t>,Tomato; p>,Potato]
 1 |OneItem			-(i1; t0 p3,4)
-2 |EggBlock		-(i67; t89 p14)
+2 |EggBlock			-(i67; t89 p14)
 3 |p>				-(i34)
 4 |Gravel			-(i20; t116)
 5 |Spoiled p>		-(i38)
@@ -41,18 +41,10 @@ PURPOSE ::
 > (AppleSauce_Chunks) - (i68)
 > OnionShell (t56) - (i76)
 > Tomato Stem Dust(d29~30) - (t93)
--- The following for testing purposes, at the moment...
-> TwoItem Dust (d2,3) - Two Item (i2)
-> (d0) - (i0)
 
-[TTA: 65]
+[TTA: 69]
 
 [UPDATED]
--- The following for testing purposes, at the moment...
-> Mashed potato(t32) - Redesigned to look more creamy.
-> (d11) - Brightened the shadows of the texture
-> StrippedGarlicDust (d12) - Brightened the shadows of the texture.
-> (d0) - Tinier dust particles
 
 [LEGEND]
 i - Item
@@ -61,9 +53,6 @@ p - Projectile
 d - Dust
 ` - Layer of Translucent Black
 ~ - Range of Numbers
--- The following for testting purposes, at the moment...
-` - LOTB
-~ - Num Range
 
 [SUMMARY]
 > One unknown item, Egg, Potatoes (including spoiled), Gravel, Some nuts, Garlic stuff, Onion
@@ -74,5 +63,4 @@ d - Dust
 -- !open --
 Fun fact: 
 	This example originates from example contents in the Design Doc.
--- this should be excellent ... and it was!
 -- !close --

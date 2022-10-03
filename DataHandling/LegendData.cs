@@ -46,9 +46,8 @@ namespace HCResourceLibraryApp.DataHandling
 
         #region fields / props
         // private
-        LegendData _previousSelf;
-        string _key;
-        List<string> _definitions;
+        string _key, _prevKey;
+        List<string> _definitions, _prevDefinitions;
 
         // public        
         public string Key
@@ -75,16 +74,22 @@ namespace HCResourceLibraryApp.DataHandling
                 return definition;
             }
         }
+        public int CountDefinitions
+        {
+            get
+            {
+                int count = 0;
+                if (_definitions.HasElements())
+                    count = _definitions.Count;
+                return count;
+            }
+        }
         #endregion
 
-        public LegendData()
-        {
-            _previousSelf = (LegendData)this.MemberwiseClone();
-        }
+        public LegendData() { }
         public LegendData(string legKey)
         {
             Key = legKey;
-            _previousSelf = (LegendData)this.MemberwiseClone();
         }
         public LegendData(string legKey, params string[] definitions)
         {
@@ -97,7 +102,6 @@ namespace HCResourceLibraryApp.DataHandling
                     if (def.IsNotNEW())
                         _definitions.Add(def.Trim());
             }
-            _previousSelf = (LegendData)this.MemberwiseClone();
         }
 
         #region methods
@@ -189,15 +193,32 @@ namespace HCResourceLibraryApp.DataHandling
                             }
                         }
 
-                    _previousSelf = (LegendData)this.MemberwiseClone();
+                    SetPreviousSelf();
                 }
             }
             return IsSetup();
         }
-        public bool ChangesDetected()
+        public override bool ChangesMade()
         {
-            return !Equals(_previousSelf);
+            return !Equals(GetPreviousSelf());
         }
+        void SetPreviousSelf()
+        {
+            _prevKey = _key;
+            if (_definitions.HasElements())
+            {
+                _prevDefinitions = new List<string>();
+                _prevDefinitions.AddRange(_definitions.ToArray());
+            }
+        }
+        LegendData GetPreviousSelf()
+        {
+            string[] prevDefs = null;
+            if (_prevDefinitions.HasElements())
+                prevDefs = _prevDefinitions.ToArray();
+            return new LegendData(_prevKey, prevDefs);
+        }
+        /// <summary>Compares two instances for similarities against: Setup state, Key, Definitions.</summary>
         public bool Equals(LegendData legDat)
         {
             bool areEquals = false;
@@ -233,6 +254,8 @@ namespace HCResourceLibraryApp.DataHandling
             }
             return areEquals;
         }
+        /// <summary>Has this instance of <see cref="ResContents"/> been initialized with the appropriate information?</summary>
+        /// <returns>A boolean stating whether the legend key and definitions have been given values, at minimum.</returns>
         public override bool IsSetup()
         {
             return _key.IsNotNEW() && _definitions.HasElements();

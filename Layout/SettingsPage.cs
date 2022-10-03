@@ -20,6 +20,7 @@ namespace HCResourceLibraryApp.Layout
             bool exitSettingsMain = false;
             do
             {
+                Program.LogState("Settings");
                 Clear();
                 Title("Application Settings", cTHB, 1);
                 FormatLine($"{Ind24}Facilitates customization of visual preferences, and has additional tools for content verification and save state reversions.", ForECol.Accent);
@@ -66,6 +67,9 @@ namespace HCResourceLibraryApp.Layout
             Preferences newForeCols = _preferencesRef.ShallowCopy();
             do
             {
+                if (activeMenuKey.IsNE())
+                    Program.LogState("Settings|Preferences");
+
                 // settings - preferences main menu
                 Clear();
                 FormatLine("NOTE :: Changes made to these settings will require a program restart.\n", ForECol.Accent);
@@ -97,6 +101,7 @@ namespace HCResourceLibraryApp.Layout
                     // window dimensions editor
                     if (setPrefsKey.Equals("a"))
                     {
+                        Program.LogState("Settings|Preferences|Window Dimensions Editor");
                         DimHeight currHeightScale = _preferencesRef.HeightScale;
                         DimWidth currWidthScale = _preferencesRef.WidthScale;
                         string dimsPercents = $"{currHeightScale.GetScaleFactorH() * 100:0}% {currWidthScale.GetScaleFactorW() * 100:0}%";
@@ -240,6 +245,8 @@ namespace HCResourceLibraryApp.Layout
                     // foreground elements (color) editor
                     else if (setPrefsKey.Equals("b"))
                     {
+                        Program.LogState("Settings|Preferences|Foreground Elements Color Editor");
+                        
                         // foreground preview visual
                         #region foreground preview
                         Title("Foreground Preview");
@@ -442,17 +449,19 @@ namespace HCResourceLibraryApp.Layout
         // not done...
         static void SubPage_ContentIntegrity()
         {
-            Minimal.HorizontalRule(subMenuUnderline, 2);
+            Program.LogState("Settings|ContentIntegrity (tbd)");
+            HorizontalRule(subMenuUnderline, 2);
             TextLine("To Be Done :: Content Integrity Verification Page\n  Elements --");
-            Minimal.List(OrderType.Unordered, "Display Contents in Library (Data IDs only)", "Verify Content Integrity", " Content Locations and File Types", " Run Verification Integrity");
+            List(OrderType.Unordered, "Display Contents in Library (Data IDs only)", "Verify Content Integrity", " Content Locations and File Types", " Run Verification Integrity");
             Pause();
         }
         // not done...
         static void SubPage_Reversion()
         {
-            Minimal.HorizontalRule(subMenuUnderline, 2);
+            Program.LogState("Settings|Reversion (tbd)");
+            HorizontalRule(subMenuUnderline, 2);
             TextLine("To Be Done :: Reversion Page\n  Elements --");
-            Minimal.List(OrderType.Unordered, "Version Reversion -or- File save reversion (same page)");
+            List(OrderType.Unordered, "Version Reversion -or- File save reversion (same page)");
             Pause();
         }
 

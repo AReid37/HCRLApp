@@ -59,11 +59,10 @@ namespace HCResourceLibraryApp.DataHandling
         // private
         const string Sep3 = Sep + Sep + Sep;
         const int noShelfNum = -1;
-        ResContents _previousSelf;
-        int _shelfID;
-        ContentBaseGroup _conBase;
-        List<ContentAdditionals> _conAddits;
-        List<ContentChanges> _conChanges;
+        int _shelfID, _prevShelfID;
+        ContentBaseGroup _conBase, _prevConBase;
+        List<ContentAdditionals> _conAddits, _prevConAddits;
+        List<ContentChanges> _conChanges, _prevConChanges;
 
         // public
         /// <summary>Also serves as the saving tag for this ResCon.</summary>
@@ -109,7 +108,6 @@ namespace HCResourceLibraryApp.DataHandling
         {
             ShelfID = noShelfNum;
             ConBase = new ContentBaseGroup();
-            _previousSelf = (ResContents)this.MemberwiseClone();
         }      
         public ResContents(int? shelfID, ContentBaseGroup conBase)
         {
@@ -117,10 +115,6 @@ namespace HCResourceLibraryApp.DataHandling
                 ShelfID = shelfID.Value;
             else ShelfID = noShelfNum;
             ConBase = conBase;
-            //ConAddits = new List<ContentAdditionals>();
-            //ConChanges = new List<ContentChanges>();
-
-            _previousSelf = (ResContents)this.MemberwiseClone();
         }
         public ResContents(int? shelfID, ContentBaseGroup conBase, ContentAdditionals[] additionals, ContentChanges[] changes) 
         {
@@ -144,13 +138,14 @@ namespace HCResourceLibraryApp.DataHandling
                         if (cc.IsSetup())
                             ConChanges.Add(cc);
             }
-            
-            _previousSelf = (ResContents)this.MemberwiseClone();
         }
 
         #region methods
-        public void StoreConAdditional(ContentAdditionals newCA)
+        /// <summary>Stores a <see cref="ContentAdditionals"/> instance related to this <see cref="ResContents"/>'s ConBase.</summary>
+        /// <param name="newCA">New instance is checked to be setup and not a duplicate.</param>
+        public bool StoreConAdditional(ContentAdditionals newCA)
         {
+            bool storedCAq = false;
             if (IsSetup())
             {
                 if (newCA != null)
@@ -165,12 +160,19 @@ namespace HCResourceLibraryApp.DataHandling
                         else ConAddits = new List<ContentAdditionals>();
 
                         if (!isDupe && isOkay)
+                        {
                             ConAddits.Add(newCA);
+                            storedCAq = true;
+                        }
                     }
             }
+            return storedCAq;
         }
-        public void StoreConChanges(ContentChanges newCC)
+        /// <summary>Stores a <see cref="ContentChanges"/> instance related to this <see cref="ResContents"/>'s ConBase.</summary>
+        /// <param name="newCC">New instance is checked to be setup and not a duplicate.</param>
+        public bool StoreConChanges(ContentChanges newCC)
         {
+            bool storedCCq = false;
             if (IsSetup())
             {
                 if (newCC != null)
@@ -192,55 +194,18 @@ namespace HCResourceLibraryApp.DataHandling
                         else ConChanges = new List<ContentChanges>();
 
                         if (!isDupe && isOkay)
+                        {
                             ConChanges.Add(newCC);
+                            storedCCq = true;
+                        }
                     }
             }
+            return storedCCq;
         }
         // public void DisposeConAdditional(CA ca)
         // public void DisposeConChanges(CC cc)
 
-        /// List<string> FetchSimilarDataIDs(string piece, out RCFetchSource source) {} // later...
-        //bool ContainsDataID(string dataIDtoFind, out RCFetchSource source, out ContentAdditionals conAddSource)
-        //{
-        //    bool containsDIDq = false;
-        //    source = RCFetchSource.None;
-        //    conAddSource = new ContentAdditionals();
-
-        //    if (IsSetup() && dataIDtoFind.IsNotNEW())
-        //    {
-        //        for (int cdx = 0; cdx < 3 && !containsDIDq; cdx++)
-        //            switch (cdx)
-        //            {
-        //                case 0:
-        //                    source = RCFetchSource.ConBaseGroup;
-        //                    if (ConBase != null)
-        //                        if (ConBase.IsSetup())
-        //                            containsDIDq = ConBase.ContainsDataID(dataIDtoFind);
-        //                    break;
-
-        //                case 1:
-        //                    source = RCFetchSource.ConAdditionals;
-        //                    if (ConAddits.HasElements())
-        //                        for (int cax = 0; cax < ConAddits.Count && !containsDIDq; cax++)
-        //                        {
-        //                            containsDIDq = ConAddits[cax].ContainsDataID(dataIDtoFind);
-        //                            if (containsDIDq)
-        //                                conAddSource = ConAddits[cax];
-        //                        }
-        //                    break;
-
-        //                    /// technically speaking, this should never be hit; ContentChanges always refer to a DataID that already exists within either ConBase or ConAddits
-        //                    //case 2:
-        //                    //    if (ConChanges.HasElements())
-        //                    //        for (int ccx = 0; ccx < ConChanges.Count && !containsDIDq; ccx++)
-        //                    //            containsDIDq = ConChanges[ccx].RelatedDataID == dataIDtoFind;
-        //                    //    break;
-        //            }
-        //    }
-        //    if (!containsDIDq)
-        //        source = RCFetchSource.None;
-        //    return containsDIDq;
-        //}
+        /// List<string> FetchSimilarDataIDs(string piece, out RCFetchSource source, out DataHandlerBase dataSource) {} // later...
         public bool ContainsDataID(string dataIDtoFind, out RCFetchSource source, out DataHandlerBase dataSource)
         {
             bool containsDIDq = false;
@@ -357,28 +322,34 @@ namespace HCResourceLibraryApp.DataHandling
                     if (newCbg.DecodeFirstGroup(rcInfo[0]))
                         ConBase = newCbg;
                 }
-                // second group
+                // second group (or skip to third group)
                 if (rcInfo[1].IsNotNEW())
                 {
-                    /// gather data
-                    List<string> infoConAdts = new();
-                    if (rcInfo[1].Contains(Sep3))
+                    /// decode second group
+                    if (!rcInfo[1].Contains(ContentChanges.ccIdentityKey))
                     {
-                        string[] rcAdtParts = rcInfo[1].Split(Sep3, System.StringSplitOptions.RemoveEmptyEntries);
-                        if (rcAdtParts.HasElements())
-                            infoConAdts.AddRange(rcAdtParts);
-                    }
-                    else infoConAdts.Add(rcInfo[1]);
+                        /// gather data
+                        List<string> infoConAdts = new();
+                        if (rcInfo[1].Contains(Sep3))
+                        {
+                            string[] rcAdtParts = rcInfo[1].Split(Sep3, System.StringSplitOptions.RemoveEmptyEntries);
+                            if (rcAdtParts.HasElements())
+                                infoConAdts.AddRange(rcAdtParts);
+                        }
+                        else infoConAdts.Add(rcInfo[1]);
 
-                    /// decode and add
-                    if (!ConAddits.HasElements())
-                        ConAddits = new List<ContentAdditionals>();
-                    foreach (string conAdtInfo in infoConAdts)
-                    {
-                        ContentAdditionals newCa = new();
-                        if (newCa.DecodeSecondGroup(conAdtInfo))
-                            ConAddits.Add(newCa);
+                        /// decode and add
+                        if (!ConAddits.HasElements())
+                            ConAddits = new List<ContentAdditionals>();
+                        foreach (string conAdtInfo in infoConAdts)
+                        {
+                            ContentAdditionals newCa = new();
+                            if (newCa.DecodeSecondGroup(conAdtInfo))
+                                ConAddits.Add(newCa);
+                        }
                     }
+                    /// deflect to 3rd group
+                    else rcInfo[2] = rcInfo[1];
                 }
                 // third group
                 if (rcInfo[2].IsNotNEW())
@@ -404,15 +375,43 @@ namespace HCResourceLibraryApp.DataHandling
                     }
                 }
 
-                _previousSelf = (ResContents)this.MemberwiseClone();
+                SetPreviousSelf();
             }
             return IsSetup();
         }
-
-        public bool ChangedDetected()
+        public override bool ChangesMade()
         {
-            return !Equals(_previousSelf);
+            return !Equals(GetPreviousSelf());
         }
+        void SetPreviousSelf()
+        {
+            _prevShelfID = _shelfID;
+            if (_conBase != null)
+            {
+                _prevConBase = new ContentBaseGroup(_conBase.VersionNum, _conBase.ContentName, _conBase.DataIDString.Split(' '));
+            }
+            if (_conAddits.HasElements())
+            {
+                _prevConAddits = new List<ContentAdditionals>();
+                _prevConAddits.AddRange(_conAddits.ToArray());
+            }
+            if (_conChanges.HasElements())
+            {
+                _prevConChanges = new List<ContentChanges>();
+                _prevConChanges.AddRange(_conChanges.ToArray());
+            }
+        }
+        ResContents GetPreviousSelf()
+        {
+            ContentAdditionals[] prevConAdts = null;
+            ContentChanges[] prevConChgs = null;
+            if (_prevConAddits.HasElements())
+                prevConAdts = _prevConAddits.ToArray();
+            if (_prevConChanges.HasElements())
+                prevConChgs = _prevConChanges.ToArray();
+            return new ResContents(_prevShelfID, _prevConBase, prevConAdts, prevConChgs);
+        }
+        /// <summary>Compares two instances for similarities against: Setup state, ConBase, ConAddits, ConChanges.</summary>
         public bool Equals(ResContents resCon)
         {
             bool areEquals = false;
@@ -432,7 +431,7 @@ namespace HCResourceLibraryApp.DataHandling
 
                         case 2:
                             areEquals = resCon.ConAddits.HasElements() == ConAddits.HasElements();
-                            if (ConAddits.HasElements())
+                            if (ConAddits.HasElements() && areEquals)
                             {
                                 areEquals = ConAddits.Count == resCon.ConAddits.Count;
                                 if (areEquals)
@@ -445,7 +444,7 @@ namespace HCResourceLibraryApp.DataHandling
 
                         case 3:
                             areEquals = resCon.ConChanges.HasElements() == ConChanges.HasElements();
-                            if (ConChanges.HasElements())
+                            if (ConChanges.HasElements() && areEquals)
                             {
                                 areEquals = ConChanges.Count == resCon.ConChanges.Count;
                                 if (areEquals)
@@ -463,7 +462,11 @@ namespace HCResourceLibraryApp.DataHandling
         /// <returns>A boolean stating whether the shelf ID and <see cref="ContentBaseGroup"/> has been given values, at minimum.</returns>
         public override bool IsSetup()
         {
-            return ShelfID != noShelfNum && ConBase.IsSetup();
+            bool conBaseSetup = false;
+            if (ConBase != null)
+                conBaseSetup = ConBase.IsSetup();
+
+            return ShelfID != noShelfNum && conBaseSetup;
         }
 
         public override string ToString()

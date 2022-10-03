@@ -58,10 +58,9 @@ namespace HCResourceLibraryApp.DataHandling
 
         #region fields / props
         // private
-        ContentBaseGroup _previousSelf;
-        VerNum _versionNumber;
-        string _contentName;
-        List<string> _dataIDs;
+        VerNum _versionNumber, _prevVersionNumber;
+        string _contentName, _prevContentName;
+        List<string> _dataIDs, _prevDataIDs;
 
         // public
         /// <summary>Version number this content was added.</summary>
@@ -109,12 +108,20 @@ namespace HCResourceLibraryApp.DataHandling
                 return idCount;
             }
         }
+        public string DataIDString
+        {
+            get
+            {
+                string dataIDs = "";
+                if (_dataIDs.HasElements())
+                    foreach (string datId in _dataIDs)
+                        dataIDs += $"{datId} ";
+                return dataIDs.Trim();
+            }
+        }
         #endregion
 
-        public ContentBaseGroup()
-        {
-            _previousSelf = (ContentBaseGroup)this.MemberwiseClone();
-        }
+        public ContentBaseGroup() { }
         public ContentBaseGroup(VerNum versionNumber, string contentName, params string[] dataIDs)
         {
             VersionNum = versionNumber;
@@ -126,7 +133,6 @@ namespace HCResourceLibraryApp.DataHandling
                     if (dataID.IsNotNEW())
                         _dataIDs.Add(dataID);
             }
-            _previousSelf = (ContentBaseGroup)this.MemberwiseClone();
         }
 
 
@@ -193,50 +199,40 @@ namespace HCResourceLibraryApp.DataHandling
                     /// relatedDataIDs
                     if (firstParts[2].IsNotNEW())
                     {
+                        _dataIDs = new List<string>();
                         if (firstParts[2].Contains(','))
                         {
                             string[] cbgDataIDs = firstParts[2].Split(',', System.StringSplitOptions.RemoveEmptyEntries);
                             if (cbgDataIDs.HasElements())
-                            {
-                                _dataIDs = new List<string>();
                                 _dataIDs.AddRange(cbgDataIDs);
-                            }
                         }
+                        else _dataIDs.Add(firstParts[2]);
                     }
-
-                    _previousSelf = (ContentBaseGroup)this.MemberwiseClone();
+                    SetPreviousSelf();
                 }
             }
             return IsSetup();
         }
-        public bool ChangesDetected()
+        public override bool ChangesMade()
         {
-            bool anyChanges = false;
-            for (int i = 0; i < 3 && !anyChanges; i++)
+            return !Equals(GetPreviousSelf());
+        }        
+        void SetPreviousSelf()
+        {
+            _prevVersionNumber = VersionNum;
+            _prevContentName = ContentName;
+            if (_dataIDs.HasElements())
             {
-                switch (i)
-                {
-                    case 1:
-                        anyChanges = _previousSelf.ContentName != ContentName;
-                        break;
-
-                    case 2:
-                        anyChanges = !_previousSelf.VersionNum.Equals(VersionNum);
-                        break;
-
-                    case 3:
-                        anyChanges = _previousSelf._dataIDs.HasElements() != _dataIDs.HasElements();
-                        if (!anyChanges)
-                            anyChanges = _previousSelf._dataIDs.Count != _dataIDs.Count;
-                        if (!anyChanges)
-                        {
-                            for (int cpd = 0; cpd < _previousSelf._dataIDs.Count && !anyChanges; cpd++)
-                                anyChanges = _previousSelf[cpd] != this[cpd];
-                        }
-                        break;
-                }
+                _prevDataIDs = new List<string>();
+                _prevDataIDs.AddRange(_dataIDs.ToArray());
             }
-            return anyChanges;
+        }
+        ContentBaseGroup GetPreviousSelf()
+        {
+            string[] prevDataIDs = null;
+            if (_prevDataIDs.HasElements())
+                prevDataIDs = _prevDataIDs.ToArray();
+            return new ContentBaseGroup(_prevVersionNumber, _prevContentName, prevDataIDs);
         }
         /// <summary>Has this instance of <see cref="ContentBaseGroup"/> been initialized with the appropriate information?</summary>
 		/// <returns>A boolean stating whether the version number, data IDs, and content name has been given values.</returns>
@@ -244,6 +240,7 @@ namespace HCResourceLibraryApp.DataHandling
         {
             return _dataIDs.HasElements() && _versionNumber.HasValue() && _contentName.IsNotNEW();
         }
+        /// <summary>Compares two instances for similarities against: Setup state, Content Name, Version Number, Data IDs.</summary>
         public bool Equals(ContentBaseGroup cbg)
         {
             bool areEqual = false;
@@ -283,6 +280,7 @@ namespace HCResourceLibraryApp.DataHandling
                 }
             }
             return areEqual;
+        /// <summary>Compares two instances for similarities against: .</summary>
         }
 
         public override string ToString()

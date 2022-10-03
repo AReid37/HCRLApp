@@ -60,10 +60,9 @@ namespace HCResourceLibraryApp.DataHandling
          ***/
 
 		#region fields / props
-		ContentAdditionals _previousSelf;
-		VerNum _versionAdded;
-		string _optionalName, _relatedDataID;
-		List<string> _dataIDs;
+		VerNum _versionAdded, _prevVersionAdded;
+		string _optionalName, _relatedDataID, _prevOptionalName, _prevRelatedDataID;
+		List<string> _dataIDs, _prevDataIDs;
 
 		// public
 		/// <summary>Version number this additional content was added (to base content).</summary>
@@ -122,12 +121,20 @@ namespace HCResourceLibraryApp.DataHandling
 				return idCount;
 			}
 		}
+		public string DataIDString
+		{
+			get
+			{
+				string dataIds = "";
+				if (_dataIDs.HasElements())
+					foreach(string datId in _dataIDs)
+						dataIds += $"{datId} ";
+				return dataIds.Trim();
+			}
+		}
 		#endregion
 
-		public ContentAdditionals()
-        {
-			_previousSelf = (ContentAdditionals)this.MemberwiseClone();
-        }
+		public ContentAdditionals() { }
 		public ContentAdditionals(VerNum verNumAddit, string relatedDataID, string optionalName, params string[] dataIDs)
         {
 			VersionAdded = verNumAddit;
@@ -141,7 +148,6 @@ namespace HCResourceLibraryApp.DataHandling
 						_dataIDs.Add(dataID);
 
             }
-			_previousSelf = (ContentAdditionals)this.MemberwiseClone();
         }
 
 
@@ -214,18 +220,17 @@ namespace HCResourceLibraryApp.DataHandling
 					/// dataID(s)
 					if (secondParts[3].IsNotNEW())
 					{
-						if (secondParts[3].Contains(','))
-						{
-							string[] caDataIDs = secondParts[3].Split(',', System.StringSplitOptions.RemoveEmptyEntries);
-							if (caDataIDs.HasElements())
-							{
-                                _dataIDs = new List<string>();
+                        _dataIDs = new List<string>();
+                        if (secondParts[3].Contains(','))
+                        {
+                            string[] caDataIDs = secondParts[3].Split(',', System.StringSplitOptions.RemoveEmptyEntries);
+                            if (caDataIDs.HasElements())
                                 _dataIDs.AddRange(caDataIDs);
-                            }
                         }
-					}
+                        else _dataIDs.Add(secondParts[3]);
+                    }
 
-					_previousSelf = (ContentAdditionals)this.MemberwiseClone();
+					SetPreviousSelf();
 				}
 			}
 			return IsSetup();
@@ -236,10 +241,29 @@ namespace HCResourceLibraryApp.DataHandling
         {
 			return _versionAdded.HasValue() && (_optionalName.IsNotNEW() || _relatedDataID.IsNotNEW()) && _dataIDs.HasElements();
 		}
-		public bool ChangesDetected()
-        {
-			return !Equals(_previousSelf);
-        }
+		public override bool ChangesMade()
+		{
+			return !Equals(GetPreviousSelf());
+		}
+		void SetPreviousSelf()
+		{
+			_prevVersionAdded = _versionAdded;
+			_prevOptionalName = _optionalName;
+			_prevRelatedDataID = _relatedDataID;
+			if (_dataIDs.HasElements())
+			{
+				_prevDataIDs = new List<string>();
+				_prevDataIDs.AddRange(_dataIDs.ToArray());
+			}	
+		}
+		ContentAdditionals GetPreviousSelf()
+		{
+			string[] prevDataIDs = null;
+			if (_prevDataIDs.HasElements())
+				prevDataIDs = _prevDataIDs.ToArray();
+			return new ContentAdditionals(_prevVersionAdded, _prevRelatedDataID, _prevOptionalName, prevDataIDs);
+		}
+		/// <summary>Compares two instances for similarities against: Setup state, Version Added, Optional Name, Related Data ID, Data IDs.</summary>
 		public bool Equals(ContentAdditionals ca)
         {
 			bool areEquals = false;

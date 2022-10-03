@@ -50,13 +50,13 @@
 
 		#region fields / props
 		// private
-		ContentChanges _previousSelf;
-		VerNum _versionChanged;
-		string _internalName, _relatedDataID, _changeDesc;
+		VerNum _versionChanged, _prevVersionChanged;
+		string _internalName, _relatedDataID, _changeDesc, _prevInternalName, _prevRelatedDataID, _prevChangeDesc;
 
 		//public
-		/// <summary>Version number this update/change took place.</summary>
-		public VerNum VersionChanged
+		public const string ccIdentityKey = "^^";
+        /// <summary>Version number this update/change took place.</summary>
+        public VerNum VersionChanged
         {
 			get => _versionChanged;
 			private set
@@ -95,19 +95,15 @@
 					_changeDesc = value;
             }
         }
-        #endregion
+		#endregion
 
-		public ContentChanges()
-        {
-			_previousSelf = (ContentChanges)this.MemberwiseClone();
-        }
+		public ContentChanges() { }
 		public ContentChanges(VerNum verNumChanged, string internalName, string relatedDataID, string description)
         {
 			VersionChanged = verNumChanged;
 			InternalName = internalName;
 			RelatedDataID = relatedDataID;
 			ChangeDesc = description;
-			_previousSelf = (ContentChanges)this.MemberwiseClone();
         }
 
 
@@ -115,9 +111,12 @@
 		public string EncodeThirdGroup()
         {
 			// Syntax: {VersionUpd}*{InternalName}*{RelatedDataID}*{ChangeDesc}***
-			string thirdEncode = "";
+
+			// Syntax Change: ^^{VersionUpd}*{InternalName}*{RelatedDataID}*{ChangeDesc}***
+			//		? -Mix up between ConAdts and ConChgs instances' decoding
+            string thirdEncode = "";
 			if (IsSetup())
-				thirdEncode = $"{VersionChanged}{Sep}{InternalName}{Sep}{RelatedDataID}{Sep}{ChangeDesc}";
+				thirdEncode = $"{ccIdentityKey}{VersionChanged}{Sep}{InternalName}{Sep}{RelatedDataID}{Sep}{ChangeDesc}";
 			return thirdEncode;
         }
 		public bool DecodeThirdGroup(string ccInfo)
@@ -144,10 +143,13 @@
 			NOTES
 				- Multiple updates contents information must be separated with '***'
 			........
+
+			Syntax Change: ^^{VersionUpd}*{InternalName}*{RelatedDataID}*{ChangeDesc}***
+				? - Mix up between ConAdts and ConChgs instances' decoding
 			**/
 
-			/// multiple CCs (separated with '***' are taken care of in ResContents decoding)
-			if (ccInfo.IsNotNEW())
+            /// multiple CCs (separated with '***' are taken care of in ResContents decoding)
+            if (ccInfo.IsNotNEW())
 			{
 				if (ccInfo.Contains(Sep) && ccInfo.CountOccuringCharacter(Sep[0]) == 3)
 				{				
@@ -155,6 +157,7 @@
 					/// version
 					if (thirdParts[0].IsNotNEW())
 					{
+						thirdParts[0] = thirdParts[0].Replace(ccIdentityKey, "");
 						if (VerNum.TryParse(thirdParts[0], out VerNum ccVerNum))
 							VersionChanged = ccVerNum;
 					}
@@ -168,15 +171,27 @@
 					if (thirdParts[3].IsNotNEW())
 						ChangeDesc = thirdParts[3];
 
-					_previousSelf = (ContentChanges)this.MemberwiseClone();
+					SetPreviousSelf();
 				}
 			}
 			return IsSetup();
 		}
-		public bool ChangesDetected()
-        {
-			return !Equals(_previousSelf);
-        }
+		public override bool ChangesMade()
+		{
+			return !Equals(GetPreviousSelf());
+		}
+		void SetPreviousSelf()
+		{
+			_prevVersionChanged = _versionChanged;
+			_prevInternalName = _internalName;
+			_prevRelatedDataID = _relatedDataID;
+			_prevChangeDesc = _changeDesc;
+		}
+		ContentChanges GetPreviousSelf()
+		{
+			return new ContentChanges(_prevVersionChanged, _prevInternalName, _prevRelatedDataID, _prevChangeDesc);
+		}
+		/// <summary>Compares two instances for similarities against: Setup state, Version Changed, Internal Name, Related Data ID, Change Description.</summary>
 		public bool Equals(ContentChanges cc)
         {
 			bool areEquals = false;
@@ -218,7 +233,7 @@
 
         public override string ToString()
         {
-			return EncodeThirdGroup().Replace(Sep, ";");
+			return EncodeThirdGroup().Replace(Sep, ";").Replace(ccIdentityKey, "");
         }
 		public string ToStringShortened()
 		{

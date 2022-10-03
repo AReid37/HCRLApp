@@ -1,7 +1,8 @@
 ##[ H I G H   C O N T R A S T   R E S O U R C E   L I B R A R Y   A P P   -   D E S I G N   D O C S ]##
 ##	DEVELOPMENT DEVIATIONS LOG	##
 ==================================
-Syntax:		{Num}# {DeviationStatus} {DeviationDescription}
+Syntax:		{Num}# {DeviationStatus} 
+			{DeviationDescription}
 	{Num}
 		A incrementing whole number starting from zero that denotes the order in which the deviations were made.
 	{DeviationStatus}
@@ -56,3 +57,8 @@ Prospects of integrating an Auto Logger within the HCRLA program lead to a revis
 Changed the syntax of the version log SUMMARY as the prospect of integrating an Auto Logger into the HCRLA program is realized.
 	- The old syntax would separate multiple Summary parts with '//', while within the tag header, all upon a single line.
 	+ Summary has a more uniform and cleaner syntax which occupies multiple lines and is not preceded with the omission key '--'.
+
+7# [ ]
+Changed the file encoding syntax of Content Changes group due to decoding issues.
+	- The previous syntax was very similar to that of Content Additionals. A problem in decoding as the ConChanges info would become a ConAddits where there was none.
+	+ Content Changes information lines start with '^^'.
