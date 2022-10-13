@@ -20,7 +20,7 @@ PURPOSE ::
 9 |Large Macadamia Nut-(i80; t117,118)
 10|Garlic Clove		-(i69; d11 t46~48)
 11|Turnip			-(i14; p1 d6,7)
-12|AppleSauce Block-(i68; t68)
+12|AppleSauce Block	-(i68; t68)
 13|Onion			-(i76)
 14|Asparagus Shelf	-(i109; t72)
 15|t>				-(i101; t93)
@@ -36,7 +36,8 @@ PURPOSE ::
 [ADDITIONAL]
 > Mashed Potato (t32) - Potato (i34)
 > Stripped Garlic Clove Dust (d12) - (t47)
-> Garlic Stem (t49 d18) - GarlicClove (t46)
+> Garlic Stem (t49) - GarlicClove (t46)
+> Garlic Stem (d18) - GarlicClove (t46)
 > (b5,11`,13,19~21) - Grains Biome Backgrounds
 > (AppleSauce_Chunks) - (i68)
 > OnionShell (t56) - (i76)
@@ -50,6 +51,7 @@ PURPOSE ::
 i - Item
 t - Tiles
 p - Projectile
+b - Background
 d - Dust
 ` - Layer of Translucent Black
 ~ - Range of Numbers

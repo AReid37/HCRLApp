@@ -168,7 +168,7 @@ namespace HCResourceLibraryApp.DataHandling
             }
             return storedCAq;
         }
-        /// <summary>Stores a <see cref="ContentChanges"/> instance related to this <see cref="ResContents"/>'s ConBase.</summary>
+        /// <summary>Stores a <see cref="ContentChanges"/> instance related to this <see cref="ResContents"/>'s ConBase or ConAddits.</summary>
         /// <param name="newCC">New instance is checked to be setup and not a duplicate.</param>
         public bool StoreConChanges(ContentChanges newCC)
         {
@@ -202,10 +202,59 @@ namespace HCResourceLibraryApp.DataHandling
             }
             return storedCCq;
         }
-        // public void DisposeConAdditional(CA ca)
-        // public void DisposeConChanges(CC cc)
+        /// <summary>Removes a <see cref="ContentAdditionals"/> instance related to this <see cref="ResContents"/>'s ConBase.</summary>
+        /// <returns>A boolean relaying the success of removing this <see cref="ContentAdditionals"/> instance.</returns>
+        public bool DisposeConAdditional(ContentAdditionals ca)
+        {
+            bool removedIt = false;
+            if (IsSetup() && ca != null)
+            {
+                const int nonRemovalIx = -1;
+                int removalIndex = nonRemovalIx;
+                if (ConAddits.HasElements())
+                    for (int cx = 0; cx < ConAddits.Count && removalIndex == nonRemovalIx; cx++)
+                    {
+                        if (ConAddits[cx].Equals(ca))
+                            removalIndex = cx;
+                    }
 
-        /// List<string> FetchSimilarDataIDs(string piece, out RCFetchSource source, out DataHandlerBase dataSource) {} // later...
+                if (removalIndex != nonRemovalIx)
+                {
+                    ConAddits.RemoveAt(removalIndex);
+                    if (ConAddits.HasElements() && removalIndex.IsWithin(0, ConAddits.Count - 1))
+                        removedIt = !ConAddits[removalIndex].Equals(ca);
+                    else removedIt = removalIndex == ConAddits.Count;
+                }
+            }
+            return removedIt;
+        }
+        /// <summary>Removes a <see cref="ContentChanges"/> instance related to this <see cref="ResContents"/>'s ConBase or ConAddits.</summary>
+        /// <returns>A boolean relaying the success of removing this <see cref="ContentChanges"/> instance.</returns>
+        public bool DisposeConChanges(ContentChanges cc)
+        {
+            bool removedIt = false;
+            if (IsSetup() && cc != null)
+            {
+                const int nonRemovalIx = -1;
+                int removalIndex = nonRemovalIx;
+                if (ConChanges.HasElements())
+                    for (int cy = 0; cy < ConChanges.Count && removalIndex == nonRemovalIx; cy++)
+                    {
+                        if (ConChanges[cy].Equals(cc))
+                            removalIndex = cy;
+                    }
+
+                if (removalIndex != nonRemovalIx)
+                {
+                    ConChanges.RemoveAt(removalIndex);
+                    if (ConChanges.HasElements() && removalIndex.IsWithin(0, ConChanges.Count - 1))
+                        removedIt = !ConChanges[removalIndex].Equals(cc);
+                    else removedIt = removalIndex == ConChanges.Count;
+                }
+            }
+            return removedIt;
+        }
+        // List<string> FetchSimilarDataIDs(string piece, out RCFetchSource source, out DataHandlerBase dataSource) {} // later...
         public bool ContainsDataID(string dataIDtoFind, out RCFetchSource source, out DataHandlerBase dataSource)
         {
             bool containsDIDq = false;
@@ -475,7 +524,7 @@ namespace HCResourceLibraryApp.DataHandling
             if (ConBase != null)
             {
                 if (ConBase.IsSetup())
-                    resConToStr += $" {ConBase.ContentName}, {ConBase.VersionNum.ToStringNumbersOnly()}";
+                    resConToStr += $" {ConBase.ContentName}, {ConBase.VersionNum.ToStringNums()}";
             }
             if (ConAddits.HasElements())
                 resConToStr += $", [{ConAddits.Count}] adts";

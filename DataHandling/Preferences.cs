@@ -365,13 +365,10 @@ namespace HCResourceLibraryApp.DataHandling
                     Dbug.NudgeIndent(false);
                 }
 
-                
+                // decodeFromSharedFile --> previousSelf must become a new MemberwiseClone from decoded data
+                previousSelf = (Preferences)this.MemberwiseClone();
+                Dbug.Log($"Cloned preferences data to 'previousSelf'; Confirmed to be the same? {!ChangesMade()}");
             }
-
-            // decodeFromSharedFile --> previousSelf must become a new MemberwiseClone from decoded data
-            previousSelf = (Preferences)this.MemberwiseClone();
-            Dbug.Log($"Cloned preferences data to 'previousSelf'; Confirmed to be the same? {!ChangesMade()}");
-
             Dbug.Log($"End decoding for Preferences -- successful decoding? {decodedPrefsDataQ}");
             Dbug.EndLogging();
             return decodedPrefsDataQ;

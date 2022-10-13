@@ -143,7 +143,11 @@ namespace HCResourceLibraryApp.Layout
                                 }
                                 else IncorrectionMessageQueue("No hard drive specified.");
                             }
-                            else IncorrectionMessageQueue("No path entered.");
+                            else
+                            {
+                                IncorrectionMessageQueue("No path entered.");
+                                stopSubmission = true;
+                            }
                             
                             /// file path confirmation
                             if (validPath)
@@ -208,7 +212,7 @@ namespace HCResourceLibraryApp.Layout
                                         stagePass = true;
                                     else stageNum = 1;
                                     ConfirmationResult(yesNo, $"{Ind34}", "Version log contents have been confirmed.", "Version log contents unconfirmed. Returning to previous stage.");
-                                }                                
+                                }                             
                             }
                             else
                                 DataReadingIssue();
@@ -220,9 +224,11 @@ namespace HCResourceLibraryApp.Layout
                             bool unallowStagePass = false;
                             if (!logDecoder.HasDecoded)
                             {
+                                mainLibrary.GetVersionRange(out _, out VerNum latestLibVer);
+
                                 SetFileLocation(pathToVersionLog);
                                 if (FileRead(null, out string[] fileData))
-                                    logDecoder.DecodeLogInfo(fileData);
+                                    logDecoder.DecodeLogInfo(fileData, latestLibVer);
                                 else DataReadingIssue();
                             }
 
@@ -280,6 +286,21 @@ namespace HCResourceLibraryApp.Layout
                             else
                             {
                                 Format($"The version log could not be decoded.", ForECol.Incorrection);
+                                string possibleReason = null;
+                                if (logDecoder.DecodedLibrary != null)
+                                {
+                                    if (!logDecoder.DecodedLibrary.Contents.HasElements())
+                                        possibleReason = "Version log contents are missing or has incorrect logging syntax";
+                                    else if (!logDecoder.DecodedLibrary.Legends.HasElements())
+                                        possibleReason = "Version log legend is missing or has incorrect logging syntax";
+                                    else if (!logDecoder.DecodedLibrary.Summaries.HasElements())
+                                        possibleReason = "Version log summary is missing or has incorrect logging syntax";
+                                }
+                                if (possibleReason.IsNotNE())
+                                {
+                                    NewLine();
+                                    Format($"{Ind24}Hint: {possibleReason}", ForECol.Incorrection);
+                                }    
                                 Pause();
                             }
 
@@ -530,7 +551,7 @@ namespace HCResourceLibraryApp.Layout
                                 //ResContents anyRC = decLibrary.Contents[0];
                                 //if (anyRC.IsSetup())
                                 //    reviewTexts.Add($"Version Number: {anyRC.ConBase.VersionNum.ToStringNumbersOnly()}");
-                                reviewTexts.Add($"Version Number: {decLibrary.Summaries[0].SummaryVersion.ToStringNumbersOnly()}");
+                                reviewTexts.Add($"Version Number: {decLibrary.Summaries[0].SummaryVersion.ToStringNums()}");
                             }
                             /// ADDED
                             if (section == DecodedSection.Added)
@@ -674,16 +695,13 @@ namespace HCResourceLibraryApp.Layout
 
                             
                             // text printing
-                            if (reviewTexts.HasElements())
+                            if (reviewTexts.HasElements() || true)
                             {
                                 /// text printing
                                 bool bypassLoopMax = showDecodeInfosQ == true;
                                 for (int rtx = 0; rtx < reviewTexts.Count || bypassLoopMax; rtx++)
                                 {
-                                    int rtxAdjust = 0;
-                                    if (section != DecodedSection.Version && section != DecodedSection.Added && section != DecodedSection.TTA)
-                                        rtxAdjust--;
-                                    DecodeInfo decodeInfo = logDecoder.GetDecodeInfo(section, rtx + rtxAdjust, out int issueCount);
+                                    DecodeInfo decodeInfo = logDecoder.GetDecodeInfo(section, rtx, out int issueCount);
 
                                     /// review line
                                     bool reviewLinePrintedQ = false;
@@ -698,7 +716,6 @@ namespace HCResourceLibraryApp.Layout
                                     if (rtx == 0)
                                         Format($" {{!{issueCount}}}", colIssueNumber);
                                     NewLine();
-
 
                                     if (showDecodeInfosQ)
                                     {

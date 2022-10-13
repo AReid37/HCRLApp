@@ -7,6 +7,7 @@ namespace HCResourceLibraryApp.DataHandling
         /*** LEGEND DATA
         Data form for legend keys and definitions
         Syntax: {key}*{keynames}***
+        New Syntax: {key}*{verIntro}*{keynames}
 
         FROM DESIGN DOC
         ..........
@@ -16,7 +17,7 @@ namespace HCResourceLibraryApp.DataHandling
 	    > {keynames}
 		    [REQUIRED] seperator-separated string values
 		    May not contain '*' symbol
-	    NOTES
+	    NOTES [Rejected]
 		    - Multiple legend keys and keynames must be separated with '***'
         ..........
         
@@ -44,12 +45,23 @@ namespace HCResourceLibraryApp.DataHandling
             - str ToStringLengthy()
          ***/
 
+        /// -----
         #region fields / props
         // private
+        VerNum _versionIntroduced, _prevVersionIntroduced;
         string _key, _prevKey;
         List<string> _definitions, _prevDefinitions;
 
         // public        
+        public VerNum VersionIntroduced
+        {
+            get => _versionIntroduced;
+            private set
+            {
+                if (value.HasValue())
+                    _versionIntroduced = value;
+            }
+        }
         public string Key
         {
             get => _key;
@@ -91,12 +103,12 @@ namespace HCResourceLibraryApp.DataHandling
         {
             Key = legKey;
         }
-        public LegendData(string legKey, params string[] definitions)
+        public LegendData(string legKey, VerNum verIntroduced, params string[] definitions)
         {
             Key = legKey;
+            VersionIntroduced = verIntroduced;
             if (definitions.HasElements())
             {
-                
                 _definitions = new List<string>();
                 foreach (string def in definitions)
                     if (def.IsNotNEW())
@@ -141,12 +153,13 @@ namespace HCResourceLibraryApp.DataHandling
         public string Encode()
         {
             // Syntax: {key}*{keynames}***
+            // New Syntax: {key}*{verIntro}*{keynames}
             // > {keynames}
             //      [REQUIRED] seperator - separated string values
             string fullEncode = "";
             if (IsSetup())
             {
-                fullEncode = $"{Key}{Sep}";
+                fullEncode = $"{Key}{Sep}{VersionIntroduced}{Sep}";
                 for (int dix = 0; dix < _definitions.Count; dix++)
                     fullEncode += $"{this[dix]}{(dix + 1 >= _definitions.Count ? "" : Sep)}";
             }
@@ -156,12 +169,15 @@ namespace HCResourceLibraryApp.DataHandling
         {
             /**
              Syntax: {key}*{keynames}***
+             New Syntax: {key}*{verIntro}*{keynames}
 
             FROM DESIGN DOC
             ..........
             > {key}
 		        [REQUIRED] string value
 		        May not contain '*' symbol or comma (',')
+            > {verIntro}
+                The version in which this legend was introduced
 	        > {keynames}
 		        [REQUIRED] seperator-separated string values
 		        May not contain '*' symbol
@@ -183,6 +199,12 @@ namespace HCResourceLibraryApp.DataHandling
                                 /// key
                                 if (lix == 0)
                                     Key = legParts[lix];
+                                /// version introduced
+                                else if (lix == 1)
+                                {
+                                    if (VerNum.TryParse(legParts[lix], out VerNum verIntro))
+                                        VersionIntroduced = verIntro;
+                                }
                                 /// definitions
                                 else
                                 {
@@ -205,6 +227,7 @@ namespace HCResourceLibraryApp.DataHandling
         void SetPreviousSelf()
         {
             _prevKey = _key;
+            _prevVersionIntroduced = _versionIntroduced;
             if (_definitions.HasElements())
             {
                 _prevDefinitions = new List<string>();
@@ -216,7 +239,7 @@ namespace HCResourceLibraryApp.DataHandling
             string[] prevDefs = null;
             if (_prevDefinitions.HasElements())
                 prevDefs = _prevDefinitions.ToArray();
-            return new LegendData(_prevKey, prevDefs);
+            return new LegendData(_prevKey, _prevVersionIntroduced, prevDefs);
         }
         /// <summary>Compares two instances for similarities against: Setup state, Key, Definitions.</summary>
         public bool Equals(LegendData legDat)
@@ -255,7 +278,7 @@ namespace HCResourceLibraryApp.DataHandling
             return areEquals;
         }
         /// <summary>Has this instance of <see cref="ResContents"/> been initialized with the appropriate information?</summary>
-        /// <returns>A boolean stating whether the legend key and definitions have been given values, at minimum.</returns>
+        /// <returns>A boolean stating whether the legend key, version introduced, and definitions have been given values, at minimum.</returns>
         public override bool IsSetup()
         {
             return _key.IsNotNEW() && _definitions.HasElements();

@@ -61,4 +61,9 @@ Changed the syntax of the version log SUMMARY as the prospect of integrating an 
 7# [ ]
 Changed the file encoding syntax of Content Changes group due to decoding issues.
 	- The previous syntax was very similar to that of Content Additionals. A problem in decoding as the ConChanges info would become a ConAddits where there was none.
-	+ Content Changes information lines start with '^^'.
+	+ Content Changes information lines start with '^'.
+
+8# [ ]
+The encoding syntax for the Legend Data object has been changed from from '{key}*{keyname}***' to '{key}*{verIntro}*{keynames}'.
+	- Legend Data's previous syntax followed the idea that it was an unnecessary attribute to keep track of its version.
+	+ Due to the idea of version reversion, Legend Data requires a record of when it was introduced to co-operate with the this function.

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
 using ConsoleFormat;
 
@@ -68,6 +69,7 @@ namespace HCResourceLibraryApp.DataHandling
 
 
         #region methods
+        // CONTENT / LIBRARY INFORMATION HANDLING METHODS
         public bool AddContent(bool keepLooseRCQ, params ResContents[] newContents)
         {
             bool addedContentsQ = false;
@@ -278,10 +280,20 @@ namespace HCResourceLibraryApp.DataHandling
         {
             return AddContent(false, newContents);
         }
-
-        // bool RemoveContent(ResCon rcToRemove)
-        // bool RemoveContent(int shelfID)
-        public bool AddLegend(LegendData[] newLegends)
+        bool IsDuplicateInLibrary(ResContents resCon)
+        {
+            bool foundDupe = false;
+            if (Contents.HasElements() && resCon != null)
+            {
+                if (resCon.IsSetup())
+                {
+                    for (int x = 0; x < Contents.Count && !foundDupe; x++)
+                        foundDupe = Contents[x].Equals(resCon);
+                }
+            }
+            return foundDupe;
+        }        
+        public bool AddLegend(params LegendData[] newLegends)
         {
             bool addedLegendQ = false;
             if (newLegends.HasElements())
@@ -393,7 +405,273 @@ namespace HCResourceLibraryApp.DataHandling
             else Dbug.Log("Other ResLibrary is null; ");
             Dbug.EndLogging();
         }
+        public bool GetVersionRange(out VerNum lowest, out VerNum highest)
+        {
+            lowest = VerNum.None;
+            highest = VerNum.None;
+            if (IsSetup())
+            {
+                if (Summaries.HasElements())
+                {
+                    foreach (SummaryData sumDat in Summaries)
+                    {
+                        // setting lowest vernum
+                        if (!lowest.HasValue())
+                            lowest = sumDat.SummaryVersion;
+                        else if (lowest.AsNumber > sumDat.SummaryVersion.AsNumber)
+                            lowest = new VerNum(sumDat.SummaryVersion.MajorNumber, sumDat.SummaryVersion.MinorNumber);
 
+                        // settting highest vernum
+                        if (!highest.HasValue())
+                            highest = sumDat.SummaryVersion;
+                        else if (highest.AsNumber < sumDat.SummaryVersion.AsNumber)
+                            highest = new VerNum(sumDat.SummaryVersion.MajorNumber, sumDat.SummaryVersion.MinorNumber);
+                    }
+                }
+            }
+            return lowest.HasValue() && highest.HasValue();
+        }
+        public void ClearLibrary()
+        {
+            _contents = new List<ResContents>();
+            _legends = new List<LegendData>();
+            _summaries = new List<SummaryData>();
+        }
+        // all the method ideas below will be combined into this single method (for beyond this, they may not be utilized)
+        //  bool RemoveContent(ResCon rcToRemove)
+        //  bool RemoveContent(int shelfID)
+        //  bool RemoveLegend(string key)  // Necessary?? Contents and summaries would be removed, but does the legend *have* to be removed?
+        //  bool RemoveSummary(VerNum versionNum)
+        public bool RevertToVersion(VerNum verReversion)
+        {
+            Dbug.StartLogging("ResLibrary.RevertToVersion(VerNum)");
+            bool revertedQ = false;
+            if (IsSetup())
+            {
+                if (verReversion.HasValue())
+                {
+                    List<ResContents> remainingContents = new();
+                    List<LegendData> remainingLegends = new();
+                    List<SummaryData> remainingSummaries = new();
+
+                    // reversion time!
+                    if (GetVersionRange(out _, out VerNum currVer))
+                    {
+                        Dbug.LogPart($"Retrieved latest library version ({currVer}), and reversion version ({verReversion}); ");
+                        if (currVer.AsNumber > verReversion.AsNumber)
+                        {
+                            Dbug.Log("Fetching array of versions to unload; ");
+                            Dbug.LogPart("- Versions to unload ::");
+                            List<VerNum> unloadableVers = new();
+                            for (int cvx = currVer.AsNumber; cvx > verReversion.AsNumber; cvx--)
+                            {
+                                VerNum unloadableVerNum = new VerNum(cvx);
+                                if (unloadableVerNum.HasValue())
+                                {
+                                    unloadableVers.Add(unloadableVerNum);
+                                    Dbug.LogPart($"  {unloadableVerNum.ToStringNums()}");
+                                }
+                            }
+                            Dbug.Log("; Proceeding to revert versions;");
+
+                            // version unloading loop here                            
+                            for (int ulx = 0; ulx < unloadableVers.Count; ulx++)
+                            {
+                                VerNum verToUnload = unloadableVers[ulx];
+                                Dbug.Log($"Unloading -- Version {verToUnload} contents; ");
+
+                                bool firstUnload = ulx == 0;
+                                int countExempted = 0, countExempted2 = 0;
+                                List<ResContents> contentsCopy = new();
+                                List<LegendData> legendsCopy = new();
+                                List<SummaryData> summariesCopy = new();
+
+                                // INDENT MAJOR
+                                Dbug.NudgeIndent(true);
+
+
+                                // -- REMOVE CONTENTS --
+                                Dbug.Log("ResContents; ");
+                                Dbug.NudgeIndent(true);
+                                if (firstUnload)
+                                    contentsCopy.AddRange(Contents.ToArray());
+                                else
+                                {
+                                    contentsCopy.AddRange(remainingContents.ToArray());
+                                    remainingContents.Clear();
+                                }
+                                /// resCon exemption loop
+                                if (contentsCopy.HasElements())
+                                {
+                                    Dbug.Log($"Copied [{contentsCopy.Count}] ResContents from {(firstUnload ? "main contents" : "remaining contents")}; ");
+                                    foreach (ResContents resCon in contentsCopy)
+                                    {
+                                        if (resCon.IsSetup())
+                                        {
+                                            /// any additionals and updates are removed here
+                                            if (!resCon.ConBase.VersionNum.Equals(verToUnload))
+                                            {
+                                                if (resCon.ConAddits.HasElements())
+                                                {
+                                                    int caRemovalAdjust = 0;
+                                                    for (int rmvcax = 0; rmvcax <= resCon.ConAddits.Count; rmvcax++)
+                                                    {
+                                                        ContentAdditionals caToRemove = resCon.ConAddits[(rmvcax - caRemovalAdjust).Clamp(0, resCon.ConAddits.Count - 1)];
+                                                        if (caToRemove.VersionAdded.Equals(verToUnload))
+                                                            if (resCon.DisposeConAdditional(caToRemove))
+                                                            {
+                                                                Dbug.Log($". Removed ConAddits :: {caToRemove} [from {resCon}]");
+                                                                caRemovalAdjust--;
+                                                                countExempted2++;
+                                                            }
+                                                    }
+                                                }
+                                                if (resCon.ConChanges.HasElements())
+                                                {
+                                                    int ccRemovalAdjust = 0;
+                                                    for (int rmvccx = 0; rmvccx <= resCon.ConChanges.Count; rmvccx++)
+                                                    {
+                                                        ContentChanges ccToRemove = resCon.ConChanges[(rmvccx - ccRemovalAdjust).Clamp(0, resCon.ConChanges.Count - 1)];
+                                                        if (ccToRemove.VersionChanged.Equals(verToUnload))
+                                                            if (resCon.DisposeConChanges(ccToRemove))
+                                                            {
+                                                                Dbug.Log($". Removed ConChanges :: {ccToRemove} [from {resCon}]");
+                                                                ccRemovalAdjust--;
+                                                                countExempted2++;
+                                                            }
+                                                    }
+                                                }
+
+                                                /// resCon is then added to remaing RCs
+                                                remainingContents.Add(resCon);
+                                            }
+                                            /// the full resCon is removed here
+                                            else
+                                            {
+                                                countExempted++;
+                                                Dbug.Log($". Exempted :: {resCon}");
+                                            }
+                                        }
+                                    }
+                                    Dbug.Log($"[{countExempted}] ResContents (and [{countExempted2}] ConAddits/ConChanges) were removed, [{remainingContents.Count}] remain; ");
+                                }
+                                else Dbug.Log("There are no ResContents to remove; ");
+                                Dbug.NudgeIndent(false);
+
+
+                                // -- REMOVE LEGENDS --
+                                countExempted = 0;
+                                Dbug.Log("LegendDatas; ");
+                                Dbug.NudgeIndent(true);
+                                if (firstUnload)
+                                    legendsCopy.AddRange(Legends.ToArray());
+                                else
+                                {
+                                    legendsCopy.AddRange(remainingLegends.ToArray());
+                                    remainingLegends.Clear();
+                                }
+                                /// legends exemption loop
+                                if (legendsCopy.HasElements())
+                                {
+                                    Dbug.Log($"Copied [{legendsCopy.Count}] Legend Datas from {(firstUnload ? "main contents" : "remaining contents")}; ");
+                                    foreach (LegendData legDat in legendsCopy)
+                                    {
+                                        if (legDat.IsSetup())
+                                        {
+                                            if (!legDat.VersionIntroduced.Equals(verToUnload))
+                                                remainingLegends.Add(legDat);
+                                            else
+                                            {
+                                                countExempted++;
+                                                Dbug.Log($". Exempted Legd :: {legDat}");
+                                            }
+                                        }
+                                    }
+                                    Dbug.Log($"[{countExempted}] Legend Datas were removed, [{remainingLegends.Count}] remain; ");
+                                }
+                                else Dbug.Log("There are no Legend Datas to remove; ");
+                                Dbug.NudgeIndent(false);
+
+
+                                // -- REMOVE SUMMARIES --
+                                countExempted2 = 0;
+                                Dbug.Log("SummaryDatas; ");
+                                Dbug.NudgeIndent(true);
+                                if (firstUnload)
+                                    summariesCopy.AddRange(Summaries.ToArray());
+                                else
+                                {
+                                    summariesCopy.AddRange(remainingSummaries.ToArray());
+                                    remainingSummaries.Clear();
+                                }
+                                /// summaries exemption loop
+                                if (summariesCopy.HasElements())
+                                {
+                                    Dbug.Log($"Copied [{summariesCopy.Count}] Summary Datas from {(firstUnload ? "main contents" : "remaining contents")}; ");
+                                    foreach (SummaryData sumDat in summariesCopy)
+                                    {
+                                        if (sumDat.IsSetup())
+                                            if (!sumDat.SummaryVersion.Equals(verToUnload))
+                                                remainingSummaries.Add(sumDat);
+                                            else
+                                            {
+                                                countExempted2++;
+                                                Dbug.Log($". Exempted Smry :: {sumDat.ToStringShortened()}");    
+                                            }
+                                    }
+                                    Dbug.Log($"[{countExempted2}] Summaries Datas were removed, [{remainingSummaries.Count}] remain; ");
+                                }
+                                else Dbug.Log("There are no Summary Datas to remove; ");
+                                Dbug.NudgeIndent(false);
+
+
+                                // UNINDENT MAJOR
+                                Dbug.NudgeIndent(false);
+                            }
+
+                            revertedQ = true;
+                        }
+                        else Dbug.Log("Version to revert to is ahead of or equal to current version; ");
+                    }
+                    else Dbug.Log("Could not retrieve latest library version; ");
+
+
+                    // if reversion successfull, set contents, legends, and summaries to remaining data
+                    // else, no changes
+                    if (revertedQ)
+                    {
+                        Dbug.LogPart("Version reversion complete; Updating library with remaining contents");
+                        /// contents
+                        if (remainingContents.HasElements())
+                            Contents = remainingContents;
+                        else Contents.Clear();
+                        /// legends
+                        if (remainingLegends.HasElements())
+                            Legends = remainingLegends;
+                        else Legends.Clear();
+                        /// summaries
+                        if (remainingSummaries.HasElements())
+                            Summaries = remainingSummaries;
+                        else Summaries.Clear();
+
+                        if (GetVersionRange(out _, out VerNum postRevertCurr))
+                        {
+                            revertedQ = postRevertCurr.Equals(verReversion);
+                            Dbug.LogPart($"; Verified? {revertedQ}");
+                        }
+                        Dbug.Log("; ");
+                    }
+                }
+                else Dbug.Log("Received an invalid version to revert to; ");
+            }
+            else Dbug.Log($"ResLibrary is not setup; ");
+            Dbug.EndLogging();
+            return revertedQ;
+        }
+
+
+        /// -
+        // OTHER MISCELLANEOUS METHODS
         /// <summary>Has this instance of <see cref="ResLibrary"/> been initialized with the appropriate information?</summary>
         /// <returns>A boolean stating whether the contents, legends, and summaries have elements within them, at minimum.</returns>
         public override bool IsSetup()
@@ -493,21 +771,10 @@ namespace HCResourceLibraryApp.DataHandling
             disableAddDbug = prevDADbg;
             return prevSelf;
         }
-        bool IsDuplicateInLibrary(ResContents resCon)
-        {
-            bool foundDupe = false;
-            if (Contents.HasElements() && resCon != null)
-            {
-                if (resCon.IsSetup())
-                {
-                    for (int x = 0; x < Contents.Count && !foundDupe; x++)
-                        foundDupe = Contents[x].Equals(resCon);
-                }
-            }
-            return foundDupe;
-        }                
-        
 
+
+
+        /// -
         // DATA HANDLING METHODS
         protected override bool EncodeToSharedFile()
         {

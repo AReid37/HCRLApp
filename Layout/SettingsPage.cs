@@ -3,17 +3,23 @@ using HCResourceLibraryApp.DataHandling;
 using ConsoleFormat;
 using static ConsoleFormat.Base;
 using static ConsoleFormat.Minimal;
+using System;
 
 namespace HCResourceLibraryApp.Layout
 {
     public static class SettingsPage
     {
         static Preferences _preferencesRef;
+        static ResLibrary _resLibrary;
         static readonly char subMenuUnderline = '=';
 
         public static void GetPreferencesReference(Preferences preferences)
         {
             _preferencesRef = preferences;
+        }
+        public static void GetResourceLibraryReference(ResLibrary resourceLibrary)
+        {
+            _resLibrary = resourceLibrary;
         }
         public static void OpenPage()
         {
@@ -80,7 +86,7 @@ namespace HCResourceLibraryApp.Layout
                 if (activeMenuKey.IsNE())
                 {
                     validKey = ListFormMenu(out setPrefsKey, "Preferences Settings Menu", subMenuUnderline, $"{Ind24}Select settings to edit >> ", "a/b", true, prefMenuOpts);
-                    quitMenuQ = setPrefsKey == null || setPrefsKey == "c";
+                    quitMenuQ = LastInput.IsNE() || setPrefsKey == "c";
                     MenuMessageQueue(!validKey && !quitMenuQ, false, null);
                 }
 
@@ -452,19 +458,210 @@ namespace HCResourceLibraryApp.Layout
             Program.LogState("Settings|ContentIntegrity (tbd)");
             HorizontalRule(subMenuUnderline, 2);
             TextLine("To Be Done :: Content Integrity Verification Page\n  Elements --");
-            List(OrderType.Unordered, "Display Contents in Library (Data IDs only)", "Verify Content Integrity", " Content Locations and File Types", " Run Verification Integrity");
+            List(OrderType.Unordered, "Display Contents in Library (Data IDs only)", "Verify Content Integrity", ". Content Locations and File Types", ". Run Verification Integrity");
             Pause();
         }
-        // not done...
+        // done
         static void SubPage_Reversion()
         {
-            Program.LogState("Settings|Reversion (tbd)");
-            HorizontalRule(subMenuUnderline, 2);
-            TextLine("To Be Done :: Reversion Page\n  Elements --");
-            List(OrderType.Unordered, "Version Reversion -or- File save reversion (same page)");
-            Pause();
-        }
+            bool exitReversionMenu = false;
+            do
+            {
+                Program.LogState("Settings|Reversion");
+                Clear();
+                //FormatLine("\n", ForECol.Accent);
 
-        // consider...  FullReset (clear ALL data)
+                string[] revertMenuOpts = { "File Save Reversion", "Version Reversion", $"{exitSubPagePhrase} [Enter]" };
+                bool validKey, quitMenuQ;
+                string setRevKey;
+                validKey = ListFormMenu(out setRevKey, "Reversion Settings Menu", subMenuUnderline, $"{Ind24}Select an option >> ", "a/b", true, revertMenuOpts);
+                quitMenuQ = LastInput.IsNE() || setRevKey == "c";
+                MenuMessageQueue(!validKey && !quitMenuQ, false, null);
+
+                if (!quitMenuQ && validKey)
+                {
+                    string titleText = "Preferences: " + (setRevKey.Equals("a") ? revertMenuOpts[0] : revertMenuOpts[1]);
+                    Clear();
+                    Title(titleText, subMenuUnderline, 2);
+
+                    // file save reversion
+                    if (setRevKey.Equals("a"))
+                    {
+                        FormatLine($"Reversion of a file save accommodates for reloading the backup of the previous program save file. This reverts all information that has been changed for this current version. A reversion can only be done once an old save state has been stored.", ForECol.Normal);
+
+                        // continue to reversion
+                        if (DataHandlerBase.AvailableReversion)
+                        {
+                            Program.LogState("Settings|Reversion|FileSaveRevert - Allowed");
+                            NewLine();
+                            FormatLine("NOTE :: A file save reversion will require a program restart.", ForECol.Accent);
+
+                            NewLine(2);
+                            FormatLine("File reversion is available (there is a save state to revert to). ", ForECol.Normal);
+                            FormatLine($"Please note that data lost from a file reversion is unrecoverable.", ForECol.Warning);
+                            Confirmation($"{Ind24}Are you sure you wish to revert file save? ", true, out bool yesNo);
+
+                            /// 1st confirmation
+                            if (yesNo)
+                            {
+                                /// 2nd confirmation
+                                Confirmation($"{Ind24}Absolutely sure of reversion? ", true, out bool absoluteYesNo, $"{Ind34}Program will revert file save and and restart.", $"{Ind34}Reversion cancelled.");
+                                
+                                if (absoluteYesNo)
+                                {
+                                    if (Program.SaveReversion())
+                                        Program.RequireRestart();
+                                    else
+                                    {
+                                        NewLine();
+                                        Format($"\tFile save reversion could not be executed!", ForECol.Incorrection);
+                                        Pause();
+                                    }    
+                                }
+                            }
+                        }
+
+                        // deny reversion access
+                        else
+                        {
+                            Program.LogState("Settings|Reversion|FileSaveRevert - Denied");
+                            NewLine();
+                            Format("File reversion is not available (no save state to revert to).", ForECol.Normal);
+                            Pause();
+                        }
+                    }
+
+                    // version reversion
+                    if (setRevKey.Equals("b"))
+                    {
+                        FormatLine($"Version Reversion is specific to the resource library and the contents within, thus only being available once the library has sufficient contents. Version reversion removes contents of a specific version until the given version state has been reached.", ForECol.Normal);
+                        FormatLine($"Example\n{Ind14}The library has contents at v0.20, reverting to v0.16 would unload:\n{Ind24}v0.20, v0.19, v0.18, v0.17.", ForECol.Normal);
+
+                        const string clearLibPhrase = "Empty Library";
+                        bool okayToResetVersion = false;
+                        string reversionDeniedMessage = "empty library";
+                        VerNum lowest = VerNum.None, highest = VerNum.None;
+                        if (_resLibrary != null)
+                        {
+                            if (_resLibrary.GetVersionRange(out lowest, out highest))
+                            {
+                                reversionDeniedMessage = "library needs more information";
+                                if (!lowest.Equals(highest))
+                                    okayToResetVersion = true;
+                            }
+                        }
+
+                        // continue to version reversion
+                        if (okayToResetVersion)
+                        {
+                            Program.LogState("Settings|Reversion|Version Reversion - Allowed");
+                            NewLine();
+                            FormatLine($"Version reversion is availble.", ForECol.Normal);
+                            HorizontalRule('\'', 1);
+                            //FormatLine("NOTE :: A version reversion will require a program restart.", ForECol.Accent);
+
+                            //NewLine(2);
+                            Highlight(false, $"The latest library version is {highest}. The library may be reverted to the oldest library version, {lowest}. ", $"{highest}", $"{lowest}");
+                            FormatLine("The library's shelves may also be completely cleared to remove all version data.", ForECol.Normal);
+                            NewLine();
+
+                            VerNum closestReversion;
+                            if (highest.MinorNumber - 1 < 0)
+                                closestReversion = new VerNum(highest.MajorNumber - 1, 99);
+                            else closestReversion = new VerNum(highest.MajorNumber, highest.MinorNumber - 1);
+
+                            string exmplRange = lowest.AsNumber != closestReversion.AsNumber ? $"{lowest.ToStringNums()} ~ {closestReversion.ToStringNums()}" : $"{lowest.ToStringNums()}";
+                            FormatLine($"Enter version to revert to ({exmplRange}) or enter any key to clear library.", ForECol.Normal);
+                            Format($"{Ind24}Revert to: ", ForECol.Normal);
+                            string input = StyledInput($"a.bb");
+
+                            if (input.IsNotNEW())
+                            {
+                                bool isRevertingToVersion = VerNum.TryParse(input, out VerNum verRevert);                                
+
+                                /// revert to version
+                                if (isRevertingToVersion)
+                                {
+                                    //Program.LogState("Settings|Reversion|Version Reversion - Allowed|Revert to Version");
+                                    if (verRevert.AsNumber.IsWithin(lowest.AsNumber, highest.AsNumber - 1))
+                                    {
+                                        SubReversionTitle();
+                                        FormatLine("Reverting to an older version of the library will remove contents added later than the given version. This change is only reversible through an immediate File Save Reversion.", ForECol.Normal);
+                                        Confirmation($"Are you sure you wish to revert to version {verRevert.ToStringNums()}? ", true, out bool yesNo);
+                                        if (yesNo)
+                                        {
+                                            Confirmation($"{Ind24}Are you absolutely sure? ", true, out bool absoluteYesNo);
+                                            ConfirmationResult(absoluteYesNo, $"{Ind24}", $"Library will be reverted to version {verRevert.ToStringNums()}.", "Library reversion cancelled.");
+
+                                            if (absoluteYesNo)
+                                            {
+                                                bool reverted = _resLibrary.RevertToVersion(verRevert);
+                                                if (!reverted)
+                                                {
+                                                    NewLine();
+                                                    Format($"{Ind24}Failed to revert library to version {verRevert.ToStringNums()}. Reversed reversion progress.", ForECol.Incorrection);
+                                                    Pause();
+                                                }
+                                            }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        Format($"{Ind24}Version to revert must be within the version range: {exmplRange}.", ForECol.Incorrection);
+                                        Pause();
+                                    }
+                                }
+
+                                /// clear library
+                                else
+                                {
+                                    SubReversionTitle();
+                                    FormatLine("Clearing the Library will remove ALL content information from the library, which is only reversible through an immediate File Save Reversion.", ForECol.Normal);
+                                    Confirmation($"Are you sure you wish to clear the library? ", true, out bool yesNo);
+                                    if (yesNo)
+                                    {
+                                        NewLine();
+                                        Highlight(true, $"\t\b\b\b\bEnter the phrase '{clearLibPhrase}' below to clear library shelves.", clearLibPhrase);
+                                        Format($"{Ind24}Phrase to reset library >> ", ForECol.Warning);
+                                        input = StyledInput(null);                                  
+                                    }
+                                    ConfirmationResult(yesNo && input == clearLibPhrase, $"{Ind34}The library ", "will be cleared.", "will not be cleared.");
+
+                                    // library cleared here
+                                    if (yesNo && input == clearLibPhrase)
+                                        _resLibrary.ClearLibrary();
+                                }
+
+
+                                void SubReversionTitle()
+                                {
+                                    NewLine(10);
+                                    HorizontalRule(subMenuUnderline);
+                                    Important(isRevertingToVersion ? "Revert To Version" : "Clear Library");
+                                    NewLine();
+                                }
+                            }
+                        }
+
+                        // deny version reversion access
+                        else
+                        {
+                            Program.LogState("Settings|Reversion|Version Reversion - Denied");
+                            NewLine();
+                            Format($"Version reversion is not available ({reversionDeniedMessage}).", ForECol.Normal);
+                            Pause();
+                        }
+
+                    }
+
+                    // save changes if any
+                    if (_resLibrary.ChangesMade())
+                        Program.SaveData(true);
+                }
+                else if (quitMenuQ)
+                    exitReversionMenu = true;
+            } 
+            while (!exitReversionMenu && !Program.AllowProgramRestart);
+        }
     }
 }

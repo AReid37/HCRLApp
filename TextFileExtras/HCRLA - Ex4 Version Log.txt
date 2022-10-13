@@ -1,0 +1,56 @@
+﻿-- !open --
+## <HIGH CONTRAST RESOURCE LIBRARY APP - Version Log Example Log #4> ##
+PURPOSE ::
+	Additional, proper version log data for testing the HCRLA program functions (similar to Examples 1 & 2)
+-- !close --
+
+-- ========== ---
+[Version : 1.2]
+
+[Added]
+1 |Watermelon	-(i167; t120)
+2 |Cantelope	-(i168; t121)
+3 |Honey Dew	-(i169; t122,t123)
+4 |YellowWatermelon - (i170; t124)
+5 |AppleWall	-(i25; w2,3`,4)
+6 |BluberryWall	-(i44; w10)
+7 |PassionFruitWall-(i46; w11)
+8 |StrawberryWall-(i116; w28`)
+9 |OneItemWall - (i4; w1)
+10|ZeroItemWall - (i3; w0)
+11|BrownEggBlock - (i87; t102 p17)
+12|Brown Egg Shell Pale - (i92; a7)
+13|Brown Egg Shell Curiass - (i93; a8)
+14|Brown Egg Shell Greaves - (i94; a9)
+
+[Additional]
+> Watermelon Chunk (Watermelon_Chunks) - Watermelon (i167)
+> (g5,6) - OneItemWall (i4)
+> (t152,153) - Ambient Pineapple Huts
+
+[TTA : 37]
+
+[Updated]
+> Turnip (d6) - Leafier dust particles.
+> Turnip (d7) - Chunkier dust particles.
+> (b13) - Enchanced the graininess of the background
+> (b21) - Enchanced the graininess of the background
+
+[Legend]
+i - Item
+t - Tiles
+p - Projectiles
+w - Wall
+a - Armor
+b - Background
+g - Glow
+
+[Summary]
+> Watermelon Series (blocks, walls), Fruit Walls [P1], One Item and Zero Item Walls
+> Pineapple Hut ambience, Brown Egg (block, armor)
+-- ========== ---
+
+-- !open --
+Fun fact: 
+	This example partially originates from example contents in the Revised Log Template.
+-- !close --

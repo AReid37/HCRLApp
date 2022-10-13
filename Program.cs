@@ -11,7 +11,7 @@ namespace HCResourceLibraryApp
     // THE ENTRANCE POINT, THE CONTROL ROOM
     public class Program
     {
-        static readonly string consoleTitle = "High Contrast Resource Library App [v1.1.2]";
+        static readonly string consoleTitle = "High Contrast Resource Library App [v1.1.3]";
         #region fields / props
         // PRIVATE \ PROTECTED
         static string prevWhereAbouts;
@@ -46,11 +46,12 @@ namespace HCResourceLibraryApp
                 logDecoder = new LogDecoder();
                 resourceLibrary = new ResLibrary();                
                 LoadData();
-                /// --v priting and pages
+                /// --v printing and pages
                 VerifyFormatUsage = true;          
                 GetPreferencesReference(preferences);
                 ApplyPreferences();
-                SettingsPage.GetPreferencesReference(preferences);                
+                SettingsPage.GetPreferencesReference(preferences);
+                SettingsPage.GetResourceLibraryReference(resourceLibrary);
 
                 // testing site
                 RunTests();
@@ -128,6 +129,7 @@ namespace HCResourceLibraryApp
             }
             while (restartProgram);
 
+            Dbug.EndLogging();
             TextLine("\n\n**REMEMBER** Test the published version of the application frequently!!\n\tVersion last tested: mid-v1.0.7".ToUpper(), Color.White);
         }
 
@@ -173,12 +175,16 @@ namespace HCResourceLibraryApp
             LogState("Loading Data");
             dataHandler.LoadFromFile(preferences, logDecoder, resourceLibrary);
         }
+        public static bool SaveReversion()
+        {
+            return dataHandler.RevertSaveFile();
+        }
         
 
 
         // TESTING STUFF
         static readonly bool runTest = false;
-        static readonly Tests testToRun = Tests.Dbug_DeactivateSessions;
+        static readonly Tests testToRun = Tests.LogSubmissionPage_DisplayLogInfo;
         enum Tests
         {
             PageBase_HighlightMethod,
@@ -415,7 +421,7 @@ namespace HCResourceLibraryApp
                 else if (testToRun == Tests.LogDecoder_DecodeLogInfo)
                 {
                     TextLine("The results of this test are recorded through Dbug.cs. Nothing to preview here...", Color.DarkGray);
-                    if (SetFileLocation(@"C:\Users\ntrc2\source\repos\HCResourceLibraryApp\HCRLA - Ex1 Version Log.txt"))
+                    if (SetFileLocation(@"C:\Users\ntrc2\source\repos\HCResourceLibraryApp\TextFileExtras\HCRLA - Ex1 Version Log.txt"))
                         if (FileRead(null, out string[] testLogData))
                             logDecoder.DecodeLogInfo(testLogData);
                 }
@@ -424,7 +430,10 @@ namespace HCResourceLibraryApp
                 {
                     hasDebugQ = false;
                     TextLine("Displays information from a log decoder", Color.DarkGray);
-                    if (SetFileLocation(@"C:\Users\ntrc2\source\repos\HCResourceLibraryApp\HCRLA - Ex1 Version Log.txt"))
+                    bool locationSet = SetFileLocation(@"C:\Users\ntrc2\source\repos\HCResourceLibraryApp\TextFileExtras\HCRLA - Ex3 Version Log.txt");
+                    //@"C:\Users\ntrc2\source\repos\HCResourceLibraryApp\TextFileExtras\HCRLA - Ex1 Version Log.txt"
+                    //@"C:\Users\ntrc2\source\repos\HCResourceLibraryApp\TextFileExtras\HCRLA - Ex3 Version Log.txt"
+                    if (locationSet)
                         if (FileRead(null, out string[] testLogData))
                             if (logDecoder.DecodeLogInfo(testLogData))
                             {
@@ -543,6 +552,12 @@ namespace HCResourceLibraryApp
             }
         }
 
+
+        /* Just saving some preferences, y'know
+            pref<cftag> Gry%Yllw%DrkGry%Rd%Mrn%Yllw%Wht%Gry%Orng
+            pref<cftag> Squished%Thin
+            logDec<cftag> C:\Users\ntrc2\source\repos\HCResourceLibraryApp\TextFileExtras\
+         */
 
         // THOUGHTS...
         // I am able to set the Cursor position within the console window

@@ -42,7 +42,6 @@
         ///         - NoteResult(bl decodedQ, str result)
         ///     
 
-        public bool successfulDecodeQ;
         public string logLine, sectionName;
         public string decodeIssue, resultingInfo;
 
@@ -51,7 +50,6 @@
 
         public DecodeInfo(string vLogLine, string logSection)
         {
-            successfulDecodeQ = false;
             logLine = vLogLine;
             sectionName = logSection;
             decodeIssue = null;
@@ -60,25 +58,19 @@
 
         /// <summary>Also partly logs ' &lt;!di&gt; ' when an issue has been noted.</summary>
         /// <param name="message">A period ('.') will be added at the end of this message.</param>
+        /// <remarks>The noted issue may not be overwritten.</remarks>
         public void NoteIssue(string message)
         {
-            if (message.IsNotNE())
+            if (message.IsNotNE() && decodeIssue.IsNE())
             {
                 decodeIssue = message;
                 Dbug.LogPart(" <!di> ");
             }
         }
         /// <param name="result">A period ('.') will be added at the end of this message.</param>
+        /// <remarks>The noted result may be overwritten.</remarks>
         public void NoteResult(string result)
         {
-            successfulDecodeQ = true;
-            if (result.IsNotNE())
-                resultingInfo = result;
-        }
-        /// <param name="result">A period ('.') will be added at the end of this message.</param>
-        public void NoteResult(bool decodedQ, string result)
-        {
-            successfulDecodeQ = decodedQ;
             if (result.IsNotNE())
                 resultingInfo = result;
         }

@@ -9,8 +9,11 @@ namespace HCResourceLibraryApp.Layout
 {
     internal static class HomePage
     {
+        const int rigStyleSheetIndex = -1; // set to -1 for no rigging
+
         public static void OpenPage()
         {
+            bool riggedStyleIndexQ = rigStyleSheetIndex != -1;
             const int inkCount = 10;
             /// INKING IDS
             ///     0~3 -> Primary Color (ex. title)
@@ -73,8 +76,10 @@ namespace HCResourceLibraryApp.Layout
                 }
             };
             int styleIx = Extensions.Random(0, styleSheet.Count - 1);
-            if (styleIx == 0) // avoid basic
+            if (styleIx == 0 && !riggedStyleIndexQ) // avoid basic
                 styleIx = Extensions.Random(0, styleSheet.Count - 1);
+            if (riggedStyleIndexQ)
+                styleIx = rigStyleSheetIndex.Clamp(0, styleSheet.Count);
 
             Program.LogState("Title Page");
             if (styleSheet.HasElements() && inkList.HasElements(inkCount))

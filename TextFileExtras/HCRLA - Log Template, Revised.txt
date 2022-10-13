@@ -1,0 +1,105 @@
+﻿[VERSION : a.bb]
+
+[ADDED]
+-- up to 25 maximum items per update. Effective until no more items to add.  
+
+[ADDITIONAL]
+
+[TTA : n]
+
+[UPDATED]
+
+[LEGEND]
+
+[SUMMARY]
+
+
+
+
+-- A single line log comment starts with '--'.
+-- A multiline log comment starts with '-- !open --' and ends with '-- !close --', each on a line of their own [HCRLA decoder only].
+
+-- !open --
+GUIDELINES
+* Avoid utilizing the '%' character within this log file.
+* Use the following characters with caution as they also play a role in log decoding:
+	Start of lines ::  [  >  -
+	Within lines   ::  [  ]  (  )  -  :  ,  ;  ~
+
+
+INFORMATION FOR EACH SECTION
+	For the explanations below: described syntax elements marked with '*' are required
+_____
+[Version]
+Syntax: [Version : {a.bb}*]
+	{a.bb} : version number with 'a' as major number and 'bb' as minor number. 
+	Ex. 1.0, 1.1, 1.11, 1.24
+	Ex. [Version : 1.1]
+_____
+[Added] 
+Header :: 
+	Syntax: [Added : {ph},{sub}; {ph2},{sub2}]
+	~~
+	set placeholders (ph) and substitution phrase (sub) to replace them for easier logging
+	{ph} : Placeholder key, a short string that will be replaced by a substitution phrase
+	{sub} : Substitution phrase, the words to replace the placeholder key with
+	Multiple ph/sub groups are separated with ';'
+	Ex.	[Added : $f,Feather Bill; m>,Marshwood; #,x32]
+
+Body :: 
+	Syntax: ##|{InternalName}* - ({MainID}*; {RelatedIds})
+	~~
+	## : The entry number of added content ('1' for first, '2' second, '3' third...).
+	{InternalName} : The in-game name given to the added item being described.
+	{MainID} : Advised that only 'Item' data IDs may go here.
+	{RelatedIds} : other related, non-wordy data Ids (tiles, projectiles, walls, ...).	
+		Multiple of similar type --> (x21,22) or (x32~34); 
+		Different types --> (x21 y22); 
+	Ex. 9 |PotPie - (i42; t23 p44,52 w31~33)
+		13|PiePan - (i40)
+_____
+[Additional]
+Syntax1: > {Opt.Name} ({DataIDs}*) - {RelatedInternalName}* ({RelatedDataID}*)
+Syntax2: > ({DataIDs}*) - {RelatedInternalName -or- Opt.Name}*
+	{Opt.Name} : Custom name to describe the group of additional data Ids
+	{DataIDs} : The additional Data IDs (of one type). Wordy data Ids added through here.
+	{RelatedInternalName} : Internal name of item / content related to the data ids.
+	{RelatedDataID} : The (item type) data ID of the related item / content.
+	Ex1 > Watermelon Chunk (WaterMelonChunk) - Watermelon (i167)
+		> (w54) - (i34)
+		> (t33~35) - (i34)
+	Ex2	> (t152,153) - Ambient Pineapple Huts 
+_____
+[TTA]
+Syntax: [TTA : #*]
+	# : The total tally of items / contents added in this version (positive integers)
+_____
+[Updated]
+Syntax: > {InternalName} ({RelatedDataID}*) - {ChangeDesc}*
+	{InternalName} : The internal name of the item or content edited.
+	{RelatedDataID} : The content / item that has been edited.
+	{ChangeDesc} : A description of the changes made to the specified content.
+	Ex. > PotPie (i42) - Crispier looking surface and creamier filling
+		> PotPie (t23) - Changed texture to match new item design
+_____
+[Legend]
+Syntax: {Key}* - {KeyDef}*
+	{Key} : The key character used within version log
+	{KeyDef} : A short description of what the key represents
+
+AVAILABLE LEGEND KEYS
+i,Item  |  t,Tiles  |  w,Wall  |  p,Projectile  |  b,Background  
+tt,Tree Tops  |  tb,Tree Branches  |  g,Glow  |  d,Dust
+~,Number Range  |  *,Previous Version ('Added' only)  |  `,Layer of Translucent Black
+
+_____
+[Summary]
+Syntax: > {SummaryPart}*
+	{SummaryPart} : A short sentence (usually as list of items) that summarizes the contents added or edited within this version. Each summary part must have its own line
+	Ex. > Brocolli, Cabbage, and few other green veggies, Veggie seeds [P1]
+		> Carrot, Pumpkins (pumpkin, squash), soil (and variants)
+	
+
+LINK TO STEAM TEXT FORMATTING
+https://steamcommunity.com/comment/Guide/formattinghelp
+-- !close --

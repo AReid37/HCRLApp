@@ -54,7 +54,7 @@
 		string _internalName, _relatedDataID, _changeDesc, _prevInternalName, _prevRelatedDataID, _prevChangeDesc;
 
 		//public
-		public const string ccIdentityKey = "^^";
+		public const string ccIdentityKey = "^";
         /// <summary>Version number this update/change took place.</summary>
         public VerNum VersionChanged
         {
