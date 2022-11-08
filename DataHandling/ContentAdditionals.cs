@@ -121,6 +121,7 @@ namespace HCResourceLibraryApp.DataHandling
 				return idCount;
 			}
 		}
+        /// <summary>Returns the data IDs as a single string separated by space characters (' ').</summary>
 		public string DataIDString
 		{
 			get
@@ -145,7 +146,8 @@ namespace HCResourceLibraryApp.DataHandling
 				_dataIDs = new List<string>();
 				foreach (string dataID in dataIDs.SortWords())
 					if (dataID.IsNotNEW())
-						_dataIDs.Add(dataID);
+						if (!_dataIDs.Contains(dataID)) // add no duplicate data ids
+                            _dataIDs.Add(dataID);
 
             }
         }

@@ -11,7 +11,10 @@ namespace HCResourceLibraryApp
     // THE ENTRANCE POINT, THE CONTROL ROOM
     public class Program
     {
-        static readonly string consoleTitle = "High Contrast Resource Library App [v1.1.3]";
+        static readonly string consoleTitle = "High Contrast Resource Library App [v1.1.4]";
+        /// <summary>If <c>true</c>, the application launches for debugging/development. Otherwise, the application launches for the published version.</summary>
+        public static readonly bool isDebugVersionQ = true;
+
         #region fields / props
         // PRIVATE \ PROTECTED
         static string prevWhereAbouts;
@@ -34,12 +37,11 @@ namespace HCResourceLibraryApp
             {
                 Clear();
                 AllowProgramRestart = false;
-                TextLine("Hello, High Contrast Resource Library App!", Color.DarkGray);
 
                 // setup                
                 /// program function
-                Console.Title = consoleTitle;
-                Tools.DisableWarnError = DisableWE.None;
+                Console.Title = consoleTitle + (isDebugVersionQ? " (debug)" : "");
+                Tools.DisableWarnError = isDebugVersionQ? DisableWE.Warnings /*Disable.All*/ : DisableWE.None;
                 /// data
                 dataHandler = new DataHandlerBase();
                 preferences = new Preferences();
@@ -47,20 +49,22 @@ namespace HCResourceLibraryApp
                 resourceLibrary = new ResLibrary();                
                 LoadData();
                 /// --v printing and pages
-                VerifyFormatUsage = true;          
+                VerifyFormatUsage = true && isDebugVersionQ;          
                 GetPreferencesReference(preferences);
                 ApplyPreferences();
                 SettingsPage.GetPreferencesReference(preferences);
                 SettingsPage.GetResourceLibraryReference(resourceLibrary);
+                LogLegendPage.GetResourceLibraryReference(resourceLibrary);
 
                 // testing site
-                RunTests();
+                if (isDebugVersionQ)
+                    RunTests();
 
 
                 // Lvl.1 - title page and main menu
                 /// home page               
                 HomePage.OpenPage();
-                Format($"{Ind24}Press [Enter] to continue >> ", Layout.ForECol.Normal);
+                Format($"{Ind24}Press [Enter] to continue >> ", ForECol.Normal);
                 StyledInput("__");
                 
                 /// main menu
@@ -74,25 +78,29 @@ namespace HCResourceLibraryApp
                         /// ->  Library Search
                         /// ->  Log Legend View
                         /// ->  Version Summaries
+                        /// ->  Generate Steam Log
                         /// ->  Settings Page
                         ///     Quit
 
                         LogState("Main Menu");
                         Clear();
-                        bool isValidMMOpt = ListFormMenu(out string mainMenuOptKey, "Main Menu", null, $"{Ind24}Option >> ", "a~f", true,
-                            "Logs Submission, Library Search, Log Legend View, Version Summaries, Settings, Quit".Split(", "));
+                        bool isValidMMOpt = ListFormMenu(out string mainMenuOptKey, "Main Menu", null, $"{Ind24}Option >> ", "a~g", true,
+                            "Logs Submission, Library Search, Log Legend View, Version Summaries, Generate Steam Log, Settings, Quit".Split(", "));
                         MenuMessageQueue(mainMenuOptKey == null, false, null);
 
                         if (isValidMMOpt)
                         {
                             // other options
-                            if (!mainMenuOptKey.Contains('f'))
+                            if (!mainMenuOptKey.Contains('g'))
                             {
                                 // logs submission page
                                 if (mainMenuOptKey.Equals("a"))
                                     LogSubmissionPage.OpenPage(resourceLibrary);
+                                // log legend view page
+                                else if (mainMenuOptKey.Equals("c"))
+                                    LogLegendPage.OpenPage();
                                 // settings page
-                                else if (mainMenuOptKey.Equals("e"))
+                                else if (mainMenuOptKey.Equals("f"))
                                     SettingsPage.OpenPage();
 
                                 else
@@ -157,6 +165,7 @@ namespace HCResourceLibraryApp
         }
 
         // Global Data handling resources
+        /// <param name="discreteQ">If <c>true</c>, will show the confirmation of saving or not in short form. Otherwise, a short sentence phrase is used for confirmation.</param>
         public static bool SaveData(bool discreteQ)
         {
             LogState("Saving Data");
@@ -167,6 +176,10 @@ namespace HCResourceLibraryApp
                 FormatLine(discreteQ? "auto-save: S." : "Auto-saving data ... success.", discreteQ? ForECol.Accent : ForECol.Correction);
             else FormatLine(discreteQ? "auto-save: F." : "Auto-saving data ... failed.", discreteQ ? ForECol.Accent : ForECol.Incorrection);
                
+            /// After saving data...
+            ///   The "previous self" states of the objects that have been saved should be updated to match what was just saved.
+            ///   By doing this, SaveData() cannot be triggered again from any check of ChangesMade() {in this situation, may also be perceived as "UnsavedChangesQ"}
+
             Wait(savedDataQ ? 1.5f : 3);
             return savedDataQ;
         }
@@ -184,19 +197,24 @@ namespace HCResourceLibraryApp
 
         // TESTING STUFF
         static readonly bool runTest = false;
-        static readonly Tests testToRun = Tests.LogSubmissionPage_DisplayLogInfo;
+        static readonly Tests testToRun = Tests.MiscRoom;
         enum Tests
         {
+            /// <summary>For random tests that need their own space, but no specific test name (variable tests)</summary>
+            MiscRoom, 
+
             PageBase_HighlightMethod,
             PageBase_ListFormMenu,
             PageBase_Wait,
             PageBase_TableFormMenu,
             PageBase_ColorMenu,
+            PageBase_WordWrapping,
             //PageBase_NavigationBar,
 
             Extensions_SortWords,
             LogDecoder_DecodeLogInfo,
-            LogSubmissionPage_DisplayLogInfo,
+            LogSubmissionPage_DisplayLogInfo_Ex1,
+            LogSubmissionPage_DisplayLogInfo_Ex3,
             Dbug_NestedSessions,
             Dbug_DeactivateSessions
         }
@@ -280,6 +298,21 @@ namespace HCResourceLibraryApp
                         valid = ColorMenu("example menu", out Color col, cToExempt);
                         attempts--;
                         NewLine(3);
+                    }
+                }
+                else if (testToRun == Tests.PageBase_WordWrapping)
+                {
+                    hasDebugQ = false;
+                    string[] examplesToTest =
+                    {
+                        "",
+                    };
+
+                    foreach (string example in examplesToTest)
+                    {
+                        TextLine(example, Color.Gray);
+                        TextLine(example, Color.Yellow);
+                        NewLine();
                     }
                 }
                 /// Extensions tests
@@ -426,13 +459,16 @@ namespace HCResourceLibraryApp
                             logDecoder.DecodeLogInfo(testLogData);
                 }
                 /// Log Submission Page
-                else if (testToRun == Tests.LogSubmissionPage_DisplayLogInfo)
+                else if (testToRun == Tests.LogSubmissionPage_DisplayLogInfo_Ex1 || testToRun == Tests.LogSubmissionPage_DisplayLogInfo_Ex3)
                 {
                     hasDebugQ = false;
                     TextLine("Displays information from a log decoder", Color.DarkGray);
-                    bool locationSet = SetFileLocation(@"C:\Users\ntrc2\source\repos\HCResourceLibraryApp\TextFileExtras\HCRLA - Ex3 Version Log.txt");
-                    //@"C:\Users\ntrc2\source\repos\HCResourceLibraryApp\TextFileExtras\HCRLA - Ex1 Version Log.txt"
-                    //@"C:\Users\ntrc2\source\repos\HCResourceLibraryApp\TextFileExtras\HCRLA - Ex3 Version Log.txt"
+
+                    bool locationSet;
+                    if (testToRun == Tests.LogSubmissionPage_DisplayLogInfo_Ex1)
+                        locationSet = SetFileLocation(@"C:\Users\ntrc2\source\repos\HCResourceLibraryApp\TextFileExtras\HCRLA - Ex1 Version Log.txt");
+                    else locationSet = SetFileLocation(@"C:\Users\ntrc2\source\repos\HCResourceLibraryApp\TextFileExtras\HCRLA - Ex3 Version Log.txt");
+
                     if (locationSet)
                         if (FileRead(null, out string[] testLogData))
                             if (logDecoder.DecodeLogInfo(testLogData))
@@ -542,6 +578,28 @@ namespace HCResourceLibraryApp
                     Dbug.Log("Enabled log line E");
                     Dbug.EndLogging();
                 }
+
+                /// Misc Room
+                else if (testToRun == Tests.MiscRoom)
+                {
+                    /// DON'T DELETE THIS HEADER | provide test name
+                    TextLine("Settings Page: Create Numeric Ranges", Color.DarkGray);
+
+                    string numbers = "0 1 2 4 6 10 12 13 14 16 17 18 19 24 26 27 29 30 31 33 35 36 37";
+                    TextLine($"Creating range from numbers:\n\t{numbers}");
+                    TextLine($"  Result:\t{SettingsPage.CreateNumericRanges(numbers.Split(" "))}");
+
+                    NewLine(2);
+                    numbers = "20 22 30 31 32 33 34 35 36 37 39 40 41 42 43 45 46 48 57 58 60 61 62 64";
+                    TextLine($"Creating range from numbers:\n\t{numbers}");
+                    TextLine($"  Result:\t{SettingsPage.CreateNumericRanges(numbers.Split(" "))}");
+
+                    NewLine(2);
+                    numbers = "56 57 59 60 61 64 66 69 70";
+                    TextLine($"Creating range from numbers:\n\t{numbers}");
+                    TextLine($"  Result:\t{SettingsPage.CreateNumericRanges(numbers.Split(" "))}");
+                }
+
 
                 if (hasDebugQ)
                     TextLine("\n\n## Debug(s) to output have been ran ##", Color.Maroon);

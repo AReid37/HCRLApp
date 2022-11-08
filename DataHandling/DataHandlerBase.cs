@@ -10,14 +10,15 @@ namespace HCResourceLibraryApp.DataHandling
         #region fields / props
         /// <summary>Separator character in file encoding/decoding.</summary>
         internal const string Sep = "%"; // percentage symbol (seperator character; also dissallowed in HCAutoLogger)  [old seperator character --> * asterik (but is used in LEGEND...facepalm)]
-        public const string FileDirectory = @"C:\Users\ntrc2\OneDrive\Pictures\High Contrast Textures\HCToolApps\HCRLA\hcd-tests\"; // public for Dbug.cs
+        // public for Dbug.cs
+        public static string FileDirectory = !Program.isDebugVersionQ? @"hcd\hcrlaData.txt" : @"C:\Users\ntrc2\OneDrive\Pictures\High Contrast Textures\HCToolApps\HCRLA\hcd-tests\"; 
         const string FileName = "hcrlaData.txt", BackupFileName = "hcrlaDataBackup.txt"; // change '.txt' to '.hcd' at end of development? Nn....NnnAahhh!
         const string SessionKeyTag = "skt";
         const int sessionKeyLength = 5;
         // OG = @"hcd\hcrlaData.txt"
         // DBG = @"C:\Users\ntrc2\OneDrive\Pictures\High Contrast Textures\HCToolApps\HCRLA\hcd-tests\hcrlaData.txt"
-        protected const string FileLocation = FileDirectory + FileName;
-        protected const string BackupFileLocation = FileDirectory + BackupFileName;
+        protected static string FileLocation = FileDirectory + FileName;
+        protected static string BackupFileLocation = FileDirectory + BackupFileName;
         protected string commonFileTag;
 
         static bool _reversionAvailableQ;
@@ -284,6 +285,7 @@ namespace HCResourceLibraryApp.DataHandling
                 }
                 sessionKey += keyPiece;
             }
+            Dbug.SingleLog("DataBaseHandler.GetSaveSessionKey()", $"FYI -- {sessionKey}");
             return sessionKey;
         }
 

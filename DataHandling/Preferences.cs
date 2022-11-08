@@ -203,6 +203,7 @@ namespace HCResourceLibraryApp.DataHandling
 
         protected override bool EncodeToSharedFile()
         {
+            Dbug.IgnoreNextLogSession();
             Dbug.StartLogging("Preferences.EncodeToSharedFile()");
             List<string> prefDataLines = new List<string>();
 

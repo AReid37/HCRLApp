@@ -108,6 +108,7 @@ namespace HCResourceLibraryApp.DataHandling
                 return idCount;
             }
         }
+        /// <summary>Returns the data IDs as a single string separated by space characters (' ').</summary>
         public string DataIDString
         {
             get
@@ -131,7 +132,8 @@ namespace HCResourceLibraryApp.DataHandling
                 _dataIDs = new List<string>();
                 foreach (string dataID in dataIDs.SortWords())
                     if (dataID.IsNotNEW())
-                        _dataIDs.Add(dataID);
+                        if (!_dataIDs.Contains(dataID)) // add no duplicate data IDs
+                            _dataIDs.Add(dataID);
             }
         }
 
@@ -251,19 +253,19 @@ namespace HCResourceLibraryApp.DataHandling
                 {
                     switch (cmp)
                     {
-                        case 1:
+                        case 0:
                             areEqual = cbg.IsSetup() == IsSetup();
                             break;
 
-                        case 2:
+                        case 1:
                             areEqual = cbg.ContentName == ContentName;
                             break;
 
-                        case 3:
+                        case 2:
                             areEqual = cbg.VersionNum.Equals(VersionNum);
                             break;
 
-                        case 4:
+                        case 3:
                             areEqual = cbg._dataIDs.HasElements() == _dataIDs.HasElements();
                             if (_dataIDs.HasElements())
                             {

@@ -3,7 +3,9 @@ using HCResourceLibraryApp.DataHandling;
 using ConsoleFormat;
 using static ConsoleFormat.Base;
 using static ConsoleFormat.Minimal;
+using System.Collections.Generic;
 using System;
+using System.Linq;
 
 namespace HCResourceLibraryApp.Layout
 {
@@ -278,7 +280,8 @@ namespace HCResourceLibraryApp.Layout
                         TextLine("Deny", newForeCols.Incorrection);
                         FormatLine(previewDiv, ForECol.Accent);
                         #endregion
-                        NewLine();
+                        HSNL(0, 2);
+                        FormatLine($"#These element colors also affects the title: {HomePage.primaryCol}, {HomePage.secondaryCol}, {HomePage.tertiaryCol}.", ForECol.Accent);
                         ShowPrefsColors(newForeCols);                        
                         FormatLine("0|Reset to defaults", ForECol.Normal);
                         NewLine();
@@ -455,11 +458,226 @@ namespace HCResourceLibraryApp.Layout
         // not done...
         static void SubPage_ContentIntegrity()
         {
-            Program.LogState("Settings|ContentIntegrity (tbd)");
-            HorizontalRule(subMenuUnderline, 2);
-            TextLine("To Be Done :: Content Integrity Verification Page\n  Elements --");
-            List(OrderType.Unordered, "Display Contents in Library (Data IDs only)", "Verify Content Integrity", ". Content Locations and File Types", ". Run Verification Integrity");
-            Pause();
+            bool exitContentIntegrityMenu = false;
+            do
+            {
+                Program.LogState("Settings|Content Integrity (wip)");
+                Clear();
+
+                string[] conIntOptions = { "Verify Content Integrity", "View All Data IDs", $"{exitSubPagePhrase} [Enter]" };
+                bool validKey, quitMenuQ;
+                string setConIntKey;
+                validKey = ListFormMenu(out setConIntKey, "Content Integrity Menu", subMenuUnderline, $"{Ind24}Select an option >> ", "1/2", true, conIntOptions);
+                quitMenuQ = LastInput.IsNE() || setConIntKey == "c";
+                MenuMessageQueue(!validKey && !quitMenuQ, false, null);
+
+                if (!quitMenuQ && validKey)
+                {
+                    bool librarySetup = false;
+                    if (_resLibrary != null)
+                        librarySetup = _resLibrary.IsSetup();
+                    string titleText = "Content Integrity: " + (setConIntKey == "a" ? conIntOptions[0] : conIntOptions[1]);
+                    Clear();
+                    Title(titleText, subMenuUnderline, 0);
+
+                    // verify content integrity
+                    if (setConIntKey.Equals("a") && librarySetup)
+                    {
+                        NewLine(2);
+                        Text("WIP...");
+                        Pause();
+                        // tbd...
+                    }
+
+                    // view all data Ids
+                    else if (setConIntKey.Equals("b") && librarySetup)
+                    {
+                        NewLine();
+                        Dbug.StartLogging("SettingsPage.SubPage_ContentIntegrity():ViewAllDataIds");
+
+                        // gather data
+                        /// fetch legend keys
+                        const string miscPhrase = "Miscellaneous";
+                        List<string> legendKeys = new() { miscPhrase }, legendDefs = new() { miscPhrase };
+                        List<string> legendSymbols = new();
+                        Dbug.Log("Fetching Legend Keys (and Definitions) --> ");
+                        Dbug.NudgeIndent(true);
+                        foreach (LegendData legDat in _resLibrary.Legends)
+                        {
+                            Dbug.LogPart($"Key '{legDat.Key}' | Added? {IsNotSymbol(legDat.Key)}");
+                            if (IsNotSymbol(legDat.Key))
+                            {
+                                legendKeys.Add(legDat.Key);
+                                /// adding key before definition so they are sorted similarly
+                                legendDefs.Add($"{legDat.Key} {legDat[0]}");
+                                Dbug.LogPart($" | and Definition '{legDat[0]}'");
+                            }
+                            else legendSymbols.Add(legDat.Key);
+                            Dbug.Log("; ");
+                        }
+                        Dbug.NudgeIndent(false);
+                        Dbug.Log("Done, and sorted; ");
+                        legendKeys = legendKeys.ToArray().SortWords();
+                        legendDefs = legendDefs.ToArray().SortWords();
+
+                        /// fetch all data ids
+                        List<string> allDataIds = new();
+                        Dbug.Log("Fetching all Data IDs (Data Id's in angled brackets '<>' were rejected); Note that legend symbols are disregarded; ");
+                        Dbug.NudgeIndent(true);
+                        foreach (ResContents resCon in _resLibrary.Contents)
+                        {
+                            Dbug.LogPart($"From #{resCon.ShelfID} {$"'{resCon.ContentName}'", -30}  //  CBG :: ");
+                            for (int cbx = 0; cbx < resCon.ConBase.CountIDs; cbx++)
+                            {
+                                string datID = RemoveLegendSymbols(resCon.ConBase[cbx]);
+                                if (!allDataIds.Contains(datID))
+                                {
+                                    allDataIds.Add(datID);
+                                    Dbug.LogPart($"{datID} ");
+                                }
+                                else Dbug.LogPart($"<{datID}> ");
+                            }
+
+                            if (resCon.ConAddits.HasElements())
+                            {
+                                Dbug.LogPart("  //  CAs ::");
+                                for (int casx = 0; casx < resCon.ConAddits.Count; casx++)
+                                {
+                                    Dbug.LogPart($" |[{casx + 1}]");
+                                    ContentAdditionals conAdt = resCon.ConAddits[casx];
+                                    for (int cax = 0; cax < conAdt.CountIDs; cax++)
+                                    {
+                                        string datID = RemoveLegendSymbols(conAdt[cax]);
+                                        if (!allDataIds.Contains(datID))
+                                        {
+                                            allDataIds.Add(datID);
+                                            Dbug.LogPart($"{datID} ");
+                                        }
+                                        else Dbug.LogPart($"<{datID}> ");
+                                    }
+                                }
+                            }
+                            Dbug.Log("; ");
+                        }
+                        Dbug.NudgeIndent(false);
+                        Dbug.Log("Done, and sorted; ");
+                        allDataIds = allDataIds.ToArray().SortWords();
+                        
+
+                        // print data IDs in categories by legend
+                        if (legendKeys.HasElements() && legendDefs.HasElements() && allDataIds.HasElements())
+                        {
+                            _resLibrary.GetVersionRange(out _, out VerNum latestVer);
+                            FormatLine($"All data IDs from shelves of library (version: {latestVer.ToStringNums()}).", ForECol.Accent);
+
+                            Dbug.Log("Printing Data ID categories; ");
+                            Dbug.NudgeIndent(true);
+                            for (int lx = 0; lx < legendKeys.Count; lx++)
+                            {
+                                string legendKey = legendKeys[lx];
+                                string legendDef = legendKey != miscPhrase ? legendDefs[lx].Replace($"{legendKey} ", "") : legendDefs[lx];
+                                Dbug.Log($"Category '{legendKey}' [{legendDef}]");
+
+                                //Highlight(false, $"{(legendKey == miscPhrase ? "" : $"'{legendKey}' ")}[{legendDef}]{Ind24}", $"[{legendDef}]");
+                                Highlight(HSNL(0, 2) > 1, $"[{legendDef}]{Ind14}", $"[{legendDef}]");
+
+                                Dbug.NudgeIndent(true);
+                                string dataIDList = "";
+                                for (int dx = 0; dx < allDataIds.Count; dx++)
+                                {
+                                    string datIDToPrint = "";
+                                    string datID = allDataIds[dx];
+
+                                    // print numeric data IDs
+                                    if (legendKey != miscPhrase)
+                                    {
+                                        if (!LogDecoder.IsNumberless(datID))
+                                            if (LogDecoder.RemoveNumbers(datID) == legendKey)
+                                                datIDToPrint = datID.Replace(legendKey, "");
+                                    }
+
+                                    // print wordy data IDs (numberless)
+                                    else
+                                    {
+                                        if (LogDecoder.IsNumberless(datID))
+                                            datIDToPrint = datID;
+                                    }
+
+                                    Dbug.LogPart($"{datIDToPrint} ");
+                                    if (datIDToPrint.IsNotNE())
+                                        dataIDList += $"{datIDToPrint} ";
+                                }
+
+                                if (legendKey != miscPhrase)
+                                {
+                                    Dbug.LogPart(" ..  Condensing with ranges");
+                                    string dataIDListWithRanges = CreateNumericRanges(dataIDList.Split(" "));
+                                    if (dataIDList.Contains(dataIDListWithRanges))
+                                        Dbug.Log("; Remains uncondensed; ");
+                                    else Dbug.Log("; ");
+
+                                    if (dataIDListWithRanges.IsNotNE())
+                                    {
+                                        Dbug.LogPart($":: {dataIDListWithRanges}");
+                                        dataIDList = dataIDListWithRanges;
+                                    }
+                                }
+                                Format(dataIDList.Trim(), ForECol.Normal);                                
+                                NewLine(lx + 1 != legendKeys.Count ? 2 : 1);
+                                Dbug.Log($" //  End '{legendKey}'");
+                                Dbug.NudgeIndent(false);
+                            }
+                            Dbug.NudgeIndent(false);
+                            //Format("All Data IDs found within library are displayed above.", ForECol.Accent);
+                            Pause();
+                        }
+                        Dbug.EndLogging();
+
+                        // method
+                        string RemoveLegendSymbols(string str)
+                        {
+                            if (legendSymbols.HasElements() && str.IsNotNE())
+                            {
+                                foreach (string legSym in legendSymbols)
+                                    str = str.Replace(legSym, "");
+                                str = str.Trim();
+                            }
+                            return str;
+                        }
+                    }
+
+                    // no library??
+                    else if (!librarySetup)
+                    {
+                        NewLine(2);
+                        Format("The library shelves are empty. This page requires the library to contain some data.", ForECol.Normal);
+                        Pause();
+                    }
+
+
+                    // (static) methods
+                    bool IsSymbol(string str)
+                    {
+                        bool isSym = false;
+                        if (str.IsNotNE())
+                        {
+                            isSym = true;
+                            if (int.TryParse(str, out _))
+                                isSym = false;
+                            else if (str.ToLower() != str.ToUpper())
+                                isSym = false;
+                        }
+                        return isSym;
+                    }
+                    bool IsNotSymbol(string str)
+                    {
+                        return !IsSymbol(str);
+                    }
+                }
+                else if (quitMenuQ)
+                    exitContentIntegrityMenu = true;
+            }
+            while (!exitContentIntegrityMenu);
         }
         // done
         static void SubPage_Reversion()
@@ -473,14 +691,13 @@ namespace HCResourceLibraryApp.Layout
 
                 string[] revertMenuOpts = { "File Save Reversion", "Version Reversion", $"{exitSubPagePhrase} [Enter]" };
                 bool validKey, quitMenuQ;
-                string setRevKey;
-                validKey = ListFormMenu(out setRevKey, "Reversion Settings Menu", subMenuUnderline, $"{Ind24}Select an option >> ", "a/b", true, revertMenuOpts);
+                validKey = ListFormMenu(out string setRevKey, "Reversion Settings Menu", subMenuUnderline, $"{Ind24}Select an option >> ", "a/b", true, revertMenuOpts);
                 quitMenuQ = LastInput.IsNE() || setRevKey == "c";
                 MenuMessageQueue(!validKey && !quitMenuQ, false, null);
 
                 if (!quitMenuQ && validKey)
                 {
-                    string titleText = "Preferences: " + (setRevKey.Equals("a") ? revertMenuOpts[0] : revertMenuOpts[1]);
+                    string titleText = "Reversion: " + (setRevKey.Equals("a") ? revertMenuOpts[0] : revertMenuOpts[1]);
                     Clear();
                     Title(titleText, subMenuUnderline, 2);
 
@@ -492,7 +709,7 @@ namespace HCResourceLibraryApp.Layout
                         // continue to reversion
                         if (DataHandlerBase.AvailableReversion)
                         {
-                            Program.LogState("Settings|Reversion|FileSaveRevert - Allowed");
+                            Program.LogState("Settings|Reversion|File Save Revert - Allowed");
                             NewLine();
                             FormatLine("NOTE :: A file save reversion will require a program restart.", ForECol.Accent);
 
@@ -524,7 +741,7 @@ namespace HCResourceLibraryApp.Layout
                         // deny reversion access
                         else
                         {
-                            Program.LogState("Settings|Reversion|FileSaveRevert - Denied");
+                            Program.LogState("Settings|Reversion|File Save Revert - Denied");
                             NewLine();
                             Format("File reversion is not available (no save state to revert to).", ForECol.Normal);
                             Pause();
@@ -662,6 +879,109 @@ namespace HCResourceLibraryApp.Layout
                     exitReversionMenu = true;
             } 
             while (!exitReversionMenu && !Program.AllowProgramRestart);
+        }
+
+
+        public static string CreateNumericRanges(string[] numbers)
+        {
+            string rangedNumbers = "";
+            if (numbers.HasElements())
+            {
+                Dbug.IgnoreNextLogSession();
+                Dbug.StartLogging("SettingsPage.CreateNumericRanges(str[])");
+                Dbug.Log($"Recieved '{numbers.Length}' numbers to create ranges from; Removing null/empty entries; Creating Ranges; ");
+                List<string> fltNumbers = new List<string>();
+                foreach (string numT in numbers)
+                    if (numT.IsNotNEW())
+                        fltNumbers.Add(numT);
+
+                Dbug.Log($"LEGEND :: Range Enter Key '{{' -- Range Exit Key '}}' -- Base Number '@#' --  End Range Number '!'");
+                //Dbug.Log($"LEGEND :: Range Enter Key '{{' -- Range Exit Key '}}' -- Base Number 'b.# ' --  End Range Number 'e.#'");
+
+                string baseNumT = null;
+                bool withinRangeQ = false;
+                for (int rx = 0; rx < fltNumbers.Count; rx++)
+                {
+                    string currNumT = fltNumbers[rx];
+                    string prevNumT = rx > 0 ? fltNumbers[rx - 1] : null;
+                    bool lastNumberQ = rx + 1 == fltNumbers.Count;
+
+                    string numToPrint = "";
+                    if (int.TryParse(currNumT, out int currNum))
+                    {
+                        if (int.TryParse(prevNumT, out int prevNum))
+                        {
+                            if (prevNum + 1 == currNum)
+                            {
+                                if (!withinRangeQ)
+                                {
+                                    Dbug.LogPart(" {");
+                                    withinRangeQ = true;
+                                    baseNumT = prevNum.ToString();
+
+                                    Dbug.LogPart($"@{baseNumT}'{currNumT}");
+
+                                    if (rangedNumbers.IsNotNE() && baseNumT.IsNotNE())
+                                        rangedNumbers = rangedNumbers.Remove((rangedNumbers.Length - baseNumT.Length - 1).Clamp(0, rangedNumbers.Length - 1));
+                                    
+                                    if (!lastNumberQ)
+                                        numToPrint = baseNumT;
+                                    else
+                                    {
+                                        Dbug.LogPart($"!}} -> ");
+                                        numToPrint = $"{baseNumT},{currNum}";
+                                    }
+
+                                }
+                                else
+                                {
+                                    if (!lastNumberQ)
+                                        Dbug.LogPart($"'{currNumT}");
+                                    else
+                                    {
+                                        Dbug.LogPart($"'{currNumT}!}} -> ");
+                                        numToPrint = "~" + currNumT;
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                if (withinRangeQ)
+                                {
+                                    if (int.TryParse(baseNumT, out int baseNum))
+                                        if (baseNum + 1 == prevNum)
+                                            numToPrint = $",{prevNumT},";
+                                    if (numToPrint.IsNE())
+                                        numToPrint = $"~{prevNumT},";
+
+                                    Dbug.LogPart($"!}}");
+                                }
+
+                                Dbug.LogPart($" {currNumT}");
+                                numToPrint += $"{currNumT},";
+
+                                withinRangeQ = false;
+                                baseNumT = null;
+                            }
+                        }
+                        else
+                        {
+                            Dbug.LogPart($" {currNumT}");
+                            numToPrint += $"{currNumT},";
+                        }
+                    }
+
+                    if (numToPrint.IsNotNE())
+                        rangedNumbers += numToPrint;
+                }
+                Dbug.Log(" // End");
+
+                if (rangedNumbers.IsNotNE())
+                    rangedNumbers = rangedNumbers.Replace(",", " ").Trim();
+                Dbug.Log($"Result Range Numbers: {rangedNumbers}");
+                Dbug.EndLogging();
+            }
+            return rangedNumbers;
         }
     }
 }

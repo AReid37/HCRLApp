@@ -21,7 +21,7 @@ PURPOSE :: (similar to Ex1)
 10|Egg Shell Loafers - (i72; a6)
 
 [ADDITIONAL]
-> OneItemGlows (g0, g2`~g4`) - One Item (i1)
+> OneItemGlows (g0,g2`~g4`) - One Item (i1)
 > (Shr_Donut) - ShugharDounut (i324)
 > Grain View Controller (i242) - Grains Biome Backgrounds (b11`)
 
@@ -41,6 +41,7 @@ PURPOSE :: (similar to Ex1)
 i - Item
 t - Tiles
 d - Dust
+b - Background
 g - Glow
 a - Armor
 ` - LOTB

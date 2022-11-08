@@ -77,7 +77,7 @@ namespace HCResourceLibraryApp.Layout
 
 
         // PROPERTIES
-        public static bool VerifyFormatUsage { private get; set; }
+        public static bool VerifyFormatUsage { get; set; }
         #endregion
 
 
@@ -162,6 +162,7 @@ namespace HCResourceLibraryApp.Layout
         {
             if (text.IsNotNE())
             {
+                WordWrap(text);
                 if (VerifyFormatUsage)
                 {
                     Text(FormatUsageKey, Color.DarkGray);
@@ -175,6 +176,7 @@ namespace HCResourceLibraryApp.Layout
         {
             if (text.IsNotNE())
             {
+                WordWrap(text);
                 if (VerifyFormatUsage)
                 {
                     Text(FormatUsageKey, Color.DarkGray);
@@ -183,6 +185,12 @@ namespace HCResourceLibraryApp.Layout
                 }
                 TextLine(text, GetPrefsForeColor(foreElementCol));
             }
+        }
+        // public for testing purposes
+        public static string WordWrap(string text)
+        {
+            /// from 'left' to 'right - 1' char spaces
+            return text;
         }
         /// <summary>
         ///     Highlights words or phrases within a larger text.
@@ -197,8 +205,6 @@ namespace HCResourceLibraryApp.Layout
             Dbug.Log($"Recieved --> text (\"{text}\"); highlightedTexts (has elements? {highlightedTexts.HasElements()})");
             if (text.IsNotNEW() && highlightedTexts.HasElements())
             {
-
-                //List<short> insertIndexes = new List<short>();
                 short highlightIndex = 0;
                 foreach (string highText in highlightedTexts)
                 {
@@ -217,7 +223,35 @@ namespace HCResourceLibraryApp.Layout
                     highlightIndex++;
                 }
 
-                string[] textWords = text.Split(' ');
+                string[] textWords = null;
+                if (textWords == null)
+                { /// wrapping
+                    //Dbug.LogPart("Compiling words ::  ");
+                    List<string> testWordsCompile = new();
+                    string wordBuild = "";
+                    bool readingSpaces = false;
+                    foreach (char character in text)
+                    {
+                        if (character != ' ' && readingSpaces)
+                        {
+                            testWordsCompile.Add(wordBuild);
+                            wordBuild = character.ToString();
+                            readingSpaces = false;
+                        }
+                        else
+                        {
+                            wordBuild += character;
+                            readingSpaces = character == ' ';
+                        }
+                    }
+                    /// get the last word in
+                    if (wordBuild.IsNotNE())
+                        testWordsCompile.Add(wordBuild);
+                    //Dbug.Log("  --> Done");
+
+                    textWords = testWordsCompile.ToArray();
+                }
+
                 for (int c = 0; c < textWords.Length; c++)
                 {
                     Dbug.LogPart($".. |");
@@ -287,8 +321,8 @@ namespace HCResourceLibraryApp.Layout
                             Dbug.Log($"format normal word >> '{word}' (on newline? {end && newLine})");
                         }
 
-                        if (!end)
-                            Text(" ");
+                        //if (!end)
+                        //    Text(" ");
                     }
                     else Dbug.Log("null or empty word~");
                 }
@@ -301,16 +335,54 @@ namespace HCResourceLibraryApp.Layout
             string input = Input(placeholder, _preferencesRef.Input);
             return input;
         }
-        public static void Heading2(string headingText, bool toLower)
+        /// <summary>Height Sensitive New Line.</summary>
+        /// <returns>A newline number between a given range dependent on Height Scale of console window.</returns>
+        public static int HSNL(int minimumNL, int maximumNL)
         {
-            if (headingText.IsNotNEW())
+            int numOfNewLines = 0;
+            if (minimumNL <= maximumNL && _preferencesRef != null)
             {
-                if (!toLower)
-                    headingText = headingText.ToUpper();
-                else headingText = headingText.ToLower();
-                FormatLine(headingText, ForECol.Heading2);
+                float range = maximumNL - minimumNL;
+                /// x -> variable prefs height factor
+                /// n -> minimum prefs height factor
+                /// m -> maximum prefs height factor
+                /// rngFac --> range factor (must be value between 0 and 1)
+                /// 
+                /// Formula synthesis
+                ///     > m - n = fixed factor range (denominator)
+                ///     > x - n = variable range (numerator)
+                ///     > rngFac = (x - n) / (m - n)
+                float rangeFactor = (_preferencesRef.HeightScale.GetScaleFactorH() - DimHeight.Squished.GetScaleFactorH()) / (DimHeight.Fill.GetScaleFactorH() - DimHeight.Squished.GetScaleFactorH());
+                numOfNewLines = minimumNL + (int)(rangeFactor * range);
+                //Dbug.SingleLog("HomePage.HSNL(int, int)", $"Got min|max values ({minimumNL}|{maximumNL}) and range ({range}); Solved for range factor ({rangeFactor * 100:0.0}%); Returned sensitive number of newlines: {numOfNewLines};");
+            }
+            return numOfNewLines;
+        }
+        /// <summary>Height Sensitive New Line Print. 
+        /// Retrieves newline number between a given range dependent on Height Scale of application window and prints those newlines to console.</summary>
+        public static void HSNLPrint(int minimumNL, int maximumNL)
+        {
+            if (minimumNL <= maximumNL && _preferencesRef != null)
+            {
+                float range = maximumNL - minimumNL;
+                /// x -> variable prefs height factor
+                /// n -> minimum prefs height factor
+                /// m -> maximum prefs height factor
+                /// rngFac --> range factor (must be value between 0 and 1)
+                /// 
+                /// Formula synthesis
+                ///     > m - n = fixed factor range (denominator)
+                ///     > x - n = variable range (numerator)
+                ///     > rngFac = (x - n) / (m - n)
+                float rangeFactor = (_preferencesRef.HeightScale.GetScaleFactorH() - DimHeight.Squished.GetScaleFactorH()) / (DimHeight.Fill.GetScaleFactorH() - DimHeight.Squished.GetScaleFactorH());
+                int numOfNewLines = minimumNL + (int)(rangeFactor * range);
+                //Dbug.SingleLog("HomePage.HSNLPrint(int, int)", $"Got min|max values ({minimumNL}|{maximumNL}) and range ({range}); Solved for range factor ({rangeFactor * 100:0.0}%); Returned sensitive number of newlines: {numOfNewLines};");
+
+                NewLine(numOfNewLines);
             }
         }
+
+
 
         // -- -- Validations -- --
         /// <summary>Queues an incorrection message for input validations</summary>

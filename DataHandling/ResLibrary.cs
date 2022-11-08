@@ -433,6 +433,7 @@ namespace HCResourceLibraryApp.DataHandling
         }
         public void ClearLibrary()
         {
+            Dbug.SingleLog("ResLibrary.ClearLibrary()", "ResLibrary's data has been cleared (reset)");
             _contents = new List<ResContents>();
             _legends = new List<LegendData>();
             _summaries = new List<SummaryData>();

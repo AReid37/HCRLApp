@@ -215,7 +215,7 @@ namespace HCResourceLibraryApp
                 - Note that numeric congregation only happens in preparation to comparisons (when the words become arrays of numbers) (to determine order)
             ***/
 
-            Dbug.IgnoreNextLogSession();
+            Dbug.DeactivateNextLogSession();
             Dbug.StartLogging("Extensions.SortWords(this str[])");
             Dbug.Log($"Recieved words to sort... are there really any words to sort? {(words.HasElements() ? "Yes" : "No")}");
             List<string> orderedWords = new();

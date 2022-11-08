@@ -96,6 +96,21 @@ namespace HCResourceLibraryApp.DataHandling
                 return count;
             }
         }
+        /// <summary>Returns the legend key's definitions as a comma-separated bundle.</summary>
+        public string DefinitionsString
+        {
+            get
+            {
+                string defs = "";
+                if (_definitions.HasElements())
+                    for (int dx = 0; dx < _definitions.Count; dx++)
+                    {
+                        defs += $"{_definitions[dx]}{(dx + 1 < _definitions.Count ? ", " : "")}";
+                    }
+                defs = defs.Trim();
+                return defs;
+            }
+        }
         #endregion
 
         public LegendData() { }
@@ -252,15 +267,15 @@ namespace HCResourceLibraryApp.DataHandling
                 {
                     switch (ldx)
                     {
-                        case 1:
+                        case 0:
                             areEquals = IsSetup() == legDat.IsSetup();
                             break;
 
-                        case 2:
+                        case 1:
                             areEquals = Key == legDat.Key;
                             break;
 
-                        case 3:
+                        case 2:
                             areEquals = _definitions.HasElements() == legDat._definitions.HasElements();
                             if (areEquals && _definitions.HasElements())
                             {

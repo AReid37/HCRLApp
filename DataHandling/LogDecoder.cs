@@ -1,7 +1,6 @@
 ﻿using ConsoleFormat;
 using System;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 using static ConsoleFormat.Base;
 
 namespace HCResourceLibraryApp.DataHandling
@@ -27,9 +26,11 @@ namespace HCResourceLibraryApp.DataHandling
                 -- !close --
         **/
         public const string omit = "--", omitBlockOpen = "-- !open --", omitBlockClose = "-- !close --";
+        const char legRangeKey = '~';
         readonly bool runSelfUpdatingTest = false, testLibConAddUpdConnectionQ = false;
         static string _prevRecentDirectory, _recentDirectory;
         bool _hasDecodedQ;
+        static bool _allowLogDecToolsDbugMessagesQ = false;
         public static string RecentDirectory
         {
             get => _recentDirectory.IsNEW() ? null : _recentDirectory;
@@ -86,6 +87,7 @@ namespace HCResourceLibraryApp.DataHandling
             bool hasFullyDecodedLogQ = false;
             Dbug.StartLogging("LogDecoder.DecodeLogInfo(str[])");
             Dbug.Log($"Recieved collection object (data from log?) to decode; collection has elements? {logData.HasElements()}");
+            _allowLogDecToolsDbugMessagesQ = true;
 
             if (logData.HasElements())
             {
@@ -101,8 +103,7 @@ namespace HCResourceLibraryApp.DataHandling
                 string secLeg = DecodedSection.Legend.ToString();   //"Legend"; 
                 string secSum = DecodedSection.Summary.ToString();  //"Summary";
                 #endregion
-                const string secBracL = "[", secBracR = "]";                 
-                const char legRangeKey = '~';
+                const string secBracL = "[", secBracR = "]";
                 const int newResConShelfNumber = 0, maxSectionsCount = 7;
                 string[] logSections =
                 {
@@ -116,7 +117,8 @@ namespace HCResourceLibraryApp.DataHandling
                 #region Decode - Tracking & Temporary Storage
                 bool endFileReading = false;
                 List<string[]> addedPholderNSubTags = new();
-
+                List<string> addedContentsNames = new();
+                List<string> usedLegendKeys = new();
                 List<string> looseInfoRCDataIDs = new();
                 List<ContentAdditionals> looseConAddits = new();
                 List<ContentChanges> looseConChanges = new();
@@ -585,8 +587,12 @@ namespace HCResourceLibraryApp.DataHandling
                                                         {
                                                             addedContsNDatas[1] = RemoveParentheses(addedContsNDatas[1]);
                                                             addedContentName = FixContentName(addedContsNDatas[0]);
+                                                            bool okayContentName = true;
+                                                            if (addedContentsNames.HasElements())
+                                                                okayContentName = !addedContentsNames.Contains(addedContentName);
+
                                                             Dbug.Log("Fetching content data IDs; ");
-                                                            if (addedContsNDatas[1].CountOccuringCharacter(';') <= 1) /// Zest -(x22)
+                                                            if (addedContsNDatas[1].CountOccuringCharacter(';') <= 1 && okayContentName) /// Zest -(x22)
                                                             {
                                                                 bool missingMainIDq = false;
                                                                 if (addedContsNDatas[1].CountOccuringCharacter(';') == 0)
@@ -602,7 +608,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                                     if (dataIdGroups.HasElements())
                                                                         foreach (string dataIDGroup in dataIdGroups)
                                                                         {
-                                                                            // For invalid Id (groups)
+                                                                            // For invalid id groups
                                                                             /// yxx,tyy
                                                                             /// qes
                                                                             if (IsNumberless(dataIDGroup))
@@ -618,6 +624,8 @@ namespace HCResourceLibraryApp.DataHandling
                                                                                 decodeInfo.NoteIssue($"Data ID group '{dataIDGroup}' is just numbers (invalid)");
                                                                                 Dbug.Log("; ");
                                                                             }
+                                                                            
+                                                                            // for valid id groups
                                                                             /// y32,33
                                                                             else if (dataIDGroup.Contains(','))
                                                                             {
@@ -625,10 +633,13 @@ namespace HCResourceLibraryApp.DataHandling
                                                                                 string[] dataIDs = dataIDGroup.Split(',', StringSplitOptions.RemoveEmptyEntries);
                                                                                 if (dataIDs.HasElements(2))
                                                                                 {
-                                                                                    string dataKey = RemoveNumbers(dataIDs[0]);
+                                                                                    Dbug.LogPart("; ");
+                                                                                    GetDataKeyAndSuffix(dataIDs[0], out string dataKey, out string suffix);
+                                                                                    NoteLegendKey(usedLegendKeys, dataKey);
+                                                                                    NoteLegendKey(usedLegendKeys, suffix);
                                                                                     if (dataKey.IsNotNEW())
                                                                                     {
-                                                                                        Dbug.LogPart($"; Retrieved data key '{dataKey}'; Adding IDs :: ");
+                                                                                        Dbug.LogPart($"Retrieved data key '{dataKey}'; Adding IDs :: ");
                                                                                         foreach (string datId in dataIDs)
                                                                                         {
                                                                                             string datToAdd = $"{dataKey}{datId.Trim().Replace(dataKey, "")}";
@@ -653,15 +664,16 @@ namespace HCResourceLibraryApp.DataHandling
                                                                             else if (dataIDGroup.Contains(legRangeKey))
                                                                             {
                                                                                 Dbug.LogPart($"Got range ID group '{dataIDGroup}'; ");
+                                                                                NoteLegendKey(usedLegendKeys, legRangeKey.ToString());
+
                                                                                 string[] dataIdRng = dataIDGroup.Split(legRangeKey);
                                                                                 if (dataIdRng.HasElements() && dataIDGroup.CountOccuringCharacter(legRangeKey) == 1)
                                                                                 {
-                                                                                    string dataKey = RemoveNumbers(dataIdRng[0]);
+                                                                                    GetDataKeyAndSuffix(dataIdRng[0], out string dataKey, out string dkSuffix);
+                                                                                    NoteLegendKey(usedLegendKeys, dataKey);
+                                                                                    NoteLegendKey(usedLegendKeys, dkSuffix);
                                                                                     if (dataKey.IsNotNEW())
                                                                                     {
-                                                                                        string dkSuffix = RemoveNumbers(dataIdRng[0].Replace(dataKey, ""));
-                                                                                        if (dkSuffix.IsNEW())
-                                                                                            dkSuffix = RemoveNumbers(dataIdRng[1].Replace(dataKey, ""));
                                                                                         Dbug.LogPart($"Retrieved data key '{dataKey}' and suffix [{(dkSuffix.IsNEW() ? "<none>" : dkSuffix)}]; ");
 
                                                                                         dataIdRng[0] = dataIdRng[0].Replace(dataKey, "");
@@ -727,6 +739,10 @@ namespace HCResourceLibraryApp.DataHandling
                                                                             /// x25 q14 ...
                                                                             else
                                                                             {
+                                                                                GetDataKeyAndSuffix(dataIDGroup, out string dataKey, out string suffix);
+                                                                                NoteLegendKey(usedLegendKeys, dataKey);
+                                                                                NoteLegendKey(usedLegendKeys, suffix);
+
                                                                                 addedDataIDs.Add(dataIDGroup.Trim());
                                                                                 Dbug.Log($"Got and added ID '{dataIDGroup.Trim()}'; ");
                                                                             }
@@ -744,8 +760,16 @@ namespace HCResourceLibraryApp.DataHandling
                                                             }
                                                             else
                                                             {
-                                                                Dbug.LogPart("Data IDs line contains too many ';'");
-                                                                decodeInfo.NoteIssue("Data IDs line contains too many ';'");
+                                                                if (okayContentName)
+                                                                {
+                                                                    Dbug.LogPart("Data IDs line contains too many ';'");
+                                                                    decodeInfo.NoteIssue("Data IDs line contains too many ';'");
+                                                                }
+                                                                else
+                                                                {
+                                                                    Dbug.LogPart("Content with this name has already been added");
+                                                                    decodeInfo.NoteIssue("Content with this name has already been added");
+                                                                }
                                                             }
                                                         }
                                                     }
@@ -805,6 +829,7 @@ namespace HCResourceLibraryApp.DataHandling
                                         // complete (Dbug revision here)
                                         if (addedDataIDs.HasElements() && addedContentName.IsNotNEW())
                                         {
+                                            addedContentsNames.Add(addedContentName);
                                             Dbug.LogPart($" --> Obtained content name ({addedContentName}) and data Ids (");
                                             foreach (string datID in addedDataIDs)
                                                 Dbug.LogPart($"{datID} ");
@@ -905,7 +930,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                         /// (q41~44)
                                                         /// (Cod_Tail)
                                                         /// Mackrel Chunks  <-->  (r230,231 y192)
-                                                        // parsed additional content
+                                                        // + parsed additional content +
                                                         splitAdditLine[0] = splitAdditLine[0].Replace("(", " (").Replace(")", ") ");
                                                         Dbug.LogPart("Spaced-out parentheses in contents; ");
                                                         string[] additContsData = splitAdditLine[0].Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
@@ -950,8 +975,26 @@ namespace HCResourceLibraryApp.DataHandling
                                                                     string[] datIDs = adtDataIDs.Split(',', StringSplitOptions.RemoveEmptyEntries);
                                                                     if (datIDs.HasElements())
                                                                     {
-                                                                        string dataKey = RemoveNumbers(datIDs[0].Replace(legRangeKey.ToString(), ""));
-                                                                        string dkSuffix = null;
+                                                                        string dataKey = null; //RemoveNumbers(datIDs[0].Replace(legRangeKey.ToString(), ""));
+                                                                        string dkSuffix = null; 
+                                                                        if (datIDs[0].Contains(legRangeKey))
+                                                                        {
+                                                                            string[] rangeParts = datIDs[0].Split(legRangeKey);
+                                                                            if (rangeParts.HasElements(2))
+                                                                            {
+                                                                                GetDataKeyAndSuffix(rangeParts[0], out dataKey, out dkSuffix);
+                                                                                /// below doesn't interfere with out-of-scope values
+                                                                                GetDataKeyAndSuffix(rangeParts[1], out string dk, out string dksfx);
+                                                                                NoteLegendKey(usedLegendKeys, dk);
+                                                                                NoteLegendKey(usedLegendKeys, dksfx);
+                                                                            }
+                                                                        }
+                                                                        else GetDataKeyAndSuffix(datIDs[0], out dataKey, out dkSuffix);
+                                                                        NoteLegendKey(usedLegendKeys, dataKey);
+                                                                        NoteLegendKey(usedLegendKeys, dkSuffix);
+
+                                                                        Dbug.LogPart($"Retrieved data key '{dataKey}'{(dkSuffix.IsNEW() ? "" : $" and suffix [{dkSuffix}]")}; ");
+                                                                        
                                                                         bool isOnlyNumber = false;
                                                                         if (RemoveNumbers(adtDataIDs.Replace(",", "").Replace(legRangeKey.ToString(), "")).IsNEW())
                                                                         {
@@ -971,32 +1014,38 @@ namespace HCResourceLibraryApp.DataHandling
                                                                                     if (invalidDataKey)
                                                                                         Dbug.LogPart($"Treating Data ID as word (is numberless); ");
 
-                                                                                    // fetch data key and suffix
-                                                                                    if (!invalidDataKey)
-                                                                                    {
-                                                                                        string preDataKey = RemoveNumbers(datId);
-                                                                                        string numAtSplit = null;
-                                                                                        if (preDataKey.IsNotNEW())
-                                                                                        {
-                                                                                            numAtSplit = datId;
-                                                                                            foreach (char c in preDataKey)
-                                                                                                numAtSplit = numAtSplit.Replace(c.ToString(), "");
-                                                                                        }
+                                                                                    /// no longer necessary...
+                                                                                    // fetch data key and suffix 
+                                                                                    //if (!invalidDataKey)
+                                                                                    //{
+                                                                                    //    //if (dataKey.IsNEW())
+                                                                                    //    //{
+                                                                                            
+                                                                                    //    //}
 
-                                                                                        if (numAtSplit.IsNotNEW())
-                                                                                        {
-                                                                                            string[] splitDat = datId.Split(numAtSplit);
-                                                                                            if (splitDat.HasElements(2))
-                                                                                            {
-                                                                                                if (splitDat[0].IsNotNEW())
-                                                                                                    dataKey = splitDat[0];
-                                                                                                if (splitDat[1].IsNotNEW())
-                                                                                                    dkSuffix = splitDat[1];
+                                                                                    //    //string preDataKey = RemoveNumbers(datId);
+                                                                                    //    //string numAtSplit = null;
+                                                                                    //    //if (preDataKey.IsNotNEW())
+                                                                                    //    //{
+                                                                                    //    //    numAtSplit = datId;
+                                                                                    //    //    foreach (char c in preDataKey)
+                                                                                    //    //        numAtSplit = numAtSplit.Replace(c.ToString(), "");
+                                                                                    //    //}
 
-                                                                                                Dbug.LogPart($"Retrieved data key '{dataKey}'{(dkSuffix.IsNEW() ? "" : $" and suffix [{dkSuffix}]")}; ");
-                                                                                            }
-                                                                                        }
-                                                                                    }
+                                                                                    //    //if (numAtSplit.IsNotNEW())
+                                                                                    //    //{
+                                                                                    //    //    string[] splitDat = datId.Split(numAtSplit);
+                                                                                    //    //    if (splitDat.HasElements(2))
+                                                                                    //    //    {
+                                                                                    //    //        if (splitDat[0].IsNotNEW())
+                                                                                    //    //            dataKey = splitDat[0];
+                                                                                    //    //        if (splitDat[1].IsNotNEW())
+                                                                                    //    //            dkSuffix = splitDat[1];
+                                                                                    //    //    }
+                                                                                    //    //}
+
+
+                                                                                    //}
                                                                                 }
                                                                                 
                                                                                 // data IDs with numbers
@@ -1007,6 +1056,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                                                     if (datId.Contains(legRangeKey))
                                                                                     {
                                                                                         Dbug.LogPart($"Got range ID group '{datId}'; ");
+                                                                                        NoteLegendKey(usedLegendKeys, legRangeKey.ToString());
                                                                                         string[] dataIdRng;
 
                                                                                         if (datId.Contains(dataKey))
@@ -1086,16 +1136,15 @@ namespace HCResourceLibraryApp.DataHandling
                                                                                     {
                                                                                         if (!IsNumberless(datId))
                                                                                         {
+                                                                                            /// below does not intefere with important data
+                                                                                            GetDataKeyAndSuffix(datId, out string dkey, out string sfx);
+                                                                                            NoteLegendKey(usedLegendKeys, dkey);
+                                                                                            NoteLegendKey(usedLegendKeys, sfx);
+
                                                                                             string dataID = $"{dataKey}{datId.Replace(dataKey, "")}".Trim();
                                                                                             adtConDataIDs.Add(dataID);
                                                                                             Dbug.LogPart($"Got and added '{dataID}'");
-                                                                                        }
-                                                                                        /// this will no longer run; this possibility was pushed to 'data IDs without numbers' condition
-                                                                                        //else
-                                                                                        //{
-                                                                                        //    Dbug.LogPart($"Numberless ID group '{datId}' is invalid");
-                                                                                        //    decodeInfo.NoteIssue($"Numberless ID group '{datId}' is invalid");
-                                                                                        //}                                                                                    
+                                                                                        }                                                                                
                                                                                     }
                                                                                 }
                                                                                 // data IDs without numbers
@@ -1104,7 +1153,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                                                 {
                                                                                     adtConDataIDs.Add(datId);
                                                                                     Dbug.LogPart($"Got and added '{datId}'");
-                                                                                }                                                                                
+                                                                                }                         
 
                                                                                 Dbug.Log(";");
                                                                             }
@@ -1228,7 +1277,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                         /// Sardines  <-->  (x89)
                                                         /// (x104)
                                                         /// CodFish  <-->  (x132)
-                                                        // parse and find related contents
+                                                        // + parse and find related contents +
                                                         if (continueToNextAdtSubSectionQ)
                                                         {
                                                             continueToNextAdtSubSectionQ = false;
@@ -1272,7 +1321,13 @@ namespace HCResourceLibraryApp.DataHandling
                                                                         {
                                                                             adtRelatedDataID = RemoveParentheses(adtRelatedDataID);
                                                                             if (RemoveNumbers(adtRelatedDataID).IsNotNEW())
+                                                                            {
+                                                                                /// doesn't interfere with out of scope stuff, ofc...
+                                                                                GetDataKeyAndSuffix(adtRelatedDataID, out string dk, out string sfx);
+                                                                                NoteLegendKey(usedLegendKeys, dk);
+                                                                                NoteLegendKey(usedLegendKeys, sfx);
                                                                                 okayRelDataID = true;
+                                                                            }
                                                                             else
                                                                             {
                                                                                 Dbug.LogPart("Related Data ID was not a Data ID (just numbers)");
@@ -1327,7 +1382,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                             }
                                                         }
 
-                                                        // associated to related content \ create new content base group
+                                                        // + associated to related content \ create new content base group +
                                                         if (continueToNextAdtSubSectionQ)
                                                         {
                                                             /// 1st: generate (temporary) additional content instance
@@ -1417,9 +1472,72 @@ namespace HCResourceLibraryApp.DataHandling
 
                                                                 Dbug.LogPart("No Related Data ID, no match with existing ResContents; ");
                                                                 ContentBaseGroup adtAsNewContent = new(logVersion, newAdditCon.OptionalName, adtConDataIDs.ToArray());
-                                                                resourceContents.Add(new ResContents(newResConShelfNumber, adtAsNewContent));
-                                                                Dbug.LogPart($"Generated new ConBase from ConAddits info :: {adtAsNewContent}");
-                                                                decodeInfo.NoteResult($"Generated ConBase from ConAddits info :: {adtAsNewContent}");
+
+                                                                /// integrating similar ConAddits that became ConBase (ConAddits-Base) (by name)
+                                                                //bool sameNameAdditsContent = false;
+                                                                ResContents sameConBaseFromConAddits = null;
+                                                                int resConArrIx = 0;
+                                                                foreach (ResContents resCon in resourceContents)
+                                                                {
+                                                                    if (resCon != null)
+                                                                    {
+                                                                        if (!addedContentsNames.Contains(resCon.ContentName))
+                                                                            if (resCon.ContentName == adtAsNewContent.ContentName)
+                                                                            {
+                                                                                sameConBaseFromConAddits = resCon;
+                                                                                break;
+                                                                            }
+                                                                    }
+                                                                    resConArrIx++;
+                                                                }
+
+                                                                // integrate with existing ConAddits-Base
+                                                                if (sameConBaseFromConAddits != null)
+                                                                {
+                                                                    int editDiIx = 0;
+                                                                    bool foundEditableDi = false;
+                                                                    foreach (DecodeInfo di in decodingInfoDock)
+                                                                    {
+                                                                        if (di.NotedResultQ)
+                                                                            if (di.resultingInfo.Contains(sameConBaseFromConAddits.ConBase.ToString()))
+                                                                            {
+                                                                                foundEditableDi = true;
+                                                                                break;
+                                                                            }
+                                                                        editDiIx++;
+                                                                    }                                                                    
+                                                                    
+                                                                    ContentBaseGroup ogConBase = sameConBaseFromConAddits.ConBase;
+                                                                    Dbug.Log($"A ConAddits-to-ConBase ({ogConBase}) has similar content name; ");
+
+                                                                    List<string> compiledDataIds = new();
+                                                                    compiledDataIds.AddRange(ogConBase.DataIDString.Split(' '));
+                                                                    compiledDataIds.AddRange(adtConDataIDs.ToArray());
+                                                                    Dbug.LogPart($"Integrating data IDs ({adtAsNewContent.DataIDString}) into existing ConAddits-to-ConBase; ");
+
+                                                                    adtAsNewContent = new ContentBaseGroup(logVersion, newAdditCon.OptionalName, compiledDataIds.ToArray());
+                                                                    resourceContents[resConArrIx] = new ResContents(newResConShelfNumber, adtAsNewContent);
+                                                                    Dbug.LogPart($"Regenerated ConBase (@ix{resConArrIx}) from ConAddits info :: {adtAsNewContent}");
+
+                                                                    if (foundEditableDi)
+                                                                    {
+                                                                        DecodeInfo prevDi = decodingInfoDock[editDiIx];
+                                                                        decodingInfoDock[editDiIx] = new DecodeInfo();
+
+                                                                        DecodeInfo rewriteDI = new DecodeInfo($"{prevDi.logLine}\n{Ind14}{decodeInfo.logLine}", prevDi.sectionName);
+                                                                        if (prevDi.NotedIssueQ)
+                                                                            rewriteDI.NoteIssue(prevDi.decodeIssue);
+                                                                        rewriteDI.NoteResult($"Regenerated ConAddits-to-ConBase :: {adtAsNewContent}");
+                                                                        decodingInfoDock[editDiIx] = rewriteDI;
+                                                                    }
+                                                                }
+                                                                // create new ConBase
+                                                                else
+                                                                {
+                                                                    resourceContents.Add(new ResContents(newResConShelfNumber, adtAsNewContent));
+                                                                    Dbug.LogPart($"Generated new ConBase from ConAddits info :: {adtAsNewContent}");
+                                                                    decodeInfo.NoteResult($"Generated ConBase from ConAddits :: {adtAsNewContent}");
+                                                                }
                                                                 completedFinalStepQ = true;
                                                             }
 
@@ -1725,6 +1843,10 @@ namespace HCResourceLibraryApp.DataHandling
                                                                 /// numberless is okay, a nonID content could be updated; .. just numbers though, is not allowed
                                                                 if (RemoveNumbers(updtDataID).IsNotNEW())
                                                                 {
+                                                                    GetDataKeyAndSuffix(updtDataID, out string dk, out string sfx);
+                                                                    NoteLegendKey(usedLegendKeys, dk);
+                                                                    NoteLegendKey(usedLegendKeys, sfx);
+
                                                                     okayDataIDQ = true;
                                                                     Dbug.Log($"Completed updated contents: Updated Name ({(updtContentName.IsNEW() ? "<null>" : updtContentName)}) and Data ID ({updtDataID}); ");
                                                                 }
@@ -2113,7 +2235,7 @@ namespace HCResourceLibraryApp.DataHandling
                                 if (decodeInfo.IsSetup())
                                     decodingInfoDock.Add(decodeInfo);
 
-                                if (sectionIssueQ)
+                                if (sectionIssueQ || decodeInfo.NotedIssueQ)
                                     if (currentSectionNumber.IsWithin(0, (short)(countSectionIssues.Length - 1)))
                                         countSectionIssues[currentSectionNumber]++;
 
@@ -2152,6 +2274,180 @@ namespace HCResourceLibraryApp.DataHandling
                     // aka 'else'
                     if (logDataLine.IsNEW() && !endFileReading)
                     {
+                        // as weird as it may seem, checks for non-described or unnoted legend keys goes here
+                        if (usedLegendKeys.HasElements() && legendDatas.HasElements() && currentSectionName == secLeg)
+                        {
+                            Dbug.NudgeIndent(true);
+                            Dbug.Log($"{{Legend_Checks}}");
+
+                            Dbug.NudgeIndent(true);
+                            // get all keys
+                            List<string> allKeys = new();
+                            Dbug.LogPart(">> Fetching used legend keys :: ");
+                            foreach (string usedKey in usedLegendKeys)
+                            {
+                                string addedQ = null;
+                                if (!allKeys.Contains(usedKey))
+                                {
+                                    allKeys.Add(usedKey);
+                                    addedQ = "+";
+                                }
+                                Dbug.LogPart($"{addedQ}'{usedKey}' - ");
+                            }
+                            Dbug.Log("; ");
+                            Dbug.LogPart(">> Fetching generated legend keys (& decInfoIx) :: ");
+                            List<int> decodeInfoIndicies = new();
+                            List<string> generatedKeys = new();
+                            foreach (LegendData legDat in legendDatas)
+                            {
+                                string addedQ = null;
+                                if (!allKeys.Contains(legDat.Key))
+                                {
+                                    allKeys.Add(legDat.Key);
+                                    addedQ = "+";
+                                }
+
+                                string diIx = "";
+                                for (int lix = 0; lix < decodingInfoDock.Count && addedQ.IsNotNE(); lix++)
+                                {
+                                    DecodeInfo lgdDi = decodingInfoDock[lix];
+                                    if (lgdDi.IsSetup() && lgdDi.sectionName == secLeg)
+                                        if (lgdDi.NotedResultQ)
+                                            if (lgdDi.resultingInfo.Contains(legDat.ToStringLengthy()))
+                                            {
+                                                diIx = $"@{lix}";
+                                                decodeInfoIndicies.Add(lix);
+                                            }
+                                }
+
+                                generatedKeys.Add(legDat.Key);
+                                Dbug.LogPart($"{addedQ}'{legDat.Key}' {diIx} - ");
+                            }
+                            Dbug.Log("; ");
+
+                            // check all keys and determine if unnoted or unused
+                            Dbug.Log("Checking all legend keys for possible issues; ");
+                            int getAccessIxFromListForOGdi = 0;
+                            foreach (string aKey in allKeys)
+                            {
+                                bool issueWasTriggered = false;
+                                bool isUsed = usedLegendKeys.Contains(aKey);
+                                bool isGenerated = generatedKeys.Contains(aKey);
+                                DecodeInfo legCheckDi = new("<no source line>", secLeg);
+
+                                if (isUsed || isGenerated)
+                                {
+                                    Dbug.LogPart($"Checked: {(isUsed ? "  used" : "NO USE")}|{(isGenerated ? "gen'd " : "NO GEN")} // Result for key '{aKey}'  --> ");
+                                    //Dbug.LogPart($"key [{aKey}]  |  used? [{isUsed}]  |  generated? [{isGenerated}]  -->  ");
+                                }
+
+                                /// unnnoted key issue
+                                if (isUsed && !isGenerated)
+                                {
+                                    Dbug.LogPart("Unnoted Key Issue");
+                                    legCheckDi.NoteIssue($"Key '{aKey}' was used but not described (Unnoted Legend Key)");
+                                    decodingInfoDock.Add(legCheckDi);
+                                    issueWasTriggered = true;
+                                }
+                                /// unused key issue
+                                else if (!isUsed && isGenerated)
+                                {
+                                    Dbug.LogPart("Unused Key Issue");
+                                    string diIssueMsg = $"Key '{aKey}' was described but not used (Unnecessary Legend Key)";
+
+                                    bool fetchedAndEditedOGDi = false;
+                                    if (decodeInfoIndicies.HasElements())
+                                    {
+                                        int accessIx = decodeInfoIndicies[getAccessIxFromListForOGdi];
+                                        DecodeInfo ogDI = decodingInfoDock[accessIx];
+                                        getAccessIxFromListForOGdi++;
+
+                                        //decodingInfoDock[accessIx] = new DecodeInfo();
+                                        if (!ogDI.NotedIssueQ)
+                                        {
+                                            legCheckDi = new DecodeInfo(ogDI.logLine, ogDI.sectionName);
+                                            legCheckDi.NoteIssue(diIssueMsg);
+                                            legCheckDi.NoteResult(ogDI.resultingInfo);
+
+                                            decodingInfoDock[accessIx] = legCheckDi;
+                                            fetchedAndEditedOGDi = true;
+                                        }
+                                    }
+
+                                    if (!fetchedAndEditedOGDi)
+                                        legCheckDi.NoteIssue(diIssueMsg);
+                                    
+                                    issueWasTriggered = true;
+                                }
+                                else if (isUsed && isGenerated)
+                                    Dbug.LogPart("Key is okay");
+
+                                if (issueWasTriggered)
+                                    countSectionIssues[currentSectionNumber]++;
+
+                                Dbug.Log("; ");
+                            }
+
+                            #region oldWay
+                            //List<string> unnotedLKeys = new(), unusedLKeys = new();
+                            //foreach (LegendData legDat in legendDatas)
+                            //{
+                            //    if (legDat.Key != legRangeKey.ToString())
+                            //    {
+                            //        /// if used legend key, but no matching legend data, then issue is: undescribed legend key
+                            //        bool noMatchingLegDatQ = true;
+                            //        foreach (string usedLegKey in usedLegendKeys)
+                            //        {
+                            //            if (usedLegKey == legDat.Key)
+                            //                noMatchingLegDatQ = false;
+                            //        }
+                            //        if (noMatchingLegDatQ)
+                            //            unnotedLKeys.Add(legDat.Key);
+
+                            //        /// if legend data, but no used legend key, then issue is: unnecessary legend key
+                            //        else if (!usedLegendKeys.Contains(legDat.Key))
+                            //            unusedLKeys.Add(legDat.Key);
+                            //    }
+                            //}
+
+                            //if (unnotedLKeys.HasElements() || unusedLKeys.HasElements())
+                            //{
+                            //    List<DecodeInfo> newIssues = new();
+
+                            //    /// undescribed legend keys
+                            //    foreach (string unnnotedKey in unnotedLKeys)
+                            //    {
+                            //        DecodeInfo legCheckDI = new("<no source line>", secLeg);
+                            //        Dbug.LogPart($"Legend key [{unnnotedKey}] has no Legend data (undescribed / unnoted)");
+                            //        legCheckDI.NoteIssue($"Undescribed / Unnoted legend key :: {unnnotedKey}");
+                            //        Dbug.Log("; ");
+
+                            //        newIssues.Add(legCheckDI);
+                            //    }
+                            //    /// unnecessary legend keys
+                            //    foreach (string unusedKey in unusedLKeys)
+                            //    {
+                            //        DecodeInfo legCheckDI = new("<no source line>", secLeg);
+                            //        Dbug.LogPart($"Legend key [{unusedKey}] has not been used");
+                            //        legCheckDI.NoteIssue($"Unnecessary (unused) legend key :: {unusedKey}");
+                            //        Dbug.Log("; ");
+
+                            //        newIssues.Add(legCheckDI);
+                            //    }
+
+                            //    if (newIssues.HasElements())
+                            //    {
+                            //        decodingInfoDock.AddRange(newIssues.ToArray());
+                            //        countSectionIssues[currentSectionNumber] += newIssues.Count;
+                            //    }
+                            //}
+                            //else Dbug.Log("All legend keys used within this version log has been noted and described; ");
+                            #endregion
+                            Dbug.NudgeIndent(false);
+
+                            Dbug.NudgeIndent(false);
+                        }
+
                         if (currentSectionNumber.IsWithin(0, (short)(countSectionIssues.Length - 1)) && currentSectionName.IsNotNE() && !currentSectionName.Equals(lastSectionName))
                         {
                             Dbug.Log($"..  Sec#{currentSectionNumber + 1} '{currentSectionName}' ended with [{countSectionIssues[currentSectionNumber]}] issues;");
@@ -2249,132 +2545,171 @@ namespace HCResourceLibraryApp.DataHandling
                     _hasDecodedQ = hasFullyDecodedLogQ;
                 }                
             }
+
+            _allowLogDecToolsDbugMessagesQ = false;
             Dbug.EndLogging();
-            return hasFullyDecodedLogQ;
-
-
-            // (static) methods?
-            /// also partly logs "Removed square brackets; "
-            static string RemoveSquareBrackets(string str)
-            {
-                if (str.IsNotNEW())
-                {
-                    str = str.Replace("[", "").Replace("]", "");
-                    Dbug.LogPart("Removed square brackets; ");
-                }
-                return str;
-            }
-            /// also partly logs "Removed parentheses; "
-            static string RemoveParentheses(string str)
-            {
-                if (str.IsNotNEW())
-                {
-                    str = str.Replace("(", "").Replace(")", "");
-                    Dbug.LogPart("Removed parentheses; ");
-                }
-                return str;
-            }
-            /// also partly logs "Name recieved: {name} -- Edited name: {fixedName}; "
-            static string FixContentName(string conNam)
-            {
-                Dbug.LogPart($"Name recieved: ");
-                string fixedConNam;
-                if (conNam.IsNotNEW())
-                {
-                    conNam = conNam.Trim();
-                    Dbug.LogPart($"{conNam} -- ");
-
-                    fixedConNam = "";
-                    bool hadSpaceBefore = false;
-                    bool isFirstCharacter = true;
-                    foreach (char c in conNam)
-                    {
-                        /// if (upperCase && notSpaceChar)
-                        ///     if (noSpaceBefore) {"C" --> " C"}
-                        ///     else (spaceBefore) {"C"}
-                        /// else (lowerCase || spaceChar)
-                        ///     if (notSpaceChar && spaceBefore) {"c" --> "C"}
-                        ///     else (spaceChar || notSpaceBefore)
-                        ///         if (isfirstCharInWord) {"c" --> "C"}
-                        ///         else (notFirstCharInWord) {"c"}
-
-                        if (c.ToString() == c.ToString().ToUpper() && c != ' ')
-                        {
-                            if (!hadSpaceBefore)
-                                fixedConNam += $" {c}";
-                            else fixedConNam += c.ToString();
-                        }
-                        else
-                        {
-                            if (c != ' ' && hadSpaceBefore)
-                                fixedConNam += c.ToString().ToUpper();
-                            else
-                            {
-                                if (isFirstCharacter)
-                                    fixedConNam += c.ToString().ToUpper();
-                                else fixedConNam += c.ToString();
-                            }
-                        }
-
-                        hadSpaceBefore = c == ' ';
-                        isFirstCharacter = false;
-                    }
-                    fixedConNam = fixedConNam.Trim();
-
-                    if (fixedConNam != conNam)
-                        Dbug.LogPart($"Edited name: {fixedConNam}");
-                    else Dbug.LogPart("No edits");
-                }
-                else
-                {
-                    fixedConNam = conNam;
-                    Dbug.LogPart("<null>");
-                }
-                Dbug.LogPart("; ");
-                return fixedConNam;
-            }
-            static string RemoveNumbers(string str)
-            {
-                if (str.IsNotNEW())
-                {
-                    for (int i = 0; i < 10; i++) // 0~9 removed
-                        str = str.Replace(i.ToString(), "");
-
-                    if (str.IsNEW())
-                        str = "";
-                    else str = str.Trim();
-                }
-                return str;
-            }
-            /// also partly logs "Checked/Added fullstop; "
-            static string FullstopCheck(string str)
-            {
-                if (str.IsNotNEW())
-                {
-                    if (!str.EndsWith("."))
-                    {
-                        str = $"{str}.";
-                        Dbug.LogPart("Added fullstop; ");
-                    }
-                    else Dbug.LogPart("Checked fullstop; ");
-                    str = str.Trim();
-                }
-                return str;
-            }
-            static bool IsNumberless(string str)
-            {
-                bool isNumless = false;
-                if (str.IsNotNEW())
-                {
-                    isNumless = str.Trim().ToLower() == RemoveNumbers(str).ToLower();
-                }
-                return isNumless;
-            }
+            return hasFullyDecodedLogQ;            
         }
         public bool DecodeLogInfo(string[] logData)
         {
             return DecodeLogInfo(logData, VerNum.None);
         }
+
+        // LOG DECODING TOOL METHODS
+        /// <summary>also partly logs "Removed square brackets; "</summary>
+        static string RemoveSquareBrackets(string str)
+        {
+            if (str.IsNotNEW())
+            {
+                str = str.Replace("[", "").Replace("]", "");
+                Dbug.LogPart("Removed square brackets; ");
+            }
+            return str;
+        }
+        /// <summary>also partly logs "Removed parentheses; "</summary>
+        static string RemoveParentheses(string str)
+        {
+            if (str.IsNotNEW())
+            {
+                str = str.Replace("(", "").Replace(")", "");
+                Dbug.LogPart("Removed parentheses; ");
+            }
+            return str;
+        }
+        /// <summary>also partly logs "Name recieved: {name} -- Edited name: {fixedName}; "</summary>
+        static string FixContentName(string conNam)
+        {
+            Dbug.LogPart($"Name recieved: ");
+            string fixedConNam;
+            if (conNam.IsNotNEW())
+            {
+                conNam = conNam.Trim();
+                Dbug.LogPart($"{conNam} -- ");
+
+                fixedConNam = "";
+                bool hadSpaceBefore = false;
+                bool isFirstCharacter = true;
+                foreach (char c in conNam)
+                {
+                    /// if (upperCase && notSpaceChar)
+                    ///     if (noSpaceBefore) {"C" --> " C"}
+                    ///     else (spaceBefore) {"C"}
+                    /// else (lowerCase || spaceChar)
+                    ///     if (notSpaceChar && spaceBefore) {"c" --> "C"}
+                    ///     else (spaceChar || notSpaceBefore)
+                    ///         if (isfirstCharInWord) {"c" --> "C"}
+                    ///         else (notFirstCharInWord) {"c"}
+
+                    if (c.ToString() == c.ToString().ToUpper() && c != ' ')
+                    {
+                        if (!hadSpaceBefore)
+                            fixedConNam += $" {c}";
+                        else fixedConNam += c.ToString();
+                    }
+                    else
+                    {
+                        if (c != ' ' && hadSpaceBefore)
+                            fixedConNam += c.ToString().ToUpper();
+                        else
+                        {
+                            if (isFirstCharacter)
+                                fixedConNam += c.ToString().ToUpper();
+                            else fixedConNam += c.ToString();
+                        }
+                    }
+
+                    hadSpaceBefore = c == ' ';
+                    isFirstCharacter = false;
+                }
+                fixedConNam = fixedConNam.Trim();
+
+                if (fixedConNam != conNam)
+                    Dbug.LogPart($"Edited name: {fixedConNam}");
+                else Dbug.LogPart("No edits");
+            }
+            else
+            {
+                fixedConNam = conNam;
+                Dbug.LogPart("<null>");
+            }
+            Dbug.LogPart("; ");
+            return fixedConNam;
+        }
+        public static string RemoveNumbers(string str)
+        {
+            if (str.IsNotNEW())
+            {
+                for (int i = 0; i < 10; i++) // 0~9 removed
+                    str = str.Replace(i.ToString(), "");
+
+                if (str.IsNEW())
+                    str = "";
+                else str = str.Trim();
+            }
+            return str;
+        }
+        /// <summary>also partly logs "Checked/Added fullstop; "</summary>
+        static string FullstopCheck(string str)
+        {
+            if (str.IsNotNEW())
+            {
+                if (!str.EndsWith("."))
+                {
+                    str = $"{str}.";
+                    Dbug.LogPart("Added fullstop; ");
+                }
+                else Dbug.LogPart("Checked fullstop; ");
+                str = str.Trim();
+            }
+            return str;
+        }
+        public static bool IsNumberless(string str)
+        {
+            bool isNumless = false;
+            if (str.IsNotNEW())
+            {
+                isNumless = str.Trim().ToLower() == RemoveNumbers(str).ToLower();
+            }
+            return isNumless;
+        }
+        /// <summary>Also partly logs "Noted legend key: {key}; "</summary>
+        static void NoteLegendKey(List<string> notingList, string legKey)
+        {
+            if (notingList != null && legKey.IsNotNEW())
+                if (!notingList.Contains(legKey))
+                {
+                    notingList.Add(legKey);
+                    Dbug.LogPart($"Noted legend key: {legKey}; ");
+                }
+        }
+        /// <summary>Also partly logs "GDnS: {dataKey}[{number}]{suffix}; " only when decoding a version log</summary>
+        public static void GetDataKeyAndSuffix(string dataIDGroup, out string dataKey, out string suffix)
+        {
+            string nonNumbers = RemoveNumbers(dataIDGroup);
+            dataKey = null;
+            suffix = null;
+            if (dataIDGroup != null)
+            {
+                string trueNum = dataIDGroup;
+                foreach (char c in nonNumbers)
+                    trueNum = trueNum.Replace(c.ToString(), "");
+
+                if (trueNum.IsNotNE())
+                {
+                    string[] splitDKnSfx = dataIDGroup.Split(trueNum);
+                    if (splitDKnSfx.HasElements(2))
+                    {
+                        dataKey = splitDKnSfx[0];
+                        suffix = splitDKnSfx[1];
+                        if (_allowLogDecToolsDbugMessagesQ)
+                            Dbug.LogPart($"GDnS: {dataKey}[{trueNum}]{suffix}; ");
+                    }
+                }
+            }
+        }
+
+
+        // DECODE INFO STUFF        
         public DecodeInfo GetDecodeInfo(DecodedSection sectionName, int infoIndex, out int sectionIssueCount)
         {
             DecodeInfo decInfo = new();
@@ -2412,7 +2747,7 @@ namespace HCResourceLibraryApp.DataHandling
                 }
             }
             return decInfo;
-        }
+        }        
 
     }        
 }
