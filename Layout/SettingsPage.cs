@@ -578,9 +578,6 @@ namespace HCResourceLibraryApp.Layout
                                 string legendDef = legendKey != miscPhrase ? legendDefs[lx].Replace($"{legendKey} ", "") : legendDefs[lx];
                                 Dbug.Log($"Category '{legendKey}' [{legendDef}]");
 
-                                //Highlight(false, $"{(legendKey == miscPhrase ? "" : $"'{legendKey}' ")}[{legendDef}]{Ind24}", $"[{legendDef}]");
-                                Highlight(HSNL(0, 2) > 1, $"[{legendDef}]{Ind14}", $"[{legendDef}]");
-
                                 Dbug.NudgeIndent(true);
                                 string dataIDList = "";
                                 for (int dx = 0; dx < allDataIds.Count; dx++)
@@ -611,7 +608,7 @@ namespace HCResourceLibraryApp.Layout
                                 if (legendKey != miscPhrase)
                                 {
                                     Dbug.LogPart(" ..  Condensing with ranges");
-                                    string dataIDListWithRanges = CreateNumericRanges(dataIDList.Split(" "));
+                                    string dataIDListWithRanges = Extensions.CreateNumericRanges(dataIDList.Split(" "));
                                     if (dataIDList.Contains(dataIDListWithRanges))
                                         Dbug.Log("; Remains uncondensed; ");
                                     else Dbug.Log("; ");
@@ -622,12 +619,24 @@ namespace HCResourceLibraryApp.Layout
                                         dataIDList = dataIDListWithRanges;
                                     }
                                 }
-                                Format(dataIDList.Trim(), ForECol.Normal);                                
-                                NewLine(lx + 1 != legendKeys.Count ? 2 : 1);
+
+                                // all printing here
+                                if (legendKey != miscPhrase || (legendKey == miscPhrase && dataIDList.IsNotNE()))
+                                {
+                                    Highlight(HSNL(0, 2) > 1, $"[{legendDef}]{Ind14}", $"[{legendDef}]");
+                                    Format(dataIDList.Trim(), ForECol.Normal);
+                                    NewLine(lx + 1 != legendKeys.Count ? 2 : 1);
+                                }
                                 Dbug.Log($" //  End '{legendKey}'");
                                 Dbug.NudgeIndent(false);
                             }
                             Dbug.NudgeIndent(false);
+
+                            // Display TTA
+                            NewLine(HSNL(0, 2) > 1 ? 3 : 2);
+                            FormatLine("-------", ForECol.Accent);
+                            Highlight(false, $"Total Textures Added :: {allDataIds.Count}.", allDataIds.Count.ToString());
+
                             //Format("All Data IDs found within library are displayed above.", ForECol.Accent);
                             Pause();
                         }
@@ -653,6 +662,9 @@ namespace HCResourceLibraryApp.Layout
                         Format("The library shelves are empty. This page requires the library to contain some data.", ForECol.Normal);
                         Pause();
                     }
+
+                    /// ALSO 
+                    ///  -- Count the TOTAL number of textures and display it...
 
 
                     // (static) methods
@@ -881,107 +893,5 @@ namespace HCResourceLibraryApp.Layout
             while (!exitReversionMenu && !Program.AllowProgramRestart);
         }
 
-
-        public static string CreateNumericRanges(string[] numbers)
-        {
-            string rangedNumbers = "";
-            if (numbers.HasElements())
-            {
-                Dbug.IgnoreNextLogSession();
-                Dbug.StartLogging("SettingsPage.CreateNumericRanges(str[])");
-                Dbug.Log($"Recieved '{numbers.Length}' numbers to create ranges from; Removing null/empty entries; Creating Ranges; ");
-                List<string> fltNumbers = new List<string>();
-                foreach (string numT in numbers)
-                    if (numT.IsNotNEW())
-                        fltNumbers.Add(numT);
-
-                Dbug.Log($"LEGEND :: Range Enter Key '{{' -- Range Exit Key '}}' -- Base Number '@#' --  End Range Number '!'");
-                //Dbug.Log($"LEGEND :: Range Enter Key '{{' -- Range Exit Key '}}' -- Base Number 'b.# ' --  End Range Number 'e.#'");
-
-                string baseNumT = null;
-                bool withinRangeQ = false;
-                for (int rx = 0; rx < fltNumbers.Count; rx++)
-                {
-                    string currNumT = fltNumbers[rx];
-                    string prevNumT = rx > 0 ? fltNumbers[rx - 1] : null;
-                    bool lastNumberQ = rx + 1 == fltNumbers.Count;
-
-                    string numToPrint = "";
-                    if (int.TryParse(currNumT, out int currNum))
-                    {
-                        if (int.TryParse(prevNumT, out int prevNum))
-                        {
-                            if (prevNum + 1 == currNum)
-                            {
-                                if (!withinRangeQ)
-                                {
-                                    Dbug.LogPart(" {");
-                                    withinRangeQ = true;
-                                    baseNumT = prevNum.ToString();
-
-                                    Dbug.LogPart($"@{baseNumT}'{currNumT}");
-
-                                    if (rangedNumbers.IsNotNE() && baseNumT.IsNotNE())
-                                        rangedNumbers = rangedNumbers.Remove((rangedNumbers.Length - baseNumT.Length - 1).Clamp(0, rangedNumbers.Length - 1));
-                                    
-                                    if (!lastNumberQ)
-                                        numToPrint = baseNumT;
-                                    else
-                                    {
-                                        Dbug.LogPart($"!}} -> ");
-                                        numToPrint = $"{baseNumT},{currNum}";
-                                    }
-
-                                }
-                                else
-                                {
-                                    if (!lastNumberQ)
-                                        Dbug.LogPart($"'{currNumT}");
-                                    else
-                                    {
-                                        Dbug.LogPart($"'{currNumT}!}} -> ");
-                                        numToPrint = "~" + currNumT;
-                                    }
-                                }
-                            }
-                            else
-                            {
-                                if (withinRangeQ)
-                                {
-                                    if (int.TryParse(baseNumT, out int baseNum))
-                                        if (baseNum + 1 == prevNum)
-                                            numToPrint = $",{prevNumT},";
-                                    if (numToPrint.IsNE())
-                                        numToPrint = $"~{prevNumT},";
-
-                                    Dbug.LogPart($"!}}");
-                                }
-
-                                Dbug.LogPart($" {currNumT}");
-                                numToPrint += $"{currNumT},";
-
-                                withinRangeQ = false;
-                                baseNumT = null;
-                            }
-                        }
-                        else
-                        {
-                            Dbug.LogPart($" {currNumT}");
-                            numToPrint += $"{currNumT},";
-                        }
-                    }
-
-                    if (numToPrint.IsNotNE())
-                        rangedNumbers += numToPrint;
-                }
-                Dbug.Log(" // End");
-
-                if (rangedNumbers.IsNotNE())
-                    rangedNumbers = rangedNumbers.Replace(",", " ").Trim();
-                Dbug.Log($"Result Range Numbers: {rangedNumbers}");
-                Dbug.EndLogging();
-            }
-            return rangedNumbers;
-        }
     }
 }

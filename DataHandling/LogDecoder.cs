@@ -1629,34 +1629,76 @@ namespace HCResourceLibraryApp.DataHandling
                                                             int countedTTANum = 0;
                                                             if (resourceContents.HasElements())
                                                             {
-                                                                // only counts within the recently decoded contents
+                                                                /// the count does not account for data IDs compared by suffixes (q1 and q1` are seen as different Ids)      
+                                                                /// this should be okay since a data ID should be consistently written with its suffix
+                                                                
+                                                                List<string> discreteDataIDs = new();
+                                                                // counts the data IDs from recently decoded contents
                                                                 foreach (ResContents resCon in resourceContents)
                                                                 {
                                                                     if (resCon != null)
                                                                     {
-                                                                        // count from content base group
                                                                         if (resCon.ConBase != null)
                                                                             if (resCon.ConBase.IsSetup())
-                                                                                countedTTANum += resCon.ConBase.CountIDs;
+                                                                            {
+                                                                                for (int ax = 0; ax < resCon.ConBase.CountIDs; ax++)
+                                                                                    if (!discreteDataIDs.Contains(resCon.ConBase[ax]))
+                                                                                        discreteDataIDs.Add(resCon.ConBase[ax]);
+                                                                            }
 
-                                                                        // count from additional contents
-                                                                        if (resCon.ConAddits.HasElements())
+                                                                        if (resCon.ConAddits != null)
                                                                             foreach (ContentAdditionals conAddit in resCon.ConAddits)
                                                                             {
                                                                                 if (conAddit != null)
                                                                                     if (conAddit.IsSetup())
-                                                                                        countedTTANum += conAddit.CountIDs;
+                                                                                        for (int bx = 0; bx < conAddit.CountIDs; bx++)
+                                                                                            if (!discreteDataIDs.Contains(conAddit[bx]))
+                                                                                                discreteDataIDs.Add(conAddit[bx]);
                                                                             }
                                                                     }
                                                                 }
 
-                                                                // also count loose conAddits
+                                                                // also counts data Ids from loose conAddits
                                                                 foreach (ContentAdditionals conAdt in looseConAddits)
                                                                 {
                                                                     if (conAdt != null)
                                                                         if (conAdt.IsSetup())
-                                                                            countedTTANum += conAdt.CountIDs;
+                                                                            for (int cx = 0; cx < conAdt.CountIDs; cx++)
+                                                                                if (!discreteDataIDs.Contains(conAdt[cx]))
+                                                                                    discreteDataIDs.Add(conAdt[cx]);
                                                                 }
+
+                                                                #region old code
+                                                                //// only counts within the recently decoded contents
+                                                                //foreach (ResContents resCon in resourceContents)
+                                                                //{
+                                                                //    if (resCon != null)
+                                                                //    {
+                                                                //        // count from content base group
+                                                                //        if (resCon.ConBase != null)
+                                                                //            if (resCon.ConBase.IsSetup())
+                                                                //                countedTTANum += resCon.ConBase.CountIDs;
+
+                                                                //        // count from additional contents
+                                                                //        if (resCon.ConAddits.HasElements())
+                                                                //            foreach (ContentAdditionals conAddit in resCon.ConAddits)
+                                                                //            {
+                                                                //                if (conAddit != null)
+                                                                //                    if (conAddit.IsSetup())
+                                                                //                        countedTTANum += conAddit.CountIDs;
+                                                                //            }
+                                                                //    }
+                                                                //}
+
+                                                                //// also count loose conAddits
+                                                                //foreach (ContentAdditionals conAdt in looseConAddits)
+                                                                //{
+                                                                //    if (conAdt != null)
+                                                                //        if (conAdt.IsSetup())
+                                                                //            countedTTANum += conAdt.CountIDs;
+                                                                //}
+                                                                #endregion
+                                                                countedTTANum = discreteDataIDs.Count;
                                                                 ranVerificationCountQ = true;
                                                             }
 
@@ -2592,7 +2634,7 @@ namespace HCResourceLibraryApp.DataHandling
                 foreach (char c in conNam)
                 {
                     /// if (upperCase && notSpaceChar)
-                    ///     if (noSpaceBefore) {"C" --> " C"}
+                    ///     if (noSpaceBefore && isLetter) {"C" --> " C"}
                     ///     else (spaceBefore) {"C"}
                     /// else (lowerCase || spaceChar)
                     ///     if (notSpaceChar && spaceBefore) {"c" --> "C"}
@@ -2602,7 +2644,7 @@ namespace HCResourceLibraryApp.DataHandling
 
                     if (c.ToString() == c.ToString().ToUpper() && c != ' ')
                     {
-                        if (!hadSpaceBefore)
+                        if (!hadSpaceBefore && Extensions.CharScore(c) >= Extensions.CharScore('a'))
                             fixedConNam += $" {c}";
                         else fixedConNam += c.ToString();
                     }

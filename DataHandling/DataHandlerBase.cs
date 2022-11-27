@@ -11,7 +11,7 @@ namespace HCResourceLibraryApp.DataHandling
         /// <summary>Separator character in file encoding/decoding.</summary>
         internal const string Sep = "%"; // percentage symbol (seperator character; also dissallowed in HCAutoLogger)  [old seperator character --> * asterik (but is used in LEGEND...facepalm)]
         // public for Dbug.cs
-        public static string FileDirectory = !Program.isDebugVersionQ? @"hcd\hcrlaData.txt" : @"C:\Users\ntrc2\OneDrive\Pictures\High Contrast Textures\HCToolApps\HCRLA\hcd-tests\"; 
+        public static string FileDirectory = !Program.isDebugVersionQ? @"hcd\" : @"C:\Users\ntrc2\OneDrive\Pictures\High Contrast Textures\HCToolApps\HCRLA\hcd-tests\"; 
         const string FileName = "hcrlaData.txt", BackupFileName = "hcrlaDataBackup.txt"; // change '.txt' to '.hcd' at end of development? Nn....NnnAahhh!
         const string SessionKeyTag = "skt";
         const int sessionKeyLength = 5;

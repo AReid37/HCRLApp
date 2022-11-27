@@ -1,17 +1,35 @@
-﻿[VERSION : a.bb]
+﻿-- !open --
+## <HIGH CONTRAST RESOURCE LIBRARY APP - All-Testing Version Log> ##
+PURPOSE ::
+	This version log is utilized in testing the decoder for a desired function against special conditions, usually after a bug has been found. Only correct information for an expected outcome should be here.
+-- !close --
+
+-- ========== ---
+[VERSION : 0.99]
 
 [ADDED]
--- up to 25 maximum items per update. Effective until no more items to add.  
+-- Below tests for correct content name fixing
+1|Lehaim's Kale - (i2123; t1987)
+2|Marcus' Plantain - (i3210; t2290)
+3|Don/803's Lifesaver - (i4419)
+4|'S' Poser - (i3923)
+5|McDesnic's Truffle - (i4565 p1000)
 
 [ADDITIONAL]
+> Plantain; Cooked (t2292) - (t2290)
 
-[TTA : n]
+[TTA : 0]
 
 [UPDATED]
 
 [LEGEND]
+i - Item
+i - item
 
 [SUMMARY]
+> All testing complete
+-- ========== ---
+
 
 
 

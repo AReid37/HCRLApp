@@ -94,7 +94,7 @@ namespace HCResourceLibraryApp.Layout
                             /// if recent directory exists
                             if (LogDecoder.RecentDirectory.IsNotNEW())
                             {
-                                Format($"The directory of the last submitted file was saved. To use this directory, precede the name of the submitted file with", ForECol.Normal);
+                                Format($"The directory of the last submitted file was saved. To use this directory, precede the name of the submitted file with ", ForECol.Normal);
                                 Highlight(true, $"'{recentDirectoryKey}'.", recentDirectoryKey);
                                 Highlight(true, $"{recentDirectoryKey} :: {LogDecoder.RecentDirectory}", LogDecoder.RecentDirectory);
                                 placeHolder += $"  -or-  {recentDirectoryKey}__.__";
@@ -197,9 +197,10 @@ namespace HCResourceLibraryApp.Layout
                                         if (line.Contains("[") && lx != 0 && !omitBlock)
                                             NewLine();
                                         /// omit line detect
-                                        bool omit = line.StartsWith(LogDecoder.omit) && !line.Contains("[");                                        
+                                        bool omit = line.StartsWith(LogDecoder.omit);
+                                        bool invalidLine = line.Contains(DataHandlerBase.Sep);                                                                                      
 
-                                        FormatLine(line, omit || omitBlock ? ForECol.Normal : ForECol.Highlight);
+                                        FormatLine(line, invalidLine? ForECol.Incorrection : (omit || omitBlock ? ForECol.Normal : ForECol.Highlight));
                                     }
                                     HorizontalRule(minorChar, 1);
 

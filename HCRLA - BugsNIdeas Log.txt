@@ -1,0 +1,51 @@
+﻿L.E.G.E.N.D
+[ ] 0# -- New bug report/idea and category issue number
+[X] 0# -- Resolved bug report or completetd category issue number
+[.] 0# -- Ignored bug report/idea and category issue number
+
+
+
+---------------------
+       B U G S
+---------------------
+[ ] 1# Remove escape characters from the lines of the version log when decoding (particulary remove: /n /t /a /f /r).
+
+[ ] 2# After data is saved, set all 'Previous Version' variables to match the current saved version, so that it is not resaving the same data and overwriting a valid file save backup.
+
+[ ] 3# When a log file's contents are being displayed, the section tags must be detected only by starting with '[' and ending with ']', not by containing both.
+
+[ ] 4# ResLib.Integrate(); when searching through loose contents for matching contents, remove data ID suffixes that are symbols before attempting to match
+
+[ ] 5# ResLib.Integrate(); when matching against definitions of Legend Datas, compare at lowercase to avoid case-insensitive duplicates.
+
+[ ] 6# @Log Legend View Page, highlight must only be highlighting the legend key. The 'key' within its definitions must not be highlighted.
+
+[ ] 7# A non-wordy data ID must be identified as a key that at least contains numbers and letters, and ends with a number. 
+    >> Real Testing Examples (NPC_12, NPC_12_Alt_1, Player_0_0, Player_0_1, Tiles_2_Beach, Tiles_59_2, Tiles_199-gross, Tree_Branches_13, Wires2, Wraith_Eyes) 
+    >> Possible Resolve: when given a legend key and its definition, only replace the key at the front of the ID with its definition, and leave the rest of the ID as is (example, Item_23 is 'i23', Tiles_42-small is 't42-small')
+
+[ ] 8# ...
+
+
+
+
+---------------------
+      I D E A S
+---------------------
+[ ] 1# A bug report/idea suggestion route that is accessible from any style input by using a keyphrase. Ideas and bugs are saved in a separate file; Ideas & bugs may also be stored with main file data.
+
+[ ] 2# Display what base contents the loose contents were connected to after contents have been integrated after a submission. Any mistakes can be undone from a reversion.
+
+[ ] 3# Log Legend View should also show what version the library is currently in
+
+[ ] 4# Each category within 'Settings->ConInt->ViewAllDataIDs' should show how many Data IDs they contain
+
+[ ] 5# The Miscellaneous category within 'Settings->ConInt->ViewAllDataIDs' can seperate its IDs into alphanumeric groups when there are many of them. Ex, A-M group and N-Z group.
+
+[ ] 6# Fuse Legend View and Summary View pages into one ('Log Legends and Summaries').
+
+[ ] 7# When displaying the decoded version logs, if there is a decode issue, the text may also display or highlight where the error occured when possible (highlight or note where in the text the issue occured).
+
+[ ] 8# Within Log Submission Page, encoding save data can be triggered once the main submission page is being exited, rather than after each submitted version log.
+
+[ ] 9# Reversion; Version Reversion, specific version removal is possible, however only if the version's contents is not referenced in future version (Either allowed or denied reversion thereafter).

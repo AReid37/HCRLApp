@@ -234,7 +234,7 @@ namespace HCResourceLibraryApp.DataHandling
 		/// <returns>A boolean stating whether the summary version, tta number, and summary parts have been given values, at minimum.</returns>
 		public override bool IsSetup()
 		{
-			return _summaryVersion.HasValue() && _ttaNumber > 0 && _summaryParts.HasElements();
+			return _summaryVersion.HasValue() && _ttaNumber >= 0 && _summaryParts.HasElements();
 		}
 
 		public override string ToString()

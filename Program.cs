@@ -11,7 +11,8 @@ namespace HCResourceLibraryApp
     // THE ENTRANCE POINT, THE CONTROL ROOM
     public class Program
     {
-        static readonly string consoleTitle = "High Contrast Resource Library App [v1.1.4]";
+        static readonly string consoleTitle = "High Contrast Resource Library App [v1.1.5]";
+        static readonly string verLastPublishTested = "mid-v1.1.5";
         /// <summary>If <c>true</c>, the application launches for debugging/development. Otherwise, the application launches for the published version.</summary>
         public static readonly bool isDebugVersionQ = true;
 
@@ -138,7 +139,56 @@ namespace HCResourceLibraryApp
             while (restartProgram);
 
             Dbug.EndLogging();
-            TextLine("\n\n**REMEMBER** Test the published version of the application frequently!!\n\tVersion last tested: mid-v1.0.7".ToUpper(), Color.White);
+            TextLine($"\n\n**REMEMBER** Test the published version of the application frequently!!\n\tVersion last tested: {verLastPublishTested}".ToUpper(), Color.White);
+
+            // report all warnings and errors into dbug file??  interesting idea....
+            Dbug.StartLogging("Report Caught Errors and Warnings");
+            #region report caught errors and warnings
+            /// these test warning and error reporting
+            //SetFileLocation("ffjjtqkx");
+            //Title("jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj", '\0', -1);
+            //Title("supercalifragilisticexpialidocious; was it spelled properly? hbfkelkfrlessiies", '\0', -1);
+
+
+            /// report errors and warnings
+            Dbug.Log($"Published version last tested in '{verLastPublishTested}'; ");
+            Dbug.Log("Reporting any recorded errors and warnings that have occured during this session :: ");
+            string errorMsg = "0", warnMsg = "0";
+
+            Dbug.Log("ERRORS");
+            Dbug.NudgeIndent(true);
+            for (int ex = 0; errorMsg.IsNotNE(); ex++)
+            {
+                errorMsg = Tools.GetWarnError(false, ex, true);
+                if (errorMsg.IsNotNE())
+                {
+                    if (ex > 0)
+                        Dbug.Log("-----");
+                    Dbug.Log($"#{ex}  //  {errorMsg}");
+                }
+                else if (ex == 0)
+                    Dbug.Log("No errors to report...");
+            }
+            Dbug.NudgeIndent(false);
+
+            Dbug.Log("WARNINGS");
+            Dbug.NudgeIndent(true);
+            for (int wx = 0; warnMsg.IsNotNE(); wx++)
+            {
+                warnMsg = Tools.GetWarnError(true, wx, true);
+                if (warnMsg.IsNotNE())
+                {
+                    if (wx > 0)
+                        Dbug.Log("- - -");
+                    Dbug.Log($"#{wx}  //  {warnMsg}");
+                }
+                else if (wx == 0)
+                    Dbug.Log("No warnings to report...");
+            }
+            Dbug.NudgeIndent(false);
+
+            #endregion
+            Dbug.EndLogging();
         }
 
 
@@ -180,7 +230,7 @@ namespace HCResourceLibraryApp
             ///   The "previous self" states of the objects that have been saved should be updated to match what was just saved.
             ///   By doing this, SaveData() cannot be triggered again from any check of ChangesMade() {in this situation, may also be perceived as "UnsavedChangesQ"}
 
-            Wait(savedDataQ ? 1.5f : 3);
+            Wait(savedDataQ ? 2f : 5);
             return savedDataQ;
         }
         public static void LoadData()
@@ -196,7 +246,7 @@ namespace HCResourceLibraryApp
 
 
         // TESTING STUFF
-        static readonly bool runTest = false;
+        static readonly bool runTest = true;
         static readonly Tests testToRun = Tests.MiscRoom;
         enum Tests
         {
@@ -585,19 +635,23 @@ namespace HCResourceLibraryApp
                     /// DON'T DELETE THIS HEADER | provide test name
                     TextLine("Settings Page: Create Numeric Ranges", Color.DarkGray);
 
+                    #region misc: CreateNumericRanges
                     string numbers = "0 1 2 4 6 10 12 13 14 16 17 18 19 24 26 27 29 30 31 33 35 36 37";
                     TextLine($"Creating range from numbers:\n\t{numbers}");
-                    TextLine($"  Result:\t{SettingsPage.CreateNumericRanges(numbers.Split(" "))}");
+                    TextLine($"  Result:\t{Extensions.CreateNumericRanges(numbers.Split(" "))}");
 
                     NewLine(2);
                     numbers = "20 22 30 31 32 33 34 35 36 37 39 40 41 42 43 45 46 48 57 58 60 61 62 64";
                     TextLine($"Creating range from numbers:\n\t{numbers}");
-                    TextLine($"  Result:\t{SettingsPage.CreateNumericRanges(numbers.Split(" "))}");
+                    TextLine($"  Result:\t{Extensions.CreateNumericRanges(numbers, ' ')}");
 
                     NewLine(2);
                     numbers = "56 57 59 60 61 64 66 69 70";
                     TextLine($"Creating range from numbers:\n\t{numbers}");
-                    TextLine($"  Result:\t{SettingsPage.CreateNumericRanges(numbers.Split(" "))}");
+                    TextLine($"  Result:\t{Extensions.CreateNumericRanges(numbers.Split(" "))}");
+                    #endregion
+
+
                 }
 
 

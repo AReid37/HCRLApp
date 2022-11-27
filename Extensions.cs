@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using ConsoleFormat;
 using HCResourceLibraryApp.DataHandling;
 using HCResourceLibraryApp.Layout;
@@ -88,6 +89,128 @@ namespace HCResourceLibraryApp
                 }
             }
             return fullStr;
+        }
+        /// <summary>
+        ///   Recieves an array of numbers (as strings) then condenses any sequences of numbers into ranges (Ex. '0 1 2 4' becomes '0~2 4')
+        /// </summary>
+        /// <returns>A condensed string of numbers with number ranges. Is empty if no numbers were given.</returns>
+        public static string CreateNumericRanges(string[] numbers)
+        {
+            string rangedNumbers = "";
+            if (numbers.HasElements())
+            {
+                Dbug.IgnoreNextLogSession();
+                Dbug.StartLogging("SettingsPage.CreateNumericRanges(str[])");
+                Dbug.Log($"Recieved '{numbers.Length}' numbers to create ranges from; Removing null/empty entries; ");
+                List<string> fltNumbers = new();
+                foreach (string numT in numbers)
+                    if (numT.IsNotNEW())
+                        fltNumbers.Add(numT);
+
+                if (fltNumbers.HasElements())
+                    fltNumbers = fltNumbers.ToArray().SortWords();
+                Dbug.Log($"Filtered down to '{fltNumbers.Count}' numbers; Sorted numbers; Creating Ranges; ");
+                Dbug.Log($"LEGEND :: Range Enter Key '{{' -- Range Exit Key '}}' -- Base Number '@#' --  End Range Number '!'");
+                //Dbug.Log($"LEGEND :: Range Enter Key '{{' -- Range Exit Key '}}' -- Base Number 'b.# ' --  End Range Number 'e.#'");
+
+                string baseNumT = null;
+                bool withinRangeQ = false;
+                for (int rx = 0; rx < fltNumbers.Count; rx++)
+                {
+                    string currNumT = fltNumbers[rx];
+                    string prevNumT = rx > 0 ? fltNumbers[rx - 1] : null;
+                    bool lastNumberQ = rx + 1 == fltNumbers.Count;
+
+                    string numToPrint = "";
+                    if (int.TryParse(currNumT, out int currNum))
+                    {
+                        if (int.TryParse(prevNumT, out int prevNum))
+                        {
+                            if (prevNum + 1 == currNum)
+                            {
+                                if (!withinRangeQ)
+                                {
+                                    Dbug.LogPart(" {");
+                                    withinRangeQ = true;
+                                    baseNumT = prevNum.ToString();
+
+                                    Dbug.LogPart($"@{baseNumT}'{currNumT}");
+
+                                    if (rangedNumbers.IsNotNE() && baseNumT.IsNotNE())
+                                        rangedNumbers = rangedNumbers.Remove((rangedNumbers.Length - baseNumT.Length - 1).Clamp(0, rangedNumbers.Length - 1));
+
+                                    if (!lastNumberQ)
+                                        numToPrint = baseNumT;
+                                    else
+                                    {
+                                        Dbug.LogPart($"!}} -> ");
+                                        numToPrint = $"{baseNumT},{currNum}";
+                                    }
+
+                                }
+                                else
+                                {
+                                    if (!lastNumberQ)
+                                        Dbug.LogPart($"'{currNumT}");
+                                    else
+                                    {
+                                        Dbug.LogPart($"'{currNumT}!}} -> ");
+                                        numToPrint = "~" + currNumT;
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                if (withinRangeQ)
+                                {
+                                    if (int.TryParse(baseNumT, out int baseNum))
+                                        if (baseNum + 1 == prevNum)
+                                            numToPrint = $",{prevNumT},";
+                                    if (numToPrint.IsNE())
+                                        numToPrint = $"~{prevNumT},";
+
+                                    Dbug.LogPart($"!}}");
+                                }
+
+                                Dbug.LogPart($" {currNumT}");
+                                numToPrint += $"{currNumT},";
+
+                                withinRangeQ = false;
+                                baseNumT = null;
+                            }
+                        }
+                        else
+                        {
+                            Dbug.LogPart($" {currNumT}");
+                            numToPrint += $"{currNumT},";
+                        }
+                    }
+
+                    if (numToPrint.IsNotNE())
+                        rangedNumbers += numToPrint;
+                }
+                Dbug.Log(" // End");
+
+                if (rangedNumbers.IsNotNE())
+                    rangedNumbers = rangedNumbers.Replace(",", " ").Trim();
+                Dbug.Log($"Result Range Numbers: {rangedNumbers}");
+                Dbug.EndLogging();
+            }
+            return rangedNumbers;
+        }
+        /// <summary>
+        ///   Recieves a string of numbers and a separating characters then condenses any sequences of numbers into ranges (Ex. '0 1 2 4' becomes '0~2 4')
+        /// </summary>
+        /// <returns>A condensed string of numbers with number ranges. Is empty if no numbers were given.</returns>
+        public static string CreateNumericRanges(string numbers, char splitChar)
+        {
+            string rangedNumbers = "";
+            if (numbers.IsNotNEW() && splitChar.IsNotNull())
+            {
+                if (numbers.Contains(splitChar))
+                    rangedNumbers = CreateNumericRanges(numbers.Split(splitChar));
+            }
+            return rangedNumbers;
         }
         #endregion
 
@@ -636,49 +759,55 @@ namespace HCResourceLibraryApp
 
             Dbug.EndLogging();
             return orderedWords;
+        }
+        /**
+            <summary>SCORING:
+            <br>- Non-scorable/null character ::// <c>-34</c></br>
+            <br>- Symbols :: ~`!@#$%^&#38;*_-+=()[]{}&lt;&gt;\|/;:'".,? // <c>Range: [-33,-2]</c></br>
+            <br>- Numerics :: 0123456789 // <c>Range: [0,9]</c></br>
+            <br>- Space Character ::// <c>10</c></br>
+            <br>- Alphabetics :: abcdefghijklmnopqrstuvwxyz // <c>Range: [11,36]</c></br>            
+            </summary>
+         */
+        public static int CharScore(char c)
+        {
+            /** PLANNING - CHARACTERS AND SCORES EXCERPT
+            --------
+            CHARACTERS AND SCORES            
+            Symbols
+                CHAR |  n   ~   `   !   @   #   $   %   ^   &   *   _   -   +   =   (   )   [   ]   {   }   <   >   \   |   /   ;   :   '   "   .   ,   ?   s
+                SCORE|  -34 -33 -32 -31 -30 -29 -28 -27 -26 -25 -24 -23 -22 -21 -20 -19 -18 -17 -16 -15 -14 -13 -12 -11 -10 -9  -8  -7  -6  -5  -4  -3  -2  10
+                    :: s (space character [' '])   n (non-scorable/null character ['\0'])
+            Numerics
+                CHAR |  eX  0   1   2   3   4   5   6   7   8   9       
+                SCORE|  -1  0   1   2   3   4   5   6   7   8   9
+                    :: eX (Indicator for resulting vacancy from numeric congregation) 
+            Alphabetics
+                CHAR |  a   b   c   d   e   f   g   h   i   j   k   l   m   n   o   p   q   r   s   t   u   v   w   x   y   z
+                SCORE|  11  12  13  14  15  16  17  18  19  20  21  22  23  24  25  26  27  28  29  30  31  32  33  34  35  36
+            ***/
+            const int nullScore = -34;
+            int score = nullScore;
 
-
-            /// static methods?
-            static int CharScore(char c)
+            if (c.IsNotNull())
             {
-                /** PLANNING - CHARACTERS AND SCORES EXCERPT
-                --------
-                CHARACTERS AND SCORES            
-                Symbols
-                    CHAR |  n   ~   `   !   @   #   $   %   ^   &   *   _   -   +   =   (   )   [   ]   {   }   <   >   \   |   /   ;   :   '   "   .   ,   ?   s
-                    SCORE|  -34 -33 -32 -31 -30 -29 -28 -27 -26 -25 -24 -23 -22 -21 -20 -19 -18 -17 -16 -15 -14 -13 -12 -11 -10 -9  -8  -7  -6  -5  -4  -3  -2  10
-                        :: s (space character [' '])   n (non-scorable/null character ['\0'])
-                Numerics
-                    CHAR |  eX  0   1   2   3   4   5   6   7   8   9       
-                    SCORE|  -1  0   1   2   3   4   5   6   7   8   9
-                        :: eX (Indicator for resulting vacancy from numeric congregation) 
-                Alphabetics
-                    CHAR |  a   b   c   d   e   f   g   h   i   j   k   l   m   n   o   p   q   r   s   t   u   v   w   x   y   z
-                    SCORE|  11  12  13  14  15  16  17  18  19  20  21  22  23  24  25  26  27  28  29  30  31  32  33  34  35  36
-                ***/
-                const int nullScore = -34;
-                int score = nullScore;
+                string chars = "~`!@#$%^&*_-+=()[]{}<>\\|/;:'\".,?" + "~0123456789" + " " + "abcdefghijklmnopqrstuvwxyz";
+                chars = chars.ToLower();
+                c = c.ToString().ToLower()[0];
 
-                if (c.IsNotNull())
+                if (chars.Contains(c.ToString()))
                 {
-                    string chars = "~`!@#$%^&*_-+=()[]{}<>\\|/;:'\".,?" + "~0123456789" + " " + "abcdefghijklmnopqrstuvwxyz";
-                    chars = chars.ToLower();
-                    c = c.ToString().ToLower()[0];
-
-                    if (chars.Contains(c.ToString()))
+                    bool stopSearch = false;
+                    char[] characters = chars.ToCharArray();
+                    for (int cix = 0; cix < characters.Length && !stopSearch; cix++)
                     {
-                        bool stopSearch = false;
-                        char[] characters = chars.ToCharArray();
-                        for (int cix = 0; cix < characters.Length && !stopSearch; cix++)
-                        {
-                            score++;
-                            if (c == characters[cix])
-                                stopSearch = true;
-                        }
+                        score++;
+                        if (c == characters[cix])
+                            stopSearch = true;
                     }
                 }
-                return score;
             }
+            return score;
         }
 
         // PRERFERENCES

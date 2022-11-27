@@ -25,7 +25,7 @@ PURPOSE :: (similar to Ex1)
 > (Shr_Donut) - ShugharDounut (i324)
 > Grain View Controller (i242) - Grains Biome Backgrounds (b11`)
 
-[TTA : 29]
+[TTA : 28]
 
 [UPDATED]
 > Mashed Potato (t32) - Redesigned to look more creamy.
