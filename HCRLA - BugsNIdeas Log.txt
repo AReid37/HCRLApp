@@ -1,6 +1,6 @@
 ﻿L.E.G.E.N.D
 [ ] 0# -- New bug report/idea and category issue number
-[X] 0# -- Resolved bug report or completetd category issue number
+[X] 0# -- Resolved bug report/implemented idea and completed category issue number
 [.] 0# -- Ignored bug report/idea and category issue number
 
 
@@ -8,19 +8,19 @@
 ---------------------
        B U G S
 ---------------------
-[ ] 1# Remove escape characters from the lines of the version log when decoding (particulary remove: /n /t /a /f /r).
+[X] 1# Remove escape characters from the lines of the version log when decoding (particulary remove: /n /t /a /f /r).
 
 [ ] 2# After data is saved, set all 'Previous Version' variables to match the current saved version, so that it is not resaving the same data and overwriting a valid file save backup.
 
-[ ] 3# When a log file's contents are being displayed, the section tags must be detected only by starting with '[' and ending with ']', not by containing both.
+[X] 3# When a log file's contents are being displayed, the section tags must be detected only by starting with '[' and ending with ']', not by containing both.
 
 [ ] 4# ResLib.Integrate(); when searching through loose contents for matching contents, remove data ID suffixes that are symbols before attempting to match
 
-[ ] 5# ResLib.Integrate(); when matching against definitions of Legend Datas, compare at lowercase to avoid case-insensitive duplicates.
+[X] 5# ResLib.Integrate() -> LegDat.AddKeyDef(); when matching against definitions of Legend Datas, compare at lowercase to avoid case-insensitive duplicates.
 
-[ ] 6# @Log Legend View Page, highlight must only be highlighting the legend key. The 'key' within its definitions must not be highlighted.
+[X] 6# @Log Legend View Page, highlight must only be highlighting the legend key. The 'key' within its definitions must not be highlighted.
 
-[ ] 7# A non-wordy data ID must be identified as a key that at least contains numbers and letters, and ends with a number. 
+[X] 7# A non-wordy data ID must be identified as a key that at least contains numbers and letters, and ends with a number. 
     >> Real Testing Examples (NPC_12, NPC_12_Alt_1, Player_0_0, Player_0_1, Tiles_2_Beach, Tiles_59_2, Tiles_199-gross, Tree_Branches_13, Wires2, Wraith_Eyes) 
     >> Possible Resolve: when given a legend key and its definition, only replace the key at the front of the ID with its definition, and leave the rest of the ID as is (example, Item_23 is 'i23', Tiles_42-small is 't42-small')
 
@@ -32,11 +32,11 @@
 ---------------------
       I D E A S
 ---------------------
-[ ] 1# A bug report/idea suggestion route that is accessible from any style input by using a keyphrase. Ideas and bugs are saved in a separate file; Ideas & bugs may also be stored with main file data.
+[ ] 1# A bug report/idea suggestion route that is accessible from any style input by using a keyphrase (Suggest '@dbi'). Ideas and bugs are saved in a separate file; Ideas & bugs may also be stored with main file data.
 
 [ ] 2# Display what base contents the loose contents were connected to after contents have been integrated after a submission. Any mistakes can be undone from a reversion.
 
-[ ] 3# Log Legend View should also show what version the library is currently in
+[X] 3# Log Legend View should also show from which log version the library's contents are based
 
 [ ] 4# Each category within 'Settings->ConInt->ViewAllDataIDs' should show how many Data IDs they contain
 
@@ -46,6 +46,12 @@
 
 [ ] 7# When displaying the decoded version logs, if there is a decode issue, the text may also display or highlight where the error occured when possible (highlight or note where in the text the issue occured).
 
-[ ] 8# Within Log Submission Page, encoding save data can be triggered once the main submission page is being exited, rather than after each submitted version log.
+[ ] 8# Within Log Submission Page, encoding save data can be triggered once the main submission page is being exited, rather than after each submitted version log. This allows a proper [file] reversion of log 'session' and greatly decreases any bloating of the Dbug session flush file.
 
-[ ] 9# Reversion; Version Reversion, specific version removal is possible, however only if the version's contents is not referenced in future version (Either allowed or denied reversion thereafter).
+[ ] 9# Reversion; Version Reversion, specific version removal is possible, however only if the version's contents is not referenced in future version (Either allowed or denied reversion thereafter; Generally useful only the case of overwriting a log version's info)
+    
+    [ ] alt.9# Log Submission; If a Version Log is submitted containing version information that already exists within the library, the option to overwrite the pre-existing information may be available (must include a report on the results of overwriting previous information) 
+
+[X] 10# Using a certain syntax to substitute a keycode with symbols that are used for log decoding (example: using "&00" to sub for "-", or using "&04" to sub for "("). File encoding/decoding won't be affected and the data remains true to it's name as it bypasses the possible errors from log decoding.
+
+[ ] 11# ...

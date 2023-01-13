@@ -143,7 +143,7 @@ namespace HCResourceLibraryApp.DataHandling
                     bool isDupe = false;
                     foreach (string def in _definitions)
                     {
-                        if (def == newDefinition)
+                        if (def.ToLower() == newDefinition.ToLower())
                         {
                             isDupe = true;
                             break;
@@ -158,7 +158,7 @@ namespace HCResourceLibraryApp.DataHandling
                 }
                 else
                 {
-                    _definitions = new List<string>();
+                    _definitions = new();
                     _definitions.Add(newDefinition);
                     addedNewDef = true;
                 }

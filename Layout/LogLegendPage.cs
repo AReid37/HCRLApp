@@ -35,6 +35,7 @@ namespace HCResourceLibraryApp.Layout
 
                     // gather data
                     LegendData[] sortedLegendData = null;
+                    VerNum latestVersion = VerNum.None;
                     if (sortedLegendData == null)
                     { /// wrapping
                         List<string> sortedKeys = new();
@@ -58,6 +59,8 @@ namespace HCResourceLibraryApp.Layout
                                 //Dbug.SingleLog("--", $"Sorted @ix{kix} --> {matchingLegDat}");
                             }
                         }
+
+                        _resLibrary.GetVersionRange(out _, out latestVersion);
                     }
 
                     // print table
@@ -69,6 +72,8 @@ namespace HCResourceLibraryApp.Layout
                         TableRowDivider(subMenuUnderline, false, GetPrefsForeColor(ForECol.Accent));
 
                         bool holdFormatVerifyValue = VerifyFormatUsage;
+                        if (holdFormatVerifyValue)
+                            TextLine("#'Verify Format Usage' has been temporarily disabled for this page.", Color.DarkGray);
                         VerifyFormatUsage = false;
 
                         /// table header
@@ -81,19 +86,20 @@ namespace HCResourceLibraryApp.Layout
                         foreach (LegendData tableLeg in sortedLegendData)
                         {
                             const string backtick = "`";
-                            string replaceBacktick = DataHandlerBase.Sep;
+                            const string replaceBacktick = DataHandlerBase.Sep;
 
                             string tabKeyInfo = $"{tableLeg.VersionIntroduced.ToStringNums()} {tableLeg.Key}".Replace(backtick, replaceBacktick);
                             string tabDat1Info = tableLeg.DefinitionsString.Replace(backtick, replaceBacktick);
                             
                             HoldNextListOrTable();                            
                             Table(tDivSize, tabKeyInfo, '|', tabDat1Info);
-                            Highlight(false, LatestTablePrintText.Replace(replaceBacktick, backtick), tableLeg.Key, tableLeg[0]);
+                            Highlight(true, LatestTablePrintText.Replace("\n","").Replace(replaceBacktick, backtick), $" {tableLeg.Key} ", tableLeg[0]);
                             if (HSNL(0, 2) - 2 == 0)
                                 HorizontalRule('-');
                         }
                         VerifyFormatUsage = holdFormatVerifyValue;
                     }
+                    Format($"{Ind14}Log Legends sourced from {latestVersion}. ", ForECol.Accent);
                     Pause();
                 }
             }

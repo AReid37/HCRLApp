@@ -194,7 +194,7 @@ namespace HCResourceLibraryApp.Layout
                                         if (line.StartsWith(LogDecoder.omitBlockClose))
                                             omitBlock = false;
                                         /// section detect
-                                        if (line.Contains("[") && lx != 0 && !omitBlock)
+                                        if (line.StartsWith("[") && line.EndsWith("]") && lx != 0 && !omitBlock)
                                             NewLine();
                                         /// omit line detect
                                         bool omit = line.StartsWith(LogDecoder.omit);
@@ -649,7 +649,13 @@ namespace HCResourceLibraryApp.Layout
                                         {
                                             string rtPart1 = $"> {(rcConChg.InternalName.IsNotNEW() ? $"{rcConChg.InternalName}{Ind24}" : "")}{rcConChg.RelatedDataID}";
                                             string rtPart2 = $"{Ind24}{rcConChg.ChangeDesc}";
-                                            reviewTexts.Add($"{rtPart1}\n{rtPart2} {looseContentIndicator}");
+                                            string rtPart3 = $" {looseContentIndicator}";
+                                            if (rcConChg.InternalName.Contains(DataHandlerBase.Sep))
+                                            {
+                                                rtPart1 = rtPart1.Replace(DataHandlerBase.Sep, "");
+                                                rtPart3 = "";
+                                            }                                            
+                                            reviewTexts.Add($"{rtPart1}\n{rtPart2}{rtPart3}");
                                         }
                                 }
                             }

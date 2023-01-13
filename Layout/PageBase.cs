@@ -202,6 +202,7 @@ namespace HCResourceLibraryApp.Layout
         {
             Dbug.DeactivateNextLogSession();
             Dbug.StartLogging("PageBase.Highlight(str, params str[])");
+            
             Dbug.Log($"Recieved --> text (\"{text}\"); highlightedTexts (has elements? {highlightedTexts.HasElements()})");
             if (text.IsNotNEW() && highlightedTexts.HasElements())
             {
@@ -321,12 +322,12 @@ namespace HCResourceLibraryApp.Layout
                             Dbug.Log($"format normal word >> '{word}' (on newline? {end && newLine})");
                         }
 
-                        //if (!end)
-                        //    Text(" ");
                     }
                     else Dbug.Log("null or empty word~");
                 }
             }
+
+
             Dbug.EndLogging();
         }
         /// <summary>Input placeholder character limit: 50 characters. <br></br>Placeholder color cannot be changed.</summary>

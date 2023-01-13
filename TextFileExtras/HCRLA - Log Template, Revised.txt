@@ -27,6 +27,14 @@ GUIDELINES
 	Start of lines ::  [  >  -
 	Within lines   ::  [  ]  (  )  -  :  ,  ;  ~
 
+	Bypassing with character substitution syntax
+	Works only in sections: Added, Additional, Updated
+		'&00' for '-'
+		'&01' for ','
+		'&02' for ':'
+		'&11' for '('
+		'&12' for ')'
+		'&99' for '' (no character)
 
 INFORMATION FOR EACH SECTION
 	For the explanations below: described syntax elements marked with '*' are required
@@ -56,7 +64,7 @@ Body ::
 	{RelatedIds} : other related, non-wordy data Ids (tiles, projectiles, walls, ...).	
 		Multiple of similar type --> (x21,22) or (x32~34); 
 		Different types --> (x21 y22); 
-	Ex. 9 |PotPie - (i42; t23 p44,52 w31~33)
+	Ex. 9 |PotPie (Chicken) - (i42; t23 p44,52 w31~33)
 		13|PiePan - (i40)
 Note: If the data ID has numbers, it's best to create a legend key for it.
 _____
@@ -90,11 +98,15 @@ Syntax: {Key}* - {KeyDef}*
 	{Key} : The key character used within version log
 	{KeyDef} : A short description of what the key represents
 Re-Note: If the data ID has numbers, it's best to create a legend key for it.
+Note: 
+ 1. The first Legend Key definition must be corresponding to the content file names
+ 2. Legend Key must always be letters, and the suffix must always be a symbol. No numbers!
 
-AVAILABLE LEGEND KEYS (v1.29)
+AVAILABLE LEGEND KEYS (v1.30)
 ~ - Number Range
 * - Introduced In Earlier Version
 ` - Layer of Translucent Black
+^ - Overhauled
 b - Background
 c - Coin
 d - Dust

@@ -1,6 +1,7 @@
 ﻿using ConsoleFormat;
 using System;
 using System.Collections.Generic;
+using System.Runtime;
 using static ConsoleFormat.Base;
 
 namespace HCResourceLibraryApp.DataHandling
@@ -26,8 +27,35 @@ namespace HCResourceLibraryApp.DataHandling
                 -- !close --
         **/
         public const string omit = "--", omitBlockOpen = "-- !open --", omitBlockClose = "-- !close --";
+        /** CHARACTER KEYCODE SUBSTITUTION RULES
+        ...........................
+        The Keycode must start with the ampersand symbol (&) which is followed by two numbers (##) 
+        Keycode syntax therefore is '&##'
+
+            Current Keycodes (sourced from 'HCRLA - Log Template, Revised.txt')
+            Sym     Code
+            ---     ---
+            '-'     &00
+            ','     &01
+            ':'     &02
+            '('     &11
+            ')'     &12
+            ''      &99
+
+        Keycode syntax is only available in the Added, Additional, and Updated sections
+        Example usages
+            [ADDED]
+            1 |KCR&00Unit - (i4500)      // Produces ConBase as "v0.00;KCR-Unit;i4500"
+            2a|McHattin's Fedora - (i4554)  // Produce ConBase as "v0.00;Mc Hattin's Fedora;i4554"
+            2b|Mc&99Hattin's Fedora - (i4554) // Produce ConBase as "v0.00;McHattin's Fedora;i4554"    (notice difference to 2a)
+
+            [ADDITIONAL]
+            > (Grate&11bloody&12) - The &11Bloody&12 Grate     // Produces ConAddit as "v0.00;;The (Bloody) Grate;Grate(bloody)"
+        v0.99;;Npc #12;n12
+         **/
+        public const string cks00 = "&00 -", cks01 = "&01 ,", cks02 = "&02 :", cks11 = "&11 (", cks12 = "&12 )", cks99 = "&99 ";
         const char legRangeKey = '~';
-        readonly bool runSelfUpdatingTest = false, testLibConAddUpdConnectionQ = false;
+        readonly bool enableSelfUpdatingFunction = true, testLibConAddUpdConnectionQ = false;
         static string _prevRecentDirectory, _recentDirectory;
         bool _hasDecodedQ;
         static bool _allowLogDecToolsDbugMessagesQ = false;
@@ -115,7 +143,7 @@ namespace HCResourceLibraryApp.DataHandling
                 List<DecodeInfo> decodingInfoDock = new();
 
                 #region Decode - Tracking & Temporary Storage
-                bool endFileReading = false;
+                bool endFileReading = false, ranLegendChecksQ = false;
                 List<string[]> addedPholderNSubTags = new();
                 List<string> addedContentsNames = new();
                 List<string> usedLegendKeys = new();
@@ -177,12 +205,7 @@ namespace HCResourceLibraryApp.DataHandling
                         }
 
                         /// imparsable line (single omit)
-                        bool omitThisLine = false;                        
-                        if (logDataLine.StartsWith(omit) && !withinOmitBlock)
-                        {
-                            //if (!logDataLine.Contains(secBracL) && !logDataLine.Contains(secBracR))
-                                omitThisLine = true;
-                        }
+                        bool omitThisLine = logDataLine.StartsWith(omit) && !withinOmitBlock;
 
                         /// if {parsable line} else {imparsable issue message}
                         if (!omitThisLine && !invalidLine && !withinOmitBlock)
@@ -234,6 +257,7 @@ namespace HCResourceLibraryApp.DataHandling
                                     sectionIssueQ = true;
 
                                     Dbug.LogPart("Version Data  //  ");
+                                    logDataLine = RemoveEscapeCharacters(logDataLine);
                                     if (IsSectionTag() && !parsedSectionTagQ)
                                     {
                                         logDataLine = RemoveSquareBrackets(logDataLine);
@@ -366,7 +390,9 @@ namespace HCResourceLibraryApp.DataHandling
                                     /// added tag (may contain placeholders and substitutes)
                                     if (logDataLine.Contains(secBracL) || logDataLine.Contains(secBracR))
                                     {
-                                        Dbug.LogPart("Identified added section tag; ");                                        
+                                        Dbug.LogPart("Identified added section tag; ");
+                                        logDataLine = RemoveEscapeCharacters(logDataLine);
+
                                         addedPholderNSubTags.Clear();
                                         if (IsSectionTag() && !parsedSectionTagQ)
                                         {
@@ -519,6 +545,7 @@ namespace HCResourceLibraryApp.DataHandling
                                         List<string> addedDataIDs = new();
 
                                         Dbug.LogPart("Identified added data; ");
+                                        logDataLine = RemoveEscapeCharacters(logDataLine);
                                         if (logDataLine.Contains('|') && logDataLine.CountOccuringCharacter('|') == 1)
                                         {
                                             /// 1  <-->  ItemName       -(x25; y32,33 q14)
@@ -586,7 +613,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                         if (okayContentDataIDs)
                                                         {
                                                             addedContsNDatas[1] = RemoveParentheses(addedContsNDatas[1]);
-                                                            addedContentName = FixContentName(addedContsNDatas[0]);
+                                                            addedContentName = CharacterKeycodeSubstitution(FixContentName(addedContsNDatas[0]));
                                                             bool okayContentName = true;
                                                             if (addedContentsNames.HasElements())
                                                                 okayContentName = !addedContentsNames.Contains(addedContentName);
@@ -604,6 +631,12 @@ namespace HCResourceLibraryApp.DataHandling
                                                                     /// (x25 y32,33 q14)
                                                                     /// (x21 y42 q21)
                                                                     addedContsNDatas[1] = addedContsNDatas[1].Replace(";", "");
+                                                                    if (DetectUsageOfCharacterKeycode(addedContsNDatas[1], cks01))
+                                                                    {
+                                                                        Dbug.LogPart($"Usage of CKS '{cks01}' in data ID groups advised against; ");
+                                                                        decodeInfo.NoteIssue($"Usage of character keycode '{cks01}' in data ID groups is advised against");
+                                                                    }
+                                                                    addedContsNDatas[1] = CharacterKeycodeSubstitution(addedContsNDatas[1]);
                                                                     string[] dataIdGroups = addedContsNDatas[1].Split(' ', StringSplitOptions.RemoveEmptyEntries);
                                                                     if (dataIdGroups.HasElements())
                                                                         foreach (string dataIDGroup in dataIdGroups)
@@ -634,15 +667,22 @@ namespace HCResourceLibraryApp.DataHandling
                                                                                 if (dataIDs.HasElements(2))
                                                                                 {
                                                                                     Dbug.LogPart("; ");
-                                                                                    GetDataKeyAndSuffix(dataIDs[0], out string dataKey, out string suffix);
+                                                                                    //GetDataKeyAndSuffix(dataIDs[0], out string dataKey, out string suffix);
+                                                                                    DisassembleDataID(dataIDs[0], out string dataKey, out _, out string suffix);
                                                                                     NoteLegendKey(usedLegendKeys, dataKey);
                                                                                     NoteLegendKey(usedLegendKeys, suffix);
                                                                                     if (dataKey.IsNotNEW())
                                                                                     {
-                                                                                        Dbug.LogPart($"Retrieved data key '{dataKey}'; Adding IDs :: ");
+                                                                                        Dbug.Log($"Retrieved data key '{dataKey}'; ");
+                                                                                        Dbug.LogPart(". Adding IDs :: ");
                                                                                         foreach (string datId in dataIDs)
                                                                                         {
-                                                                                            string datToAdd = $"{dataKey}{datId.Trim().Replace(dataKey, "")}";
+                                                                                            Dbug.LogPart("(");
+                                                                                            DisassembleDataID(datId, out _, out string dataBody, out string sfx);
+                                                                                            Dbug.LogPart(") ");
+
+                                                                                            //string datToAdd = $"{dataKey}{datId.Trim().Replace(dataKey, "")}";
+                                                                                            string datToAdd = dataKey + dataBody + sfx;
                                                                                             if (!IsNumberless(datToAdd))
                                                                                             {
                                                                                                 addedDataIDs.Add(datToAdd);
@@ -669,7 +709,8 @@ namespace HCResourceLibraryApp.DataHandling
                                                                                 string[] dataIdRng = dataIDGroup.Split(legRangeKey);
                                                                                 if (dataIdRng.HasElements() && dataIDGroup.CountOccuringCharacter(legRangeKey) == 1)
                                                                                 {
-                                                                                    GetDataKeyAndSuffix(dataIdRng[0], out string dataKey, out string dkSuffix);
+                                                                                    //GetDataKeyAndSuffix(dataIdRng[0], out string dataKey, out string dkSuffix);
+                                                                                    DisassembleDataID(dataIdRng[0], out string dataKey, out _, out string dkSuffix);
                                                                                     NoteLegendKey(usedLegendKeys, dataKey);
                                                                                     NoteLegendKey(usedLegendKeys, dkSuffix);
                                                                                     if (dataKey.IsNotNEW())
@@ -739,7 +780,8 @@ namespace HCResourceLibraryApp.DataHandling
                                                                             /// x25 q14 ...
                                                                             else
                                                                             {
-                                                                                GetDataKeyAndSuffix(dataIDGroup, out string dataKey, out string suffix);
+                                                                                //GetDataKeyAndSuffix(dataIDGroup, out string dataKey, out string suffix);
+                                                                                DisassembleDataID(dataIDGroup, out string dataKey, out _, out string suffix);
                                                                                 NoteLegendKey(usedLegendKeys, dataKey);
                                                                                 NoteLegendKey(usedLegendKeys, suffix);
 
@@ -881,6 +923,8 @@ namespace HCResourceLibraryApp.DataHandling
                                     //if (logDataLine.Contains(secBracL) && logDataLine.Contains(secBracR))
                                     if (IsSectionTag())
                                     {
+                                        logDataLine = RemoveEscapeCharacters(logDataLine);
+
                                         isHeader = true;
                                         if (!parsedSectionTagQ)
                                         {
@@ -899,6 +943,7 @@ namespace HCResourceLibraryApp.DataHandling
                                     if (!isHeader)
                                     {
                                         Dbug.LogPart("Identified additional data; ");
+                                        logDataLine = RemoveEscapeCharacters(logDataLine); 
                                         if (logDataLine.StartsWith('>') && logDataLine.CountOccuringCharacter('>') == 1)
                                         {
                                             /// Sardine Tins (u41,42) - Sardines (x89)
@@ -951,8 +996,8 @@ namespace HCResourceLibraryApp.DataHandling
                                                             bool okayAdtContentName = true;
                                                             if (adtContentName.Contains('(') || adtContentName.Contains(')'))
                                                             {
-                                                                Dbug.LogPart("Content name cannot contain parentheses");
-                                                                decodeInfo.NoteIssue("Content name cannot contain parentheses");
+                                                                Dbug.LogPart("Content name cannot (directly) contain parentheses");
+                                                                decodeInfo.NoteIssue("Content name cannot (directly) contain parentheses");
                                                                 okayAdtContentName = false;
                                                             }                                                            
 
@@ -964,37 +1009,44 @@ namespace HCResourceLibraryApp.DataHandling
                                                             {
                                                                 Dbug.Log("; ");
                                                                 adtDataIDs = RemoveParentheses(adtDataIDs.Trim().Replace(' ', ','));
-                                                                adtContentName = FixContentName(adtContentName);
+                                                                adtContentName = CharacterKeycodeSubstitution(FixContentName(adtContentName));
                                                                 Dbug.LogPart($"Parsed addit. content name ({(adtContentName.IsNEW() ? "<no name>" : adtContentName)}) and data ID group ({adtDataIDs})");
 
                                                                 /// u24,23`,29~31,CodTail
                                                                 if (adtDataIDs.Replace(",","").IsNotNEW())
                                                                 {
-                                                                    //Dbug.Log("; Data ID group contains ','; Fetching data IDs; ");
                                                                     Dbug.Log($";{(adtDataIDs.Contains(',') ? " Data ID group contains ',';" : "")} Fetching data IDs; ");
                                                                     string[] datIDs = adtDataIDs.Split(',', StringSplitOptions.RemoveEmptyEntries);
                                                                     if (datIDs.HasElements())
                                                                     {
-                                                                        string dataKey = null; //RemoveNumbers(datIDs[0].Replace(legRangeKey.ToString(), ""));
-                                                                        string dkSuffix = null; 
+                                                                        string dataKey = null;
+                                                                        string dataBody = null;
+                                                                        string dkSuffix = null;
+
+                                                                        // if (get datakey and suffix for ranges) else (get datakey and suffix for other id groups)
                                                                         if (datIDs[0].Contains(legRangeKey))
                                                                         {
-                                                                            string[] rangeParts = datIDs[0].Split(legRangeKey);
+                                                                            string[] rangeParts = CharacterKeycodeSubstitution(datIDs[0]).Split(legRangeKey);
                                                                             if (rangeParts.HasElements(2))
                                                                             {
-                                                                                GetDataKeyAndSuffix(rangeParts[0], out dataKey, out dkSuffix);
+                                                                                //GetDataKeyAndSuffix(rangeParts[0], out dataKey, out dkSuffix);
+                                                                                DisassembleDataID(rangeParts[0], out dataKey, out _, out dkSuffix);
                                                                                 /// below doesn't interfere with out-of-scope values
-                                                                                GetDataKeyAndSuffix(rangeParts[1], out string dk, out string dksfx);
+                                                                                //GetDataKeyAndSuffix(rangeParts[1], out string dk, out string dksfx);
+                                                                                DisassembleDataID(rangeParts[1], out string dk, out _, out string dksfx);
                                                                                 NoteLegendKey(usedLegendKeys, dk);
                                                                                 NoteLegendKey(usedLegendKeys, dksfx);
                                                                             }
                                                                         }
-                                                                        else GetDataKeyAndSuffix(datIDs[0], out dataKey, out dkSuffix);
+                                                                        else DisassembleDataID(CharacterKeycodeSubstitution(datIDs[0]), out dataKey, out dataBody, out dkSuffix);
+                                                                        //else GetDataKeyAndSuffix(datIDs[0], out dataKey, out dkSuffix);
                                                                         NoteLegendKey(usedLegendKeys, dataKey);
                                                                         NoteLegendKey(usedLegendKeys, dkSuffix);
 
+                                                                        bool noDataKey = dataKey.IsNEW();
                                                                         Dbug.LogPart($"Retrieved data key '{dataKey}'{(dkSuffix.IsNEW() ? "" : $" and suffix [{dkSuffix}]")}; ");
                                                                         
+                                                                        /// decode issue handling
                                                                         bool isOnlyNumber = false;
                                                                         if (RemoveNumbers(adtDataIDs.Replace(",", "").Replace(legRangeKey.ToString(), "")).IsNEW())
                                                                         {
@@ -1003,157 +1055,143 @@ namespace HCResourceLibraryApp.DataHandling
                                                                             decodeInfo.NoteIssue($"Data ID group is just numbers (invalid)");
                                                                         }
 
+                                                                        // go through the data ID groups for this addit.
                                                                         Dbug.NudgeIndent(true);
-                                                                        if (!isOnlyNumber)
-                                                                            foreach (string datId in datIDs)
+                                                                        if (!isOnlyNumber && (!noDataKey || dataBody.IsNotNE()))
+                                                                            foreach (string rawDatID in datIDs)
                                                                             {
-                                                                                bool invalidDataKey = false;
+                                                                                bool invalidDataKey = false, cksDataIDViolation = DetectUsageOfCharacterKeycode(rawDatID, cks01);
+                                                                                string datId = CharacterKeycodeSubstitution(rawDatID);
                                                                                 if (RemoveNumbers(datId).IsNotNEW())
                                                                                 {
                                                                                     invalidDataKey = IsNumberless(datId);
                                                                                     if (invalidDataKey)
                                                                                         Dbug.LogPart($"Treating Data ID as word (is numberless); ");
-
-                                                                                    /// no longer necessary...
-                                                                                    // fetch data key and suffix 
-                                                                                    //if (!invalidDataKey)
-                                                                                    //{
-                                                                                    //    //if (dataKey.IsNEW())
-                                                                                    //    //{
-                                                                                            
-                                                                                    //    //}
-
-                                                                                    //    //string preDataKey = RemoveNumbers(datId);
-                                                                                    //    //string numAtSplit = null;
-                                                                                    //    //if (preDataKey.IsNotNEW())
-                                                                                    //    //{
-                                                                                    //    //    numAtSplit = datId;
-                                                                                    //    //    foreach (char c in preDataKey)
-                                                                                    //    //        numAtSplit = numAtSplit.Replace(c.ToString(), "");
-                                                                                    //    //}
-
-                                                                                    //    //if (numAtSplit.IsNotNEW())
-                                                                                    //    //{
-                                                                                    //    //    string[] splitDat = datId.Split(numAtSplit);
-                                                                                    //    //    if (splitDat.HasElements(2))
-                                                                                    //    //    {
-                                                                                    //    //        if (splitDat[0].IsNotNEW())
-                                                                                    //    //            dataKey = splitDat[0];
-                                                                                    //    //        if (splitDat[1].IsNotNEW())
-                                                                                    //    //            dkSuffix = splitDat[1];
-                                                                                    //    //    }
-                                                                                    //    //}
-
-
-                                                                                    //}
                                                                                 }
                                                                                 
-                                                                                // data IDs with numbers
-                                                                                /// q21 x24`
-                                                                                if (!invalidDataKey)
+                                                                                if (!cksDataIDViolation)
                                                                                 {
-                                                                                    /// q41~44
-                                                                                    if (datId.Contains(legRangeKey))
+                                                                                    // data IDs with numbers
+                                                                                    /// q21 x24`
+                                                                                    if (!invalidDataKey)
                                                                                     {
-                                                                                        Dbug.LogPart($"Got range ID group '{datId}'; ");
-                                                                                        NoteLegendKey(usedLegendKeys, legRangeKey.ToString());
-                                                                                        string[] dataIdRng;
-
-                                                                                        if (datId.Contains(dataKey))
+                                                                                        /// q41~44
+                                                                                        if (datId.Contains(legRangeKey))
                                                                                         {
-                                                                                            Dbug.LogPart($"Removed data key '{dataKey}' before split; ");
-                                                                                            dataIdRng = datId.Replace(dataKey, "").Split(legRangeKey);
-                                                                                        }
-                                                                                        else dataIdRng = datId.Split(legRangeKey);
+                                                                                            Dbug.LogPart($"Got range ID group '{datId}'; ");
+                                                                                            NoteLegendKey(usedLegendKeys, legRangeKey.ToString());
+                                                                                            string[] dataIdRng;
 
-                                                                                        if (dataIdRng.HasElements() && datId.CountOccuringCharacter(legRangeKey) == 1)
-                                                                                        {
-                                                                                            dkSuffix = RemoveNumbers(dataIdRng[0].Replace(dataKey, ""));
-                                                                                            if (dkSuffix.IsNEW())
-                                                                                                dkSuffix = RemoveNumbers(dataIdRng[1]);
-
-                                                                                            if (dkSuffix.IsNotNEW())
+                                                                                            if (dataKey.IsNotNE())
                                                                                             {
-                                                                                                Dbug.LogPart($"Retrieved suffix [{(dkSuffix.IsNEW() ? "<none>" : dkSuffix)}]; ");
-                                                                                                dataIdRng[0] = dataIdRng[0].Replace(dkSuffix, "");
-                                                                                                dataIdRng[1] = dataIdRng[1].Replace(dkSuffix, "");
-                                                                                            }
-                                                                                            bool parseRngA = int.TryParse(dataIdRng[0], out int rngA);
-                                                                                            bool parseRngB = int.TryParse(dataIdRng[1], out int rngB);
-                                                                                            if (parseRngA && parseRngB)
-                                                                                            {
-                                                                                                //Dbug.Log("..");
-                                                                                                if (rngA != rngB)
+                                                                                                dataIdRng = datId.Split(legRangeKey);
+                                                                                                if (datId.Contains(dataKey))
                                                                                                 {
-                                                                                                    int lowBound = Math.Min(rngA, rngB), highBound = Math.Max(rngA, rngB);
-                                                                                                    Dbug.LogPart($"Parsed range numbers ({lowBound} up to {highBound}); ");
+                                                                                                    Dbug.LogPart($"Removed data key '{dataKey}' before split; ");
+                                                                                                    dataIdRng = datId.Replace(dataKey, "").Split(legRangeKey);
+                                                                                                }
+                                                                                            }
+                                                                                            else dataIdRng = datId.Split(legRangeKey);
 
-                                                                                                    Dbug.LogPart("Adding IDs :: ");
-                                                                                                    for (int rnix = lowBound; rnix <= highBound; rnix++)
+                                                                                            /// if (valid syntax) else (decoding issue, syntax error)
+                                                                                            if (dataIdRng.HasElements() && datId.CountOccuringCharacter(legRangeKey) == 1)
+                                                                                            {
+                                                                                                if (dataKey.IsNotNE())
+                                                                                                    dkSuffix = RemoveNumbers(dataIdRng[0].Replace(dataKey, ""));
+                                                                                                if (dkSuffix.IsNEW())
+                                                                                                    dkSuffix = RemoveNumbers(dataIdRng[1]);
+
+                                                                                                if (dkSuffix.IsNotNEW())
+                                                                                                {
+                                                                                                    Dbug.LogPart($"Retrieved suffix [{(dkSuffix.IsNEW() ? "<none>" : dkSuffix)}]; ");
+                                                                                                    dataIdRng[0] = dataIdRng[0].Replace(dkSuffix, "");
+                                                                                                    dataIdRng[1] = dataIdRng[1].Replace(dkSuffix, "");
+                                                                                                }
+                                                                                                bool parseRngA = int.TryParse(dataIdRng[0], out int rngA);
+                                                                                                bool parseRngB = int.TryParse(dataIdRng[1], out int rngB);
+                                                                                                if (parseRngA && parseRngB)
+                                                                                                {
+                                                                                                    //Dbug.Log("..");
+                                                                                                    if (rngA != rngB)
                                                                                                     {
-                                                                                                        string dataID = $"{dataKey}{rnix}{dkSuffix}".Trim();
-                                                                                                        adtConDataIDs.Add(dataID);
-                                                                                                        Dbug.LogPart($"{dataID} - ");
+                                                                                                        int lowBound = Math.Min(rngA, rngB), highBound = Math.Max(rngA, rngB);
+                                                                                                        Dbug.LogPart($"Parsed range numbers ({lowBound} up to {highBound}); ");
+
+                                                                                                        Dbug.LogPart("Adding IDs :: ");
+                                                                                                        for (int rnix = lowBound; rnix <= highBound; rnix++)
+                                                                                                        {
+                                                                                                            string dataID = $"{dataKey}{rnix}{dkSuffix}".Trim();
+                                                                                                            adtConDataIDs.Add(dataID);
+                                                                                                            Dbug.LogPart($"{dataID} - ");
+                                                                                                        }
+                                                                                                    }
+                                                                                                    else
+                                                                                                    {
+                                                                                                        Dbug.LogPart("Both range values cannot be the same");
+                                                                                                        decodeInfo.NoteIssue("Both range values cannot be the same");
                                                                                                     }
                                                                                                 }
                                                                                                 else
                                                                                                 {
-                                                                                                    Dbug.LogPart("Both range values cannot be the same");
-                                                                                                    decodeInfo.NoteIssue("Both range values cannot be the same");
+                                                                                                    if (parseRngA)
+                                                                                                    {
+                                                                                                        Dbug.LogPart($"Right range value '{dataIdRng[1]}' was an invalid number");
+                                                                                                        decodeInfo.NoteIssue($"Right range value '{dataIdRng[1]}' was an invalid number");
+                                                                                                    }
+                                                                                                    else
+                                                                                                    {
+                                                                                                        Dbug.LogPart($"Left range value '{dataIdRng[0]}' was an invalid number");
+                                                                                                        decodeInfo.NoteIssue($"Left range value '{dataIdRng[0]}' was an invalid number");
+                                                                                                    }
                                                                                                 }
                                                                                             }
                                                                                             else
                                                                                             {
-                                                                                                if (parseRngA)
+                                                                                                if (dataIdRng.HasElements())
                                                                                                 {
-                                                                                                    Dbug.LogPart($"Right range value '{dataIdRng[1]}' was an invalid number");
-                                                                                                    decodeInfo.NoteIssue($"Right range value '{dataIdRng[1]}' was an invalid number");
+                                                                                                    Dbug.LogPart($"This range group has too many '{legRangeKey}'");
+                                                                                                    decodeInfo.NoteIssue($"This range group has too many '{legRangeKey}'");
                                                                                                 }
                                                                                                 else
                                                                                                 {
-                                                                                                    Dbug.LogPart($"Left range value '{dataIdRng[0]}' was an invalid number");
-                                                                                                    decodeInfo.NoteIssue($"Left range value '{dataIdRng[0]}' was an invalid number");
+                                                                                                    Dbug.LogPart($"This range is missing values or missing '{legRangeKey}'");
+                                                                                                    decodeInfo.NoteIssue($"This range is missing values or missing '{legRangeKey}'");
                                                                                                 }
                                                                                             }
                                                                                         }
+
+                                                                                        /// u41 u42 q41...
                                                                                         else
                                                                                         {
-                                                                                            if (dataIdRng.HasElements())
+                                                                                            if (!IsNumberless(datId))
                                                                                             {
-                                                                                                Dbug.LogPart($"This range group has too many '{legRangeKey}'");
-                                                                                                decodeInfo.NoteIssue($"This range group has too many '{legRangeKey}'");
-                                                                                            }
-                                                                                            else
-                                                                                            {
-                                                                                                Dbug.LogPart($"This range is missing values or missing '{legRangeKey}'");
-                                                                                                decodeInfo.NoteIssue($"This range is missing values or missing '{legRangeKey}'");
+                                                                                                /// below does not intefere with important data
+                                                                                                //GetDataKeyAndSuffix(datId, out string dkey, out string sfx);
+
+                                                                                                DisassembleDataID(datId, out string dkey, out string dbody, out string sfx);
+                                                                                                NoteLegendKey(usedLegendKeys, dkey);
+                                                                                                NoteLegendKey(usedLegendKeys, sfx);
+
+                                                                                                //string dataID = $"{dataKey}{datId.Replace(dataKey, "")}".Trim();
+                                                                                                string dataID = dataKey + dbody + sfx;
+                                                                                                adtConDataIDs.Add(dataID);
+                                                                                                Dbug.LogPart($"Got and added '{dataID}'");
                                                                                             }
                                                                                         }
                                                                                     }
-
-                                                                                    /// u41 u42 q41...
+                                                                                    // data IDs without numbers
+                                                                                    /// CodTail
                                                                                     else
                                                                                     {
-                                                                                        if (!IsNumberless(datId))
-                                                                                        {
-                                                                                            /// below does not intefere with important data
-                                                                                            GetDataKeyAndSuffix(datId, out string dkey, out string sfx);
-                                                                                            NoteLegendKey(usedLegendKeys, dkey);
-                                                                                            NoteLegendKey(usedLegendKeys, sfx);
-
-                                                                                            string dataID = $"{dataKey}{datId.Replace(dataKey, "")}".Trim();
-                                                                                            adtConDataIDs.Add(dataID);
-                                                                                            Dbug.LogPart($"Got and added '{dataID}'");
-                                                                                        }                                                                                
+                                                                                        adtConDataIDs.Add(datId);
+                                                                                        Dbug.LogPart($"Got and added '{datId}'");
                                                                                     }
-                                                                                }
-                                                                                // data IDs without numbers
-                                                                                /// CodTail
+                                                                                }        
                                                                                 else
                                                                                 {
-                                                                                    adtConDataIDs.Add(datId);
-                                                                                    Dbug.LogPart($"Got and added '{datId}'");
-                                                                                }                         
+                                                                                    Dbug.LogPart($"; Data group may not contain comma CKS ({cks01})");
+                                                                                    decodeInfo.NoteIssue($"Data group may not contain following character keycode: {cks01}");
+                                                                                }
 
                                                                                 Dbug.Log(";");
                                                                             }
@@ -1165,87 +1203,6 @@ namespace HCResourceLibraryApp.DataHandling
                                                                     Dbug.LogPart("; Data group had no values for data IDs");
                                                                     decodeInfo.NoteIssue("Data group had no values for data IDs");
                                                                 }
-                                                                #region isThisReallyNecessary?
-                                                                /// q41~44                                                                
-                                                                //else if (adtDataIDs.Contains(legRangeKey))
-                                                                //{
-                                                                //    Dbug.Log("; Data ID group is a number range; ");
-                                                                //    string[] dataIdRng = adtDataIDs.Split(legRangeKey);
-
-                                                                //    if (dataIdRng.HasElements() && adtDataIDs.CountOccuringCharacter(legRangeKey) == 1)
-                                                                //    {
-                                                                //        string dataKey = RemoveNumbers(dataIdRng[0]);
-                                                                //        if (dataKey.IsNotNEW())
-                                                                //        {
-                                                                //            string dkSuffix = RemoveNumbers(dataIdRng[0].Replace(dataKey, ""));
-                                                                //            if (dkSuffix.IsNEW())
-                                                                //                dkSuffix = RemoveNumbers(dataIdRng[1].Replace(dataKey, ""));
-                                                                //            Dbug.LogPart($"Retrieved data key '{dataKey}' and suffix [{(dkSuffix.IsNEW() ? "<none>" : dkSuffix)}]; ");
-
-                                                                //            dataIdRng[0] = dataIdRng[0].Replace(dataKey, "");
-                                                                //            dataIdRng[1] = dataIdRng[1].Replace(dataKey, "");
-                                                                //            if (dkSuffix.IsNotNEW())
-                                                                //            {
-                                                                //                dataIdRng[0] = dataIdRng[0].Replace(dkSuffix, "");
-                                                                //                dataIdRng[1] = dataIdRng[1].Replace(dkSuffix, "");
-                                                                //            }
-
-                                                                //            bool parseRngA = int.TryParse(dataIdRng[0], out int rngA);
-                                                                //            bool parseRngB = int.TryParse(dataIdRng[1], out int rngB);
-                                                                //            if (parseRngA && parseRngB)
-                                                                //            {
-                                                                //                if (rngA != rngB)
-                                                                //                {
-                                                                //                    int lowBound = Math.Min(rngA, rngB), highBound = Math.Max(rngA, rngB);
-                                                                //                    Dbug.LogPart($"Parsed range numbers ({lowBound} up to {highBound}); ");
-
-                                                                //                    Dbug.LogPart("Adding IDs :: ");
-                                                                //                    for (int rnix = lowBound; rnix <= highBound; rnix++)
-                                                                //                    {
-                                                                //                        string dataID = $"{dataKey}{rnix}{dkSuffix}".Trim();
-                                                                //                        adtConDataIDs.Add(dataID);
-                                                                //                        Dbug.LogPart($"{dataID} - ");
-                                                                //                    }
-                                                                //                }
-                                                                //                else
-                                                                //                {
-                                                                //                    Dbug.LogPart("Both range values cannot be the same");
-                                                                //                    decodeInfo.NoteIssue("Both range values cannot be the same");
-                                                                //                }
-                                                                //            }
-                                                                //            else
-                                                                //            {
-                                                                //                if (parseRngA)
-                                                                //                {
-                                                                //                    Dbug.LogPart($"Right range value '{dataIdRng[1]}' was an invalid number");
-                                                                //                    decodeInfo.NoteIssue($"Right range value '{dataIdRng[1]}' was an invalid number");
-                                                                //                }
-                                                                //                else
-                                                                //                {
-                                                                //                    Dbug.LogPart($"Left range value '{dataIdRng[0]}' was an invalid number");
-                                                                //                    decodeInfo.NoteIssue($"Left range value '{dataIdRng[0]}' was an invalid number");
-                                                                //                }
-                                                                //            }
-                                                                //        }
-                                                                //    }
-                                                                //    else
-                                                                //    {
-                                                                //        if (dataIdRng.HasElements())
-                                                                //        {
-                                                                //            Dbug.LogPart($"This range group has too many '{legRangeKey}'");
-                                                                //            decodeInfo.NoteIssue($"This range group has too many '{legRangeKey}'");
-                                                                //        }
-                                                                //        else
-                                                                //        {
-                                                                //            Dbug.LogPart($"This range is missing values or missing '{legRangeKey}'");
-                                                                //            decodeInfo.NoteIssue($"This range is missing values or missing '{legRangeKey}'");
-                                                                //        }
-                                                                //    }
-                                                                //}
-
-                                                                /// y23
-                                                                //else adtConDataIDs.Add(adtDataIDs.Trim());
-                                                                #endregion
 
                                                                 if (adtConDataIDs.HasElements())
                                                                 {
@@ -1310,20 +1267,21 @@ namespace HCResourceLibraryApp.DataHandling
                                                                         }
                                                                         else
                                                                         {
-                                                                            adtRelatedName = FixContentName(adtRelatedName);
+                                                                            adtRelatedName = CharacterKeycodeSubstitution(FixContentName(adtRelatedName));
                                                                             okayRelName = true;
                                                                         }
                                                                     }
                                                                     // for data id
                                                                     if (adtRelatedDataID.IsNotNEW())
                                                                     {
-                                                                        if (!adtRelatedDataID.Contains(legRangeKey) && !adtRelatedDataID.Contains(','))
+                                                                        if (!adtRelatedDataID.Contains(legRangeKey) && !adtRelatedDataID.Contains(',') && !DetectUsageOfCharacterKeycode(adtRelatedDataID, cks01))
                                                                         {
                                                                             adtRelatedDataID = RemoveParentheses(adtRelatedDataID);
                                                                             if (RemoveNumbers(adtRelatedDataID).IsNotNEW())
                                                                             {
                                                                                 /// doesn't interfere with out of scope stuff, ofc...
-                                                                                GetDataKeyAndSuffix(adtRelatedDataID, out string dk, out string sfx);
+                                                                                //GetDataKeyAndSuffix(adtRelatedDataID, out string dk, out string sfx);
+                                                                                DisassembleDataID(CharacterKeycodeSubstitution(adtRelatedDataID), out string dk, out _, out string sfx);
                                                                                 NoteLegendKey(usedLegendKeys, dk);
                                                                                 NoteLegendKey(usedLegendKeys, sfx);
                                                                                 okayRelDataID = true;
@@ -1336,7 +1294,12 @@ namespace HCResourceLibraryApp.DataHandling
                                                                         }
                                                                         else
                                                                         {
-                                                                            if (!adtRelatedDataID.Contains(legRangeKey))
+                                                                            if (DetectUsageOfCharacterKeycode(adtRelatedDataID, cks01))
+                                                                            {
+                                                                                Dbug.LogPart($"; Related data id may not contain comma CKS ({cks01})");
+                                                                                decodeInfo.NoteIssue($"Related Data ID may not contain following character keycode: {cks01}");
+                                                                            }
+                                                                            else if (!adtRelatedDataID.Contains(legRangeKey))
                                                                             {
                                                                                 Dbug.LogPart("There can only be one related Data ID (contains ',')");
                                                                                 decodeInfo.NoteIssue("There can only be one related Data ID (contains ',')");
@@ -1610,6 +1573,7 @@ namespace HCResourceLibraryApp.DataHandling
                                     sectionIssueQ = true;
 
                                     Dbug.LogPart("TTA Data  //  ");
+                                    logDataLine = RemoveEscapeCharacters(logDataLine);
                                     if (IsSectionTag() && !parsedSectionTagQ)
                                     {
                                         logDataLine = RemoveSquareBrackets(logDataLine);
@@ -1806,6 +1770,8 @@ namespace HCResourceLibraryApp.DataHandling
                                     /// updated header (imparsable, but not an issue)
                                     if (IsSectionTag())
                                     {
+                                        logDataLine = RemoveEscapeCharacters(logDataLine);
+                                        
                                         isHeader = true;
                                         if (!parsedSectionTagQ)
                                         {
@@ -1824,6 +1790,7 @@ namespace HCResourceLibraryApp.DataHandling
                                     if (!isHeader)
                                     {
                                         Dbug.LogPart("Identified updated data; ");
+                                        logDataLine = RemoveEscapeCharacters(logDataLine);
                                         if (logDataLine.StartsWith('>') && logDataLine.CountOccuringCharacter('>') == 1)
                                         {
                                             /// Taco Sauce (y32) - Fixed to look much saucier
@@ -1855,14 +1822,19 @@ namespace HCResourceLibraryApp.DataHandling
                                                         }
                                                         Dbug.LogPart("; ");
                                                         updtDataID = RemoveParentheses(updtDataID);
-                                                        updtContentName = FixContentName(updtContentName);
+                                                        updtContentName = CharacterKeycodeSubstitution(FixContentName(updtContentName));
                                                         Dbug.Log("..");
 
                                                         bool okayDataIDQ = false;
-                                                        if (updtDataID.Contains(',') || updtDataID.Contains(legRangeKey))
+                                                        if (updtDataID.Contains(',') || updtDataID.Contains(legRangeKey) || DetectUsageOfCharacterKeycode(updtDataID, cks01))
                                                         {
                                                             Dbug.LogPart("Only one updated ID may be referenced per update");
-                                                            if (updtDataID.Contains(','))
+                                                            if (DetectUsageOfCharacterKeycode(updtDataID, cks01))
+                                                            {
+                                                                Dbug.LogPart($" (contains comma CKS '{cks01}')");
+                                                                decodeInfo.NoteIssue($"Only one updated ID can be referenced (no data groups; contains character keycode '{cks01}')");
+                                                            }
+                                                            else if (updtDataID.Contains(','))
                                                             {
                                                                 Dbug.LogPart(" (contains ',')");
                                                                 decodeInfo.NoteIssue($"Only one updated ID can be referenced (no data groups; contains ',')");
@@ -1885,7 +1857,10 @@ namespace HCResourceLibraryApp.DataHandling
                                                                 /// numberless is okay, a nonID content could be updated; .. just numbers though, is not allowed
                                                                 if (RemoveNumbers(updtDataID).IsNotNEW())
                                                                 {
-                                                                    GetDataKeyAndSuffix(updtDataID, out string dk, out string sfx);
+                                                                    updtDataID = CharacterKeycodeSubstitution(updtDataID);
+
+                                                                    //GetDataKeyAndSuffix(updtDataID, out string dk, out string sfx);
+                                                                    DisassembleDataID(updtDataID, out string dk, out _, out string sfx);
                                                                     NoteLegendKey(usedLegendKeys, dk);
                                                                     NoteLegendKey(usedLegendKeys, sfx);
 
@@ -1902,7 +1877,7 @@ namespace HCResourceLibraryApp.DataHandling
 
                                                         // updated description
                                                         if (okayDataIDQ)
-                                                            updtChangeDesc = FullstopCheck(splitLogLine[1]);
+                                                            updtChangeDesc = FullstopCheck(CharacterKeycodeSubstitution(splitLogLine[1]));
 
                                                         // generate ContentChanges, connect to ConBase or ConAddits, then attach to ResCon
                                                         if (okayDataIDQ)
@@ -1910,14 +1885,15 @@ namespace HCResourceLibraryApp.DataHandling
                                                             ContentChanges newConChanges = new(logVersion, updtContentName, updtDataID, updtChangeDesc);
                                                             Dbug.Log($"Generated {nameof(ContentChanges)} instance :: {newConChanges}; ");
 
-                                                            /// testing
-                                                            if (runSelfUpdatingTest)
+                                                            /// testing... and now enabled, self updating contents aren't loose
+                                                            bool isSelfConnected = false;
+                                                            if (enableSelfUpdatingFunction)
                                                             {
                                                                 Dbug.LogPart("[SELF-UPDATING] Searching for connection in 'Decoded Library' -- ");
 
                                                                 ResContents matchingResCon = null;
                                                                 ContentAdditionals subMatchConAdd = new();
-                                                                /// should only be checking with existing library; can't update something that was just added
+                                                                /// should only be checking with existing library; *can't* update something that was just added
                                                                 if (resourceContents != null)
                                                                 {
                                                                     if (resourceContents.HasElements())
@@ -1935,6 +1911,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                                                 bool matchedNameQ = false;
 
                                                                                 Dbug.LogPart($" Got match ('{newConChanges.RelatedDataID}' from source '{source}'");
+                                                                                /// checks for matching content name against ConBase or ConAddits
                                                                                 if (source.Equals(RCFetchSource.ConBaseGroup))
                                                                                 {
                                                                                     if (resCon.ContentName == updtContentName)
@@ -1964,6 +1941,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                                     Dbug.Log("; ");
                                                                 }
 
+                                                                /// matching self-updated content connection
                                                                 if (matchingResCon != null)
                                                                 {
                                                                     matchingResCon.StoreConChanges(newConChanges);
@@ -1971,13 +1949,21 @@ namespace HCResourceLibraryApp.DataHandling
                                                                     if (subMatchConAdd.IsSetup())
                                                                         Dbug.LogPart($"ConAddits ({subMatchConAdd})");
                                                                     else Dbug.LogPart($"ConBase ({matchingResCon.ConBase})");
-                                                                    Dbug.Log($" [through ID '{newConChanges.RelatedDataID}']");
-                                                                    decodeInfo.NoteResult($"Connected ConChanges ({newConChanges}) to {(subMatchConAdd.IsSetup() ? $"ConAddits ({subMatchConAdd})" : $"ConBase {matchingResCon.ConBase}")} [by ID '{newConChanges.RelatedDataID}'");
+                                                                    Dbug.Log($" [by ID '{newConChanges.RelatedDataID}'] (self-updated)");
+                                                                    decodeInfo.NoteResult($"Connected ConChanges ({newConChanges}) to {(subMatchConAdd.IsSetup() ? $"ConAddits ({subMatchConAdd})" : $"ConBase {matchingResCon.ConBase}")} [by ID '{newConChanges.RelatedDataID}']");
 
+                                                                    decodeInfo.NoteIssue("Self-updating content: updating content in its introduced version is advised against");
+                                                                    isSelfConnected = true;
+
+                                                                    // these actions just for the decode display on log submission page
+                                                                    ContentChanges copy4NonLoose = new(logVersion, newConChanges.InternalName + Sep, updtDataID, updtChangeDesc);
+                                                                    looseConChanges.Add(copy4NonLoose); 
+                                                                    looseInfoRCDataIDs.Add(copy4NonLoose.RelatedDataID);
                                                                 }
                                                             }
 
-                                                            if (!runSelfUpdatingTest)
+                                                            /// the normal function: updates are always loose contents
+                                                            if (!isSelfConnected)
                                                             {
                                                                 looseConChanges.Add(newConChanges);
                                                                 looseInfoRCDataIDs.Add(newConChanges.RelatedDataID);
@@ -2059,6 +2045,8 @@ namespace HCResourceLibraryApp.DataHandling
                                     /// legend header (imparsable, but not an issue)
                                     if (IsSectionTag())
                                     {
+                                        logDataLine = RemoveEscapeCharacters(logDataLine);
+                                        
                                         isHeader = true;
                                         if (!parsedSectionTagQ)
                                         {
@@ -2079,6 +2067,7 @@ namespace HCResourceLibraryApp.DataHandling
                                         if (logDataLine.Contains('-') && logDataLine.CountOccuringCharacter('-') == 1)
                                         {
                                             Dbug.LogPart("Identified legend data; Contains '-'; ");
+                                            logDataLine = RemoveEscapeCharacters(logDataLine);
                                             string[] splitLegKyDef = logDataLine.Split('-');
                                             if (splitLegKyDef.HasElements(2))
                                                 if (splitLegKyDef[0].IsNotNEW() && splitLegKyDef[1].IsNotNEW())
@@ -2198,6 +2187,8 @@ namespace HCResourceLibraryApp.DataHandling
                                     /// summary header (imparsable, but not an issue)
                                     if (IsSectionTag())
                                     {
+                                        logDataLine = RemoveEscapeCharacters(logDataLine);
+                                        
                                         isHeader = true;
                                         if (!parsedSectionTagQ)
                                         {
@@ -2307,8 +2298,7 @@ namespace HCResourceLibraryApp.DataHandling
 
                                 Dbug.Log($"Skipping L{lineNum} --> Contains invalid character: '{Sep}'");
                             }
-                            else Dbug.Log($"Omitting L{lineNum} --> Imparsable: Line contains '{omit}'");
-                            //else Dbug.Log($"Omitting L{lineNum} --> Imparsable: Line contains '{omit}' and does not contain '{secBracL}' or '{secBracR}'");
+                            else Dbug.Log($"Omitting L{lineNum} --> Imparsable: Line starts with '{omit}'");
                         }
                     }
                     Dbug.NudgeIndent(false);
@@ -2317,7 +2307,7 @@ namespace HCResourceLibraryApp.DataHandling
                     if (logDataLine.IsNEW() && !endFileReading)
                     {
                         // as weird as it may seem, checks for non-described or unnoted legend keys goes here
-                        if (usedLegendKeys.HasElements() && legendDatas.HasElements() && currentSectionName == secLeg)
+                        if (!ranLegendChecksQ && usedLegendKeys.HasElements() && legendDatas.HasElements() && currentSectionName == secLeg)
                         {
                             Dbug.NudgeIndent(true);
                             Dbug.Log($"{{Legend_Checks}}");
@@ -2337,7 +2327,7 @@ namespace HCResourceLibraryApp.DataHandling
                                 Dbug.LogPart($"{addedQ}'{usedKey}' - ");
                             }
                             Dbug.Log("; ");
-                            Dbug.LogPart(">> Fetching generated legend keys (& decInfoIx) :: ");
+                            Dbug.LogPart(">> Fetching generated legend keys (& decInfoIx as '@#') :: ");
                             List<int> decodeInfoIndicies = new();
                             List<string> generatedKeys = new();
                             foreach (LegendData legDat in legendDatas)
@@ -2486,8 +2476,9 @@ namespace HCResourceLibraryApp.DataHandling
                             //else Dbug.Log("All legend keys used within this version log has been noted and described; ");
                             #endregion
                             Dbug.NudgeIndent(false);
-
                             Dbug.NudgeIndent(false);
+
+                            ranLegendChecksQ = true;
                         }
 
                         if (currentSectionNumber.IsWithin(0, (short)(countSectionIssues.Length - 1)) && currentSectionName.IsNotNE() && !currentSectionName.Equals(lastSectionName))
@@ -2597,7 +2588,62 @@ namespace HCResourceLibraryApp.DataHandling
             return DecodeLogInfo(logData, VerNum.None);
         }
 
+
         // LOG DECODING TOOL METHODS
+        /// <summary>Also partly logs "CKS: code(key); "</summary>
+        static string CharacterKeycodeSubstitution(string str)
+        {
+            string subbedStr = null;
+            if (str.IsNotNEW())
+            {
+                subbedStr = str;
+                List<string[]> codesNKeys = new()
+                {
+                    cks00.Split(' '),
+                    cks01.Split(' '),
+                    cks02.Split(' '),
+                    cks11.Split(' '),
+                    cks12.Split(' '),
+                    cks99.Split(' '),
+                };
+
+                string dbgStr = "";
+                foreach (string[] codeNKey in codesNKeys)
+                {
+                    if (codeNKey.HasElements(2))
+                    {
+                        string code = codeNKey[0], key = codeNKey[1];
+                        if (code.IsNotNE())
+                        {
+                            string prevSubbedStr = subbedStr;
+                            subbedStr = subbedStr.Replace(code, key);
+
+                            if (prevSubbedStr.Length != subbedStr.Length)
+                                dbgStr += $"{code}[{key}] ";
+                        }
+                    }
+                }
+
+                if (dbgStr.IsNotNE())
+                    Dbug.LogPart($"CKS: {dbgStr.Trim()}; ");
+                    // ..; CKS: &00[-] &11[(]; ...
+            }
+            return subbedStr;
+        }
+        static bool DetectUsageOfCharacterKeycode(string str, string cks)
+        {
+            bool detectedUsage = false;
+            if (str.IsNotNE() && cks.IsNotNE())
+            {
+                if (cks.Contains(' '))
+                {
+                    string[] codeNKey = cks.Split(' ');
+                    if (str.Contains(codeNKey[0]))
+                        detectedUsage = true;
+                }
+            }
+            return detectedUsage;
+        }
         /// <summary>also partly logs "Removed square brackets; "</summary>
         static string RemoveSquareBrackets(string str)
         {
@@ -2630,12 +2676,13 @@ namespace HCResourceLibraryApp.DataHandling
 
                 fixedConNam = "";
                 bool hadSpaceBefore = false;
+                bool hadNonLetterBefore = false;
                 bool isFirstCharacter = true;
                 foreach (char c in conNam)
                 {
                     /// if (upperCase && notSpaceChar)
-                    ///     if (noSpaceBefore && isLetter) {"C" --> " C"}
-                    ///     else (spaceBefore) {"C"}
+                    ///     if (noSpaceBefore && isLetter && nonLetterBefore) {"C" --> " C"}
+                    ///     else (spaceBefore || notLetter || letterBefore) {"C"}
                     /// else (lowerCase || spaceChar)
                     ///     if (notSpaceChar && spaceBefore) {"c" --> "C"}
                     ///     else (spaceChar || notSpaceBefore)
@@ -2644,7 +2691,7 @@ namespace HCResourceLibraryApp.DataHandling
 
                     if (c.ToString() == c.ToString().ToUpper() && c != ' ')
                     {
-                        if (!hadSpaceBefore && Extensions.CharScore(c) >= Extensions.CharScore('a'))
+                        if (!hadSpaceBefore && Extensions.CharScore(c) >= Extensions.CharScore('a') && !hadNonLetterBefore)
                             fixedConNam += $" {c}";
                         else fixedConNam += c.ToString();
                     }
@@ -2660,7 +2707,10 @@ namespace HCResourceLibraryApp.DataHandling
                         }
                     }
 
+                    /// hadSpaceBefore = isNotLetter (includes spaceChar, symbols, and numbers)
+                    //hadSpaceBefore = Extensions.CharScore(c) < Extensions.CharScore('a');
                     hadSpaceBefore = c == ' ';
+                    hadNonLetterBefore = Extensions.CharScore(c) < Extensions.CharScore('a') && c != ' ';
                     isFirstCharacter = false;
                 }
                 fixedConNam = fixedConNam.Trim();
@@ -2676,6 +2726,61 @@ namespace HCResourceLibraryApp.DataHandling
             }
             Dbug.LogPart("; ");
             return fixedConNam;
+        }
+        /// <summary>also partly logs "Removed Esc.Chars: [{n t a f r}]; "</summary>
+        static string RemoveEscapeCharacters(string str)
+        {
+            if (str.IsNotNE())
+            {
+                string subLogPart = "";
+                string newStr = str;
+                for (int rec = 0; rec <= 5 && newStr.IsNotNE(); rec++)
+                {
+                    char escChar = '\0';
+                    string prevNewStr = newStr;
+                    //bool removedAnEscCharQ = false;
+                    switch (rec)
+                    {
+                        case 0: 
+                            newStr = newStr.Replace("\n", "");
+                            escChar = 'n';
+                            break;
+
+                        case 1:
+                            newStr = newStr.Replace("\t", "");
+                            escChar = 't';
+                            break;
+
+                        case 2:
+                            newStr = newStr.Replace("\a", "");
+                            escChar = 'a';
+                            break;
+
+                        case 3:
+                            newStr = newStr.Replace("\f", "");
+                            escChar = 'f';
+                            break;
+
+                        case 4:
+                            newStr = newStr.Replace("\r", "");
+                            escChar = 'r';
+                            break;
+
+                        // trim case
+                        case 5:
+                            newStr = newStr.Trim();
+                            break;
+                    }
+
+                    if (escChar.IsNotNull() && prevNewStr.Length != newStr.Length)
+                        subLogPart += $"{escChar} ";
+                }
+
+                if (subLogPart.IsNotNE())
+                    Dbug.LogPart($"Removed Esc.Chars [{subLogPart.Trim()}]; ");
+                str = newStr;
+            }
+            return str;
         }
         public static string RemoveNumbers(string str)
         {
@@ -2710,7 +2815,8 @@ namespace HCResourceLibraryApp.DataHandling
             bool isNumless = false;
             if (str.IsNotNEW())
             {
-                isNumless = str.Trim().ToLower() == RemoveNumbers(str).ToLower();
+                str = str.Trim();
+                isNumless = str.ToLower() == RemoveNumbers(str).ToLower();
             }
             return isNumless;
         }
@@ -2746,6 +2852,121 @@ namespace HCResourceLibraryApp.DataHandling
                         if (_allowLogDecToolsDbugMessagesQ)
                             Dbug.LogPart($"GDnS: {dataKey}[{trueNum}]{suffix}; ");
                     }
+                }
+            }
+        }
+        /// <summary>Also partly logs "DD:{datakey}[{dataBody}]{suffix}; " only when decoding a version log</summary>
+        /// <remarks>Successor method to the formerly used '<c>GetDataKeyAndSuffix(str dataIDGroup, out str datakey, out str suffix)</c>'</remarks>
+        public static void DisassembleDataID(string dataIDGroup, out string dataKey, out string dataBody, out string suffix)
+        {
+            dataKey = null;
+            suffix = null;
+            dataBody = null;
+            if (dataIDGroup.IsNotNEW())
+            {
+                // ?[DB]SF
+                /// Cod_Tail
+                /// Shoe_Spike`
+                /// Watermelon^
+                if (IsNumberless(dataIDGroup))
+                {
+                    char lastChar = dataIDGroup[^1];
+                    if (lastChar.IsNotNull())
+                        if (Extensions.CharScore(lastChar) < 0)
+                            suffix = lastChar.ToString();
+
+                    if (suffix.IsNotNE())
+                        dataBody = dataIDGroup.Replace(suffix, "");
+                    else dataBody = dataIDGroup;
+                }
+                // DK[DB]SF
+                /// q2`
+                /// q67_3*
+                /// xl4-alt0`
+                else
+                {
+                    // get suffix first and remove from main data
+                    char lastChar = dataIDGroup[^1];
+                    if (lastChar.IsNotNull())
+                        if (Extensions.CharScore(lastChar) < 0)
+                            suffix = lastChar.ToString();
+
+                    if (suffix.IsNotNE())
+                        dataBody = dataIDGroup.Substring(0, dataIDGroup.Length - 1); // also 'dataIDGroup[..^1]
+                    else dataBody = dataIDGroup;
+
+                    // get data key
+                    string preDataKey = "";
+                    foreach (char c in dataBody)
+                    {
+                        if (IsNumberless(c.ToString()))
+                            preDataKey += c;
+                        else break;
+                    }
+                    if (preDataKey.IsNotNE())
+                        dataKey = preDataKey.Trim();
+
+                    if (dataKey.IsNotNE())
+                        dataBody = dataBody.Substring(dataKey.Length);
+                }
+
+
+                if (_allowLogDecToolsDbugMessagesQ)
+                    Dbug.LogPart($"DD:{dataKey}[{dataBody}]{suffix}; ");
+            }
+        }
+        /// <summary>Functions as it's counterpart, however it logs nothing</summary>
+        public static void DisassembleDataIDQuiet(string dataIDGroup, out string dataKey, out string dataBody, out string suffix)
+        {
+            dataKey = null;
+            suffix = null;
+            dataBody = null;
+            if (dataIDGroup.IsNotNEW())
+            {
+                // ?[DB]SF
+                /// Cod_Tail
+                /// Shoe_Spike`
+                /// Watermelon^
+                if (IsNumberless(dataIDGroup))
+                {
+                    char lastChar = dataIDGroup[^1];
+                    if (lastChar.IsNotNull())
+                        if (Extensions.CharScore(lastChar) < 0)
+                            suffix = lastChar.ToString();
+
+                    if (suffix.IsNotNE())
+                        dataBody = dataIDGroup.Replace(suffix, "");
+                    else dataBody = dataIDGroup;
+                }
+                // DK[DB]SF
+                /// q2`
+                /// q67_3*
+                /// xl4-alt0`
+                else
+                {
+                    // get suffix first and remove from main data
+                    char lastChar = dataIDGroup[^1];
+                    if (lastChar.IsNotNull())
+                        if (Extensions.CharScore(lastChar) < 0)
+                            suffix = lastChar.ToString();
+
+                    if (suffix.IsNotNE())
+                        dataBody = dataIDGroup.Substring(0, dataIDGroup.Length - 1); // also 'dataIDGroup[..^1]
+                    else dataBody = dataIDGroup;
+
+                    // get data key
+                    string preDataKey = "";
+                    foreach (char c in dataBody)
+                    {
+                        if (IsNumberless(c.ToString()))
+                            preDataKey += c;
+                        else break;
+                    }
+                    if (preDataKey.IsNotNE())
+                        dataKey = preDataKey.Trim();
+
+                    if (dataKey.IsNotNE())
+                        dataBody = dataBody.Substring(dataKey.Length);
                 }
             }
         }

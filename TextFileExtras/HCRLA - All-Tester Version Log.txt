@@ -8,27 +8,63 @@ PURPOSE ::
 [VERSION : 0.99]
 
 [ADDED]
--- Below tests for correct content name fixing
-1|Lehaim's Kale - (i2123; t1987)
+-- !open --
+	Item entries 1-6 tests for correct content name fixing
+	Entry #1 also specifically tests for removal of escape characters (mostly for tab and newline)
+	Entry #5 specifically tests for character keycode substitutions
+-- !close --
+1|Lehaim's Kale		- (i2123; t1987)	
 2|Marcus' Plantain - (i3210; t2290)
 3|Don/803's Lifesaver - (i4419)
 4|'S' Poser - (i3923)
-5|McDesnic's Truffle - (i4565 p1000)
+5|Mc&99Desnic's Truffle - (i4565 p1000 p1000&001)
+6|4Bit Raptor (small) - (i5000)
+-- Item entries 7-8 test for proper non-wordy data ID identification 
+7|Benark's Burgher - (i1845; p717,717_2)
+8|Grand Podium - (i1998; t35_large`)
+
 
 [ADDITIONAL]
 > Plantain; Cooked (t2292) - (t2290)
+-- !open --
+	The additionals below test for non-wordy data ID identification
+	Entries #4,#6,#9, and #10 also test for character keycode substitutions
+-- !close --
+> (n12) - Npc #12
+> (n12_alt_1) - Npc #12
+> (pl0_0,0_1) - Player Zero
+> (t2_Beach,59_2,199&00gross) - Weird Tiels
+> (t27_tiny) - Tiny Odd Tiels
+> (tb13) - A &11Broken&12 TreeBranch
+> (Wires2) - Wires Two
+> (Wraith_Eyes) - Spooky Eyes
+> N&99P&99C No.31 (n31,n31&00mushy) - Mc&99Descnic's Truffle (i4565)
+
+
 
 [TTA : 0]
 
+
 [UPDATED]
+-- A test for self-updating content and character keycode substitutions
+> Mc&99Des&99Truffle&11thrown&12 (p1000) - Their dearest truffle seems more friendly &02&12 ... and mushy
 
 [LEGEND]
+-- A case sensitive duplicate definition test
 i - Item
 i - item
+-- A few keys for testing additional non-wordy data ID identification
+t - Tiles
+pl - Player
+n - NPC
+tb - Tree Branches
+
+
 
 [SUMMARY]
 > All testing complete
 -- ========== ---
+
 
 
 
@@ -45,6 +81,14 @@ GUIDELINES
 	Start of lines ::  [  >  -
 	Within lines   ::  [  ]  (  )  -  :  ,  ;  ~
 
+	Bypassing with character substitution syntax
+	Works only in these sections: Added, Additional, Updated
+		'&00' for '-'
+		'&01' for ','
+		'&02' for ':'
+		'&11' for '('
+		'&12' for ')'
+		'&99' for '' (no character)
 
 INFORMATION FOR EACH SECTION
 	For the explanations below: described syntax elements marked with '*' are required

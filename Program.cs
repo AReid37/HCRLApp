@@ -11,7 +11,7 @@ namespace HCResourceLibraryApp
     // THE ENTRANCE POINT, THE CONTROL ROOM
     public class Program
     {
-        static readonly string consoleTitle = "High Contrast Resource Library App [v1.1.5]";
+        static readonly string consoleTitle = "High Contrast Resource Library App [v1.1.6]";
         static readonly string verLastPublishTested = "mid-v1.1.5";
         /// <summary>If <c>true</c>, the application launches for debugging/development. Otherwise, the application launches for the published version.</summary>
         public static readonly bool isDebugVersionQ = true;
@@ -246,8 +246,8 @@ namespace HCResourceLibraryApp
 
 
         // TESTING STUFF
-        static readonly bool runTest = true;
-        static readonly Tests testToRun = Tests.MiscRoom;
+        static readonly bool runTest = false;
+        static readonly Tests testToRun = Tests.LogSubmissionPage_DisplayLogInfo_AllTester;
         enum Tests
         {
             /// <summary>For random tests that need their own space, but no specific test name (variable tests)</summary>
@@ -265,6 +265,7 @@ namespace HCResourceLibraryApp
             LogDecoder_DecodeLogInfo,
             LogSubmissionPage_DisplayLogInfo_Ex1,
             LogSubmissionPage_DisplayLogInfo_Ex3,
+            LogSubmissionPage_DisplayLogInfo_AllTester,
             Dbug_NestedSessions,
             Dbug_DeactivateSessions
         }
@@ -509,7 +510,7 @@ namespace HCResourceLibraryApp
                             logDecoder.DecodeLogInfo(testLogData);
                 }
                 /// Log Submission Page
-                else if (testToRun == Tests.LogSubmissionPage_DisplayLogInfo_Ex1 || testToRun == Tests.LogSubmissionPage_DisplayLogInfo_Ex3)
+                else if (testToRun == Tests.LogSubmissionPage_DisplayLogInfo_Ex1 || testToRun == Tests.LogSubmissionPage_DisplayLogInfo_Ex3 || testToRun == Tests.LogSubmissionPage_DisplayLogInfo_AllTester)
                 {
                     hasDebugQ = false;
                     TextLine("Displays information from a log decoder", Color.DarkGray);
@@ -517,7 +518,9 @@ namespace HCResourceLibraryApp
                     bool locationSet;
                     if (testToRun == Tests.LogSubmissionPage_DisplayLogInfo_Ex1)
                         locationSet = SetFileLocation(@"C:\Users\ntrc2\source\repos\HCResourceLibraryApp\TextFileExtras\HCRLA - Ex1 Version Log.txt");
-                    else locationSet = SetFileLocation(@"C:\Users\ntrc2\source\repos\HCResourceLibraryApp\TextFileExtras\HCRLA - Ex3 Version Log.txt");
+                    else if (testToRun == Tests.LogSubmissionPage_DisplayLogInfo_Ex3)
+                        locationSet = SetFileLocation(@"C:\Users\ntrc2\source\repos\HCResourceLibraryApp\TextFileExtras\HCRLA - Ex3 Version Log.txt");
+                    else locationSet = SetFileLocation(@"C:\Users\ntrc2\source\repos\HCResourceLibraryApp\TextFileExtras\HCRLA - All-Tester Version Log.txt");
 
                     if (locationSet)
                         if (FileRead(null, out string[] testLogData))
@@ -633,25 +636,66 @@ namespace HCResourceLibraryApp
                 else if (testToRun == Tests.MiscRoom)
                 {
                     /// DON'T DELETE THIS HEADER | provide test name
-                    TextLine("Settings Page: Create Numeric Ranges", Color.DarkGray);
+                    TextLine("Log Decoder: Compare Non-Wordy DataID Parsing Functions", Color.DarkGray);
 
-                    #region misc: CreateNumericRanges
-                    string numbers = "0 1 2 4 6 10 12 13 14 16 17 18 19 24 26 27 29 30 31 33 35 36 37";
-                    TextLine($"Creating range from numbers:\n\t{numbers}");
-                    TextLine($"  Result:\t{Extensions.CreateNumericRanges(numbers.Split(" "))}");
+                    #region misc: settingsPage: CreateNumericRanges
+                    //string numbers = "0 1 2 4 6 10 12 13 14 16 17 18 19 24 26 27 29 30 31 33 35 36 37";
+                    //TextLine($"Creating range from numbers:\n\t{numbers}");
+                    //TextLine($"  Result:\t{Extensions.CreateNumericRanges(numbers.Split(" "))}");
 
-                    NewLine(2);
-                    numbers = "20 22 30 31 32 33 34 35 36 37 39 40 41 42 43 45 46 48 57 58 60 61 62 64";
-                    TextLine($"Creating range from numbers:\n\t{numbers}");
-                    TextLine($"  Result:\t{Extensions.CreateNumericRanges(numbers, ' ')}");
+                    //NewLine(2);
+                    //numbers = "20 22 30 31 32 33 34 35 36 37 39 40 41 42 43 45 46 48 57 58 60 61 62 64";
+                    //TextLine($"Creating range from numbers:\n\t{numbers}");
+                    //TextLine($"  Result:\t{Extensions.CreateNumericRanges(numbers, ' ')}");
 
-                    NewLine(2);
-                    numbers = "56 57 59 60 61 64 66 69 70";
-                    TextLine($"Creating range from numbers:\n\t{numbers}");
-                    TextLine($"  Result:\t{Extensions.CreateNumericRanges(numbers.Split(" "))}");
+                    //NewLine(2);
+                    //numbers = "56 57 59 60 61 64 66 69 70";
+                    //TextLine($"Creating range from numbers:\n\t{numbers}");
+                    //TextLine($"  Result:\t{Extensions.CreateNumericRanges(numbers.Split(" "))}");
                     #endregion
 
+                    #region misc: logDecoder: CompareNon-WordyDataIDParsingFunctions
+                    Color oldPCol = Color.Red, newPCol = Color.Blue;
+                    string dataIDsToParse = "i14` q32 pe566* Cod_Tail Shark_Fin` tt4_0 tb5-gross* slap1 slap2 x7_small n113 n113_alt_0` s_alt4 invalid8``";
 
+                    TextLine($"Each data ID to parse follows a format:\n\tOriginal  |  OldParsingResult [in {oldPCol}] | NewParsingResult [in {newPCol}]");
+                    TextLine($"{Ind24}Old Method: LogDec.GetDataKeyAndSuffix() as 'dataKey[number]suffix'");
+                    TextLine($"{Ind24}New Method: LogDec.DisassembleDataID() as 'dataKey[dataBody]suffix'");
+                    NewLine();
+
+                    const string ndr = " "; // no data replace
+                    if (dataIDsToParse.IsNotNE())
+                        foreach (string parsingDataID in dataIDsToParse.Split(' '))
+                        {
+                            if (parsingDataID.IsNotNE())
+                            {
+                                // og
+                                Text($"{parsingDataID,-12} |  ");
+
+                                // old parsing
+                                LogDecoder.GetDataKeyAndSuffix(parsingDataID, out string oDK, out string oSF);
+                                string oNM = parsingDataID;
+                                if (LogDecoder.IsNumberless(parsingDataID))
+                                    oNM = null;
+                                if (oNM.IsNotNE() && oDK.IsNotNE())
+                                    oNM = oNM.Replace(oDK, "");
+                                if (oNM.IsNotNE() && oSF.IsNotNE())
+                                    oNM = oNM.Replace(oSF, "");
+                                string oldText = $"{(oDK.IsNE() ? ndr : oDK)}[{(oNM.IsNE() ? ndr : oNM)}]{(oSF.IsNE() ? ndr : oSF)}";
+                                Text($"{oldText,-15}", oldPCol);
+
+                                // div
+                                Text(" | ");
+
+                                // new parsing
+                                LogDecoder.DisassembleDataID(parsingDataID, out string nDK, out string nDB, out string nSF);
+                                Text($"{(nDK.IsNE() ? ndr : nDK)}[{(nDB.IsNE() ? ndr : nDB)}]{(nSF.IsNE() ? ndr : nSF)}", newPCol);
+
+                                // next id
+                                NewLine();
+                            }
+                        }
+                    #endregion
                 }
 
 
