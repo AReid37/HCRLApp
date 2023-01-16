@@ -160,7 +160,11 @@ namespace HCResourceLibraryApp.DataHandling
 			bool containsDataIDq = false;
 			if (dataIDtoFind.IsNotNEW() && IsSetup())
 				for (int dix = 0; dix < _dataIDs.Count && !containsDataIDq; dix++)
-					containsDataIDq = this[dix] == dataIDtoFind;
+				{
+					/// contains data ID = exact ID match /or/ true ID match
+					LogDecoder.DisassembleDataIDQuiet(this[dix], out string dk, out string db, out _);
+                    containsDataIDq = this[dix] == dataIDtoFind || (dk + db) == dataIDtoFind;
+                }
 			return containsDataIDq;
         }
 		public string EncodeSecondGroup()
@@ -172,6 +176,8 @@ namespace HCResourceLibraryApp.DataHandling
 				secondEncode = $"{VersionAdded}{Sep}{RelatedDataID}{Sep}{OptionalName}{Sep}";
 				for (int s = 0; s < _dataIDs.Count; s++)
 					secondEncode += this[s] + (s + 1 < _dataIDs.Count ? "," : "");
+
+				SetPreviousSelf();
             }
 			return secondEncode;
 		}

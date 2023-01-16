@@ -11,7 +11,7 @@ namespace HCResourceLibraryApp
     // THE ENTRANCE POINT, THE CONTROL ROOM
     public class Program
     {
-        static readonly string consoleTitle = "High Contrast Resource Library App [v1.1.6]";
+        static readonly string consoleTitle = "High Contrast Resource Library App [v1.1.7]";
         static readonly string verLastPublishTested = "mid-v1.1.5";
         /// <summary>If <c>true</c>, the application launches for debugging/development. Otherwise, the application launches for the published version.</summary>
         public static readonly bool isDebugVersionQ = true;
@@ -247,7 +247,7 @@ namespace HCResourceLibraryApp
 
         // TESTING STUFF
         static readonly bool runTest = false;
-        static readonly Tests testToRun = Tests.LogSubmissionPage_DisplayLogInfo_AllTester;
+        static readonly Tests testToRun = Tests.MiscRoom;
         enum Tests
         {
             /// <summary>For random tests that need their own space, but no specific test name (variable tests)</summary>
@@ -636,65 +636,97 @@ namespace HCResourceLibraryApp
                 else if (testToRun == Tests.MiscRoom)
                 {
                     /// DON'T DELETE THIS HEADER | provide test name
-                    TextLine("Log Decoder: Compare Non-Wordy DataID Parsing Functions", Color.DarkGray);
+                    TextLine("Settings Page: Create Numeric Data ID Ranges", Color.DarkGray);
+                    char miscKey = 'a';
 
-                    #region misc: settingsPage: CreateNumericRanges
-                    //string numbers = "0 1 2 4 6 10 12 13 14 16 17 18 19 24 26 27 29 30 31 33 35 36 37";
-                    //TextLine($"Creating range from numbers:\n\t{numbers}");
-                    //TextLine($"  Result:\t{Extensions.CreateNumericRanges(numbers.Split(" "))}");
+                    #region miscA: settingsPage: CreateNumericDataIDRanges
+                    if (miscKey == 'a')
+                    {
+                        Color resultCol = Color.Yellow, difficultyCol = Color.NavyBlue;
 
-                    //NewLine(2);
-                    //numbers = "20 22 30 31 32 33 34 35 36 37 39 40 41 42 43 45 46 48 57 58 60 61 62 64";
-                    //TextLine($"Creating range from numbers:\n\t{numbers}");
-                    //TextLine($"  Result:\t{Extensions.CreateNumericRanges(numbers, ' ')}");
+                        TextLine("Lvl1 - Simple ranges", difficultyCol);
+                        string numbers = "0 1 2 4 6 10 12 13 14 16 17 18 19 24 26 27 29 30 31 33 35 36 37";
+                        TextLine($"Creating range from numbers:\n\t{numbers}");
+                        TextLine($"  Result: {Extensions.CreateNumericDataIDRanges(numbers.Split(" "))}", resultCol);
 
-                    //NewLine(2);
-                    //numbers = "56 57 59 60 61 64 66 69 70";
-                    //TextLine($"Creating range from numbers:\n\t{numbers}");
-                    //TextLine($"  Result:\t{Extensions.CreateNumericRanges(numbers.Split(" "))}");
+                        NewLine(2);
+                        numbers = "20 22 30 31 32 33 34 35 36 37 39 40 41 42 43 45 46 48 57 58 60 61 62 64";
+                        TextLine($"Creating range from numbers:\n\t{numbers}");
+                        TextLine($"  Result: {Extensions.CreateNumericDataIDRanges(numbers, ' ')}", resultCol);
+
+                        NewLine(2);
+                        numbers = "56 57 59 60 61 64 66 69 70";
+                        TextLine($"Creating range from numbers:\n\t{numbers}");
+                        TextLine($"  Result: {Extensions.CreateNumericDataIDRanges(numbers.Split(" "))}", resultCol);
+
+                        NewLine(2);
+                        TextLine("Lvl2 - Odd numbers, imparsable numbers", difficultyCol);
+                        numbers = "73 74 75 78 78_2 79 81 83-wet 86 87_3 88 89 94 95 96 97 97_01 98 99 100 102 103 103_0 104 105";
+                        TextLine($"Creating range from numbers:\n\t{numbers}");
+                        TextLine($"  Result: {Extensions.CreateNumericDataIDRanges(numbers.Split(" "))}", resultCol);
+
+                        NewLine(2);
+                        numbers = "89_q 90 91 92 95 96 96_2 97 98 99 99_alt 99_alt2 100 101 104 105 106 107_4";
+                        TextLine($"Creating range from numbers:\n\t{numbers}");
+                        TextLine($"  Result: {Extensions.CreateNumericDataIDRanges(numbers.Split(" "))}", resultCol);
+
+                        NewLine(2);
+                        TextLine("Lvl3 - Ranges within the imparsables", difficultyCol);
+                        numbers = "109 110 111 111_0 111_1 113 116 117 117_0 117_1 117_2 117_3 117_4 121 122 124 126 127 128";
+                        TextLine($"Creating range from numbers:\n\t{numbers}");
+                        TextLine($"  Result: {Extensions.CreateNumericDataIDRanges(numbers.Split(" "))}", resultCol);
+
+                        NewLine(2);
+                        numbers = "124_0 125_0 125_1 125_2 125_3 126_1 128_2 131_0 131_1 131_3 131_4 133_0 141_0 141_1 141_2";
+                        TextLine($"Creating range from numbers:\n\t{numbers}");
+                        TextLine($"  Result: {Extensions.CreateNumericDataIDRanges(numbers.Split(" "))}", resultCol);
+                    }
                     #endregion
 
-                    #region misc: logDecoder: CompareNon-WordyDataIDParsingFunctions
-                    Color oldPCol = Color.Red, newPCol = Color.Blue;
-                    string dataIDsToParse = "i14` q32 pe566* Cod_Tail Shark_Fin` tt4_0 tb5-gross* slap1 slap2 x7_small n113 n113_alt_0` s_alt4 invalid8``";
+                    #region miscB: logDecoder: CompareNon-WordyDataIDParsingFunctions
+                    if (miscKey == 'b')
+                    {
+                        Color oldPCol = Color.Red, newPCol = Color.Blue;
+                        string dataIDsToParse = "i14` q32 pe566* Cod_Tail Shark_Fin` tt4_0 tb5-gross* slap1 slap2 x7_small n113 n113_alt_0` s_alt4 invalid8``";
 
-                    TextLine($"Each data ID to parse follows a format:\n\tOriginal  |  OldParsingResult [in {oldPCol}] | NewParsingResult [in {newPCol}]");
-                    TextLine($"{Ind24}Old Method: LogDec.GetDataKeyAndSuffix() as 'dataKey[number]suffix'");
-                    TextLine($"{Ind24}New Method: LogDec.DisassembleDataID() as 'dataKey[dataBody]suffix'");
-                    NewLine();
+                        TextLine($"Each data ID to parse follows a format:\n\tOriginal  |  OldParsingResult [in {oldPCol}] | NewParsingResult [in {newPCol}]");
+                        TextLine($"{Ind24}Old Method: LogDec.GetDataKeyAndSuffix() as 'dataKey[number]suffix'");
+                        TextLine($"{Ind24}New Method: LogDec.DisassembleDataID() as 'dataKey[dataBody]suffix'");
+                        NewLine();
 
-                    const string ndr = " "; // no data replace
-                    if (dataIDsToParse.IsNotNE())
-                        foreach (string parsingDataID in dataIDsToParse.Split(' '))
-                        {
-                            if (parsingDataID.IsNotNE())
+                        const string ndr = " "; // no data replace
+                        if (dataIDsToParse.IsNotNE())
+                            foreach (string parsingDataID in dataIDsToParse.Split(' '))
                             {
-                                // og
-                                Text($"{parsingDataID,-12} |  ");
+                                if (parsingDataID.IsNotNE())
+                                {
+                                    // og
+                                    Text($"{parsingDataID,-12} |  ");
 
-                                // old parsing
-                                LogDecoder.GetDataKeyAndSuffix(parsingDataID, out string oDK, out string oSF);
-                                string oNM = parsingDataID;
-                                if (LogDecoder.IsNumberless(parsingDataID))
-                                    oNM = null;
-                                if (oNM.IsNotNE() && oDK.IsNotNE())
-                                    oNM = oNM.Replace(oDK, "");
-                                if (oNM.IsNotNE() && oSF.IsNotNE())
-                                    oNM = oNM.Replace(oSF, "");
-                                string oldText = $"{(oDK.IsNE() ? ndr : oDK)}[{(oNM.IsNE() ? ndr : oNM)}]{(oSF.IsNE() ? ndr : oSF)}";
-                                Text($"{oldText,-15}", oldPCol);
+                                    // old parsing
+                                    LogDecoder.GetDataKeyAndSuffix(parsingDataID, out string oDK, out string oSF);
+                                    string oNM = parsingDataID;
+                                    if (LogDecoder.IsNumberless(parsingDataID))
+                                        oNM = null;
+                                    if (oNM.IsNotNE() && oDK.IsNotNE())
+                                        oNM = oNM.Replace(oDK, "");
+                                    if (oNM.IsNotNE() && oSF.IsNotNE())
+                                        oNM = oNM.Replace(oSF, "");
+                                    string oldText = $"{(oDK.IsNE() ? ndr : oDK)}[{(oNM.IsNE() ? ndr : oNM)}]{(oSF.IsNE() ? ndr : oSF)}";
+                                    Text($"{oldText,-15}", oldPCol);
 
-                                // div
-                                Text(" | ");
+                                    // div
+                                    Text(" | ");
 
-                                // new parsing
-                                LogDecoder.DisassembleDataID(parsingDataID, out string nDK, out string nDB, out string nSF);
-                                Text($"{(nDK.IsNE() ? ndr : nDK)}[{(nDB.IsNE() ? ndr : nDB)}]{(nSF.IsNE() ? ndr : nSF)}", newPCol);
+                                    // new parsing
+                                    LogDecoder.DisassembleDataID(parsingDataID, out string nDK, out string nDB, out string nSF);
+                                    Text($"{(nDK.IsNE() ? ndr : nDK)}[{(nDB.IsNE() ? ndr : nDB)}]{(nSF.IsNE() ? ndr : nSF)}", newPCol);
 
-                                // next id
-                                NewLine();
+                                    // next id
+                                    NewLine();
+                                }
                             }
-                        }
+                    }
                     #endregion
                 }
 

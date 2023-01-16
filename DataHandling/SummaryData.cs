@@ -105,6 +105,8 @@ namespace HCResourceLibraryApp.DataHandling
 				fullEncode = $"{SummaryVersion}{Sep}{TTANum}{Sep}";
 				for (int sx = 0; sx < SummaryParts.Count; sx++)
 					fullEncode += $"{SummaryParts[sx]}{(sx + 1 >= SummaryParts.Count ? "" : Sep)}";
+				
+				SetPreviousSelf();
 			}
 			return fullEncode;
 		}

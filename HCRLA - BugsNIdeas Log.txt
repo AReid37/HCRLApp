@@ -10,11 +10,11 @@
 ---------------------
 [X] 1# Remove escape characters from the lines of the version log when decoding (particulary remove: /n /t /a /f /r).
 
-[ ] 2# After data is saved, set all 'Previous Version' variables to match the current saved version, so that it is not resaving the same data and overwriting a valid file save backup.
+[X] 2# After data is saved, set all 'Previous Version' variables to match the current saved version, so that it is not resaving the same data and overwriting a valid file save backup.
 
 [X] 3# When a log file's contents are being displayed, the section tags must be detected only by starting with '[' and ending with ']', not by containing both.
 
-[ ] 4# ResLib.Integrate(); when searching through loose contents for matching contents, remove data ID suffixes that are symbols before attempting to match
+[X] 4# ResLib.Integrate(); when searching through loose contents for matching contents, remove data ID suffixes that are symbols before attempting to match
 
 [X] 5# ResLib.Integrate() -> LegDat.AddKeyDef(); when matching against definitions of Legend Datas, compare at lowercase to avoid case-insensitive duplicates.
 
@@ -38,7 +38,7 @@
 
 [X] 3# Log Legend View should also show from which log version the library's contents are based
 
-[ ] 4# Each category within 'Settings->ConInt->ViewAllDataIDs' should show how many Data IDs they contain
+[X] 4# Each category within 'Settings->ConInt->ViewAllDataIDs' should show how many Data IDs they contain
 
 [ ] 5# The Miscellaneous category within 'Settings->ConInt->ViewAllDataIDs' can seperate its IDs into alphanumeric groups when there are many of them. Ex, A-M group and N-Z group.
 
@@ -46,7 +46,7 @@
 
 [ ] 7# When displaying the decoded version logs, if there is a decode issue, the text may also display or highlight where the error occured when possible (highlight or note where in the text the issue occured).
 
-[ ] 8# Within Log Submission Page, encoding save data can be triggered once the main submission page is being exited, rather than after each submitted version log. This allows a proper [file] reversion of log 'session' and greatly decreases any bloating of the Dbug session flush file.
+[X] 8# Within Log Submission Page, encoding save data can be triggered once the main submission page is being exited, rather than after each submitted version log. This allows a proper [file] reversion of log 'session' and greatly decreases any bloating of the Dbug session flush file.
 
 [ ] 9# Reversion; Version Reversion, specific version removal is possible, however only if the version's contents is not referenced in future version (Either allowed or denied reversion thereafter; Generally useful only the case of overwriting a log version's info)
     
@@ -54,4 +54,6 @@
 
 [X] 10# Using a certain syntax to substitute a keycode with symbols that are used for log decoding (example: using "&00" to sub for "-", or using "&04" to sub for "("). File encoding/decoding won't be affected and the data remains true to it's name as it bypasses the possible errors from log decoding.
 
-[ ] 11# ...
+[ ] 11# The option to restart the program on command (either in Main Menu or Settings Menu).
+
+[ ] 12# ...

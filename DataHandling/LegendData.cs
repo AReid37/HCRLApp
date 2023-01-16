@@ -177,6 +177,8 @@ namespace HCResourceLibraryApp.DataHandling
                 fullEncode = $"{Key}{Sep}{VersionIntroduced}{Sep}";
                 for (int dix = 0; dix < _definitions.Count; dix++)
                     fullEncode += $"{this[dix]}{(dix + 1 >= _definitions.Count ? "" : Sep)}";
+
+                SetPreviousSelf();
             }
             return fullEncode;
         }

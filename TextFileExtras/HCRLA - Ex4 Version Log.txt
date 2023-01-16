@@ -1,11 +1,11 @@
 ﻿-- !open --
 ## <HIGH CONTRAST RESOURCE LIBRARY APP - Version Log Example Log #4> ##
 PURPOSE ::
-	Additional, proper version log data for testing the HCRLA program functions (similar to Examples 1 & 2)
+	Additional, proper version log data for testing the HCRLA program functions (similar to Examples 2 & 3)
 -- !close --
 
 -- ========== ---
-[Version : 1.2]
+[Version : 1.3]
 
 [Added]
 1 |Watermelon	-(i167; t120)

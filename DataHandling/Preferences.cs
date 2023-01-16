@@ -36,11 +36,11 @@ namespace HCResourceLibraryApp.DataHandling
         #region props / fields
         Preferences previousSelf;
         const Color defNormal = Color.Gray, defHighlight = Color.Yellow, defAccent = Color.DarkGray, defCorrection = Color.Green, defIncorrection = Color.Red, defWarning = Color.Yellow, defHeading1 = Color.White, defHeading2 = Color.Gray, defInput = Color.Yellow;
+        const DimHeight defHeightScale = DimHeight.Normal;
+        const DimWidth defWidthScale = DimWidth.Normal;
         Color _normal, _highlight, _accent, _correction, _incorrection, _warning, _heading1, _heading2, _input;
         DimHeight _dimHeightScale;
-        const DimHeight defHeightScale = DimHeight.Normal;
         DimWidth _dimWidthScale;
-        const DimWidth defWidthScale = DimWidth.Normal;
 
 
         // PROPS
@@ -215,6 +215,9 @@ namespace HCResourceLibraryApp.DataHandling
             prefDataLines.Add($"{HeightScale}{Sep}{WidthScale}");
             Dbug.Log($"L2 Enc  //  tag [{commonFileTag}]  //  {prefDataLines[1]}");
             Dbug.EndLogging();
+
+            // set previous self to current self
+            previousSelf = (Preferences)this.MemberwiseClone();
 
             // encode data
             return Base.FileWrite(false, commonFileTag, prefDataLines.ToArray());
@@ -437,16 +440,17 @@ namespace HCResourceLibraryApp.DataHandling
         public Preferences ShallowCopy()
         {
             return (Preferences)this.MemberwiseClone();
-        }
+        }        
 
         public void GetScreenDimensions(out int trueHeight, out int trueWidth)
         {
             int maxHeight = Console.LargestWindowHeight;
             int maxWidth = Console.LargestWindowWidth;
 
+            const int rfw = 4, rfh = 2; // rounding factor
             float heightScale = HeightScale.GetScaleFactorH(), widthScale = WidthScale.GetScaleFactorW();
-            trueHeight = (int)(maxHeight * heightScale);
-            trueWidth = (int)(maxWidth * widthScale);
+            trueHeight = ((int)(maxHeight * heightScale / rfh)) * rfh; // always a (smaller) multiple of rounding factor
+            trueWidth = ((int)(maxWidth * widthScale / rfw)) * rfw; // always a (smaller) multiple of rounding factor
         }
         public static void GetScreenDimensions(out int trueHeight, out int trueWidth, DimHeight height, DimWidth width)
         {

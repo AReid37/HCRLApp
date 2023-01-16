@@ -1,183 +1,26 @@
 ﻿-- !open --
-## <HIGH CONTRAST RESOURCE LIBRARY APP - Version Log Example Log #2> ##
+## <HIGH CONTRAST RESOURCE LIBRARY APP - Version Log Example Log #3> ##
 PURPOSE ::
-	Tests the log decoder against multitudes of incorrect or garbage data, then to reassess and develop the decoder to resolve the issues that arise.
-
-	Ex3; less realistic example, just multitudes of incorrect and garbage data
+	Additional, proper version log data for testing the HCRLA program functions (similar to Examples 1 & 2)
 -- !close --
-
-
--- below are few functional tests of omission block command lines --
--- !open --
--- !open --
-	^ the above shouldn't work because an omission block is already entered
--- !close --
--- !close --
---	^ the above shouldn't work because an omission block is already exited
-
--- !open -- < this shouldn't work because it is not alone on its line
--- !close -- < this won't work either because it not alone on its line
-
-
 
 -- ========== ---
--- !open --
-GLOBAL RULES
-> All sections tags should only parse whatever is within their brackets, rather a section tag may only be identified if it starts and ends with its brackets
-> Section tags are identified non-case sensitive, but with exact letters
-> A section ends when it is followed by an empty line
--- !close --
+[Version : 1.2]
 
-(versin)
-[versionry]
-[version 103]
-[version
-[ver : 23 : ]
-]version: 32[
-[version: 32]
-vvss [Version : 1.2]x
-[Version : 0.10]
-[version: 0.99]
-
-
--- sections should be parsed in appropriate order; these should be ignored
-[additionals]
-[updated]
-
-[summary]
-% sehs
-
-
--- a section tag should be identified (and parsed) ONCE, and no more
-[ADD : ]
-(added)
-ADDED
-[ADDED x,Xxx]
-[ADDED u,Uuu : x;Xxx ]
-[Added : x;Uxx]
-ad [ ADDED : r,Rrr]t,Ttt; o,Ooo
-[Added : x,Uxx: y,Yvvv]
-[added: y,YYy]
 [Added]
--- 
-Item ff; 
-|t |ItemF - (ff)
-t |ItemF - (ff)
-0 |ItemF -- (ff)
-0 |itemFF - (ff, ss)
-0 |itemFF - (ff; ss; tt`)
-0 |item rr - ((rr; r3~~4 r1~s, r1,tt r0~0 r4~2))
-[23]
-0 | - 
-1 | ItemU -
-2 | ItemV (v2223)
-3 |ItemX - 32
-2 |ItemV - 33; 34()
-4 |Itemxv - (35; 36~37 38,39^)
-0 |item ff - ((f0t))
-1 | ItemW - (w0;)
--1|Itemw(44) - (w-1;-323)
-2|ItemV (rrse) - (w8)
--- testing of character keycode subs error
-4 |ItemVW - (i44&0121)
 
-x|ItemX - (x2; x42j)
-
-
-
--- should be skipped
-[legend]
-
-
-
-[addtional]
 [Additional]
-[aDDiTioNaL]
-abb cc - xyy zz
-aaaba > skj
->> aabb cc - xxyy zz
-> aabb cc - xxyy - zz
-> cc - xxyy (zz)
-> aabb (cc,dd) - xxyy (zz, zs)
-> aabb (cc) - xxyy (zz,zs)
-> ddde (fe,f2~2,ffeedg) - (uu~u3)
-> () - xx zz
-> (,) - xz zxz
-> bbaa
-> bbaax (zzc) - 
-> -
-> ndk (40) - tt (20)
-> (30~32) - tdkx
-> ss(ttks (ccdd) - (ts2)
-> ssttks (ccdd) - ff(ss (ts2)
-> ddex (k2) - (332)
-> ndxes (q-3) - (r32)
--- testing of character keycode subs errors
-> (nnk&01skkts) - An Odd Painting
-> ndesxe (q4) - dtdkx (r32&0145)
 
-> iiss - qoos
+[TTA : 0]
 
-
-
-[ttaa ]
-[tts : tta : nns ]
-[tta: tts : nns ]
-[[tta : x32]]
-[TTA : -23]
-[TTA : 4]
-5 [tta: ] 8
-
-
-
-[uptaded]
-->[Updated]ues
 [Updated]
-[updated]
-rrr sss - mmm oo sss
-tt > 
->> rrr (ss) - mm oo ss
-> rrr (ss) - mm - oo ss
-> rr ss - mm oo ss
-> rr (ss)
-> rr (ss) -
-> rr (s3) - mm oo ss mosss
-> qq (p,p) - mm ooss
-> qq (p1~1) - mm oss o
-> -
-> oo (22^) - nonononmmm ss
--- testing of character keycode subs error
-> rrs (s67&011) - nostmsls
-> 
--- this is not being read because of above
-> rs ss (sts) - tms
 
-> qq (pp) - tts
-
-
-
-[legn]
-[legend:]
 [Legend]
-11 oneone
-22 - 
-- threethree
-44 - fourruof - fourfour
-55 - five,five
--
 
-
-
-[smry]
-sjt][summary:]]
-[ summary ]
-[summary]
-info info info info
-[SUMMARY]
-info infor inform > 
-> information > information
->> informa info i
-> informa 1
-> informatation 2
-> informa 1
+[Summary]
 -- ========== ---
+
+-- !open --
+Fun fact: 
+	This version log was the former 'Error Testing Version Log'
+-- !close --

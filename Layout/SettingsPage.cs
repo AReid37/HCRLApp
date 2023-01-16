@@ -580,6 +580,7 @@ namespace HCResourceLibraryApp.Layout
 
                                 Dbug.NudgeIndent(true);
                                 string dataIDList = "";
+                                int dataIDCount = 0;
                                 for (int dx = 0; dx < allDataIds.Count; dx++)
                                 {
                                     string datIDToPrint = "";
@@ -589,8 +590,11 @@ namespace HCResourceLibraryApp.Layout
                                     if (legendKey != miscPhrase)
                                     {
                                         if (!LogDecoder.IsNumberless(datID))
-                                            if (LogDecoder.RemoveNumbers(datID) == legendKey)
-                                                datIDToPrint = datID.Replace(legendKey, "");
+                                        {
+                                            LogDecoder.DisassembleDataID(datID, out string dk, out string db, out _);
+                                            if (dk == legendKey)
+                                                datIDToPrint = db;
+                                        }
                                     }
 
                                     // print wordy data IDs (numberless)
@@ -602,28 +606,39 @@ namespace HCResourceLibraryApp.Layout
 
                                     Dbug.LogPart($"{datIDToPrint} ");
                                     if (datIDToPrint.IsNotNE())
+                                    {
                                         dataIDList += $"{datIDToPrint} ";
+                                        dataIDCount++;
+                                    }
                                 }
 
                                 if (legendKey != miscPhrase)
                                 {
-                                    Dbug.LogPart(" ..  Condensing with ranges");
-                                    string dataIDListWithRanges = Extensions.CreateNumericRanges(dataIDList.Split(" "));
+                                    Dbug.Log(" ..  Condensing with ranges; ");
+                                    string dataIDListWithRanges = Extensions.CreateNumericDataIDRanges(dataIDList.Split(" "));
+                                    bool uncondensedQ = false;
                                     if (dataIDList.Contains(dataIDListWithRanges))
-                                        Dbug.Log("; Remains uncondensed; ");
-                                    else Dbug.Log("; ");
+                                    {
+                                        Dbug.LogPart("Remains uncondensed; ");
+                                        uncondensedQ = true;
+                                    }
 
-                                    if (dataIDListWithRanges.IsNotNE())
+                                    if (dataIDListWithRanges.IsNotNE() && !uncondensedQ)
                                     {
                                         Dbug.LogPart($":: {dataIDListWithRanges}");
                                         dataIDList = dataIDListWithRanges;
                                     }
                                 }
+                                Dbug.LogPart($" Counted '{dataIDCount}' data IDs; ");
 
                                 // all printing here
                                 if (legendKey != miscPhrase || (legendKey == miscPhrase && dataIDList.IsNotNE()))
                                 {
-                                    Highlight(HSNL(0, 2) > 1, $"[{legendDef}]{Ind14}", $"[{legendDef}]");
+                                    //Highlight(HSNL(0, 2) > 1, $"[{legendDef}] ('{dataIDCount}' IDs){Ind14}", $"[{legendDef}] ('{dataIDCount}' IDs)");
+                                    Format($"[{legendDef}] ", ForECol.Highlight);
+                                    Format($"<{dataIDCount}>{Ind14}", ForECol.Accent);
+                                    HSNLPrint(0, HSNL(0, 2).Clamp(0, 1));
+
                                     Format(dataIDList.Trim(), ForECol.Normal);
                                     NewLine(lx + 1 != legendKeys.Count ? 2 : 1);
                                 }
@@ -635,36 +650,39 @@ namespace HCResourceLibraryApp.Layout
                             // Display TTA
                             NewLine(HSNL(0, 2) > 1 ? 3 : 2);
                             FormatLine("-------", ForECol.Accent);
-                            Highlight(false, $"Total Textures Added :: {allDataIds.Count}.", allDataIds.Count.ToString());
+                            Highlight(false, $"Total Contents :: {allDataIds.Count}.", allDataIds.Count.ToString());
+                            //Highlight(false, $"Total Textures Added :: {allDataIds.Count}.", allDataIds.Count.ToString());
 
                             //Format("All Data IDs found within library are displayed above.", ForECol.Accent);
                             Pause();
                         }
                         Dbug.EndLogging();
 
-                        // method
+                        // method - more like 'remove legend suffixes'
                         string RemoveLegendSymbols(string str)
                         {
-                            if (legendSymbols.HasElements() && str.IsNotNE())
+                            if (str.IsNotNE())
                             {
-                                foreach (string legSym in legendSymbols)
-                                    str = str.Replace(legSym, "");
-                                str = str.Trim();
+                                LogDecoder.DisassembleDataID(str, out string dk, out string db, out _);
+                                str = dk + db;
                             }
+                            //if (legendSymbols.HasElements() && str.IsNotNE())
+                            //{
+                            //    foreach (string legSym in legendSymbols)
+                            //        str = str.Replace(legSym, "");
+                            //    str = str.Trim();
+                            //}
                             return str;
                         }
                     }
 
-                    // no library??
+                    // no library??     :C
                     else if (!librarySetup)
                     {
                         NewLine(2);
                         Format("The library shelves are empty. This page requires the library to contain some data.", ForECol.Normal);
                         Pause();
                     }
-
-                    /// ALSO 
-                    ///  -- Count the TOTAL number of textures and display it...
 
 
                     // (static) methods

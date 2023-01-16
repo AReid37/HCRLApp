@@ -145,7 +145,11 @@ namespace HCResourceLibraryApp.DataHandling
             bool containsDataIdQ = false;
             if (dataIDtoFind.IsNotNEW() && IsSetup())
                 for (int dix = 0; dix < _dataIDs.Count && !containsDataIdQ; dix++)
-                    containsDataIdQ = this[dix] == dataIDtoFind;
+                {
+                    /// contains data ID = exact ID match /or/ true ID match
+                    LogDecoder.DisassembleDataIDQuiet(this[dix], out string dk, out string db, out _);
+                    containsDataIdQ = this[dix] == dataIDtoFind || (dk + db) == dataIDtoFind;
+                }
             return containsDataIdQ;
         }
         public string EncodeFirstGroup()
@@ -157,6 +161,8 @@ namespace HCResourceLibraryApp.DataHandling
                 firstEncode = $"{VersionNum}{Sep}{ContentName}{Sep}";
                 for (int s = 0; s < _dataIDs.Count; s++)
                     firstEncode += this[s] + (s + 1 < _dataIDs.Count ? "," : "");
+
+                SetPreviousSelf();
             }
             return firstEncode;
         }

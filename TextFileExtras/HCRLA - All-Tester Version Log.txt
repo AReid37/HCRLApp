@@ -20,7 +20,7 @@ PURPOSE ::
 5|Mc&99Desnic's Truffle - (i4565 p1000 p1000&001)
 6|4Bit Raptor (small) - (i5000)
 -- Item entries 7-8 test for proper non-wordy data ID identification 
-7|Benark's Burgher - (i1845; p717,717_2)
+7|Benark's Burgher - (i1845; p717,717_2^)
 8|Grand Podium - (i1998; t35_large`)
 
 
@@ -29,6 +29,7 @@ PURPOSE ::
 -- !open --
 	The additionals below test for non-wordy data ID identification
 	Entries #4,#6,#9, and #10 also test for character keycode substitutions
+	Entry #11 tests for connecting ConAddits to content without including suffixes (ei, '^' is not required in this instance)
 -- !close --
 > (n12) - Npc #12
 > (n12_alt_1) - Npc #12
@@ -39,6 +40,7 @@ PURPOSE ::
 > (Wires2) - Wires Two
 > (Wraith_Eyes) - Spooky Eyes
 > N&99P&99C No.31 (n31,n31&00mushy) - Mc&99Descnic's Truffle (i4565)
+> Dust Particles (d23) - (p717_2)  
 
 
 
@@ -46,19 +48,27 @@ PURPOSE ::
 
 
 [UPDATED]
--- A test for self-updating content and character keycode substitutions
+-- !open --
+	Tests in this section are always self-updating contents
+	Entry #1 tests for character keycode substitutions
+	Entry #2 tests for connecting a ConChanges without including suffixes (ei, '`' is not required in this instance)
+-- !close --
 > Mc&99Des&99Truffle&11thrown&12 (p1000) - Their dearest truffle seems more friendly &02&12 ... and mushy
+> Grand Podium (t35_large) - It just wasn't large enough the first time.
 
 [LEGEND]
 -- A case sensitive duplicate definition test
 i - Item
 i - item
--- A few keys for testing additional non-wordy data ID identification
+-- A ton of other keys, really...
 t - Tiles
 pl - Player
 n - NPC
 tb - Tree Branches
-
+^ - Overhauled
+d - Dust
+p - Projectile
+` - LOTB
 
 
 [SUMMARY]

@@ -36,6 +36,11 @@ namespace HCResourceLibraryApp.Layout
             ///         10 (-) :: Pattern Medium
             ///         11 (.) :: Pattern Light
             ///         
+            /// INKING IDS CONDENSED
+            ///     0~3 (Primary Color) {title} [0 Full, 1 Dark, 2 Medium, 3 Light]
+            ///     4~7 (Secondary Col) {sbttl} [4 Full, 5 Dark, 6 Medium, 7 Light]
+            ///     8~11 (Tertiary Col) {touch} [8 Full, 9 Dark, - Medium, . Light]
+            ///     
             HPInk[] inkList = new HPInk[inkCount]
             {
                 // primary
@@ -60,25 +65,14 @@ namespace HCResourceLibraryApp.Layout
             // styles within this list
             List<string[]> styleSheet = new List<string[]>
             {
-                /// for old title design
+                /// 0: for old title design
                 new string[]
                 {
                     //"0123 4567 89-.",
                     ""
                 },
 
-                /// test style clipping - cosine wave with demarked start and end
-                #region
-                //new string[]
-                //{
-                //    "000               001               011               122              2",
-                //    "2  012         012   012         012   012         012   012         012",
-                //    "2     012   012         012   012         012   012         012   012  2",
-                //    "2        012               012               012               012     2",
-                //},
-                #endregion
-
-                /// simple acronym design with half star on sides
+                /// 1: simple acronym design with half star on sides
                 new string[]
                 {
                     "   0  0 0000 000  0     000   ",
@@ -88,7 +82,7 @@ namespace HCResourceLibraryApp.Layout
                     "   0  0 0000 0  0 0000    0   ",
                 },
 
-                /// 'HC' in two merging blocks followed by 3D like 'R.L.A'
+                /// 2: 'HC' in two merging blocks followed by 3D like 'R.L.A'
                 new string[]
                 {
                     /// 'HC' within two block-like objects merging together                    
@@ -113,13 +107,223 @@ namespace HCResourceLibraryApp.Layout
                     "  8.8.    8.      8.8.   ",
                     "  8.8. 9. 888. 9. 8.8. 9.",
                 },
+
+                /// 3: 'HC' in similar shape to resource pack icon surrounded with an epic screen crack effect
+                new string[]
+                {
+                // bounds
+                //  <|                                  |         |                                  |>
+                    HSNL(0,10) < 4 ? null :
+                    "                                        7.                                       ",
+                    HSNL(0,10) < 2 ? null :
+                    "                                7    77711..   .                                 ",
+                    HSNL(0,10) < 1 ? null :
+                    "                           7      7 7761 12...  ..    .                          ",
+                    "                         7    777216761  12...212.-..       .                    ",
+                    "                 7   77   77776721 1661  12.211 12.---...    .                   ",
+                    "              7       777776677221  11    111  122--...  ..                      ", // ~
+                    "                  77 777676622111    1         122222---.-.... ..    .           ",
+                    "                77 777 7777211   1       00009  111212-.... .   ...              ",
+                    "          7  77  777676676662211   50 50 09999     1 12----.-..-.....            ",
+                    "            7   777 7777776766221  50 50 09      11212--.-.... ...    .  .       ",
+                    "     7   7 777 7777677766676666621 50000 09   11122-.----------.---..-.... ..  . ", // ~~ m i d
+                    " 7 77 7777677666776666676666662211 50550 09    12-----.---..-....-... ... .      ", // ~~ m i d
+                    "         77 777  777777666662211   50 50 00009 122--....... ....  .       .      ",
+                    "   7  77  7   7776777666776666221  50 50 99999 12--.---..- ..... .. .            ",
+                    "          7    777  7777777766621  55 55      12-.... ..  .. .    .              ",
+                    "        7    77 7777776776666221 11            12---.-... .                      ",
+                    "                  7 77 777766621121  1     111  12-....       ..     .           ", // ~
+                    "          7   77      77 7776767221 161   12.21112..      .                      ",
+                    "                    77     7777621 16611 12..   .                                ",
+                    HSNL(0,10) < 1 ? null :
+                    "                            7  772167761 12...     .                             ",
+                    HSNL(0,10) < 2 ? null :
+                    "                              7 777   771..                                      ",
+                    HSNL(0,10) < 4 ? null :
+                    "                                        7                                        ",
+                //  <|                                  |         |                                  |>
+                // bounds
+
+                    /** *****
+                    F I N A L 
+                    "                                        7.                                       ",
+                    "                                7    77711..   .                                 ",
+                    "                           7      7 7761 12...  ..    .                          ",
+                    "                         7    777216761  12...212.-..       .                    ",
+                    "                 7   77   77776721 1661  12.211 12.---...    .                   ",
+                    "              7       777776677221  11    111  122--...  ..                      ", // ~
+                    "                  77 777676622111    1         122222---.-.... ..    .           ",
+                    "                77 777 7777211   1       00009  111212-.... .   ...              ",
+                    "          7  77  777676676662211   50 50 09999     1 12----.-..-.....            ",
+                    "            7   777 7777776766221  50 50 09      11212--.-.... ...    .  .       ",
+                    "     7   7 777 7777677766676666621 50000 09   11122-.----------.---..-.... ..  . ", // ~~ m i d
+                    " 7 77 7777677666776666676666662211 50550 09    12-----.---..-....-... ... .      ", // ~~ m i d
+                    "         77 777  777777666662211   50 50 00009 122--....... ....  .       .      ",
+                    "   7  77  7   7776777666776666221  50 50 99999 12--.---..- ..... .. .            ",
+                    "          7    777  7777777766621  55 55      12-.... ..  .. .    .              ",
+                    "        7    77 7777776776666221 11            12---.-... .                      ",
+                    "                  7 77 777766621121  1     111  12-....       ..     .           ", // ~
+                    "          7   77      77 7776767221 161   12.21112..      .                      ",
+                    "                    77     7777621 16611 12..   .                                ",
+                    "                            7  772167761 12...     .                             ",
+                    "                              7 777   771..                                      ",
+                    "                                        7                                        ",
+                    
+                    
+                    ITERATION 5b
+                    """"""""""""
+                    "                                        `'                                       ",
+                    "                                `    ```22''   '                                 ",
+                    "                           `      ` ``72 2-'''  ''    '                          ",
+                    "                         `    ```627`72  2-'''-2-'.''       '                    ",
+                    "                 `   ``   ````7`62 2772  2-'-22 2-'...'''    '                   ",
+                    "              `       `````77``662  22    222  2--..'''  ''                      ", // ~
+                    "                  `` ```7`7766222    2         2-----...'.'''' ''    '           ",
+                    "                `` ``` ````622   2       00009  222-2-.'''' '   '''              ",
+                    "          `  ``  ```7`77`7776622   50 50 09999     2 2-....'.''.'''''            ",
+                    "            `   ``` ``````7`77662  50 50 09      22-2-..'.'''' '''    '  '       ",
+                    "     `   ` ``` ````7```777`7777762 50000 09   222--.'..........'...''.'''' ''  ' ", // ~~ m i d
+                    " ` `` ````7``777``77777`7777776622 50550 09    2-.....'...''.''''.''' ''' '      ", // ~~ m i d
+                    "         `` ```  ``````777776622   50 50 00009 2--..''''''' ''''  '       '      ",
+                    "   `  ``  `   ```7```777``7777662  50 50 99999 2-..'...''. ''''' '' '            ",
+                    "          `    ```  ````````77762  55 55      2-.'''' ''  '' '    '              ",
+                    "        `    `` ``````7``7777662 22            2-...'.''' '                      ",
+                    "                  ` `` ````77762262  2     222  2-.''''       ''     '           ", // ~
+                    "          `   ``      `` ```7`7`662 272   2-'-222-''      '                      ",
+                    "                    ``     ````762 27722 2-''   '                                ",
+                    "                            `  ``627``72 2-'''     '                             ",
+                    "                              ` ```   ``2''                                      ",
+                    "                                        `                                        ",
+                    
+                    
+                    
+                    ITERATION 5
+                    """""""""""
+                    "                                        22                                       ",
+                    "                                      72 2-                                      ",
+                    "                                 627 72  2-   -2- .                              ",
+                    "                              7 62 2772  2- -22 2- ...                           ",
+                    "                           77  662  22    222  2--..                             ", // ~
+                    "                        7 7766222    2         2-----... .                       ",
+                    "                           622   2       00009  222-2-.                          ",
+                    "                    7 77 7776622   50 50 09999     2 2-.... .  .                 ",
+                    "                          7 77662  50 50 09      22-2-.. .                       ",
+                    "                   7   777 7777762 50000 09   222--. .......... ...  .           ", // ~~ m i d
+                    "          7  777  77777 7777776622 50550 09    2-..... ...  .    .               ", // ~~ m i d
+                    "                       777776622   50 50 00009 2--..                             ",
+                    "                 7   777  7777662  50 50 99999 2-.. ...  .                       ",
+                    "                            77762  55 55      2-.                                ",
+                    "                      7  7777662 22            2-... .                           ",
+                    "                           77762262  2     222  2-.                              ", // ~
+                    "                            7 7 662 272   2- -222-                               ",
+                    "                               762 27722 2-                                      ",
+                    "                                 627  72 2-                                      ",
+                    "                                        2                                        ",
+                    
+                    
+                    ITERATION 4
+                    """""""""""
+                    "                                        22                                       ",
+                    "                                       2 2                                       ",
+                    "                                  2   2  2     2                                 ",
+                    "                                 2 2  2  2   22 2                                ",
+                    "                           77    2  22    222  2  ..                             ", // ~
+                    "                        7 77  222    2         2     ... .                       ",
+                    "                            22   2       00009  222 2 .                          ",
+                    "                      7  777  22   50 50 09999     2 2 .... .  .                 ",
+                    "                          7 77  2  50 50 09      22 2 .. .                       ",
+                    "                   7   777 77777 2 50000 09   222  . .......... ...  .           ", // ~~ m i d
+                    "          7  777  77777 777777  22 50550 09    2 ..... ...  .    .               ", // ~~ m i d
+                    "                      7  777  22   50 50 00009 2  ..                             ",
+                    "                  7   77  7777  2  50 50 99999 2 .. ...  .                       ",
+                    "                            777 2  55 55      2 .                                ",
+                    "                      7  7777  2 22            2 ...                             ",
+                    "                           777 22 2  2     222  2 .                              ", // ~
+                    "                            7 7   2 2 2   2   222                                ",
+                    "                                 2 2  22 2                                       ",
+                    "                                  2    2 2                                       ",
+                    "                                        2                                        ",
+
+                    
+                    ITERATION 3
+                    """""""""""
+                    "                                        33                                       ",
+                    "                                       3 3                                       ",
+                    "                                  3   3  3     3                                 ",
+                    "                                 3 3  3  3   33 3                                ",
+                    "                                 3  33    333  3                                 ",
+                    "                              333    3         3                                 ",
+                    "                            33   3       00009  333 3                            ",
+                    "                              33   50 50 09999     3 3                           ",
+                    "                                3  50 50 09      33 3                            ",
+                    "                                 3 50000 09   333                                ",
+                    "                                33 50550 09    3                                 ",
+                    "                              33   50 50 00009 3                                 ",
+                    "                                3  50 50 99999 3                                 ",
+                    "                                3  55 55      3                                  ",
+                    "                               3 33            3                                 ",
+                    "                               33 3  3     333  3                                ",
+                    "                                  3 3 3   3   333                                ",
+                    "                                 3 3  33 3                                       ",
+                    "                                  3    3 3                                       ",
+                    "                                        3                                        ",
+                    
+
+                    ITERATION 2
+                    """""""""""
+                    "      0000-",
+                    "60 60 0---.",
+                    "60 60 0-   ",
+                    "60000 0-   ",
+                    "60660 0-   ",
+                    "60 60 0000-",
+                    "60 60 ----.",
+                    "76 76      ",
+                    
+
+                    ITERATION 1
+                    """""""""""
+                    "      0000",
+                    "0  0  0   ",
+                    "0  0  0   ",
+                    "0000  0   ",
+                    "0  0  0   ",
+                    "0  0  0000",
+                    "0  0      ",
+
+                    ***** */
+                },
+
+                /// INKING IDS CONDENSED
+                ///     0~3 (Primary Color) {title} [0 Full, 1 Dark, 2 Medium, 3 Light]
+                ///     4~7 (Secondary Col) {sbttl} [4 Full, 5 Dark, 6 Medium, 7 Light]
+                ///     8~11 (Tertiary Col) {touch} [8 Full, 9 Dark, - Medium, . Light]
+
+
+                /// n: test style clipping
+                #region
+                new string[]
+                {
+                    "    2222                      00                      2222    ",
+                    "3333    8888                00  00                8888    3333",
+                    "            4444          00      00          4444            ",
+                    "                8888444400    --    0044448888                ",
+                    // ^above for clipping (neg. padding) -- below for center aligning (pos. padding)
+                    " ",
+                    "8888            0000            8888",
+                    "    4444      00    00      4444    ",
+                    "        884400   --   004488        ",
+                },
+                #endregion
             };
-            int styleIx = Extensions.Random(0, styleSheet.Count - 1);
+            /// selecting style by index here
+            int styleIx = Extensions.Random(0, styleSheet.Count - 2);
             if (styleIx == 0 && !riggedStyleIndexQ) // avoid basic
-                styleIx = Extensions.Random(0, styleSheet.Count - 1);
+                styleIx = Extensions.Random(0, styleSheet.Count - 2);
             if (riggedStyleIndexQ)
                 styleIx = rigStyleSheetIndex.Clamp(0, styleSheet.Count);
 
+            // ALL PRINTING HERE
             if (styleSheet.HasElements() && inkList.HasElements(inkCount))
             {
                 /// for some reason, Minimal method custom colors don't fully apply on start up until i do this...
@@ -143,6 +347,10 @@ namespace HCResourceLibraryApp.Layout
                         HorizontalRule(cTHB, HSNL(0, 2));
                         break;
 
+                    case 3:
+                        HorizontalRule(cBHB, HSNL(0, 4));
+                        break;
+
                     default: break;
                 }
 
@@ -152,23 +360,26 @@ namespace HCResourceLibraryApp.Layout
                 {
                     for (int csi = 0; csi < chosenStyle.Length; csi++)
                     {
+                        bool lineIsAsWideAsBufferQ = false;
                         if (chosenStyle[csi].IsNotNE())
                         {
+                            chosenStyle[csi] = chosenStyle[csi].Replace("\n", "");
+
                             // center align style                            
                             int bufferWidth = Console.WindowWidth;
                             int lineWidth = chosenStyle[csi].Length * 2;
-                            int padding = (bufferWidth - lineWidth) / 4;
+                            int padding = (bufferWidth - lineWidth) / 2; //(int)((bufferWidth - lineWidth) / 4f);
                             string styleLine;
                             /// indent
                             if (padding > 0)
                             {
-                                styleLine = chosenStyle[csi].PadLeft(padding + (lineWidth / 2));
+                                styleLine = chosenStyle[csi].PadLeft((lineWidth + padding) / 2);
                             }   
                             /// clip
                             else
                             {
                                 int csLen = chosenStyle[csi].Length;
-                                styleLine = chosenStyle[csi].Substring(-padding + 2, csLen + (padding * 2) - 2);
+                                styleLine = chosenStyle[csi].Substring(-padding / 2, csLen + padding);
                             }
 
 
@@ -184,9 +395,11 @@ namespace HCResourceLibraryApp.Layout
                                 }
                                 else DrawPixel(Color.Black);
                             }
+
+                            lineIsAsWideAsBufferQ = bufferWidth <= lineWidth;
                         }
 
-                        if (chosenStyle[csi] != null)
+                        if (chosenStyle[csi] != null && !lineIsAsWideAsBufferQ)
                             NewLine();
                     }
                 }
@@ -207,6 +420,11 @@ namespace HCResourceLibraryApp.Layout
                     case 2:
                         HSNLPrint(0, 4);
                         HorizontalRule(cBHB, HSNL(0,2));
+                        break;
+
+                    case 3:
+                        HSNLPrint(0, 4);
+                        HorizontalRule(cTHB, HSNL(0, 4).Clamp(0, 1));
                         break;
 
                     default: break;

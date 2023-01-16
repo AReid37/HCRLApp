@@ -43,6 +43,12 @@ namespace HCResourceLibraryApp.Layout
                 }
                 
             } while (!exitLogSubMain && !Program.AllowProgramRestart);
+
+            // auto-saves: 
+            //      -> LogDecoder recentDirectory
+            //      -> ResLibrary <new data>
+            if (LogDecoder.ChangesMade() || mainLibrary.ChangesMade())
+                Program.SaveData(false);
         }
 
         static void SubPage_SubmitLog(ResLibrary mainLibrary)
@@ -344,8 +350,9 @@ namespace HCResourceLibraryApp.Layout
             // auto-saves: 
             //      -> LogDecoder recentDirectory
             //      -> ResLibrary <new data>
-            if (LogDecoder.ChangesMade() || mainLibrary.ChangesMade())
-                Program.SaveData(true);
+            /// moved to OpenPage()
+            //if (LogDecoder.ChangesMade() || mainLibrary.ChangesMade())
+            //    Program.SaveData(true);
         }
         
         // public for now, so i may test it
@@ -650,11 +657,12 @@ namespace HCResourceLibraryApp.Layout
                                             string rtPart1 = $"> {(rcConChg.InternalName.IsNotNEW() ? $"{rcConChg.InternalName}{Ind24}" : "")}{rcConChg.RelatedDataID}";
                                             string rtPart2 = $"{Ind24}{rcConChg.ChangeDesc}";
                                             string rtPart3 = $" {looseContentIndicator}";
-                                            if (rcConChg.InternalName.Contains(DataHandlerBase.Sep))
-                                            {
-                                                rtPart1 = rtPart1.Replace(DataHandlerBase.Sep, "");
-                                                rtPart3 = "";
-                                            }                                            
+                                            if (rcConChg.InternalName.IsNotNE())
+                                                if (rcConChg.InternalName.Contains(DataHandlerBase.Sep))
+                                                {
+                                                    rtPart1 = rtPart1.Replace(DataHandlerBase.Sep, "");
+                                                    rtPart3 = "";
+                                                }                                            
                                             reviewTexts.Add($"{rtPart1}\n{rtPart2}{rtPart3}");
                                         }
                                 }

@@ -82,9 +82,12 @@ namespace HCResourceLibraryApp.DataHandling
         protected override bool EncodeToSharedFile()
         {
             string encodeRD = RecentDirectory.IsNEW() ? Sep : RecentDirectory;
-            bool hasEnconded = FileWrite(false, commonFileTag, encodeRD);
+            bool hasEncoded = FileWrite(false, commonFileTag, encodeRD);
+            if (ChangesMade())
+                _prevRecentDirectory = RecentDirectory;
             Dbug.SingleLog("LogDecoder.EncodeToSharedFile()", $"Log Decoder has saved recent directory path :: {RecentDirectory}");
-            return hasEnconded;
+
+            return hasEncoded;
         }
         protected override bool DecodeFromSharedFile()
         {
@@ -667,28 +670,24 @@ namespace HCResourceLibraryApp.DataHandling
                                                                                 if (dataIDs.HasElements(2))
                                                                                 {
                                                                                     Dbug.LogPart("; ");
-                                                                                    //GetDataKeyAndSuffix(dataIDs[0], out string dataKey, out string suffix);
                                                                                     DisassembleDataID(dataIDs[0], out string dataKey, out _, out string suffix);
                                                                                     NoteLegendKey(usedLegendKeys, dataKey);
                                                                                     NoteLegendKey(usedLegendKeys, suffix);
                                                                                     if (dataKey.IsNotNEW())
                                                                                     {
                                                                                         Dbug.Log($"Retrieved data key '{dataKey}'; ");
-                                                                                        Dbug.LogPart(". Adding IDs :: ");
                                                                                         foreach (string datId in dataIDs)
                                                                                         {
-                                                                                            Dbug.LogPart("(");
+                                                                                            Dbug.LogPart(". Adding ID; ");
                                                                                             DisassembleDataID(datId, out _, out string dataBody, out string sfx);
-                                                                                            Dbug.LogPart(") ");
-
-                                                                                            //string datToAdd = $"{dataKey}{datId.Trim().Replace(dataKey, "")}";
+                                                                                            NoteLegendKey(usedLegendKeys, sfx);
                                                                                             string datToAdd = dataKey + dataBody + sfx;
                                                                                             if (!IsNumberless(datToAdd))
                                                                                             {
                                                                                                 addedDataIDs.Add(datToAdd);
-                                                                                                Dbug.LogPart($"{datToAdd} - ");
+                                                                                                Dbug.LogPart($"Got and added '{datToAdd}'");
                                                                                             }
-                                                                                            //else Dbug.LogPart($"[X]{datToAdd} - ");
+                                                                                            Dbug.Log("; ");
                                                                                         }
                                                                                     }
                                                                                 }
@@ -696,8 +695,8 @@ namespace HCResourceLibraryApp.DataHandling
                                                                                 {
                                                                                     Dbug.LogPart("; This complex ID group does not have at least 2 IDs");
                                                                                     decodeInfo.NoteIssue("This complex ID group does not have at least 2 IDs");
+                                                                                    Dbug.Log("; ");
                                                                                 }
-                                                                                Dbug.Log("; ");
                                                                             }
                                                                             /// r20~22
                                                                             /// q21`~24`
@@ -1183,6 +1182,9 @@ namespace HCResourceLibraryApp.DataHandling
                                                                                     /// CodTail
                                                                                     else
                                                                                     {
+                                                                                        DisassembleDataID(datId, out _, out _, out string sf);
+                                                                                        NoteLegendKey(usedLegendKeys, sf);
+
                                                                                         adtConDataIDs.Add(datId);
                                                                                         Dbug.LogPart($"Got and added '{datId}'");
                                                                                     }
@@ -1398,7 +1400,6 @@ namespace HCResourceLibraryApp.DataHandling
                                                                         }
                                                                     }
                                                             }
-                                                            //else Dbug.LogPart("No Related Data ID provided");
                                                             Dbug.Log("; ");
 
                                                             // if (has relDataID, find related ConBase) else if (only relName, create new ConBase)
@@ -2324,7 +2325,7 @@ namespace HCResourceLibraryApp.DataHandling
                                     allKeys.Add(usedKey);
                                     addedQ = "+";
                                 }
-                                Dbug.LogPart($"{addedQ}'{usedKey}' - ");
+                                Dbug.LogPart($" {addedQ}'{usedKey}' ");
                             }
                             Dbug.Log("; ");
                             Dbug.LogPart(">> Fetching generated legend keys (& decInfoIx as '@#') :: ");
@@ -2353,7 +2354,7 @@ namespace HCResourceLibraryApp.DataHandling
                                 }
 
                                 generatedKeys.Add(legDat.Key);
-                                Dbug.LogPart($"{addedQ}'{legDat.Key}' {diIx} - ");
+                                Dbug.LogPart($" {addedQ}'{legDat.Key}' {diIx} ");
                             }
                             Dbug.Log("; ");
 

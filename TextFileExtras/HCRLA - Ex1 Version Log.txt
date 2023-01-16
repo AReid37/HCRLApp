@@ -28,7 +28,7 @@ PURPOSE ::
 17|Steamed t>		-(i103; t95)
 18|Rice				-(i9; t14 p5)
 19|Lettuce			-(i214; t172)
-20|Apple			-(i24; t18`)
+20|Apple			-(i24; t18`,18_2`)
 21|Bluberry			-(i42; t29 p6)
 22|Passion Fruit	-(i43; t31)
 23|Strawberry		-(i115; t128)

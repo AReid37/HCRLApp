@@ -330,7 +330,6 @@ namespace HCResourceLibraryApp.DataHandling
                     for (int caix = 0; caix < ConAddits.Count; caix++)
                         groupsEncode[1] += ConAddits[caix].EncodeSecondGroup() + (caix + 1 >= ConAddits.Count ? "" : Sep3);
                 }
-                ///else groupsEncode[1] = Sep;
 
                 // 3rd group
                 if (ConChanges.HasElements())
@@ -339,7 +338,8 @@ namespace HCResourceLibraryApp.DataHandling
                     for (int ccix = 0; ccix < ConChanges.Count; ccix++)
                         groupsEncode[2] += ConChanges[ccix].EncodeThirdGroup() + (ccix + 1 >= ConChanges.Count ? "" : Sep3);
                 }
-                ///else groupsEncode[2] = Sep;
+
+                SetPreviousSelf();
             }
             return groupsEncode;
         }

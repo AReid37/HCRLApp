@@ -116,7 +116,10 @@
 			//		? -Mix up between ConAdts and ConChgs instances' decoding
             string thirdEncode = "";
 			if (IsSetup())
-				thirdEncode = $"{ccIdentityKey}{VersionChanged}{Sep}{InternalName}{Sep}{RelatedDataID}{Sep}{ChangeDesc}";
+			{
+                thirdEncode = $"{ccIdentityKey}{VersionChanged}{Sep}{InternalName}{Sep}{RelatedDataID}{Sep}{ChangeDesc}";
+				SetPreviousSelf();
+            }
 			return thirdEncode;
         }
 		public bool DecodeThirdGroup(string ccInfo)

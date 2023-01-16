@@ -124,16 +124,32 @@ namespace HCResourceLibraryApp.DataHandling
                                         {
                                             Dbug.LogPart($"Connecting ConAddits ({looseCa}) >> ");
                                             ResContents matchingResCon = null;
+
+                                            /// matching here
+                                            LogDecoder.DisassembleDataID(looseCa.RelatedDataID, out string dk, out string db, out _);
+                                            string trueRelDataID = dk + db;
                                             foreach (ResContents resCon in Contents)
                                             {
                                                 if (resCon.ContainsDataID(looseCa.RelatedDataID, out RCFetchSource source))
+                                                {
                                                     if (source == RCFetchSource.ConBaseGroup)
                                                     {
                                                         matchingResCon = resCon;
                                                         break;
                                                     }
+                                                }
+                                                else if (resCon.ContainsDataID(trueRelDataID, out source))
+                                                {
+                                                    if (source == RCFetchSource.ConBaseGroup)
+                                                    {
+                                                        matchingResCon = resCon;
+                                                        Dbug.LogPart("[by trueID] ");
+                                                        break;
+                                                    }
+                                                }
                                             }
 
+                                            /// connection here
                                             if (matchingResCon != null)
                                             {
                                                 Dbug.LogPart($"Found ResCon {{{matchingResCon}}} >> ");
@@ -167,6 +183,10 @@ namespace HCResourceLibraryApp.DataHandling
                                         {
                                             Dbug.LogPart($"Connecting ConChanges ({looseCc.ToStringShortened()}) >> ");
                                             ResContents matchingResCon = null;
+
+                                            /// matching here
+                                            LogDecoder.DisassembleDataID(looseCc.RelatedDataID, out string dk, out string db, out _);
+                                            string trueRelDataID = dk + db;
                                             foreach (ResContents resCon in Contents)
                                             {
                                                 if (resCon.ContainsDataID(looseCc.RelatedDataID, out _))
@@ -174,8 +194,15 @@ namespace HCResourceLibraryApp.DataHandling
                                                     matchingResCon = resCon;
                                                     break;
                                                 }
+                                                else if (resCon.ContainsDataID(trueRelDataID, out _))
+                                                {
+                                                    matchingResCon = resCon;
+                                                    Dbug.LogPart("[by trueID] ");
+                                                    break;
+                                                }
                                             }
 
+                                            /// connection here
                                             if (matchingResCon != null)
                                             {
                                                 Dbug.LogPart($"Found ResCon {{{matchingResCon}}} >> ");
@@ -862,6 +889,9 @@ namespace HCResourceLibraryApp.DataHandling
 
                 Dbug.Log($"Encoded ResLibrary? {noIssue}");
                 encodedQ = noIssue;
+
+                if (encodedQ)
+                    SetPreviousSelf();
             }
             else Dbug.Log("Not enough data within ResLibrary to proceed with encoding; ");
             

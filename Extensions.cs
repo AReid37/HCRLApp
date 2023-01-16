@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.ExceptionServices;
 using ConsoleFormat;
 using HCResourceLibraryApp.DataHandling;
 using HCResourceLibraryApp.Layout;
@@ -94,13 +95,13 @@ namespace HCResourceLibraryApp
         ///   Recieves an array of numbers (as strings) then condenses any sequences of numbers into ranges (Ex. '0 1 2 4' becomes '0~2 4')
         /// </summary>
         /// <returns>A condensed string of numbers with number ranges. Is empty if no numbers were given.</returns>
-        public static string CreateNumericRanges(string[] numbers)
+        public static string CreateNumericDataIDRanges(string[] numbers)
         {
             string rangedNumbers = "";
             if (numbers.HasElements())
             {
                 Dbug.IgnoreNextLogSession();
-                Dbug.StartLogging("SettingsPage.CreateNumericRanges(str[])");
+                Dbug.StartLogging("Extensions.CreateNumericDataIDRanges(str[])");
                 Dbug.Log($"Recieved '{numbers.Length}' numbers to create ranges from; Removing null/empty entries; ");
                 List<string> fltNumbers = new();
                 foreach (string numT in numbers)
@@ -110,11 +111,11 @@ namespace HCResourceLibraryApp
                 if (fltNumbers.HasElements())
                     fltNumbers = fltNumbers.ToArray().SortWords();
                 Dbug.Log($"Filtered down to '{fltNumbers.Count}' numbers; Sorted numbers; Creating Ranges; ");
-                Dbug.Log($"LEGEND :: Range Enter Key '{{' -- Range Exit Key '}}' -- Base Number '@#' --  End Range Number '!'");
+                Dbug.Log($"LEGEND :: Range Enter '{{' -- Range Exit '}}' -- Base Num '@#' --  End Range Num '!' -- Last Num Ends Range '>' -- Incompatibility Range Break '*' -- Range Indicators [' .]");
                 //Dbug.Log($"LEGEND :: Range Enter Key '{{' -- Range Exit Key '}}' -- Base Number 'b.# ' --  End Range Number 'e.#'");
 
-                string baseNumT = null;
-                bool withinRangeQ = false;
+                string baseNumT = null, baseOddNumT = null;
+                bool withinRangeQ = false, withinOddRangeQ = false;
                 for (int rx = 0; rx < fltNumbers.Count; rx++)
                 {
                     string currNumT = fltNumbers[rx];
@@ -122,69 +123,371 @@ namespace HCResourceLibraryApp
                     bool lastNumberQ = rx + 1 == fltNumbers.Count;
 
                     string numToPrint = "";
-                    if (int.TryParse(currNumT, out int currNum))
+                    bool parsedCurrNum = int.TryParse(currNumT, out int currNum);
+                    bool parsedPrevNum = int.TryParse(prevNumT, out int prevNum);
+
+                    /// Normal Numbers
+                    /// 5 6
+                    if (parsedCurrNum && parsedPrevNum)
                     {
-                        if (int.TryParse(prevNumT, out int prevNum))
+                        //Dbug.LogPart("\\");
+
+                        /// IF this num is next in sequence; ELSE this num is beyond sequence 
+                        if (prevNum + 1 == currNum)
                         {
-                            if (prevNum + 1 == currNum)
+                            /// is not within range |
+                            if (!withinRangeQ)
                             {
-                                if (!withinRangeQ)
-                                {
-                                    Dbug.LogPart(" {");
-                                    withinRangeQ = true;
-                                    baseNumT = prevNum.ToString();
+                                Dbug.LogPart($" {{");
+                                withinRangeQ = true;
+                                baseNumT = prevNum.ToString();
 
-                                    Dbug.LogPart($"@{baseNumT}'{currNumT}");
+                                Dbug.LogPart($"@{baseNumT}'{currNumT}");
 
-                                    if (rangedNumbers.IsNotNE() && baseNumT.IsNotNE())
-                                        rangedNumbers = rangedNumbers.Remove((rangedNumbers.Length - baseNumT.Length - 1).Clamp(0, rangedNumbers.Length - 1));
+                                /// IF there is preceding sequences AND there is base sequence number: remove last-printed number in sequence (iow. remove base number)
+                                if (rangedNumbers.IsNotNE() && baseNumT.IsNotNE())
+                                    rangedNumbers = rangedNumbers.Remove((rangedNumbers.Length - baseNumT.Length - 1).Clamp(0, rangedNumbers.Length - 1));
 
-                                    if (!lastNumberQ)
-                                        numToPrint = baseNumT;
-                                    else
-                                    {
-                                        Dbug.LogPart($"!}} -> ");
-                                        numToPrint = $"{baseNumT},{currNum}";
-                                    }
-
-                                }
+                                /// IF more numbers follow: print base sequence number; ELSE print base sequence number and this/last number
+                                if (!lastNumberQ)
+                                    numToPrint = baseNumT;
                                 else
                                 {
-                                    if (!lastNumberQ)
-                                        Dbug.LogPart($"'{currNumT}");
-                                    else
-                                    {
-                                        Dbug.LogPart($"'{currNumT}!}} -> ");
-                                        numToPrint = "~" + currNumT;
-                                    }
+                                    Dbug.LogPart($"!}}> ");
+                                    numToPrint = $"{baseNumT},{currNumT}";
                                 }
                             }
+                            /// is within range |
                             else
                             {
-                                if (withinRangeQ)
+                                /// IF more numbers follow: don't print number; ELSE print sequence-ending/last number
+                                if (!lastNumberQ)
+                                    Dbug.LogPart($"'{currNumT}");
+                                else
                                 {
-                                    if (int.TryParse(baseNumT, out int baseNum))
-                                        if (baseNum + 1 == prevNum)
-                                            numToPrint = $",{prevNumT},";
-                                    if (numToPrint.IsNE())
-                                        numToPrint = $"~{prevNumT},";
-
-                                    Dbug.LogPart($"!}}");
+                                    Dbug.LogPart($"'{currNumT}!}}> ");
+                                    numToPrint = $"~{currNumT}";
                                 }
+                            }
+                        }
+                        else
+                        {
+                            /// IF is within range (IF sequence of 2: print as normal; IF number to print unset, sequence of 3+: print sequence-ending number)
+                            if (withinRangeQ)
+                            {
+                                if (int.TryParse(baseNumT, out int baseNum))
+                                    if (baseNum + 1 == prevNum)
+                                        numToPrint = $",{prevNumT},";
+                                if (numToPrint.IsNE())
+                                    numToPrint = $"~{prevNumT},";
 
-                                Dbug.LogPart($" {currNumT}");
-                                numToPrint += $"{currNumT},";
+                                Dbug.LogPart($"!}}");
+                            }
+
+                            Dbug.LogPart($" {currNumT}");
+                            numToPrint += $"{currNumT},";
+
+                            withinRangeQ = false;
+                            baseNumT = null;
+                        }
+                    }
+                    /// 'Odd' Numbers
+                    /// 6_2 7-wet
+                    else
+                    {
+                        //Dbug.LogPart("/");
+
+                        /// IF is within range; (IF current num is odd AND previous is normal; print sequence-ending number, start odd number sequences)
+                        if (withinRangeQ)
+                        {
+                            // .. 4 (5 5_0) 6 ..
+                            if (!parsedCurrNum && parsedPrevNum)
+                            {
+                                if (int.TryParse(baseNumT, out int baseNum))
+                                    if (baseNum + 1 == prevNum)
+                                        numToPrint = $",{prevNumT},";
+                                if (numToPrint.IsNE())
+                                    numToPrint = $"~{prevNumT},";
+                                Dbug.LogPart($"!}}*");
+
+                                //Dbug.LogPart($" {currNumT}");
+                                //numToPrint += $"{currNumT},";
 
                                 withinRangeQ = false;
                                 baseNumT = null;
                             }
                         }
-                        else
+
+                        /// IF is not within range
+                        if (!withinRangeQ)
                         {
-                            Dbug.LogPart($" {currNumT}");
-                            numToPrint += $"{currNumT},";
+                            bool parsedPrevOddNum = TryGetEndingNumber(prevNumT, out string prevBaseT, out int prevEndNum);
+                            bool parsedCurrOddNum = TryGetEndingNumber(currNumT, out string currBaseT, out int currEndNum);
+
+                            // .. 0 (1_0 1_1) 2 ..
+                            bool justPrintQ = true;
+                            if (!parsedCurrNum && !parsedPrevNum)
+                            {
+                                /// IF parsed/fetched this and previous odd numbers
+                                if (parsedPrevOddNum && parsedCurrOddNum)
+                                {
+                                    /// IF previous odd num and this odd num have the same preceding numbers/text: ...; ELSE print sequence ending number, end odd number sequence
+                                    if (prevBaseT == currBaseT)
+                                    {
+                                        justPrintQ = false;
+                                        /// IF this num is next in odd sequence; ELSE this num is beyond odd sequence 
+                                        if (prevEndNum + 1 == currEndNum)
+                                        {
+                                            /// is not within odd range; ELSE is within odd range
+                                            if (!withinOddRangeQ)
+                                            {
+                                                Dbug.LogPart($" {{");
+                                                withinOddRangeQ = true;
+                                                baseOddNumT = prevNumT;
+
+                                                Dbug.LogPart($"@{prevNumT}.{currNumT}");
+
+                                                /// IF there is preceding sequences AND there is odd base sequence number: remove last-printed number in sequence (iow. remove odd base number)
+                                                if (rangedNumbers.IsNotNE() && baseOddNumT.IsNotNE())
+                                                    rangedNumbers = rangedNumbers.Remove((rangedNumbers.Length - baseOddNumT.Length - 1).Clamp(0, rangedNumbers.Length - 1));
+
+                                                /// IF more odd numbers follow: print base sequence number; ELSE print base sequence number and this/last odd number
+                                                if (!lastNumberQ)
+                                                    numToPrint = baseOddNumT;
+                                                else
+                                                {
+                                                    Dbug.LogPart($"!}}> ");
+                                                    numToPrint = $"{baseOddNumT},{currNumT}";
+                                                }
+                                            }
+                                            else
+                                            {
+                                                /// IF more numbers follow: don't print number; ELSE print sequence-ending/last number
+                                                if (!lastNumberQ)
+                                                    Dbug.LogPart($".{currNumT}");
+                                                else
+                                                {
+                                                    Dbug.LogPart($".{currNumT}!}}> ");
+                                                    numToPrint = $"~{currNumT}";
+                                                }
+                                            }
+                                        }
+                                        else
+                                        {
+                                            /// IF is within odd range (IF sequence of 2: print as normal; IF number to print unset, sequence of 3+: print odd sequence-ending number)
+                                            if (withinOddRangeQ)
+                                            {
+                                                if (TryGetEndingNumber(baseOddNumT, out _, out int baseEndNum))
+                                                    if (baseEndNum + 1 == prevEndNum)
+                                                        numToPrint = $",{prevNumT},";
+                                                if (numToPrint.IsNE())
+                                                    numToPrint = $"~{prevNumT},";
+
+                                                Dbug.LogPart($"!}}");
+                                            }
+
+                                            Dbug.LogPart($" {currNumT}");
+                                            numToPrint += $"{currNumT},";
+
+                                            withinOddRangeQ = false;
+                                            baseOddNumT = null;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        if (withinOddRangeQ)
+                                        {
+                                            if (TryGetEndingNumber(baseOddNumT, out _, out int baseEndNum))
+                                                if (baseEndNum + 1 == prevEndNum)
+                                                    numToPrint = $",{prevNumT},";
+                                            if (numToPrint.IsNE())
+                                                numToPrint = $"~{prevNumT},";
+
+                                            Dbug.LogPart($"!}}**");
+                                        }
+
+                                        /// // since 'justPrint' isn't disabled here, the following lines can be commented out
+                                        /// Dbug.LogPart($" {currNumT}");
+                                        /// numToPrint += $"{currNumT},";
+
+                                        withinOddRangeQ = false;
+                                        baseOddNumT = null;
+                                    }
+                                }
+
+                                #region dispose/
+                                //if (parsedCurrOddNum && parsedPrevOddNum)
+                                //{
+                                //    justPrintQ = false;
+                                //    if (prevEndNum + 1 == currEndNum)
+                                //    {
+                                //        /// is not within range |
+                                //        if (!withinOddRangeQ)
+                                //        {
+                                //            Dbug.LogPart(" {");
+                                //            withinOddRangeQ = true;
+                                //            baseOddNumT = prevNumT;
+
+                                //            Dbug.LogPart($"@{baseOddNumT}'{currNumT}");
+
+                                //            ///
+                                //            if (rangedNumbers.IsNotNE() && baseOddNumT.IsNotNE())
+                                //                ;
+
+                                //            ///
+                                //            if (!lastNumberQ)
+                                //                ;
+                                //            else
+                                //            {
+                                //                Dbug.LogPart($"!}}> ");
+                                //            }
+                                //        }
+                                //        /// is within range |
+                                //        else
+                                //        {
+                                //            /// IF more odd numbers follow: don't print number; ELSE print sequence-ending/last odd number
+                                //            if (!lastNumberQ)
+                                //                Dbug.LogPart($"'{currNumT}");
+                                //            else
+                                //            {
+                                //                Dbug.LogPart($"'{currNumT}!}}> ");
+                                //            }
+                                //        }
+                                //    }
+                                //    else
+                                //    {
+                                //        /// IF was within odd range (IF sequence of 2: print as normal; IF number to print unset, sequence of 3+: print sequence-ending odd number)
+                                //        if (withinOddRangeQ)
+                                //        {
+                                //            if (TryGetEndingNumber(baseOddNumT, out int baseEndNum))
+                                //                if (baseEndNum + 1 == prevEndNum)
+                                //                    ;
+                                //            if (numToPrint.IsNE())
+                                //                ;
+
+                                //            Dbug.LogPart($"!}}");
+                                //        }
+
+                                //        Dbug.LogPart($" {currNumT}");
+
+                                //        withinOddRangeQ = false;
+                                //        baseOddNumT = null;
+                                //    }
+                                //}    
+                                //else
+                                //{
+                                //    if (withinOddRangeQ)
+                                //    {
+
+                                //    }
+                                //}
+                                #endregion
+                            }
+
+                            /// IF just print next number: (IF is within odd range: end odd range)
+                            if (justPrintQ)
+                            {
+                                if (withinOddRangeQ)
+                                {
+                                    if (TryGetEndingNumber(baseOddNumT, out _, out int baseEndNum))
+                                        if (baseEndNum + 1 == prevEndNum)
+                                            numToPrint = $",{prevNumT},";
+                                    if (numToPrint.IsNE())
+                                        numToPrint = $"~{prevNumT},";
+
+                                    Dbug.LogPart($"!}}*");
+
+                                    //withinOddRangeQ = false;
+                                    //baseOddNumT = null;
+                                }
+
+                                withinOddRangeQ = false;
+                                baseOddNumT = null;
+
+                                Dbug.LogPart($" {currNumT}");
+                                numToPrint += $"{currNumT},";
+                            }
                         }
+                        
                     }
+                    /// 124_0 125_0:125_1:125_2:125_3 126_1 128_2 131_0:131_1.131_3:131_4 133_0 141_0:141_1:141_2 // End
+                    ///justPrintQ = false;
+                    ///if (prevEndNum + 1 == currEndNum)
+                    ///    Dbug.LogPart($":{currNumT}");
+                    ///else Dbug.LogPart($".{currNumT}");
+
+                    #region old-code
+                    //if (int.TryParse(currNumT, out int currNum))
+                    //{
+                    //    if (int.TryParse(prevNumT, out int prevNum))
+                    //    {
+                    //        /// IF this num is next in sequence; ELSE this num is beyond sequence 
+                    //        if (prevNum + 1 == currNum)
+                    //        {
+                    //            /// is not within range |
+                    //            if (!withinRangeQ)
+                    //            {
+                    //                Dbug.LogPart(" {");
+                    //                withinRangeQ = true;
+                    //                baseNumT = prevNum.ToString();
+
+                    //                Dbug.LogPart($"@{baseNumT}'{currNumT}");
+
+                    //                /// IF there is preceding sequences AND there is base sequence number: remove last-printed number in sequence
+                    //                if (rangedNumbers.IsNotNE() && baseNumT.IsNotNE())
+                    //                    rangedNumbers = rangedNumbers.Remove((rangedNumbers.Length - baseNumT.Length - 1).Clamp(0, rangedNumbers.Length - 1));
+
+                    //                /// IF more numbers follow: print base sequence number; ELSE print base sequence number and this/last number
+                    //                if (!lastNumberQ)
+                    //                    numToPrint = baseNumT;
+                    //                else
+                    //                {
+                    //                    Dbug.LogPart($"!}}> ");
+                    //                    numToPrint = $"{baseNumT},{currNum}";
+                    //                }
+
+                    //            }
+                    //            else
+                    //            {
+                    //                /// is within range | IF more numbers follow: don't print number; ELSE print sequence-ending/last number
+                    //                if (!lastNumberQ)
+                    //                    Dbug.LogPart($"'{currNumT}");
+                    //                else
+                    //                {
+                    //                    Dbug.LogPart($"'{currNumT}!}}> ");
+                    //                    numToPrint = "~" + currNumT;
+                    //                }
+                    //            }
+                    //        }
+                    //        else
+                    //        {
+                    //            /// IF was within range (IF sequence of 2: print as normal; IF number to print unset, sequence of 3+: print sequence-ending number)
+                    //            if (withinRangeQ)
+                    //            {
+                    //                if (int.TryParse(baseNumT, out int baseNum))
+                    //                    if (baseNum + 1 == prevNum)
+                    //                        numToPrint = $",{prevNumT},";
+                    //                if (numToPrint.IsNE())
+                    //                    numToPrint = $"~{prevNumT},";
+
+                    //                Dbug.LogPart($"!}}");
+                    //            }
+
+                    //            Dbug.LogPart($" {currNumT}");
+                    //            numToPrint += $"{currNumT},";
+
+                    //            withinRangeQ = false;
+                    //            baseNumT = null;
+                    //        }
+                    //    }
+                    //    else
+                    //    {
+                    //        Dbug.LogPart($" {currNumT}");
+                    //        numToPrint += $"{currNumT},";
+                    //    }
+                    //}
+                    #endregion
+
 
                     if (numToPrint.IsNotNE())
                         rangedNumbers += numToPrint;
@@ -197,18 +500,49 @@ namespace HCResourceLibraryApp
                 Dbug.EndLogging();
             }
             return rangedNumbers;
+
+            // method
+            bool TryGetEndingNumber(string str, out string numBase, out int endNum)
+            {
+                numBase = null;
+                string endingNumStr = str;
+                if (str.IsNotNE())
+                {
+                    endingNumStr = "";
+                    bool halt = false;
+                    for (int sx = str.Length - 1; sx >= 0 && !halt; sx--)
+                    {
+                        if (!LogDecoder.IsNumberless(str[sx].ToString()))
+                            endingNumStr = str[sx].ToString() + endingNumStr;
+                        else halt = true;
+                    }
+
+                    // the ending number cannot be the same as the whole (recieved) number
+                    if (endingNumStr.IsNotNE())
+                    {
+                        if (endingNumStr == str.Trim())
+                            endingNumStr = null;
+                        else
+                        {
+                            endingNumStr = endingNumStr.Trim();
+                            numBase = str.Remove(str.Length - endingNumStr.Length);
+                        }
+                    }
+                }
+                return int.TryParse(endingNumStr, out endNum);
+            }
         }
         /// <summary>
         ///   Recieves a string of numbers and a separating characters then condenses any sequences of numbers into ranges (Ex. '0 1 2 4' becomes '0~2 4')
         /// </summary>
         /// <returns>A condensed string of numbers with number ranges. Is empty if no numbers were given.</returns>
-        public static string CreateNumericRanges(string numbers, char splitChar)
+        public static string CreateNumericDataIDRanges(string numbers, char splitChar)
         {
             string rangedNumbers = "";
             if (numbers.IsNotNEW() && splitChar.IsNotNull())
             {
                 if (numbers.Contains(splitChar))
-                    rangedNumbers = CreateNumericRanges(numbers.Split(splitChar));
+                    rangedNumbers = CreateNumericDataIDRanges(numbers.Split(splitChar));
             }
             return rangedNumbers;
         }
