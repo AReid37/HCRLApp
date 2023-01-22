@@ -45,6 +45,7 @@ namespace HCResourceLibraryApp.DataHandling
         List<ResContents> _contents, _prevContents;
         List<LegendData> _legends, _prevLegends;
         List<SummaryData> _summaries, _prevSummaries;
+        List<ResLibIntegrationInfo> rliInfoDock;
 
         // public
         public const string LooseResConName = "!LooseContent!";
@@ -78,7 +79,10 @@ namespace HCResourceLibraryApp.DataHandling
                 if (disableAddDbug)
                     Dbug.DeactivateNextLogSession();
                 Dbug.StartLogging("ResLibrary.AddContent(prms RC[])");
-                Dbug.LogPart($"Recieved [{newContents.Length}] new ResCons for library");
+                Dbug.LogPart($"Recieved [{newContents.Length}] new ResCons for library; Refresh integration info dock? {keepLooseRCQ}");
+
+                if (!keepLooseRCQ)
+                    rliInfoDock = new List<ResLibIntegrationInfo>();
 
                 List<int> shelfNums = new();
                 if (Contents.HasElements())
@@ -108,14 +112,18 @@ namespace HCResourceLibraryApp.DataHandling
                         if (newRC.ContentName == LooseResConName)
                         {
                             Dbug.LogPart("Identified 'loose' ResCon; ");
+                            /// IF existing contents and able to sort loose contents: sort loose contents; 
                             if (Contents.HasElements() && !keepLooseRCQ)
                             {
                                 Dbug.Log("Library has pre-existing contents that may serve as connections; ");
+                                ResLibIntegrationInfo rliInfo = new();
+                                RCFetchSource rliType = RCFetchSource.None;
 
                                 /// find matching and connect ConAddits
                                 List<string> RCextras = new();
                                 if (newRC.ConAddits.HasElements())
                                 {
+                                    rliType = RCFetchSource.ConAdditionals;
                                     Dbug.Log("Making connections :: ConAddits to ConBase");
                                     Dbug.NudgeIndent(true);
                                     foreach (ContentAdditionals looseCa in newRC.ConAddits)
@@ -157,12 +165,25 @@ namespace HCResourceLibraryApp.DataHandling
                                                 {
                                                     RCextras.Add(matchingResCon.ToString());
                                                     Dbug.LogPart($"Connected with ConBase ({matchingResCon.ConBase}) [by ID '{looseCa.RelatedDataID}']");
+
+                                                    rliInfo = new ResLibIntegrationInfo(rliType, looseCa.DataIDString, looseCa.OptionalName, matchingResCon.ContentName, looseCa.RelatedDataID);
                                                 }
                                                 else Dbug.LogPart($"Rejected ConAddits");
                                             }
                                             else Dbug.LogPart("No ConBase connections found (discarded)");
+
+                                            if (!rliInfo.IsSetup())
+                                                rliInfo = new ResLibIntegrationInfo(rliType, looseCa.DataIDString, looseCa.OptionalName, null, null);
+                                            Dbug.LogPart(" <rlii> "); /// this logs regardless of what happens
                                         }
-                                        Dbug.Log("; ");
+                                        Dbug.Log(";");
+
+                                        /// add ConAddits info to dock
+                                        if (rliInfo.IsSetup())
+                                        {
+                                            rliInfoDock.Add(rliInfo);
+                                            rliInfo = new ResLibIntegrationInfo();
+                                        }
                                     }
                                     Dbug.NudgeIndent(false);
 
@@ -175,6 +196,7 @@ namespace HCResourceLibraryApp.DataHandling
                                 RCextras.Clear();
                                 if (newRC.ConChanges.HasElements())
                                 {
+                                    rliType = RCFetchSource.ConChanges;
                                     Dbug.Log("Making connections :: ConChanges to ConBase/ConAddits");
                                     Dbug.NudgeIndent(true);
                                     foreach (ContentChanges looseCc in newRC.ConChanges)
@@ -183,6 +205,7 @@ namespace HCResourceLibraryApp.DataHandling
                                         {
                                             Dbug.LogPart($"Connecting ConChanges ({looseCc.ToStringShortened()}) >> ");
                                             ResContents matchingResCon = null;
+                                            rliInfo = new ResLibIntegrationInfo();
 
                                             /// matching here
                                             LogDecoder.DisassembleDataID(looseCc.RelatedDataID, out string dk, out string db, out _);
@@ -208,6 +231,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                 Dbug.LogPart($"Found ResCon {{{matchingResCon}}} >> ");
                                                 if (matchingResCon.ContainsDataID(looseCc.RelatedDataID, out RCFetchSource source, out DataHandlerBase dataSource))
                                                 {
+                                                    bool connectCCq = false;
                                                     if (source == RCFetchSource.ConBaseGroup)
                                                     {
                                                         ContentBaseGroup matchCbg = (ContentBaseGroup)dataSource;
@@ -217,6 +241,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                             {
                                                                 RCextras.Add(matchingResCon.ToString());
                                                                 Dbug.LogPart($"Connected with ConBase ({matchCbg}) [by ID '{looseCc.RelatedDataID}']");
+                                                                connectCCq = true;
                                                             }
                                                             else Dbug.LogPart($"Rejected ConChanges");
                                                         }
@@ -230,15 +255,30 @@ namespace HCResourceLibraryApp.DataHandling
                                                             {
                                                                 RCextras.Add(matchingResCon.ToString());
                                                                 Dbug.LogPart($"Connected with ConAddits ({matchCa}) [by ID '{looseCc.RelatedDataID}']");
+                                                                connectCCq = true;
                                                             }
                                                             else Dbug.LogPart($"Rejected ConChanges");
                                                         }
                                                     }
+
+                                                    if (connectCCq)
+                                                        rliInfo = new ResLibIntegrationInfo(rliType, looseCc.RelatedDataID, looseCc.ChangeDesc, matchingResCon.ContentName, looseCc.RelatedDataID);
                                                 }
                                             }
                                             else Dbug.LogPart("No connections found (discarded)");
+
+                                            if (!rliInfo.IsSetup())
+                                                rliInfo = new ResLibIntegrationInfo(rliType, looseCc.RelatedDataID, looseCc.ChangeDesc, null, null);
+                                            Dbug.LogPart(" <rlii> "); /// this logs regardless of what happens
                                         }
                                         Dbug.Log("; ");
+
+                                        /// add ConChanges info to dock
+                                        if (rliInfo.IsSetup())
+                                        {
+                                            rliInfoDock.Add(rliInfo);
+                                            rliInfo = new ResLibIntegrationInfo();
+                                        }
                                     }
                                     Dbug.NudgeIndent(false);
 
@@ -247,6 +287,7 @@ namespace HCResourceLibraryApp.DataHandling
                                             Dbug.Log($". Edited RC :: {rcEdits}");
                                 }
                             }
+                            /// ELSE don't sort loose contents
                             else
                             {
                                 if (!keepLooseRCQ)
@@ -261,7 +302,6 @@ namespace HCResourceLibraryApp.DataHandling
                                     Dbug.Log($"*Added* :: {newRC}; ");
                                 }
                             }
-                            //Dbug.Log("; ");
                         }
 
                         // just add
@@ -408,9 +448,10 @@ namespace HCResourceLibraryApp.DataHandling
             }
             return addedSummaryQ;
         }        
-        public void Integrate(ResLibrary other)
+        public void Integrate(ResLibrary other, out ResLibIntegrationInfo[] resLibIntegrationInfoDock)
         {
             Dbug.StartLogging("ResLibrary.Integrate(ResLib)");
+            resLibIntegrationInfoDock = null;
             if (other != null)
             {
                 Dbug.LogPart("Other ResLibrary is instantiated; ");
@@ -420,6 +461,8 @@ namespace HCResourceLibraryApp.DataHandling
 
                     // add resCons
                     AddContent(other.Contents.ToArray());
+                    if (rliInfoDock.HasElements())
+                        resLibIntegrationInfoDock = rliInfoDock.ToArray();
 
                     // add legend
                     AddLegend(other.Legends.ToArray());
@@ -767,17 +810,20 @@ namespace HCResourceLibraryApp.DataHandling
         }
         void SetPreviousSelf()
         {
-            if (_contents.HasElements())
+            _prevContents = null;
+            _prevLegends = null;
+            _prevSummaries = null;
+            if (_contents != null)
             {
                 _prevContents = new List<ResContents>();
                 _prevContents.AddRange(_contents.ToArray());
             }
-            if (_legends.HasElements())
+            if (_legends != null)
             {
                 _prevLegends = new List<LegendData>();
                 _prevLegends.AddRange(_legends.ToArray());
             }
-            if (_summaries.HasElements())
+            if (_summaries != null)
             {
                 _prevSummaries = new List<SummaryData>();
                 _prevSummaries.AddRange(_summaries.ToArray());
@@ -789,11 +835,11 @@ namespace HCResourceLibraryApp.DataHandling
             bool prevDADbg = disableAddDbug;
             disableAddDbug = true;
 
-            if (_prevContents.HasElements())
+            if (_prevContents != null)
                 prevSelf.AddContent(_prevContents.ToArray());
-            if (_prevLegends.HasElements())
+            if (_prevLegends != null)
                 prevSelf.AddLegend(_prevLegends.ToArray());
-            if (_prevSummaries.HasElements())
+            if (_prevSummaries != null)
                 prevSelf.AddSummary(_prevSummaries.ToArray());
             
             disableAddDbug = prevDADbg;

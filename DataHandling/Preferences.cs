@@ -408,7 +408,7 @@ namespace HCResourceLibraryApp.DataHandling
         }
         /// <summary>Compares another <see cref="Preferences"/> instance to this instance for similarity in values.</summary>
         /// <returns>A boolean representing whether the values of the compared preferences matches those of this instance.</returns>
-        public bool Compare(Preferences other)
+        public bool Equals(Preferences other)
         {
             bool endChecks = false;
             int countNoMatch = 0;

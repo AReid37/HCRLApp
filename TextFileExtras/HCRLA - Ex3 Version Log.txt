@@ -8,19 +8,60 @@ PURPOSE ::
 [Version : 1.2]
 
 [Added]
+1 |Blobbleberry		-(i445; t345 p16`,17 tt2~5 tb1`~3)
+2 |Wheat			-(i7)
+3 |Durum&00wood		-(i21; t4,5)
+4 |Barley			-(i12)
+5 |Barlibark		-(i22; t8,13)
+6 |Oats				-(i27; t9)
+7 |Rolled Oat Block -(i64; t22)
+8 |Long Rice		-(i28; t14`* p11)
+9 |Short Rice		-(i32; t14`*)
+10|Rice Stalk		-(i46; t11)
+11|Long Rice Stalk  -(i45; t12)
+12|Short Rice Stalk -(i52; t10)
 
 [Additional]
+-- This ver log could be mostly wordy Data IDs, as I still have to test the Misc special display somehow...
+> Blobbleberry Ocrhid Bushes (tt1`) - (t345)
+> Wheat Stalks (tt7) - (t4)
+> Wheat Buds (tb7) - (t4)
+> FallingWheatGrains (WheatGranule,WheatGranules,Husks_Wheat) - (t4)
+> Long Rice Stalk Particles (LongRiceDust,Husks_LongRice) - (t12)
+> Short Rice Stalk Particles (ShortRiceDust,Husks_ShortRice) - (t10)
+> (Muk,Murk,Murk&00acidic) - Murky Grain Particles
+> (BarleyHusks) - (i12)
+> (Husks_Oats) - (t9)
+> Thrown Long Rice And Debris (FriendlyLongRice&00lets,UnfriendlyLongRice&00lets) - (p11)
+> Rice Stalk Particles (NormalRiceDust,Husks_Rice) - Rice Stalk (t11)
+> Rice Debris (FriendlyRice&00lets) - Rice (p6)
+> (en&00US&00ItemLocalization.json) - Item Localization File &11English&02 U&99S&12
 
-[TTA : 0]
+[TTA : 54]
 
 [Updated]
+> Rice (i9) - Reangled texture to be uniform with new rice grains&02 long and short
+> I&99L&99F_en&99Us (en&00US&00ItemLocalization.json) - Rice grains now have an item tooltip lore hinting to a history of usage as projectile weaponry
+> Rice (t14`) - Made room on the sprite sheet for grown long and short grains 
+-- just for testing's sake... ughhh!
+> I&99L&99F_en&99Us (en&00US&00ItemLocalization.json) - please, stop. Get some help.
 
 [Legend]
+i - Item
+t - Tiles
+` - LOTB
+p - Projectile
+tt - Tree Tops
+tb - Tree Branches
+~ - Number Range
+* - PrevUpd
 
 [Summary]
+> Blobbleberry, Many Grain related items, tiles and other textures
+> Rice lore and associated localization file
 -- ========== ---
 
 -- !open --
 Fun fact: 
-	This version log was the former 'Error Testing Version Log'
+	This version log was the former 'Error Testing Version Log'.
 -- !close --

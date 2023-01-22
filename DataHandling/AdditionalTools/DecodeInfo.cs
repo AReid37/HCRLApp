@@ -74,10 +74,40 @@
             if (result.IsNotNE())
                 resultingInfo = result;
         }
-        /// <returns>A boolean relaying whether the log line, section name, and either the decode issue message or resulting info message have values.</returns>
+        /// <returns>A boolean relaying whether the log line, section name, and either the decode issue message or resulting info message have values.</returns>        
         public bool IsSetup()
         {
             return logLine.IsNotNEW() && sectionName.IsNotNEW() && (decodeIssue.IsNotNE() || resultingInfo.IsNotNE());
+        }
+        public bool Equals(DecodeInfo other)
+        {
+            bool areEquals = true;
+            for (int d = 0; d < 5 && areEquals; d++)
+            {
+                switch (d)
+                {
+                    case 0:
+                        areEquals = IsSetup() == other.IsSetup();
+                        break;
+
+                    case 1:
+                        areEquals = logLine == other.logLine;
+                        break;
+
+                    case 2:
+                        areEquals = sectionName == other.sectionName;
+                        break;
+
+                    case 3:
+                        areEquals = decodeIssue == other.decodeIssue;
+                        break;
+
+                    case 4:
+                        areEquals = resultingInfo == other.resultingInfo;
+                        break;
+                }
+            }
+            return areEquals;
         }
     }
 }

@@ -1,6 +1,7 @@
 ﻿using ConsoleFormat;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Runtime;
 using static ConsoleFormat.Base;
 
@@ -71,6 +72,9 @@ namespace HCResourceLibraryApp.DataHandling
         public ResLibrary DecodedLibrary { get; private set; }
         public List<DecodeInfo> DecodeInfoDock;
         public bool HasDecoded { get => _hasDecodedQ; }
+
+        /// for decoding
+        List<string> usedLegendKeys = new(), usedLegendKeysSources = new();
 
         public LogDecoder()
         {
@@ -143,17 +147,17 @@ namespace HCResourceLibraryApp.DataHandling
                 bool withinASectionQ = false, parsedSectionTagQ = false, withinOmitBlock = false;
                 string currentSectionName = null, lastSectionName = null;
                 int[] countSectionIssues = new int[8];
-                List<DecodeInfo> decodingInfoDock = new();
+                List<DecodeInfo> decodingInfoDock = new(), prevDecodingInfoDock = new();
 
                 #region Decode - Tracking & Temporary Storage
                 bool endFileReading = false, ranLegendChecksQ = false;
                 List<string[]> addedPholderNSubTags = new();
                 List<string> addedContentsNames = new();
-                List<string> usedLegendKeys = new();
                 List<string> looseInfoRCDataIDs = new();
                 List<ContentAdditionals> looseConAddits = new();
                 List<ContentChanges> looseConChanges = new();
-
+                usedLegendKeys = new List<string>();
+                usedLegendKeysSources = new List<string>();
                 // vv to be integrated into library later vv
                 VerNum logVersion = VerNum.None;
                 List<ResContents> resourceContents = new();                
@@ -349,7 +353,8 @@ namespace HCResourceLibraryApp.DataHandling
                                             decodeInfo.NoteIssue("This line does not start with '['");
                                         }
                                     }
-                                    Dbug.Log($"  //  End version");
+                                    
+                                    EndSectionDbugLog("version", null);
                                 }
 
                                 /// ADDED
@@ -389,18 +394,22 @@ namespace HCResourceLibraryApp.DataHandling
                                      */
 
                                     sectionIssueQ = true;
+                                    bool wasSectionTag = false;
 
                                     /// added tag (may contain placeholders and substitutes)
                                     if (logDataLine.Contains(secBracL) || logDataLine.Contains(secBracR))
                                     {
                                         Dbug.LogPart("Identified added section tag; ");
+                                        wasSectionTag = true;
                                         logDataLine = RemoveEscapeCharacters(logDataLine);
 
-                                        addedPholderNSubTags.Clear();
                                         if (IsSectionTag() && !parsedSectionTagQ)
                                         {
                                             if (addedPholderNSubTags.HasElements())
+                                            {
                                                 Dbug.LogPart("Clearing ph/sub list; ");
+                                                addedPholderNSubTags.Clear();
+                                            }
 
                                             logDataLine = RemoveSquareBrackets(logDataLine);
                                             if (logDataLine.Contains(':') && logDataLine.CountOccuringCharacter(':') <= 1)
@@ -516,7 +525,10 @@ namespace HCResourceLibraryApp.DataHandling
                                                     }                                                    
                                                 }
                                                 else
+                                                {
+                                                    Dbug.LogPart("Additional section tag identified");
                                                     decodeInfo.NoteResult("Additional section tag identified");
+                                                }
                                             }
                                         }   
                                         else
@@ -537,7 +549,6 @@ namespace HCResourceLibraryApp.DataHandling
                                                 decodeInfo.NoteIssue("This line does not start with '['");
                                             }
                                         }
-                                        Dbug.Log("  //  End added (section tag)");
                                     }
 
                                     /// added items (become content base groups)
@@ -671,8 +682,8 @@ namespace HCResourceLibraryApp.DataHandling
                                                                                 {
                                                                                     Dbug.LogPart("; ");
                                                                                     DisassembleDataID(dataIDs[0], out string dataKey, out _, out string suffix);
-                                                                                    NoteLegendKey(usedLegendKeys, dataKey);
-                                                                                    NoteLegendKey(usedLegendKeys, suffix);
+                                                                                    NoteLegendKey(dataKey, dataIDs[0]);
+                                                                                    NoteLegendKey(suffix, dataIDs[0]);
                                                                                     if (dataKey.IsNotNEW())
                                                                                     {
                                                                                         Dbug.Log($"Retrieved data key '{dataKey}'; ");
@@ -680,7 +691,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                                                         {
                                                                                             Dbug.LogPart(". Adding ID; ");
                                                                                             DisassembleDataID(datId, out _, out string dataBody, out string sfx);
-                                                                                            NoteLegendKey(usedLegendKeys, sfx);
+                                                                                            NoteLegendKey(sfx, datId);
                                                                                             string datToAdd = dataKey + dataBody + sfx;
                                                                                             if (!IsNumberless(datToAdd))
                                                                                             {
@@ -703,15 +714,15 @@ namespace HCResourceLibraryApp.DataHandling
                                                                             else if (dataIDGroup.Contains(legRangeKey))
                                                                             {
                                                                                 Dbug.LogPart($"Got range ID group '{dataIDGroup}'; ");
-                                                                                NoteLegendKey(usedLegendKeys, legRangeKey.ToString());
+                                                                                NoteLegendKey(legRangeKey.ToString(), dataIDGroup);
 
                                                                                 string[] dataIdRng = dataIDGroup.Split(legRangeKey);
                                                                                 if (dataIdRng.HasElements() && dataIDGroup.CountOccuringCharacter(legRangeKey) == 1)
                                                                                 {
                                                                                     //GetDataKeyAndSuffix(dataIdRng[0], out string dataKey, out string dkSuffix);
                                                                                     DisassembleDataID(dataIdRng[0], out string dataKey, out _, out string dkSuffix);
-                                                                                    NoteLegendKey(usedLegendKeys, dataKey);
-                                                                                    NoteLegendKey(usedLegendKeys, dkSuffix);
+                                                                                    NoteLegendKey(dataKey, dataIdRng[0]);
+                                                                                    NoteLegendKey(dkSuffix, dataIdRng[0]);
                                                                                     if (dataKey.IsNotNEW())
                                                                                     {
                                                                                         Dbug.LogPart($"Retrieved data key '{dataKey}' and suffix [{(dkSuffix.IsNEW() ? "<none>" : dkSuffix)}]; ");
@@ -781,8 +792,8 @@ namespace HCResourceLibraryApp.DataHandling
                                                                             {
                                                                                 //GetDataKeyAndSuffix(dataIDGroup, out string dataKey, out string suffix);
                                                                                 DisassembleDataID(dataIDGroup, out string dataKey, out _, out string suffix);
-                                                                                NoteLegendKey(usedLegendKeys, dataKey);
-                                                                                NoteLegendKey(usedLegendKeys, suffix);
+                                                                                NoteLegendKey(dataKey, dataIDGroup);
+                                                                                NoteLegendKey(suffix, dataIDGroup);
 
                                                                                 addedDataIDs.Add(dataIDGroup.Trim());
                                                                                 Dbug.Log($"Got and added ID '{dataIDGroup.Trim()}'; ");
@@ -885,8 +896,9 @@ namespace HCResourceLibraryApp.DataHandling
 
                                             sectionIssueQ = false;
                                         }
-                                        Dbug.Log("  //  End added (data)");
                                     }
+
+                                    EndSectionDbugLog("added", !wasSectionTag && !IsSectionTag());
                                 }
 
                                 /// ADDITIONAL
@@ -1033,14 +1045,14 @@ namespace HCResourceLibraryApp.DataHandling
                                                                                 /// below doesn't interfere with out-of-scope values
                                                                                 //GetDataKeyAndSuffix(rangeParts[1], out string dk, out string dksfx);
                                                                                 DisassembleDataID(rangeParts[1], out string dk, out _, out string dksfx);
-                                                                                NoteLegendKey(usedLegendKeys, dk);
-                                                                                NoteLegendKey(usedLegendKeys, dksfx);
+                                                                                NoteLegendKey(dk, rangeParts[1]);
+                                                                                NoteLegendKey(dksfx, rangeParts[1]);
                                                                             }
                                                                         }
                                                                         else DisassembleDataID(CharacterKeycodeSubstitution(datIDs[0]), out dataKey, out dataBody, out dkSuffix);
                                                                         //else GetDataKeyAndSuffix(datIDs[0], out dataKey, out dkSuffix);
-                                                                        NoteLegendKey(usedLegendKeys, dataKey);
-                                                                        NoteLegendKey(usedLegendKeys, dkSuffix);
+                                                                        NoteLegendKey(dataKey, datIDs[0]);
+                                                                        NoteLegendKey(dkSuffix, datIDs[0]);
 
                                                                         bool noDataKey = dataKey.IsNEW();
                                                                         Dbug.LogPart($"Retrieved data key '{dataKey}'{(dkSuffix.IsNEW() ? "" : $" and suffix [{dkSuffix}]")}; ");
@@ -1078,7 +1090,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                                                         if (datId.Contains(legRangeKey))
                                                                                         {
                                                                                             Dbug.LogPart($"Got range ID group '{datId}'; ");
-                                                                                            NoteLegendKey(usedLegendKeys, legRangeKey.ToString());
+                                                                                            NoteLegendKey(legRangeKey.ToString(), datId);
                                                                                             string[] dataIdRng;
 
                                                                                             if (dataKey.IsNotNE())
@@ -1168,8 +1180,8 @@ namespace HCResourceLibraryApp.DataHandling
                                                                                                 //GetDataKeyAndSuffix(datId, out string dkey, out string sfx);
 
                                                                                                 DisassembleDataID(datId, out string dkey, out string dbody, out string sfx);
-                                                                                                NoteLegendKey(usedLegendKeys, dkey);
-                                                                                                NoteLegendKey(usedLegendKeys, sfx);
+                                                                                                NoteLegendKey(dkey, datId);
+                                                                                                NoteLegendKey(sfx, datId);
 
                                                                                                 //string dataID = $"{dataKey}{datId.Replace(dataKey, "")}".Trim();
                                                                                                 string dataID = dataKey + dbody + sfx;
@@ -1183,7 +1195,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                                                     else
                                                                                     {
                                                                                         DisassembleDataID(datId, out _, out _, out string sf);
-                                                                                        NoteLegendKey(usedLegendKeys, sf);
+                                                                                        NoteLegendKey(sf, datId);
 
                                                                                         adtConDataIDs.Add(datId);
                                                                                         Dbug.LogPart($"Got and added '{datId}'");
@@ -1191,8 +1203,8 @@ namespace HCResourceLibraryApp.DataHandling
                                                                                 }        
                                                                                 else
                                                                                 {
-                                                                                    Dbug.LogPart($"; Data group may not contain comma CKS ({cks01})");
-                                                                                    decodeInfo.NoteIssue($"Data group may not contain following character keycode: {cks01}");
+                                                                                    Dbug.LogPart($"; Data ID group may not contain comma CKS ({cks01})");
+                                                                                    decodeInfo.NoteIssue($"Data ID group may not contain following character keycode: {cks01}");
                                                                                 }
 
                                                                                 Dbug.Log(";");
@@ -1202,8 +1214,8 @@ namespace HCResourceLibraryApp.DataHandling
                                                                 }
                                                                 else
                                                                 {
-                                                                    Dbug.LogPart("; Data group had no values for data IDs");
-                                                                    decodeInfo.NoteIssue("Data group had no values for data IDs");
+                                                                    Dbug.LogPart("; Data ID group had no values for data IDs");
+                                                                    decodeInfo.NoteIssue("Data ID group had no values for data IDs");
                                                                 }
 
                                                                 if (adtConDataIDs.HasElements())
@@ -1284,8 +1296,8 @@ namespace HCResourceLibraryApp.DataHandling
                                                                                 /// doesn't interfere with out of scope stuff, ofc...
                                                                                 //GetDataKeyAndSuffix(adtRelatedDataID, out string dk, out string sfx);
                                                                                 DisassembleDataID(CharacterKeycodeSubstitution(adtRelatedDataID), out string dk, out _, out string sfx);
-                                                                                NoteLegendKey(usedLegendKeys, dk);
-                                                                                NoteLegendKey(usedLegendKeys, sfx);
+                                                                                NoteLegendKey(dk, adtRelatedDataID);
+                                                                                NoteLegendKey(sfx, adtRelatedDataID);
                                                                                 okayRelDataID = true;
                                                                             }
                                                                             else
@@ -1488,7 +1500,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                                         DecodeInfo prevDi = decodingInfoDock[editDiIx];
                                                                         decodingInfoDock[editDiIx] = new DecodeInfo();
 
-                                                                        DecodeInfo rewriteDI = new DecodeInfo($"{prevDi.logLine}\n{Ind14}{decodeInfo.logLine}", prevDi.sectionName);
+                                                                        DecodeInfo rewriteDI = new DecodeInfo($"{prevDi.logLine}\n{decodeInfo.logLine}", prevDi.sectionName);
                                                                         if (prevDi.NotedIssueQ)
                                                                             rewriteDI.NoteIssue(prevDi.decodeIssue);
                                                                         rewriteDI.NoteResult($"Regenerated ConAddits-to-ConBase :: {adtAsNewContent}");
@@ -1549,8 +1561,9 @@ namespace HCResourceLibraryApp.DataHandling
                                                 decodeInfo.NoteIssue("This line does not start with '>'");
                                             }                                            
                                         }
-                                        Dbug.Log("  //  End additional");
                                     }
+
+                                    EndSectionDbugLog("additional", !IsSectionTag());
                                 }
 
                                 /// TOTAL TEXTURES ADDED
@@ -1737,7 +1750,8 @@ namespace HCResourceLibraryApp.DataHandling
                                             decodeInfo.NoteIssue("This line does not start with '['");
                                         }
                                     }
-                                    Dbug.Log("  //  End tta");
+                                    
+                                    EndSectionDbugLog("tta", null);
                                 }
 
                                 /// UPDATED 
@@ -1862,8 +1876,8 @@ namespace HCResourceLibraryApp.DataHandling
 
                                                                     //GetDataKeyAndSuffix(updtDataID, out string dk, out string sfx);
                                                                     DisassembleDataID(updtDataID, out string dk, out _, out string sfx);
-                                                                    NoteLegendKey(usedLegendKeys, dk);
-                                                                    NoteLegendKey(usedLegendKeys, sfx);
+                                                                    NoteLegendKey(dk, updtDataID);
+                                                                    NoteLegendKey(sfx, updtDataID);
 
                                                                     okayDataIDQ = true;
                                                                     Dbug.Log($"Completed updated contents: Updated Name ({(updtContentName.IsNEW() ? "<null>" : updtContentName)}) and Data ID ({updtDataID}); ");
@@ -2017,8 +2031,10 @@ namespace HCResourceLibraryApp.DataHandling
                                                 decodeInfo.NoteIssue("This line does not start with '>'");
                                             }
                                         }
-                                        Dbug.Log("  //  End updated");
                                     }
+
+                                    EndSectionDbugLog("updated", !IsSectionTag());
+
                                 }
 
                                 /// LEGEND
@@ -2099,16 +2115,37 @@ namespace HCResourceLibraryApp.DataHandling
 
                                                         if (matchingLegDat != null)
                                                         {
+                                                            /// find matching decode issue
+                                                            int editDiIx = -1;
+                                                            DecodeInfo newDecInfo = new();
+                                                            for (int dx = 0; dx < decodingInfoDock.Count && editDiIx == -1; dx++)
+                                                            {
+                                                                DecodeInfo diToCheck = decodingInfoDock[dx];
+                                                                if (diToCheck.resultingInfo.Contains(matchingLegDat.ToString()))
+                                                                {
+                                                                    editDiIx = dx;
+                                                                    newDecInfo = new DecodeInfo($"{diToCheck.logLine}\n{logDataLine}", currentSectionName);
+                                                                    newDecInfo.NoteResult(diToCheck.resultingInfo);
+                                                                }
+                                                            }
+
+                                                            
                                                             bool addedDef = matchingLegDat.AddKeyDefinition(newLegData[0]);
                                                             if (addedDef)
                                                             {
                                                                 Dbug.LogPart($"Expanded legend data :: {matchingLegDat.ToStringLengthy()}");
-                                                                decodeInfo.NoteResult($"Edited existing legend data (new definition) :: {matchingLegDat.ToStringLengthy()}");
+                                                                newDecInfo.NoteResult($"Edited existing legend data (new definition) :: {matchingLegDat.ToStringLengthy()}");
                                                             }
                                                             else
                                                             {
-                                                                Dbug.LogPart("New definition could not be added to existing LegData instance");
-                                                                decodeInfo.NoteIssue("New definition could not be added to existing LegData instance");
+                                                                Dbug.LogPart($"New definition '{newLegData[0]}' could not be added (duplicate?)");
+                                                                newDecInfo.NoteIssue($"New definition '{newLegData[0]}' could not be added (duplicate?)");
+                                                            }
+
+                                                            if (newDecInfo.IsSetup())
+                                                            {
+                                                                decodeInfo = new();
+                                                                decodingInfoDock[editDiIx] = newDecInfo;
                                                             }
                                                         }
                                                         else
@@ -2155,9 +2192,9 @@ namespace HCResourceLibraryApp.DataHandling
                                                 decodeInfo.NoteIssue("This line is missing '-'");
                                             }
                                         }
-                                        Dbug.Log("  //  End legend");
                                     }
 
+                                    EndSectionDbugLog("legend", !IsSectionTag());
                                 }
 
                                 /// SUMMARY 
@@ -2199,7 +2236,7 @@ namespace HCResourceLibraryApp.DataHandling
                                         }
                                         else
                                         {
-                                            Dbug.Log("Summary section tag has already been parsed");
+                                            Dbug.LogPart("Summary section tag has already been parsed");
                                             decodeInfo.NoteIssue("Summary section tag has already been parsed");
                                         }
                                     }
@@ -2261,13 +2298,72 @@ namespace HCResourceLibraryApp.DataHandling
                                                 decodeInfo.NoteIssue("This line does not start with '>'");
                                             }
                                         }
-                                        Dbug.Log("  //  End summary");
                                     }
+
+                                    EndSectionDbugLog("summary", !IsSectionTag());
                                 }
 
 
+                                /// decoding info dock reports
                                 if (decodeInfo.IsSetup())
-                                    decodingInfoDock.Add(decodeInfo);
+                                {
+                                    Dbug.LogPart($"{Ind34}//{Ind34}{{DIDCheck}} ");
+                                    /// check if any decoding infos have been inserted                                    
+                                    if (prevDecodingInfoDock.HasElements())
+                                    {
+                                        //Dbug.LogPart("      {DIDCheck} ");
+                                        string changedIndex = "", changeType = "None";
+                                        for (int px = 0; px < prevDecodingInfoDock.Count && changedIndex.IsNE(); px++)
+                                        {
+                                            /// determine if there has been a change
+                                            DecodeInfo prevDI = prevDecodingInfoDock[px];
+                                            if (px < decodingInfoDock.Count)
+                                            {
+                                                DecodeInfo dI = decodingInfoDock[px];
+                                                if (!prevDI.Equals(dI))
+                                                {
+                                                    changedIndex = $"@{px.ToString()}";
+                                                    /// determine if changes is an insert or an edit
+                                                    /// IF next DI is fetchable: (IF next DI is same as previous' DI: consider change 'insert'; ELSE consider change 'edit n add'); 
+                                                    /// ELSE consider change 'edit'
+                                                    if (px + 1 < decodingInfoDock.Count)
+                                                    {
+                                                        DecodeInfo dIAfter = decodingInfoDock[px + 1];
+                                                        if (dIAfter.Equals(prevDI))
+                                                            changeType = "Insert";
+                                                        else
+                                                        {
+                                                            changeType = "Edit n Add";
+                                                            changedIndex += $" @{px + 1}";
+                                                        }
+                                                    }
+                                                    else changeType = "Edit";
+                                                }
+                                            }
+                                        }
+
+                                        Dbug.LogPart($"[{changeType}]{changedIndex}");
+                                        Dbug.LogPart(";  ");
+                                        //Dbug.Log(";  //  ");
+                                    }
+
+                                    /// add new decoding info dock
+                                    if (decodeInfo.IsSetup())
+                                    {
+                                        Dbug.LogPart($"[Added]@{decodingInfoDock.Count};  ");
+                                        decodingInfoDock.Add(decodeInfo);
+                                    }
+
+                                    /// set previous decoding info dock
+                                    if (decodingInfoDock.HasElements())
+                                    {
+                                        //Dbug.LogPart($"[<]prevDID set;  ");
+                                        prevDecodingInfoDock = new List<DecodeInfo>();
+                                        prevDecodingInfoDock.AddRange(decodingInfoDock.ToArray());
+                                    }
+                                }                                
+                                Dbug.Log(" // ");
+
 
                                 if (sectionIssueQ || decodeInfo.NotedIssueQ)
                                     if (currentSectionNumber.IsWithin(0, (short)(countSectionIssues.Length - 1)))
@@ -2280,7 +2376,23 @@ namespace HCResourceLibraryApp.DataHandling
                             // method
                             bool IsSectionTag()
                             {
-                                return logDataLine.StartsWith(secBracL) && logDataLine.EndsWith(secBracR);
+                                return RemoveEscapeCharacters(logDataLine).StartsWith(secBracL) && RemoveEscapeCharacters(logDataLine).EndsWith(secBracR);
+                            }
+                            void EndSectionDbugLog(string section, bool? isDataQ)
+                            {
+                                string subText = "", preText = "  //  ";
+                                if (isDataQ.HasValue)
+                                {
+                                    subText = isDataQ.Value ? "(data)" : "(section tag)";
+                                    if (isDataQ.Value)
+                                    {
+                                        Dbug.Log(" // ");
+                                        preText = ".   ";
+                                    }
+                                }
+
+                                //Dbug.Log($"{preText}End {section} {subText}");
+                                Dbug.LogPart($"{preText}End {section} {subText}");
                             }
                         }
                         else
@@ -2308,26 +2420,54 @@ namespace HCResourceLibraryApp.DataHandling
                     if (logDataLine.IsNEW() && !endFileReading)
                     {
                         // as weird as it may seem, checks for non-described or unnoted legend keys goes here
-                        if (!ranLegendChecksQ && usedLegendKeys.HasElements() && legendDatas.HasElements() && currentSectionName == secLeg)
+                        if (!ranLegendChecksQ && usedLegendKeys.HasElements() && usedLegendKeysSources.HasElements() && legendDatas.HasElements() && currentSectionName == secLeg)
                         {
                             Dbug.NudgeIndent(true);
                             Dbug.Log($"{{Legend_Checks}}");
+                            const string clampSuffix = "...";
+                            const int clampDistance = 7;
 
                             Dbug.NudgeIndent(true);
                             // get all keys
+                            /// from notes
                             List<string> allKeys = new();
-                            Dbug.LogPart(">> Fetching used legend keys :: ");
-                            foreach (string usedKey in usedLegendKeys)
+                            List<string> allKeysSources = null;
+                            Dbug.LogPart(">> Fetching used legend keys (and sources) :: ");
+                            if (usedLegendKeys.Count == usedLegendKeysSources.Count)
                             {
-                                string addedQ = null;
-                                if (!allKeys.Contains(usedKey))
+                                allKeysSources = new();
+                                for (int ukx = 0; ukx < usedLegendKeys.Count; ukx++)
                                 {
-                                    allKeys.Add(usedKey);
-                                    addedQ = "+";
+                                    string usedKey = usedLegendKeys[ukx];
+                                    string ukSource = usedLegendKeysSources[ukx];
+
+                                    string addedQ = null;
+                                    if (!allKeys.Contains(usedKey))
+                                    {
+                                        allKeys.Add(usedKey);
+                                        allKeysSources.Add(ukSource);
+                                        addedQ = "+";
+                                    }
+                                    Dbug.LogPart($" {addedQ}'{usedKey}' ");
                                 }
-                                Dbug.LogPart($" {addedQ}'{usedKey}' ");
+                            }
+                            else
+                            {
+                                /// backup - legkeys only
+                                Dbug.LogPart("[aborted sources; UKLen!=UKSLen] :: ");
+                                foreach (string usedKey in usedLegendKeys)
+                                {
+                                    string addedQ = null;
+                                    if (!allKeys.Contains(usedKey))
+                                    {
+                                        allKeys.Add(usedKey);
+                                        addedQ = "+";
+                                    }
+                                    Dbug.LogPart($" {addedQ}'{usedKey}' ");
+                                }
                             }
                             Dbug.Log("; ");
+                            /// from generations
                             Dbug.LogPart(">> Fetching generated legend keys (& decInfoIx as '@#') :: ");
                             List<int> decodeInfoIndicies = new();
                             List<string> generatedKeys = new();
@@ -2360,7 +2500,7 @@ namespace HCResourceLibraryApp.DataHandling
 
                             // check all keys and determine if unnoted or unused
                             Dbug.Log("Checking all legend keys for possible issues; ");
-                            int getAccessIxFromListForOGdi = 0;
+                            int getAccessIxFromListForOGdi = 0, usedSourceIx = 0;
                             foreach (string aKey in allKeys)
                             {
                                 bool issueWasTriggered = false;
@@ -2377,6 +2517,56 @@ namespace HCResourceLibraryApp.DataHandling
                                 /// unnnoted key issue
                                 if (isUsed && !isGenerated)
                                 {
+                                    /// grab from source
+                                    if (allKeysSources.HasElements())
+                                    {
+                                        bool haltSourceSearchQ = false;
+                                        for (int sx = 0; sx < decodingInfoDock.Count && !haltSourceSearchQ; sx++)
+                                        {
+                                            DecodeInfo di = decodingInfoDock[sx];
+                                            string ukSource = allKeysSources[usedSourceIx];
+                                            if (di.IsSetup())
+                                                if (di.logLine.Contains(ukSource))
+                                                {
+                                                    di.logLine = RemoveEscapeCharacters(di.logLine);
+                                                    haltSourceSearchQ = true;
+                                                    string newDiSourceLine = null;
+                                                    string focus = ukSource;
+                                                    string[] ukSourceSplit = ukSource.Split(aKey);
+
+                                                    string sourceOrigin = $"{Ind24}[from {di.sectionName}]";
+                                                    if (di.sectionName == secAdd && di.logLine.Contains(secAdt))
+                                                        sourceOrigin = $"{Ind24}[from {secAdt} -> {di.sectionName}]";
+
+                                                    /// source style 2 -- focuses legend key in source only
+                                                    if (ukSourceSplit.HasElements(2))
+                                                    {
+                                                        focus = $"{{{aKey}}}";
+                                                        string fullLogLine = "";
+                                                        for (int c = 0; c < ukSourceSplit.Length; c++)
+                                                        {
+                                                            if (c == 0)
+                                                                fullLogLine += $"{ukSourceSplit[c]}{focus}";
+                                                            else
+                                                            {
+                                                                if (c + 1 == ukSourceSplit.Length)
+                                                                    fullLogLine += ukSourceSplit[c];
+                                                                else fullLogLine += $"{ukSourceSplit[c]}{aKey}";
+                                                            }
+                                                        }
+                                                        newDiSourceLine = di.logLine.Replace(ukSource, fullLogLine);
+                                                    }
+
+                                                    /// source style 1 -- focuses full source
+                                                    if (newDiSourceLine.IsNE())
+                                                        newDiSourceLine = di.logLine.Replace(ukSource, $"{{{ukSource}}}");
+                                                    newDiSourceLine = newDiSourceLine.Clamp(clampDistance + clampSuffix.Length, clampSuffix, focus, null) + sourceOrigin;
+                                                    legCheckDi = new DecodeInfo(newDiSourceLine, legCheckDi.sectionName);
+                                                }
+                                        }
+                                    }                                    
+
+                                    /// issue reported here
                                     Dbug.LogPart("Unnoted Key Issue");
                                     legCheckDi.NoteIssue($"Key '{aKey}' was used but not described (Unnoted Legend Key)");
                                     decodingInfoDock.Add(legCheckDi);
@@ -2418,6 +2608,7 @@ namespace HCResourceLibraryApp.DataHandling
                                 if (issueWasTriggered)
                                     countSectionIssues[currentSectionNumber]++;
 
+                                usedSourceIx++;
                                 Dbug.Log("; ");
                             }
 
@@ -2482,12 +2673,12 @@ namespace HCResourceLibraryApp.DataHandling
                             ranLegendChecksQ = true;
                         }
 
+
                         if (currentSectionNumber.IsWithin(0, (short)(countSectionIssues.Length - 1)) && currentSectionName.IsNotNE() && !currentSectionName.Equals(lastSectionName))
                         {
                             Dbug.Log($"..  Sec#{currentSectionNumber + 1} '{currentSectionName}' ended with [{countSectionIssues[currentSectionNumber]}] issues;");
                             lastSectionName = currentSectionName;
                         }
-                        //Dbug.LogPart($"Searching for Sec#{nextSectionNumber + 1} ({nextSectionName})  //  ");
 
                         if (!firstSearchingDbgRanQ && !withinOmitBlock)
                         {
@@ -2821,17 +3012,29 @@ namespace HCResourceLibraryApp.DataHandling
             }
             return isNumless;
         }
-        /// <summary>Also partly logs "Noted legend key: {key}; "</summary>
-        static void NoteLegendKey(List<string> notingList, string legKey)
+        /// <summary>Also partly logs "Noted legend key: {key} [+ID: {id}]; "</summary>
+        void NoteLegendKey(string legKey, string sourceDataID)
         {
-            if (notingList != null && legKey.IsNotNEW())
-                if (!notingList.Contains(legKey))
+            if (usedLegendKeys != null && legKey.IsNotNEW())
+                if (!usedLegendKeys.Contains(legKey))
                 {
-                    notingList.Add(legKey);
-                    Dbug.LogPart($"Noted legend key: {legKey}; ");
+                    usedLegendKeys.Add(legKey);
+                    Dbug.LogPart($"Noted legend key: {legKey}");
+
+
+                    if (usedLegendKeysSources != null && sourceDataID.IsNotNEW())
+                    {
+                        /// IF legend key sources list is not parallel in length to used legend keys list
+                        if (usedLegendKeysSources.Count < usedLegendKeys.Count)
+                        {
+                            usedLegendKeysSources.Add(sourceDataID);
+                            Dbug.LogPart($" [+ID: {sourceDataID}]");
+                        }
+                        Dbug.LogPart("; ");
+                    }
                 }
         }
-        /// <summary>Also partly logs "GDnS: {dataKey}[{number}]{suffix}; " only when decoding a version log</summary>
+        /// <summary>Also partly logs "GDnS: {dataKey}[{number}]{suffix}; " only when decoding a version log (retired)</summary>
         public static void GetDataKeyAndSuffix(string dataIDGroup, out string dataKey, out string suffix)
         {
             string nonNumbers = RemoveNumbers(dataIDGroup);
@@ -2857,7 +3060,7 @@ namespace HCResourceLibraryApp.DataHandling
             }
         }
         /// <summary>Also partly logs "DD:{datakey}[{dataBody}]{suffix}; " only when decoding a version log</summary>
-        /// <remarks>Successor method to the formerly used '<c>GetDataKeyAndSuffix(str dataIDGroup, out str datakey, out str suffix)</c>'</remarks>
+        /// <remarks>Successor method to the formerly used <seealso cref="GetDataKeyAndSuffix(string, out string, out string)"/></remarks>
         public static void DisassembleDataID(string dataIDGroup, out string dataKey, out string dataBody, out string suffix)
         {
             dataKey = null;
@@ -2871,13 +3074,14 @@ namespace HCResourceLibraryApp.DataHandling
                 /// Watermelon^
                 if (IsNumberless(dataIDGroup))
                 {
-                    char lastChar = dataIDGroup[^1];
-                    if (lastChar.IsNotNull())
-                        if (Extensions.CharScore(lastChar) < 0)
-                            suffix = lastChar.ToString();
+                    suffix = GetSuffixChars(dataIDGroup);
 
+                    /// in case suffix is the entire string, iow. just symbols
                     if (suffix.IsNotNE())
-                        dataBody = dataIDGroup.Replace(suffix, "");
+                    {
+                        if (suffix != dataIDGroup)
+                            dataBody = dataIDGroup.Substring(0, dataIDGroup.Length - suffix.Length);
+                    }                        
                     else dataBody = dataIDGroup;
                 }
                 // DK[DB]SF
@@ -2887,89 +3091,75 @@ namespace HCResourceLibraryApp.DataHandling
                 else
                 {
                     // get suffix first and remove from main data
-                    char lastChar = dataIDGroup[^1];
-                    if (lastChar.IsNotNull())
-                        if (Extensions.CharScore(lastChar) < 0)
-                            suffix = lastChar.ToString();
+                    suffix = GetSuffixChars(dataIDGroup);
 
                     if (suffix.IsNotNE())
-                        dataBody = dataIDGroup.Substring(0, dataIDGroup.Length - 1); // also 'dataIDGroup[..^1]
+                    {
+                        if (suffix != dataIDGroup)
+                            dataBody = dataIDGroup.Substring(0, dataIDGroup.Length - suffix.Length); // also 'dataIDGroup[..^suffix.Length]
+                    }
                     else dataBody = dataIDGroup;
 
                     // get data key
-                    string preDataKey = "";
-                    foreach (char c in dataBody)
+                    /// in case suffix is the entire string, iow. just symbols
+                    if (dataBody.IsNotNE())
                     {
-                        if (IsNumberless(c.ToString()))
-                            preDataKey += c;
-                        else break;
+                        string preDataKey = "";
+                        foreach (char c in dataBody)
+                        {
+                            if (IsNumberless(c.ToString()))
+                                preDataKey += c;
+                            else break;
+                        }
+                        if (preDataKey.IsNotNE())
+                            dataKey = preDataKey.Trim();
+
+                        if (dataKey.IsNotNE())
+                            dataBody = dataBody.Substring(dataKey.Length);
                     }
-                    if (preDataKey.IsNotNE())
-                        dataKey = preDataKey.Trim();
-
-                    if (dataKey.IsNotNE())
-                        dataBody = dataBody.Substring(dataKey.Length);
-                }
-
+                }                
 
                 if (_allowLogDecToolsDbugMessagesQ)
                     Dbug.LogPart($"DD:{dataKey}[{dataBody}]{suffix}; ");
+
+
+                // local method
+                static string GetSuffixChars(string mainDIdGroup)
+                {
+                    string suffix = null;
+                    if (mainDIdGroup[^1].IsNotNull())
+                        if (Extensions.CharScore(mainDIdGroup[^1]) < 0)
+                        {
+                            bool fetchSymbolChars = true;
+                            string preSuffix = "";
+                            /// FOR (..; IF fetching symbols AND char to get is not beyond (front end) length of data ID group; ..)
+                            for (int sfx = 1; fetchSymbolChars && mainDIdGroup.Length >= sfx; sfx++)
+                            {
+                                char theLastChars = mainDIdGroup[^sfx];
+                                if (Extensions.CharScore(theLastChars) < 0)
+                                    preSuffix = theLastChars + preSuffix;
+                                else fetchSymbolChars = false;
+                            }
+                            if (preSuffix.IsNotNE())
+                                suffix = preSuffix.Trim();
+                        }
+                    #region old_code
+                    //char lastChar = dataIDGroup[^1];
+                    //if (lastChar.IsNotNull())
+                    //    if (Extensions.CharScore(lastChar) < 0)
+                    //        suffix = lastChar.ToString();
+                    #endregion
+                    return suffix;
+                }
             }
         }
         /// <summary>Functions as it's counterpart, however it logs nothing</summary>
         public static void DisassembleDataIDQuiet(string dataIDGroup, out string dataKey, out string dataBody, out string suffix)
         {
-            dataKey = null;
-            suffix = null;
-            dataBody = null;
-            if (dataIDGroup.IsNotNEW())
-            {
-                // ?[DB]SF
-                /// Cod_Tail
-                /// Shoe_Spike`
-                /// Watermelon^
-                if (IsNumberless(dataIDGroup))
-                {
-                    char lastChar = dataIDGroup[^1];
-                    if (lastChar.IsNotNull())
-                        if (Extensions.CharScore(lastChar) < 0)
-                            suffix = lastChar.ToString();
-
-                    if (suffix.IsNotNE())
-                        dataBody = dataIDGroup.Replace(suffix, "");
-                    else dataBody = dataIDGroup;
-                }
-                // DK[DB]SF
-                /// q2`
-                /// q67_3*
-                /// xl4-alt0`
-                else
-                {
-                    // get suffix first and remove from main data
-                    char lastChar = dataIDGroup[^1];
-                    if (lastChar.IsNotNull())
-                        if (Extensions.CharScore(lastChar) < 0)
-                            suffix = lastChar.ToString();
-
-                    if (suffix.IsNotNE())
-                        dataBody = dataIDGroup.Substring(0, dataIDGroup.Length - 1); // also 'dataIDGroup[..^1]
-                    else dataBody = dataIDGroup;
-
-                    // get data key
-                    string preDataKey = "";
-                    foreach (char c in dataBody)
-                    {
-                        if (IsNumberless(c.ToString()))
-                            preDataKey += c;
-                        else break;
-                    }
-                    if (preDataKey.IsNotNE())
-                        dataKey = preDataKey.Trim();
-
-                    if (dataKey.IsNotNE())
-                        dataBody = dataBody.Substring(dataKey.Length);
-                }
-            }
+            bool prevAllowDbugRelay = _allowLogDecToolsDbugMessagesQ;
+            _allowLogDecToolsDbugMessagesQ = false;
+            DisassembleDataID(dataIDGroup, out dataKey, out dataBody, out suffix);
+            _allowLogDecToolsDbugMessagesQ = prevAllowDbugRelay;            
         }
 
 

@@ -44,6 +44,8 @@ w - Wall
 a - Armor
 b - Background
 g - Glow
+d - Dust
+` - LOTB
 
 [Summary]
 > Watermelon Series (blocks, walls), Fruit Walls [P1], One Item and Zero Item Walls

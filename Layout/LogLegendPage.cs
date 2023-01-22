@@ -71,10 +71,7 @@ namespace HCResourceLibraryApp.Layout
                         TableRowDivider(true);
                         TableRowDivider(subMenuUnderline, false, GetPrefsForeColor(ForECol.Accent));
 
-                        bool holdFormatVerifyValue = VerifyFormatUsage;
-                        if (holdFormatVerifyValue)
-                            TextLine("#'Verify Format Usage' has been temporarily disabled for this page.", Color.DarkGray);
-                        VerifyFormatUsage = false;
+                        Program.ToggleFormatUsageVerification();
 
                         /// table header
                         HoldNextListOrTable();
@@ -97,9 +94,9 @@ namespace HCResourceLibraryApp.Layout
                             if (HSNL(0, 2) - 2 == 0)
                                 HorizontalRule('-');
                         }
-                        VerifyFormatUsage = holdFormatVerifyValue;
+                        Program.ToggleFormatUsageVerification();
                     }
-                    Format($"{Ind14}Log Legends sourced from {latestVersion}. ", ForECol.Accent);
+                    Format($"{Ind14}All Log Legends from latest library version ({latestVersion}). ", ForECol.Accent);
                     Pause();
                 }
             }

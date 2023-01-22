@@ -394,15 +394,17 @@ namespace HCResourceLibraryApp.Layout
                 _incorrectionMessage = null;
             else _incorrectionMessage = message;
         }
-        /// <summary>Triggers a queued incorection message for input validation.</summary>
-        /// <param name="pretext">Precedes the incorrection message.</param>
-        public static void IncorrectionMessageTrigger(string pretext)
+        /// <summary>Triggers a queued incorection message for input validation. Also include a Pause().</summary>
+        /// <param name="pretext">Precedes the incorrection message once given a value.</param>
+        /// <param name="postText">Follows the incorrection message once given a value.</param>
+        public static void IncorrectionMessageTrigger(string pretext, string postText)
         {
             if (_incorrectionMessage.IsNotNEW())
             {
-                if (pretext.IsNotNEW())
-                    Format($"{pretext}{_incorrectionMessage}", ForECol.Incorrection);
-                else Format(_incorrectionMessage, ForECol.Incorrection);
+                //if (pretext.IsNotNEW())
+                //    Format($"{pretext}{_incorrectionMessage}", ForECol.Incorrection);
+                //else Format(_incorrectionMessage, ForECol.Incorrection);
+                Format($"{pretext}{_incorrectionMessage}{postText}", ForECol.Incorrection);
                 Pause();
             }
         }
@@ -774,7 +776,7 @@ namespace HCResourceLibraryApp.Layout
 
 
         // -- Other --
-        /// <summary>Halts program for some time [Range 0, 10].</summary>
+        /// <summary>Halts program for some time (in seconds) [Range 0, 10].</summary>
         public static void Wait(float seconds)
         {
             int milliSeconds = (int)(seconds.Clamp(0, 10) * 1000);

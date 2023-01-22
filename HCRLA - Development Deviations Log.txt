@@ -1,20 +1,18 @@
-##[ H I G H   C O N T R A S T   R E S O U R C E   L I B R A R Y   A P P   -   D E S I G N   D O C S ]##
+##[ H I G H   C O N T R A S T   R E S O U R C E   L I B R A R Y   A P P   -   D E S I G N   D O C S   D E V I - L O G ]##
 ##	DEVELOPMENT DEVIATIONS LOG	##
 ==================================
-Syntax:		{Num}# {DeviationStatus} 
+Syntax:		{Num}#
 			{DeviationDescription}
 	{Num}
 		A incrementing whole number starting from zero that denotes the order in which the deviations were made.
-	{DeviationStatus}
-		Uses square brackets separated with a space. Use a space character (' ') within brackets if deviation is implemented in development, and an 'X' if the deviation reverted to the original plan.
 	{Deviation Description}
-		A description of the deviation made. It must include the reason for deviation, what it is deviating from (reference the original plan), and what the deviation is.
+		A description of the deviation made. It must include the reason for a described deviation, what it is deviating from (reference the original plan), and what the deviation resolves.
 		Format
 			{DeviationDesc}				<- What the deviation is / cause of deviation (describe)
 				- {OriginalPlan}		<- Deviating from what? Original goal
 				+ {DeviationPlan}		<- Goal of the deviation
 	Ex.
-		0# [ ] 
+		0#
 		Spilled paint on the computer.
 			- Meant to paint a symbol on computer.
 			+ Made a splash effect on computer with paint.
@@ -23,47 +21,52 @@ Syntax:		{Num}# {DeviationStatus}
 
 Logs Below
 ===============
-0# [ ]
+0#
 Project is using .NET 5.0 (unsupported) with ConsoleFormat class library.
-	- Planned to create project using compatible version with ConsoleFormat class (.NET 2.1).
+	- Planned to create project using compatible version with ConsoleFormat class (.NET 3.1).
 	+ Decided to stick with .NET 5.0 for QoL programming syntax and leave incompatiblity issues up to frequent builds and tests.
 
-1# [ ] 
+1#
 Implemented base class for data-handling classes (DataHandlerBase.cs).
 	- Assumed that each class will handle their own data and write to file.
 	+ Assists in communication between data-handling classes, handles some repeating elements, and simplifies mono-file management.
 
-2# [ ]
+2#
 Added a ninth Foreground Element Color to Preferences for the user's input color.
 	- There originally were only eight colors, neither denoted for the user's input.
 	+ Just an extra customization option for Foreground elements. Changes also made to Visual customization example for Foreground Element Colors (minor additions).
 
-3# [ ]
+3#
 Changed the percentages on the first two options for both Height and Width window dimensions.
 	- The orignal percentages for the Height and Width window dimensions were 20% and 40%. 20% is way too small for the program to operate.
 	+ The original 20% will be changed to 40%, and the original 40% changed to 50%. Both are changes to accomadate for program window operation requirements.
 
-4# [ ]
+4#
 Changed the seperating character from asterik (*) to percentage (%).
 	- The original separator character overlooked the fact that the Legend and some Data IDs will contain the '*' as a key.
 	+ The % character will replace the * character in file interactions. Additionally, this character is forbidden by the HCAutoLogger.
 
-5# [ ]
+5#
 Prospects of integrating an Auto Logger within the HCRLA program lead to a revision of version log syntaxes, this included log commenting which now has new implementations.
 	- The version log only supported commenting (or omissions) through using the '--' key.
 	+ Multiple omissions or multi-line commenting is now available, using the tags '-- !open --' and '-- !close --'.
 
-6# [ ]
+6#
 Changed the syntax of the version log SUMMARY as the prospect of integrating an Auto Logger into the HCRLA program is realized.
 	- The old syntax would separate multiple Summary parts with '//', while within the tag header, all upon a single line.
 	+ Summary has a more uniform and cleaner syntax which occupies multiple lines and is not preceded with the omission key '--'.
 
-7# [ ]
+7#
 Changed the file encoding syntax of Content Changes group due to decoding issues.
 	- The previous syntax was very similar to that of Content Additionals. A problem in decoding as the ConChanges info would become a ConAddits where there was none.
 	+ Content Changes information lines start with '^'.
 
-8# [ ]
+8#
 The encoding syntax for the Legend Data object has been changed from from '{key}*{keyname}***' to '{key}*{verIntro}*{keynames}'.
 	- Legend Data's previous syntax followed the idea that it was an unnecessary attribute to keep track of its version.
 	+ Due to the idea of version reversion, Legend Data requires a record of when it was introduced to co-operate with the this function.
+
+9#
+With regards to the Code Design Structure outlined in the Design Doc, clases 'ContentVerificationSystem' and 'ReversionHandler' does not exist.
+	- The processes of reversion and content verification would be designated to their own classes.
+	+ Reversion is handled between the ResLibrary and DataHandlerBase classes. The content verification process class is simply being renamed to the 'ContentValidator' class.

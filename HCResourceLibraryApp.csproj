@@ -11,4 +11,12 @@
     </Reference>
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="TextFileExtras\CIVTestingField\ExContents\Ex1VL\" />
+    <Folder Include="TextFileExtras\CIVTestingField\ExContents\Ex2VL\" />
+    <Folder Include="TextFileExtras\CIVTestingField\ExContents\Ex4VL\" />
+    <Folder Include="TextFileExtras\CIVTestingField\ExContents\Ex3VL\" />
+    <Folder Include="TextFileExtras\CIVTestingField\ExContents\ATVL\" />
+  </ItemGroup>
+
 </Project>

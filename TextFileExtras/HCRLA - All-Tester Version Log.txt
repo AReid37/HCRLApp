@@ -38,10 +38,9 @@ PURPOSE ::
 > (t27_tiny) - Tiny Odd Tiels
 > (tb13) - A &11Broken&12 TreeBranch
 > (Wires2) - Wires Two
-> (Wraith_Eyes) - Spooky Eyes
+> (Glowing_Eyes) - Spooky Eyes
 > N&99P&99C No.31 (n31,n31&00mushy) - Mc&99Descnic's Truffle (i4565)
-> Dust Particles (d23) - (p717_2)  
-
+> Dust Particles (d23) - (p717_2) 
 
 
 [TTA : 0]
@@ -56,6 +55,7 @@ PURPOSE ::
 > Mc&99Des&99Truffle&11thrown&12 (p1000) - Their dearest truffle seems more friendly &02&12 ... and mushy
 > Grand Podium (t35_large) - It just wasn't large enough the first time.
 
+
 [LEGEND]
 -- A case sensitive duplicate definition test
 i - Item
@@ -68,7 +68,9 @@ tb - Tree Branches
 ^ - Overhauled
 d - Dust
 p - Projectile
+-- A casual test on expanding definition of same key
 ` - LOTB
+` - L.O.T.B.
 
 
 [SUMMARY]

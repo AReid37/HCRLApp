@@ -26,7 +26,7 @@ PURPOSE ::
 15|t>				-(i101; t93)
 16|Canned t>		-(i102; t94)
 17|Steamed t>		-(i103; t95)
-18|Rice				-(i9; t14 p5)
+18|Rice				-(i9; t14` p5)
 19|Lettuce			-(i214; t172)
 20|Apple			-(i24; t18`,18_2`)
 21|Bluberry			-(i42; t29 p6)
@@ -43,7 +43,7 @@ PURPOSE ::
 > OnionShell (t56) - (i76)
 > Tomato Stem Dust(d29~30) - (t93)
 
-[TTA: 69]
+[TTA: 70]
 
 [UPDATED]
 

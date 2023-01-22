@@ -5,7 +5,6 @@ using static ConsoleFormat.Base;
 using static ConsoleFormat.Minimal;
 using System.Collections.Generic;
 using System;
-using System.Text;
 
 namespace HCResourceLibraryApp.Layout
 {
@@ -175,7 +174,7 @@ namespace HCResourceLibraryApp.Layout
                                 }
                                 ConfirmationResult(yesNo, $"{Ind34}", "Version log file path accepted.", "Path to version log denied.");
                             }
-                            else IncorrectionMessageTrigger($"{Ind24}Invalid file path entered:\n{Ind34}");
+                            else IncorrectionMessageTrigger($"{Ind24}Invalid file path entered:\n{Ind34}", null);
                         }
                         // 2 - original log review (raw)
                         else if (stageNum == 2)
@@ -253,7 +252,7 @@ namespace HCResourceLibraryApp.Layout
                                 Format("Press [Enter] to toggle display style, and enter any key to continue >> ", ForECol.Normal);
                                 input = StyledInput(null);
 
-                                // if {view different displays} else {confirm info and add to library}
+                                /// IF no input: view different displays; ELSE confirm info and integrate to library
                                 if (input.IsNE())
                                 {
                                     unallowStagePass = true;
@@ -283,7 +282,18 @@ namespace HCResourceLibraryApp.Layout
                                     /// integrate into library
                                     else
                                     {
-                                        mainLibrary.Integrate(logDecoder.DecodedLibrary);
+                                        mainLibrary.Integrate(logDecoder.DecodedLibrary, out ResLibIntegrationInfo[] resLibIntInfoDock);
+                                        
+                                        /// report of connections for loose contents
+                                        if (resLibIntInfoDock.HasElements())
+                                        {
+                                            NewLine();
+                                            Title("Loose Contents Connection Reports");
+                                            DisplayIntegrationInfo(resLibIntInfoDock);
+                                            NewLine();
+                                        }
+
+                                        /// user validation of content integration
                                         Format($"{Ind24}Integrated contents into library.", ForECol.Correction);
                                         Pause();
                                         exitSubmissionPage = true;
@@ -560,6 +570,7 @@ namespace HCResourceLibraryApp.Layout
                                 //if (anyRC.IsSetup())
                                 //    reviewTexts.Add($"Version Number: {anyRC.ConBase.VersionNum.ToStringNumbersOnly()}");
                                 reviewTexts.Add($"Version Number: {decLibrary.Summaries[0].SummaryVersion.ToStringNums()}");
+
                             }
                             /// ADDED
                             if (section == DecodedSection.Added)
@@ -601,6 +612,10 @@ namespace HCResourceLibraryApp.Layout
 
                                 // connected ConAddits
                                 reviewTexts.Add(sectionName.ToUpper());
+                                List<string> rTextsMatcher = new()
+                                {
+                                    sectionName.ToUpper()
+                                };
                                 foreach (ResContents resCon in decLibrary.Contents)
                                 {
                                     if (resCon.IsSetup() && resCon.ContentName != ResLibrary.LooseResConName)
@@ -610,6 +625,7 @@ namespace HCResourceLibraryApp.Layout
                                             {
                                                 string partRt = $"> {(rcConAdt.OptionalName.IsNotNEW() ? $"{rcConAdt.OptionalName} " : "")}";
                                                 reviewTexts.Add($"{partRt}({rcConAdt.DataIDString}) - {resCon.ContentName} ({rcConAdt.RelatedDataID})");
+                                                rTextsMatcher.Add(rcConAdt.ToString());
                                             }
                                     }
                                 }
@@ -622,7 +638,45 @@ namespace HCResourceLibraryApp.Layout
                                         {
                                             string partRt = $"> {(rcConAdt.OptionalName.IsNotNEW() ? $"{rcConAdt.OptionalName} " : "")}";
                                             reviewTexts.Add($"{partRt}({rcConAdt.DataIDString}) - ({rcConAdt.RelatedDataID}) {looseContentIndicator}");
+                                            rTextsMatcher.Add(rcConAdt.ToString());
                                         }
+                                }
+
+                                // reorganize reviewTexts order just for additionals
+                                string[] newReviewTexts = new string[reviewTexts.Count];
+                                for (int nrx = 0; nrx < reviewTexts.Count && reviewTexts.Count == rTextsMatcher.Count; nrx++)
+                                {
+                                    string ogReviewText = reviewTexts[nrx];
+                                    string rtMatcher = rTextsMatcher[nrx];
+
+                                    bool foundMatch = false;
+                                    int trueIx = -1;
+                                    if (nrx != 0)
+                                    {
+                                        for (int dx = 0; !foundMatch; dx++)
+                                        {
+                                            DecodeInfo decodeInfo = logDecoder.GetDecodeInfo(section, dx, out _);
+                                            if (decodeInfo.resultingInfo.Contains(rtMatcher))
+                                            {
+                                                trueIx = dx;
+                                                foundMatch = true;
+                                            }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        // just for the header
+                                        foundMatch = true;
+                                        trueIx = 0;
+                                    }
+
+                                    if (foundMatch && trueIx.IsWithin(0, newReviewTexts.Length - 1))
+                                        newReviewTexts[trueIx] = ogReviewText;
+                                }
+                                if (newReviewTexts.HasElements())
+                                {
+                                    reviewTexts.Clear();
+                                    reviewTexts.AddRange(newReviewTexts);
                                 }
                             }
                             /// TTA
@@ -643,7 +697,7 @@ namespace HCResourceLibraryApp.Layout
                                     > Mashed Potato		t32
                                         Redesigned to look more creamy.
                                     > Spoiled Potato	i38
-                                        Recolored to look less appetizing. 
+                                        Recolored to look less appetizing.
                                  */
 
                                 //reviewTexts.Add($"{sectionName.ToUpper()} [loose]");
@@ -710,7 +764,7 @@ namespace HCResourceLibraryApp.Layout
 
                             
                             // text printing
-                            if (reviewTexts.HasElements() || true)
+                            if (reviewTexts.HasElements())
                             {
                                 /// text printing
                                 bool bypassLoopMax = showDecodeInfosQ == true;
@@ -737,7 +791,7 @@ namespace HCResourceLibraryApp.Layout
                                         if (decodeInfo.IsSetup())
                                         {
                                             /// source line
-                                            FormatLine($"{(reviewLinePrintedQ ? Ind14 : "")}{decodeInfo.logLine}", colSourceLine);
+                                            FormatLine($"{(reviewLinePrintedQ ? Ind14 : "")}{decodeInfo.logLine.Replace("\n", $"\n{Ind14}")}", colSourceLine);
                                             /// decode issue
                                             if (decodeInfo.NotedIssueQ)
                                                 FormatLine($"{Ind14}{decodeInfo.decodeIssue}", colIssueMsg);
@@ -823,6 +877,101 @@ namespace HCResourceLibraryApp.Layout
                 }
             }
         }
+        static void DisplayIntegrationInfo(ResLibIntegrationInfo[] integrationInfoDock)
+        {
+            if (integrationInfoDock.HasElements())
+            {
+                /** LOOSE CONTENTS CONNECTION REPORT - Display concept
+                    What do i want to know?
+                    - The loose content {LC}
+                    - The loose content type (CA or CC?)  {LCType}
+                    - Is connected or discarded? If connected, connected to what? {Result} {Connection}
+                                                
+                    Visualize:
+                    ........................
+                    Form: {Result} {LCType}: '{LC}' {Connection}.
+                    - Base Foreground color: Normal
 
+                    {Result}    -> ## {Discarded / Connected}
+                    - Foreground colors: incorrection, correction ('#' only?)
+
+                    {LCType}    -> Additional content / Updated content
+                    {LC}        :: '{CA / CC details}'
+                        Adt     -> {Opt.Name} {DataIDs} 
+                        Upd     -> {DataID} {Desc.Short}
+                    - Foreground colors: Highlight
+
+                    {Connection}-> to '{BaseContent}' by '{RelatedID}' / [null]
+                    - Foreground colors: Normal
+
+
+                    EXAMPLES
+                    .................
+                Ex1
+                    ## Discarded additional content: 'Ben's Buckle; BensBeltBuckle'.
+                    ## Connected additional content: 'Flyer Trails; y33 y42' to 'Flyer' by 's45'.
+				    ## Discarded additional content: 'y72` y73'.
+                    ## Discarded updated content: 'r356; Redesigned to fit bett...'.
+                    ## Connected updated content: 's44; Improved brightness of...' to 'Bald Cap' by 's44'.
+
+                Ex2
+                    ## Discarded additional content: 
+                        'Ben's Buckle; BensBeltBuckle'.
+                    ## Connected additional content: 
+                        'Flyer Trails; y33 y42' to 'Flyer' by 's45'.
+				    ## Discarded additional content:
+					    'y72` y73'.
+                    ## Discarded updated content: 
+                        'r356; Redesigned to fit bett...'.
+                    ## Connected updated content: 
+                        's44; Improved brightness of...' to 'Bald Cap' by 's44'.
+                    */
+
+                const int updtDescLim = 25, adtIDsLim = 15, adtNameLim = 20;
+                foreach (ResLibIntegrationInfo rlii in integrationInfoDock)
+                {
+                    if (rlii.IsSetup())
+                    {
+                        /** Snippet from Loose Content Connection Report
+                            EXAMPLES
+                            .................
+                            Ex1
+                                ## Discarded additional content: 'Ben's Buckle; BensBeltBuckle'.
+                                ## Connected additional content: 'Flyer Trails; y33 y42' to 'Flyer' by 's45'.
+				                ## Discarded additional content: 'y72` y73'.
+                                ## Discarded updated content: 'r356; Redesigned to fit bett...'.
+                                ## Connected updated content: 's44; Improved brightness of...' to 'Bald Cap' by 's44'.
+
+                            Ex2
+                                ## Discarded additional content: 
+                                    'Ben's Buckle; BensBeltBuckle'.
+                                ## Connected additional content: 
+                                    'Flyer Trails; y33 y42' to 'Flyer' by 's45'.
+				                ## Discarded additional content:
+					                'y72` y73'.
+                                ## Discarded updated content: 
+                                    'r356; Redesigned to fit bett...'.
+                                ## Connected updated content: 
+                                    's44; Improved brightness of...' to 'Bald Cap' by 's44'.
+                            
+                         */
+
+                        bool isAdtq = rlii.infoType == RCFetchSource.ConAdditionals;
+
+                        Format("## ", rlii.isConnectedQ ? ForECol.Correction : ForECol.Incorrection);
+                        FormatLine($"{(rlii.isConnectedQ ? "Connected" : "Discarded")} {(isAdtq ? "additional" : "updated")} content: ", ForECol.Normal);
+                        
+                        Format($"{Ind34}'", ForECol.Normal);
+                        if (isAdtq)
+                            Format($"{(rlii.adtOptName.IsNE() ? "" : $"{rlii.adtOptName.Clamp(adtNameLim, "...")}; ")}{rlii.adtDataIDs.Clamp(adtIDsLim, "...")}", ForECol.Highlight);
+                        else Format($"{rlii.updDataID}; {rlii.updShortDesc.Clamp(updtDescLim, "...")}", ForECol.Highlight);
+
+                        if (rlii.isConnectedQ)
+                            Format($"' to '{rlii.connectionName}' by '{rlii.connectionDataID}", ForECol.Normal);                    
+                        FormatLine("'.", ForECol.Normal);
+                    }
+                }
+            }
+        }
     }
 }

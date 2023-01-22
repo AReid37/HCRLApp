@@ -66,7 +66,8 @@ t |ItemF - (ff)
 0 |ItemF -- (ff)
 0 |itemFF - (ff, ss)
 0 |itemFF - (ff; ss; tt`)
-0 |item rr - ((rr; r3~~4 r1~s, r1,tt r0~0 r4~2))
+0 |item rr - ((rr; rx3~~4 r1~s, r1,tt r0~0 r4~2))
+0 |item r2r - (r5~7~9)
 [23]
 0 | - 
 1 | ItemU -
@@ -101,6 +102,9 @@ aaaba > skj
 > aabb (cc,dd) - xxyy (zz, zs)
 > aabb (cc) - xxyy (zz,zs)
 > ddde (fe,f2~2,ffeedg) - (uu~u3)
+> ddde (f2~2,ffeedg) - (uu~u3)
+> ddde (fffeedg) - (uu~u3)
+> ddde (fffeedg) - (uu,u3)
 > () - xx zz
 > (,) - xz zxz
 > bbaa
@@ -145,7 +149,7 @@ tt >
 > qq (p,p) - mm ooss
 > qq (p1~1) - mm oss o
 > -
-> oo (22^) - nonononmmm ss
+> oo (22^) -	nonononmmm ss
 -- testing of character keycode subs error
 > rrs (s67&011) - nostmsls
 > 

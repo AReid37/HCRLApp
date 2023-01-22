@@ -48,20 +48,18 @@ Further Example Version Logs (4+)
 
 
 
-==== INFO COMPILATION DUMP ==== 
+==== INFO COMPILATION DUMP (as of 1.1.8) ==== 
 [Armor] 3~9
-[Backgrounds] 5 11` 13 21
-[Dust] 0 2 3 6 7 11 12 18 29 30
-[Glow] 0 2`~4` 5 6
-[Item] 0~4 9 14 20 24 25 34 38 42~46 67~69 70~72 76~80 87 92~94 101~103 107~110 115 116 167~170 214 242 324
-[Tiles] 0~2 14 18` 29 31 32 46~48 49 56 68 72~74 89 93~95 102 113~118 120~124 128 152 153 172
-[TreeBranches] 1* 3`*~5`* 7*
-[TreeTops] 1* 3* 4* 5* 7*
-[Projectiles] 1 3~6 14 17 54
-[Wall] 0~2 3` 4 10 11 28`
-[Misc] AppleSauce_Chunks Watermelon_Chunks Shr_Donut
-
-LEGEND :: {DataID}* ~ these data IDs do not relate to a named content and therefore were not included in example version log
-
---- OTHER MISC INFO ---
-. |Blobbleberry		-(i445; t345 p16`,17 tt2~5 tb1`~3)
+[Backgrounds] 5 11 13 19~21
+[Dust] 0 2 3 6 7 11 12 18 23 29 30
+[Glow] 0 2~6
+[Item] 0~4 9 14 20 21 24 25 34 38 42~44 46 56 67~72 76~80 87 92~94 101~103 107~110 115 116 167~170 214 242 324 1845 1998 2123 3210 3923 4419 4565 5000
+[NPC] 12 12_alt_1 31 31-mushy
+[Tiles] 0~2 2_Beach 14 18 18_2 27_tiny 29 31 32 35_large 46~49 56 59_2 68 72~74 89 93~95 102 113~118 120~124 128 152 153 172 199-gross 1987 2290 2292
+[TreeBranches] 1~3 4 5 7 13
+[TreeTops] 1 2~5 7
+[Player] 0_0 0_1
+[Projectiles] 1 3~6 14 16 17 54 717 717_2 1000 1000-1
+[Wall] 0~4 10 11 28
+---
+[Misc] AppleSauce_Chunks Glowing_Eyes Husks_Wheat Shr_Donut Watermelon_Chunks WheatGranule WheatGranules Wires2 WiresTwo

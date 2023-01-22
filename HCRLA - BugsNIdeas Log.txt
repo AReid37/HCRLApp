@@ -34,7 +34,7 @@
 ---------------------
 [ ] 1# A bug report/idea suggestion route that is accessible from any style input by using a keyphrase (Suggest '@dbi'). Ideas and bugs are saved in a separate file; Ideas & bugs may also be stored with main file data.
 
-[ ] 2# Display what base contents the loose contents were connected to after contents have been integrated after a submission. Any mistakes can be undone from a reversion.
+[X] 2# Display what base contents the loose contents were connected to after contents have been integrated after a submission. Any mistakes can be undone from a reversion.
 
 [X] 3# Log Legend View should also show from which log version the library's contents are based
 
@@ -56,4 +56,6 @@
 
 [ ] 11# The option to restart the program on command (either in Main Menu or Settings Menu).
 
-[ ] 12# ...
+[X] 12# Version reversion may only allow the ability to clear the library's data if only one version's data exists (instead of shunning the user to add more data).
+
+[ ] 13# ...

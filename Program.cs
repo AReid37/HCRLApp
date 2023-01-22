@@ -11,10 +11,11 @@ namespace HCResourceLibraryApp
     // THE ENTRANCE POINT, THE CONTROL ROOM
     public class Program
     {
-        static readonly string consoleTitle = "High Contrast Resource Library App [v1.1.7]";
+        static readonly string consoleTitle = "High Contrast Resource Library App [v1.1.8]";
         static readonly string verLastPublishTested = "mid-v1.1.5";
         /// <summary>If <c>true</c>, the application launches for debugging/development. Otherwise, the application launches for the published version.</summary>
         public static readonly bool isDebugVersionQ = true;
+        static readonly bool verifyFormatUsageBase = true;
 
         #region fields / props
         // PRIVATE \ PROTECTED
@@ -24,6 +25,7 @@ namespace HCResourceLibraryApp
         static DataHandlerBase dataHandler;
         static Preferences preferences;
         static LogDecoder logDecoder;
+        static ContentValidator contentValidator;
         static ResLibrary resourceLibrary;
 
         // PUBLIC
@@ -38,24 +40,28 @@ namespace HCResourceLibraryApp
             {
                 Clear();
                 AllowProgramRestart = false;
+                LogState($"Start Up - {consoleTitle + (isDebugVersionQ ? " (debug)" : "")}");
 
                 // setup                
                 /// program function
                 Console.Title = consoleTitle + (isDebugVersionQ? " (debug)" : "");
-                Tools.DisableWarnError = isDebugVersionQ? DisableWE.Warnings /*Disable.All*/ : DisableWE.None;
+                Tools.DisableWarnError = !isDebugVersionQ? DisableWE.Warnings /*Disable.All*/ : DisableWE.None;
                 /// data
                 dataHandler = new DataHandlerBase();
                 preferences = new Preferences();
                 logDecoder = new LogDecoder();
-                resourceLibrary = new ResLibrary();                
+                contentValidator = new ContentValidator();
+                resourceLibrary = new ResLibrary();
                 LoadData();
+                contentValidator.GetResourceLibraryReference(resourceLibrary);
                 /// --v printing and pages
-                VerifyFormatUsage = true && isDebugVersionQ;          
+                VerifyFormatUsage = verifyFormatUsageBase && isDebugVersionQ;          
                 GetPreferencesReference(preferences);
                 ApplyPreferences();
                 SettingsPage.GetPreferencesReference(preferences);
                 SettingsPage.GetResourceLibraryReference(resourceLibrary);
-                LogLegendPage.GetResourceLibraryReference(resourceLibrary);
+                SettingsPage.GetContentValidatorReference(contentValidator);
+                LogLegendPage.GetResourceLibraryReference(resourceLibrary);                
 
                 // testing site
                 if (isDebugVersionQ)
@@ -219,7 +225,7 @@ namespace HCResourceLibraryApp
         public static bool SaveData(bool discreteQ)
         {
             LogState("Saving Data");
-            bool savedDataQ = dataHandler.SaveToFile(preferences, logDecoder, resourceLibrary);
+            bool savedDataQ = dataHandler.SaveToFile(preferences, logDecoder, contentValidator, resourceLibrary);
             NewLine(2);
             Format($"{saveIcon}\t", ForECol.Accent);
             if (savedDataQ)
@@ -236,18 +242,36 @@ namespace HCResourceLibraryApp
         public static void LoadData()
         {
             LogState("Loading Data");
-            dataHandler.LoadFromFile(preferences, logDecoder, resourceLibrary);
+            dataHandler.LoadFromFile(preferences, logDecoder, contentValidator, resourceLibrary);
         }
         public static bool SaveReversion()
         {
             return dataHandler.RevertSaveFile();
         }
         
+        public static void ToggleFormatUsageVerification()
+        {
+            if (isDebugVersionQ && verifyFormatUsageBase)
+            {
+                if (VerifyFormatUsage)
+                {
+                    VerifyFormatUsage = false;
+                    //TextLine("#'Verify Format Usage' has been disabled.", Color.DarkGray);
+                    //Text(" [VFU:off] ", Color.DarkGray);
+                }
+                else
+                {
+                    VerifyFormatUsage = true;
+                    //Text(" [VFU:on] ", Color.DarkGray);
+                    //TextLine("#'Verify Format Usage' has been re-enabled.", Color.DarkGray);
+                }
+            }            
+        }
 
 
         // TESTING STUFF
         static readonly bool runTest = false;
-        static readonly Tests testToRun = Tests.MiscRoom;
+        static readonly Tests testToRun = Tests.LogSubmissionPage_DisplayLogInfo_ErrorTester;
         enum Tests
         {
             /// <summary>For random tests that need their own space, but no specific test name (variable tests)</summary>
@@ -266,6 +290,7 @@ namespace HCResourceLibraryApp
             LogSubmissionPage_DisplayLogInfo_Ex1,
             LogSubmissionPage_DisplayLogInfo_Ex3,
             LogSubmissionPage_DisplayLogInfo_AllTester,
+            LogSubmissionPage_DisplayLogInfo_ErrorTester,
             Dbug_NestedSessions,
             Dbug_DeactivateSessions
         }
@@ -510,7 +535,7 @@ namespace HCResourceLibraryApp
                             logDecoder.DecodeLogInfo(testLogData);
                 }
                 /// Log Submission Page
-                else if (testToRun == Tests.LogSubmissionPage_DisplayLogInfo_Ex1 || testToRun == Tests.LogSubmissionPage_DisplayLogInfo_Ex3 || testToRun == Tests.LogSubmissionPage_DisplayLogInfo_AllTester)
+                else if (testToRun == Tests.LogSubmissionPage_DisplayLogInfo_Ex1 || testToRun == Tests.LogSubmissionPage_DisplayLogInfo_Ex3 || testToRun == Tests.LogSubmissionPage_DisplayLogInfo_AllTester || testToRun == Tests.LogSubmissionPage_DisplayLogInfo_ErrorTester)
                 {
                     hasDebugQ = false;
                     TextLine("Displays information from a log decoder", Color.DarkGray);
@@ -520,6 +545,8 @@ namespace HCResourceLibraryApp
                         locationSet = SetFileLocation(@"C:\Users\ntrc2\source\repos\HCResourceLibraryApp\TextFileExtras\HCRLA - Ex1 Version Log.txt");
                     else if (testToRun == Tests.LogSubmissionPage_DisplayLogInfo_Ex3)
                         locationSet = SetFileLocation(@"C:\Users\ntrc2\source\repos\HCResourceLibraryApp\TextFileExtras\HCRLA - Ex3 Version Log.txt");
+                    else if (testToRun == Tests.LogSubmissionPage_DisplayLogInfo_ErrorTester)
+                        locationSet = SetFileLocation(@"C:\Users\ntrc2\source\repos\HCResourceLibraryApp\TextFileExtras\HCRLA - Error Tester Version Log.txt");
                     else locationSet = SetFileLocation(@"C:\Users\ntrc2\source\repos\HCResourceLibraryApp\TextFileExtras\HCRLA - All-Tester Version Log.txt");
 
                     if (locationSet)
@@ -632,12 +659,13 @@ namespace HCResourceLibraryApp
                     Dbug.EndLogging();
                 }
 
+
                 /// Misc Room
                 else if (testToRun == Tests.MiscRoom)
                 {
                     /// DON'T DELETE THIS HEADER | provide test name
-                    TextLine("Settings Page: Create Numeric Data ID Ranges", Color.DarkGray);
-                    char miscKey = 'a';
+                    TextLine("Extensions: str.Clamp(4 params) variations", Color.DarkGray);
+                    char miscKey = 'c';
 
                     #region miscA: settingsPage: CreateNumericDataIDRanges
                     if (miscKey == 'a')
@@ -680,14 +708,20 @@ namespace HCResourceLibraryApp
                         numbers = "124_0 125_0 125_1 125_2 125_3 126_1 128_2 131_0 131_1 131_3 131_4 133_0 141_0 141_1 141_2";
                         TextLine($"Creating range from numbers:\n\t{numbers}");
                         TextLine($"  Result: {Extensions.CreateNumericDataIDRanges(numbers.Split(" "))}", resultCol);
+
+                        NewLine(2);
+                        numbers = "u138 u139 u140 u146 u157 u158 u160 x200 x201 x202 x202_0 x202_2 x202_3 x202_4 x204 x205 x215 x216 x217";
+                        TextLine($"Creating range from numbers:\n\t{numbers}");
+                        TextLine($"  Result: {Extensions.CreateNumericDataIDRanges(numbers.Split(" "))}", resultCol);
                     }
                     #endregion
 
                     #region miscB: logDecoder: CompareNon-WordyDataIDParsingFunctions
                     if (miscKey == 'b')
                     {
+                        hasDebugQ = false;
                         Color oldPCol = Color.Red, newPCol = Color.Blue;
-                        string dataIDsToParse = "i14` q32 pe566* Cod_Tail Shark_Fin` tt4_0 tb5-gross* slap1 slap2 x7_small n113 n113_alt_0` s_alt4 invalid8``";
+                        string dataIDsToParse = "i14` q32 pe566* Cod_Tail Shark_Fin` tt4_0 tb5-gross* slap1 slap2 x7_small n113 n113_alt_0` s_alt4 isOkay8`` i` 4* 8 *`^";
 
                         TextLine($"Each data ID to parse follows a format:\n\tOriginal  |  OldParsingResult [in {oldPCol}] | NewParsingResult [in {newPCol}]");
                         TextLine($"{Ind24}Old Method: LogDec.GetDataKeyAndSuffix() as 'dataKey[number]suffix'");
@@ -728,6 +762,65 @@ namespace HCResourceLibraryApp
                             }
                     }
                     #endregion
+
+                    #region miscC: extensions: str.Clamp(4 params) variations
+                    if (miscKey == 'c')
+                    {
+                        hasDebugQ = false;
+                        Color colLeft = Color.Red, colMid = Color.Green, colRight = Color.Blue;
+                        /// "words", "focusedWord", "#", "suffix"
+                        string[,] testString = new string[,]
+                        {
+                            {"Cabbage Rolls are (not) the best", "are", "5", "" },
+                            {"An apple a day keeps the doctor away", "apple", "7", "~" },
+                            {"I should be asleep right now :(", "sleep", "9", "~"},
+                            {"This is not the end of it", "of", "5", "~"},
+                            {"Racecar is racecar", "is", "6", ""},
+                            {"The difference between tomatoes and potatoes", "tom", "7", ""},
+                            {"Surely you have not slapped yourself in the face", "slapped", "8", "...."},
+                            {"moleson, matts and marks and maisons", "and", "8", ".."},
+                            {"Ten carrots", "c", "5", "--"},
+                            {"Mut hut", " ", "2", ".:.:."}
+                        };
+
+                        TextLine($"Spread of '[distance]' from '[focusWord]' with clamper '[suffix]' [darkGray]\nOG [white]{Ind34}\n\tLeft [{colLeft}] | Middle [{colMid}] | Right [{colRight}]");
+                        NewLine();
+
+                        if (testString.HasElements())
+                        {
+                            for (int tsx = 0; tsx < testString.GetLength(0); tsx++)
+                            {
+                                string ogWords = (string)testString.GetValue(tsx, 0);
+                                string focusWd = (string)testString.GetValue(tsx, 1);
+                                string distnce = (string)testString.GetValue(tsx, 2);
+                                string cSuffix = (string)testString.GetValue(tsx, 3);
+
+                                if (ogWords.IsNotNE() && focusWd.IsNotNE() && int.TryParse(distnce, out int distNum))
+                                {
+                                    NewLine();
+                                    TextLine($"Spread of '{distnce}' from '{focusWd}' with clamper '{cSuffix}'", Color.DarkGray);
+                                    TextLine($"{ogWords}");
+
+                                    string fc_left = ogWords.Clamp(distNum, cSuffix, focusWd, false);
+                                    string fc_midl = ogWords.Clamp(distNum, cSuffix, focusWd, null);
+                                    string fc_rght = ogWords.Clamp(distNum, cSuffix, focusWd, true);
+
+                                    HoldNextListOrTable();
+                                    Table(Table3Division.Even, fc_left, cLS, fc_midl, fc_rght);
+                                    if (LatestTablePrintText.IsNotNE())
+                                    {
+                                        string[] tablePrints = LatestTablePrintText.Split(cLS);
+                                        Text(tablePrints[0], colLeft);
+                                        Text("|");
+                                        Text(tablePrints[1], colMid);
+                                        Text("|");
+                                        Text(tablePrints[2], colRight);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    #endregion
                 }
 
 
@@ -740,12 +833,6 @@ namespace HCResourceLibraryApp
             }
         }
 
-
-        /* Just saving some preferences, y'know
-            pref<cftag> Gry%Yllw%DrkGry%Rd%Mrn%Yllw%Wht%Gry%Orng
-            pref<cftag> Squished%Thin
-            logDec<cftag> C:\Users\ntrc2\source\repos\HCResourceLibraryApp\TextFileExtras\
-         */
 
         // THOUGHTS...
         // I am able to set the Cursor position within the console window

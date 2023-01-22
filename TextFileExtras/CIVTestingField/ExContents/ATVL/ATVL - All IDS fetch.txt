@@ -1,0 +1,23 @@
+[Dust / d] (D.N.A.E)
+23
+
+[Item / i]
+1845 1998 2123 3210 3923 4419 4565 5000
+
+[NPC / n]
+12 12_alt_1 31 31-mushy
+
+[Player / pl]
+0_0 0_1
+
+[Projectile / p]
+717 717_2 1000 1000-1
+
+[Tiles / t]
+2_Beach 27_tiny 35_large 59_2 199-gross 1987 2290 2292
+
+[Tree Branches / tb]
+13
+
+[Misc]
+Dust Glowing_Eyes WiresTwo Wires2

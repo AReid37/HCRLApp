@@ -5,7 +5,7 @@ using static ConsoleFormat.Base;
 using static ConsoleFormat.Minimal;
 using System.Collections.Generic;
 using System;
-using System.Linq;
+using System.IO;
 
 namespace HCResourceLibraryApp.Layout
 {
@@ -13,6 +13,7 @@ namespace HCResourceLibraryApp.Layout
     {
         static Preferences _preferencesRef;
         static ResLibrary _resLibrary;
+        static ContentValidator _contentValidator;
         static readonly char subMenuUnderline = '=';
 
         public static void GetPreferencesReference(Preferences preferences)
@@ -22,6 +23,10 @@ namespace HCResourceLibraryApp.Layout
         public static void GetResourceLibraryReference(ResLibrary resourceLibrary)
         {
             _resLibrary = resourceLibrary;
+        }
+        public static void GetContentValidatorReference(ContentValidator contentValidator)
+        {
+            _contentValidator = contentValidator;
         }
         public static void OpenPage()
         {
@@ -63,8 +68,10 @@ namespace HCResourceLibraryApp.Layout
 
             // auto-saves:
             //      -> preferences
-            if (_preferencesRef.ChangesMade())
-                Program.SaveData(false);
+            //      -> content validator
+            if (_preferencesRef != null && _contentValidator != null)
+                if (_preferencesRef.ChangesMade() || _contentValidator.ChangesMade())
+                    Program.SaveData(false);
         }
 
         // done
@@ -241,7 +248,7 @@ namespace HCResourceLibraryApp.Layout
                             // incorrection messages
                             else
                             {
-                                IncorrectionMessageTrigger($"{Ind24}Invalid input entered: \n{Ind34}");
+                                IncorrectionMessageTrigger($"{Ind24}Invalid input entered: \n{Ind34}", null);
                                 //Format($"{Ind24}Invalid input entered: \n{Ind34}{invalidationMsg}", ForECol.Incorrection);
                                 //Pause();
                             }
@@ -340,7 +347,7 @@ namespace HCResourceLibraryApp.Layout
                         // review and finally confirm changes before exiting
                         else
                         {
-                            if (!_preferencesRef.Compare(newForeCols))
+                            if (!_preferencesRef.Equals(newForeCols))
                             {
                                 Clear();
                                 Title("Confirm Foreground Element Color Edits", '.', 0);
@@ -458,41 +465,463 @@ namespace HCResourceLibraryApp.Layout
         // not done...
         static void SubPage_ContentIntegrity()
         {
-            bool exitContentIntegrityMenu = false;
+            bool exitContentIntegrityMenu = false;            
+            string activeMenuKey = null;
+
+            VerNum verLow, verHigh = verLow = VerNum.None;
+            List<string> folderPaths = new(), fileExtensions = new();
+            // folder paths and file extensions preload
+            if (_contentValidator != null)
+            {
+                if (_contentValidator.IsSetup())
+                {
+                    if (_contentValidator.FolderPaths.HasElements())
+                        folderPaths.AddRange(_contentValidator.FolderPaths);
+                    if (_contentValidator.FileExtensions.HasElements())
+                        fileExtensions.AddRange(_contentValidator.FileExtensions);
+                }
+            }
+
             do
             {
-                Program.LogState("Settings|Content Integrity (wip)");
+                // settings - ConInt main menu
+                if (activeMenuKey.IsNE())
+                    Program.LogState("Settings|Content Integrity (wip)");
                 Clear();
 
                 string[] conIntOptions = { "Verify Content Integrity", "View All Data IDs", $"{exitSubPagePhrase} [Enter]" };
-                bool validKey, quitMenuQ;
-                string setConIntKey;
-                validKey = ListFormMenu(out setConIntKey, "Content Integrity Menu", subMenuUnderline, $"{Ind24}Select an option >> ", "1/2", true, conIntOptions);
-                quitMenuQ = LastInput.IsNE() || setConIntKey == "c";
-                MenuMessageQueue(!validKey && !quitMenuQ, false, null);
-
-                if (!quitMenuQ && validKey)
+                bool validKey = false, quitMenuQ = false;
+                string setConIntKey = null;
+                if (activeMenuKey.IsNE())
                 {
+                    validKey = ListFormMenu(out setConIntKey, "Content Integrity Menu", subMenuUnderline, $"{Ind24}Select an option >> ", "1/2", true, conIntOptions);
+                    quitMenuQ = LastInput.IsNE() || setConIntKey == "c";
+                    MenuMessageQueue(!validKey && !quitMenuQ, false, null);
+                }
+
+                if ((!quitMenuQ && validKey) || activeMenuKey.IsNotNE())
+                {
+                    // auto-return (only for one page)
+                    bool endActiveMenuKey = false;
+                    if (activeMenuKey.IsNE())
+                        activeMenuKey = setConIntKey;
+                    else if (activeMenuKey.IsNotNE()) 
+                        setConIntKey = activeMenuKey;
+
                     bool librarySetup = false;
                     if (_resLibrary != null)
                         librarySetup = _resLibrary.IsSetup();
                     string titleText = "Content Integrity: " + (setConIntKey == "a" ? conIntOptions[0] : conIntOptions[1]);
                     Clear();
-                    Title(titleText, subMenuUnderline, 0);
+                    Title(titleText, subMenuUnderline, 1);
+
 
                     // verify content integrity
                     if (setConIntKey.Equals("a") && librarySetup)
                     {
-                        NewLine(2);
-                        Text("WIP...");
-                        Pause();
-                        // tbd...
+                        Program.LogState("Settings|Content Integrity (wip)|Verify Content Integrity");
+                        //NewLine();
+                        FormatLine($"{Ind24}Content Integrity Verification (CIV) is a process that validates the existence of contents in the resource library within a given folder.", ForECol.Normal);
+                        NewLine();
+
+                        /** Verification Location Review (snippet) [from Design Doc] + Planning
+				            ...................................
+				            Relative Paths
+				            1 |~ Games\Terraria\ResourcePacks\High Contrast\Content				
+				            2 |~Terraria\ResourcePacks\High Contrast\Content\Images
+				
+				            File Extensions In Use
+				            1 |.png
+				            2 |.mp3
+				            3 |.xnb				
+				            ...................................		
+                        
+
+                            ## ContentValidator.cs : DataHandler  "a class purposed for Content Integrity Verification (CIV)"
+                            FEILDS / PROPS
+                            - ResLibr _libraryRef
+                            - str[] _folderPaths, _prevFolderPaths
+                            - str[] _fileTypeExts, _prevFileTypeExts    
+                            - CVI[] _conValReport
+
+                            CONSTRUCTORS
+                            - CV ()
+                            - CV (ResLib libraryReference)
+                            
+                            METHODS
+                            - pb void Validate(VerNum[] versionRange, str[] folderPaths, str[] fileTypeExtensions)
+                            - ovr bl EncodeToSharedFile()
+                            - ovr bl DecodeFromSharedFile()
+                            - ovr bl ChangesDetected()
+                            - vd SetPreviousSelf()
+                            - CV GetPreviousSelf()
+
+
+                            ....................
+                            ## ConValInfo.cs (struct) 
+                            FIELDS / PROPS    
+                            - bl validatedQ
+                            - str dataID
+                            - str expandedDataID (?)
+                            - str filePath (?)
+
+                            CONSTRUCTORS
+                            - CVI(bl isValidatedQ, str storedDataID)
+                            - CVI(bl isValidatedQ, str storedDataID, str longDataID, str contentPath)
+                        
+                            METHODS
+                            - bl Equals(CIV other)
+                            - bl IsSetup()
+                            
+                         */
+
+
+                        // CIV info review display
+                        bool createdDisplayQ = false;
+                        if (HSNL(0, 2) > 0)
+                            Title("CIV Parameters Review", subMenuUnderline);
+                        else Title("CIV Parameters Review");                                                
+                        /// IF got version range: show info display; ELSE don't show info display and relay issue
+                        if (_resLibrary.GetVersionRange(out VerNum verEarliest, out VerNum verLatest))
+                        {
+                            Program.ToggleFormatUsageVerification();
+                            const ForECol heading3Col = ForECol.Heading2;
+
+                            // + VERSION RANGE +
+                            /// set ver range bounds
+                            if (!verHigh.HasValue() && !verLow.HasValue())
+                            {
+                                verLow = verEarliest;
+                                verHigh = verLatest;
+                            }
+                            /// format ver range text
+                            string verRangeText = null;
+                            if (verHigh.HasValue() && verLow.HasValue())
+                            { /// wrapping
+                                if (verEarliest.Equals(verLow) && verLatest.Equals(verHigh) && !verHigh.Equals(verLow))
+                                    verRangeText = $"All versions (to latest: {verHigh.ToStringNums()})";
+                                else if (verHigh.Equals(verLow))
+                                    verRangeText = $"Version {verLow.ToStringNums()} only";
+                                else verRangeText = $"Versions {verLow.ToStringNums()} through {verHigh.ToStringNums()}";
+                            }
+                            /// printing
+                            Format($"Version Range", heading3Col);
+                            NewLine();
+                            Highlight(true, $". |{verRangeText}", verLow.ToStringNums(), verHigh.ToStringNums());
+                            NewLine();                            
+
+
+                            // + FOLDER PATHS +
+                            FormatLine("Folder Paths", heading3Col);
+                            if (folderPaths.HasElements())
+                            {
+                                for (int fpx = 0; fpx < folderPaths.Count; fpx++)
+                                {
+                                    Format($"{fpx + 1,-2}|", ForECol.Normal);
+                                    FormatLine(folderPaths[fpx], ForECol.Highlight);
+                                }
+                            }
+                            else FormatLine("1 |(none)", ForECol.Normal);
+                            NewLine();
+
+
+                            // + FILE EXTENSIONS +
+                            FormatLine("File Extensions", heading3Col);
+                            if (fileExtensions.HasElements())
+                            {
+                                for (int fex = 0; fex < fileExtensions.Count; fex++)
+                                {
+                                    Format($"{fex + 1, -2}|", ForECol.Normal);
+                                    FormatLine(fileExtensions[fex], ForECol.Highlight);
+                                }
+                            }
+                            else FormatLine("1 |(none)", ForECol.Normal);
+                            NewLine(2);
+
+                            createdDisplayQ = true;
+                            Program.ToggleFormatUsageVerification();
+                        }
+                        else
+                        {
+                            Format($"Display could not be create. Unable to retrieve library version range.", ForECol.Incorrection);
+                            Pause();
+                        }
+
+
+                        // CIV info inputs and CIV execution
+                        if (createdDisplayQ)
+                        {
+                            string[] options = new string[] { "Version Range", "Folder Path", "File Extension" };
+                            bool validOpt = TableFormMenu(out short optNum, "Edit CIV Parameters", subMenuUnderline, false, $"{Ind14}Select parameter to edit or enter any other key to continue >> ", "1~3/?", 3, options);
+                            
+                            /// IF valid input recieved: edit appropriate CIV parameter; ELSE run content integrity or exit page
+                            if (validOpt)
+                            {
+                                NewLine(5);
+                                HorizontalRule(cTHB, 0);
+                                Important($"Edit {options[optNum - 1]}");
+
+                                // version range edit
+                                if (optNum == 1)
+                                {
+                                    if (!verEarliest.Equals(verLatest))
+                                    {
+                                        const string rngSplit = "-";
+                                        FormatLine($"The earliest library version is {verEarliest}, and the latest library version is {verLatest}. The library version(s) to validate must exist within the aformentioned versions.", ForECol.Normal);
+                                        NewLine();
+
+                                        Format($"{Ind14}The current version range is ", ForECol.Normal);
+                                        Highlight(true, verLow.Equals(verHigh) ? $"{verHigh} only." : $"{verLow} to {verHigh}.", verLow.ToString(), verHigh.ToString());
+                                        FormatLine($"{Ind14}Follow prompt syntax with 'a' and 'bb' as major and minor numbers respectively.", ForECol.Accent);
+                                        Format($"{Ind14}Enter the new version range >> ", ForECol.Normal);
+
+                                        // validation of input
+                                        string inputVer = StyledInput($"a.bb {rngSplit} a.bb  /OR/  a.bb");
+                                        bool parsedAndFetchedNewVerRangeQ = false;
+                                        if (inputVer.IsNotNE())
+                                        {
+                                            if (inputVer.Contains(rngSplit))
+                                            {
+                                                string[] verString = inputVer.Split(rngSplit, StringSplitOptions.RemoveEmptyEntries);
+                                                if (verString.HasElements(2))
+                                                {
+                                                    if (VerNum.TryParse(verString[0], out VerNum verRngA))
+                                                        if (VerNum.TryParse(verString[1], out VerNum verRngB))
+                                                        {
+                                                            if (verRngA.AsNumber.IsWithin(verEarliest.AsNumber, verLatest.AsNumber))
+                                                                if (verRngB.AsNumber.IsWithin(verEarliest.AsNumber, verLatest.AsNumber))
+                                                                {
+                                                                    if (verRngA.Equals(verRngB))
+                                                                        verLow = verHigh = verRngB;
+                                                                    else
+                                                                    {
+                                                                        verLow = new VerNum(Math.Min(verRngA.AsNumber, verRngB.AsNumber));
+                                                                        verHigh = new VerNum(Math.Max(verRngA.AsNumber, verRngB.AsNumber));
+                                                                    }
+                                                                    parsedAndFetchedNewVerRangeQ = true;
+                                                                }
+                                                                else IncorrectionMessageQueue($"Right version was beyond library version range ({verEarliest.ToStringNums()} - {verLatest.ToStringNums()})");
+                                                            else IncorrectionMessageQueue($"Left version was beyond library version range ({verEarliest.ToStringNums()} - {verLatest.ToStringNums()})");
+                                                        }
+                                                        else IncorrectionMessageQueue("Right version range did not follow syntax of 'a.bb'");
+                                                    else IncorrectionMessageQueue("Left version range did not follow syntax of 'a.bb'");
+                                                }
+                                                else IncorrectionMessageQueue("Input did not follow syntax of 'a.bb - a.bb'");
+                                            }
+                                            else
+                                            {
+                                                if (VerNum.TryParse(inputVer, out VerNum verSingle))
+                                                    if (verSingle.AsNumber.IsWithin(verEarliest.AsNumber, verLatest.AsNumber))
+                                                    {
+                                                        verLow = verHigh = verSingle;
+                                                        parsedAndFetchedNewVerRangeQ = true;
+                                                    }
+                                                    else IncorrectionMessageQueue($"Given version was beyond library version range ({verEarliest.ToStringNums()} - {verLatest.ToStringNums()})");
+                                                else IncorrectionMessageQueue("Input did not follow syntax of 'a.bb'");
+                                            }
+                                        }
+
+                                        // validation of input relayed
+                                        IncorrectionMessageTrigger($"{Ind24}Version range remains unchanged:\n{Ind34}", ".");
+                                        IncorrectionMessageQueue(null);
+                                        if (parsedAndFetchedNewVerRangeQ)
+                                        {
+                                            if (verLow.Equals(verHigh))
+                                                Format($"{Ind24}Version range has been changed to {verLow} only.", ForECol.Correction);
+                                            else Format($"{Ind24}Version range has been changed to {verLow} through {verHigh}.", ForECol.Correction);
+                                            Pause();
+                                        }
+                                    }
+                                    else
+                                    {
+                                        Format($"Only one version exists in the library, thus the version range cannot be edited.", ForECol.Normal);
+                                        Pause();
+                                    }                                        
+                                }
+
+                                // folder path edits
+                                else if (optNum == 2)
+                                {
+                                    FormatLine("Folder paths provide the CIV process with a destination to execute content validation. Multipler folder paths may be provided for content validation.", ForECol.Normal);
+                                    NewLine();
+
+                                    string placeHolder = @"C:\__\__";
+                                    if (folderPaths.HasElements())
+                                    {
+                                        FormatLine($"{Ind14}The following folder paths have been provided: ", ForECol.Normal);
+                                        List(OrderType.Ordered_Numeric, folderPaths.ToArray());
+                                        NewLine();
+
+                                        FormatLine($"{Ind14}An existing folder path may be removed by using their list number shown above.", ForECol.Accent);
+                                        Format($"{Ind14}Remove/submit folder path >> ", ForECol.Normal);
+                                        placeHolder = $"#  /OR/  " + placeHolder;
+                                    }
+                                    else
+                                    {
+                                        FormatLine($"{Ind14}There are no provided folder paths.", ForECol.Normal);
+                                        FormatLine($"{Ind14}A folder's path could also be fetched from a given file's path.", ForECol.Accent);
+                                        Format($"{Ind14}Submit folder path >> ", ForECol.Normal);                                        
+                                    }
+
+                                    // input validation
+                                    string inputFolder = StyledInput(placeHolder);
+                                    bool fetchedFolderPathOrIndexQ = false;
+                                    const int nonFolderIx = -1;
+                                    int folderIx = nonFolderIx;
+                                    if (inputFolder.IsNotNE())
+                                    {
+                                        if (inputFolder.Contains(":\\"))
+                                        {
+                                            string[] pathParts = inputFolder.Split("\\", StringSplitOptions.RemoveEmptyEntries);
+                                            if (pathParts.HasElements(2))
+                                            {
+                                                /// fetch folder path  ... then check if folder is real
+                                                string fetchedFolderPath = "";
+                                                for (int fdx = 0; fdx < pathParts.Length; fdx++)
+                                                {
+                                                    string pathPart = pathParts[fdx];
+                                                    if (fdx + 1 == pathParts.Length)
+                                                    {
+                                                        if (!pathPart.Contains("."))
+                                                            fetchedFolderPath += pathPart + "\\";
+                                                    }
+                                                    else fetchedFolderPath += pathPart + "\\";
+                                                }
+
+                                                if (!folderPaths.Contains(fetchedFolderPath))
+                                                {
+                                                    DirectoryInfo fetchedFolderInfo = new DirectoryInfo(fetchedFolderPath);
+                                                    if (fetchedFolderInfo.Exists)
+                                                    {
+                                                        folderPaths.Add(fetchedFolderPath);
+                                                        fetchedFolderPathOrIndexQ = true;
+                                                    }
+                                                    else IncorrectionMessageQueue($"Folder path '{fetchedFolderPath}' does not exist");
+                                                }
+                                                else IncorrectionMessageQueue("This folder path already exists within folder paths list");
+                                            }
+                                            else IncorrectionMessageQueue("No folders were specified (besides the hard drive)");
+                                        }
+                                        else if (folderPaths.HasElements())
+                                        {
+                                            if (int.TryParse(inputFolder, out int folderNum))
+                                            {
+                                                if (folderNum.IsWithin(1, folderPaths.Count))
+                                                {
+                                                    folderIx = folderNum - 1;
+                                                    fetchedFolderPathOrIndexQ = true;
+                                                }
+                                                else IncorrectionMessageQueue("Folder number does not exist in preceding list of paths");
+                                            }
+                                            else IncorrectionMessageQueue("Neither a folder number nor a folder path was provided");
+                                        }
+                                        else IncorrectionMessageQueue("A hard drive was not specified in folder path");
+                                    }
+
+                                    // input validation relay
+                                    IncorrectionMessageTrigger($"{Ind24}Folder Paths list remains unchanged:\n{Ind34}", ".");
+                                    IncorrectionMessageQueue(null);
+                                    if (fetchedFolderPathOrIndexQ)
+                                    {
+                                        if (folderIx == nonFolderIx && folderPaths.HasElements())
+                                            Format($"{Ind24}Added new item to folder paths list:\n{Ind34}{folderPaths[^1]}.", ForECol.Correction);
+                                        else
+                                        {
+                                            string removedPath = folderPaths[folderIx];
+                                            folderPaths.RemoveAt(folderIx);
+                                            Format($"{Ind24}Removed folder path #{folderIx + 1} from paths list:\n{Ind34}{removedPath}.", ForECol.Correction);
+                                        }
+                                        Pause();
+                                    }
+                                }
+
+                                // file extension edits
+                                else if (optNum == 3)
+                                {
+                                    FormatLine("A file extension is a suffix of a file name that relates to the file type. Providing file extensions allows the CIV process to target only specific kinds of files for content validation.", ForECol.Normal);
+                                    NewLine();
+
+                                    if (fileExtensions.HasElements())
+                                    {
+                                        Format($"{Ind14}The following file extensions are being used:\n{Ind24}", ForECol.Normal);
+                                        for (int fx = 0; fx < fileExtensions.Count; fx++)
+                                            Highlight(false, $"{fileExtensions[fx]}{(fx + 1 >= fileExtensions.Count ? "" : ", ")}", fileExtensions[fx]);
+                                        NewLine();
+                                    }
+                                    else FormatLine($"{Ind14}There are currently no file extensions in use.", ForECol.Normal);
+                                    FormatLine($"{Ind14}List file extensions in lower-case and separate with spaces (Ex: 'txt png').", ForECol.Accent);
+                                    Format($"{Ind14}List new file extensions >> ", ForECol.Normal);
+
+                                    // validation of input
+                                    string inputFext = StyledInput("extA extB...");
+                                    bool parsedAndFetchedFileExtensionsQ = false;
+                                    if (inputFext.IsNotNE())
+                                    {
+                                        if (!inputFext.Contains(DataHandlerBase.Sep))
+                                        {
+                                            string[] fileExts = inputFext.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                                            if (fileExts.HasElements())
+                                            {
+                                                fileExtensions.Clear();
+                                                for (int fx = 0; fx < fileExts.Length; fx++)
+                                                {
+                                                    string fExt = fileExts[fx].Replace(".", "").ToLower();
+                                                    fileExtensions.Add($".{fExt}");
+                                                }
+                                                parsedAndFetchedFileExtensionsQ = true;
+                                            }
+                                            else IncorrectionMessageQueue("No file extensions were listed");
+                                        }
+                                        else IncorrectionMessageQueue($"File extensions containing the '{DataHandlerBase.Sep}' character are not allowed.");
+                                    }
+
+                                    // relay validation of input
+                                    IncorrectionMessageTrigger($"{Ind24}File Extensions list remains unchanged: ", ".");
+                                    IncorrectionMessageQueue(null);
+                                    if (parsedAndFetchedFileExtensionsQ)
+                                    {
+                                        Format($"{Ind24}File extensions list has been updated.", ForECol.Correction);
+                                        Pause();
+                                    }
+                                }                                
+                            }
+                            else
+                            {
+                                /// IF no input: exit page; ELSE check data and run content integrity
+                                if (LastInput.IsNE())
+                                    endActiveMenuKey = true;
+                                else
+                                {
+                                    NewLine();
+                                    /// check data before running CIV
+                                    bool readyToRunCIVQ = folderPaths.HasElements() && fileExtensions.HasElements();
+                                    if (!readyToRunCIVQ)
+                                    {
+                                        if (folderPaths.HasElements())
+                                            IncorrectionMessageQueue("At least one file extension is required before running CIV.");
+                                        else IncorrectionMessageQueue("At least one folder path is required before running CIV.");
+                                    }
+
+                                    /// data check and validation 
+                                    IncorrectionMessageTrigger($"{Ind14}CIV process could not be executed.\n{Ind24}Issue: ", null);
+                                    IncorrectionMessageQueue(null);
+                                    if (readyToRunCIVQ)
+                                    {
+                                        _contentValidator.Validate(new VerNum[] { verLow, verHigh }, folderPaths.ToArray(), fileExtensions.ToArray());
+                                        Text("Wip...CIV was called");
+                                        Pause();
+                                    }
+                                }
+                            }
+                        }
+                        else endActiveMenuKey = true;
                     }
 
                     // view all data Ids
                     else if (setConIntKey.Equals("b") && librarySetup)
                     {
-                        NewLine();
+                        endActiveMenuKey = true;
+                        Program.LogState("Settings|Content Integrity (wip)|View All Data IDs");
                         Dbug.StartLogging("SettingsPage.SubPage_ContentIntegrity():ViewAllDataIds");
 
                         // gather data
@@ -522,7 +951,7 @@ namespace HCResourceLibraryApp.Layout
 
                         /// fetch all data ids
                         List<string> allDataIds = new();
-                        Dbug.Log("Fetching all Data IDs (Data Id's in angled brackets '<>' were rejected); Note that legend symbols are disregarded; ");
+                        Dbug.Log("Fetching all Data IDs (Data Ids in angled brackets '<>' were rejected); Note that legend symbols are disregarded; ");
                         Dbug.NudgeIndent(true);
                         foreach (ResContents resCon in _resLibrary.Contents)
                         {
@@ -570,7 +999,7 @@ namespace HCResourceLibraryApp.Layout
                             _resLibrary.GetVersionRange(out _, out VerNum latestVer);
                             FormatLine($"All data IDs from shelves of library (version: {latestVer.ToStringNums()}).", ForECol.Accent);
 
-                            Dbug.Log("Printing Data ID categories; ");
+                            Dbug.Log("Printing Data ID categories; Data IDs in angled brackets '<>' are misc. IDs that required disassembling; ");
                             Dbug.NudgeIndent(true);
                             for (int lx = 0; lx < legendKeys.Count; lx++)
                             {
@@ -583,6 +1012,7 @@ namespace HCResourceLibraryApp.Layout
                                 int dataIDCount = 0;
                                 for (int dx = 0; dx < allDataIds.Count; dx++)
                                 {
+                                    bool disableOrignalLogPrintQ = false;
                                     string datIDToPrint = "";
                                     string datID = allDataIds[dx];
 
@@ -602,9 +1032,21 @@ namespace HCResourceLibraryApp.Layout
                                     {
                                         if (LogDecoder.IsNumberless(datID))
                                             datIDToPrint = datID;
+                                        else
+                                        {
+                                            LogDecoder.DisassembleDataID(datID, out string dk, out string db, out _);
+                                            if (!legendKeys.Contains(dk) && db.IsNotNE())
+                                            {
+                                                datIDToPrint = datID;
+                                                
+                                                disableOrignalLogPrintQ = true;
+                                                Dbug.LogPart($"<{datIDToPrint}> ");
+                                            }
+                                        }
                                     }
 
-                                    Dbug.LogPart($"{datIDToPrint} ");
+                                    if (!disableOrignalLogPrintQ)
+                                        Dbug.LogPart($"{datIDToPrint} ");
                                     if (datIDToPrint.IsNotNE())
                                     {
                                         dataIDList += $"{datIDToPrint} ";
@@ -629,7 +1071,7 @@ namespace HCResourceLibraryApp.Layout
                                         dataIDList = dataIDListWithRanges;
                                     }
                                 }
-                                Dbug.LogPart($" Counted '{dataIDCount}' data IDs; ");
+                                Dbug.LogPart($" .. Counted '{dataIDCount}' data IDs; ");
 
                                 // all printing here
                                 if (legendKey != miscPhrase || (legendKey == miscPhrase && dataIDList.IsNotNE()))
@@ -682,8 +1124,11 @@ namespace HCResourceLibraryApp.Layout
                         NewLine(2);
                         Format("The library shelves are empty. This page requires the library to contain some data.", ForECol.Normal);
                         Pause();
+                        endActiveMenuKey = true;
                     }
 
+                    if (endActiveMenuKey)
+                        activeMenuKey = null;
 
                     // (static) methods
                     bool IsSymbol(string str)
@@ -761,7 +1206,7 @@ namespace HCResourceLibraryApp.Layout
                                     else
                                     {
                                         NewLine();
-                                        Format($"\tFile save reversion could not be executed!", ForECol.Incorrection);
+                                        Format($"\tFile save reversion could not be executed! (Restart Recommended)", ForECol.Incorrection);
                                         Pause();
                                     }    
                                 }
@@ -785,49 +1230,66 @@ namespace HCResourceLibraryApp.Layout
                         FormatLine($"Example\n{Ind14}The library has contents at v0.20, reverting to v0.16 would unload:\n{Ind24}v0.20, v0.19, v0.18, v0.17.", ForECol.Normal);
 
                         const string clearLibPhrase = "Empty Library";
-                        bool okayToResetVersion = false;
+                        bool okayToResetVersion = false, okayToClearLibrary = false;
                         string reversionDeniedMessage = "empty library";
                         VerNum lowest = VerNum.None, highest = VerNum.None;
                         if (_resLibrary != null)
                         {
                             if (_resLibrary.GetVersionRange(out lowest, out highest))
                             {
-                                reversionDeniedMessage = "library needs more information";
+                                //reversionDeniedMessage = "library needs more information";
                                 if (!lowest.Equals(highest))
                                     okayToResetVersion = true;
+                                okayToClearLibrary = true;
                             }
                         }
 
                         // continue to version reversion
-                        if (okayToResetVersion)
+                        if (okayToResetVersion || okayToClearLibrary)
                         {
-                            Program.LogState("Settings|Reversion|Version Reversion - Allowed");
+                            Program.LogState($"Settings|Reversion|Version Reversion - Allowed{(okayToResetVersion ? "" : " (Clearance Only)")}");
                             NewLine();
-                            FormatLine($"Version reversion is availble.", ForECol.Normal);
+                            FormatLine($"Version reversion is {(okayToResetVersion ? "" : "(partially) ")}availble.", ForECol.Normal);
                             HorizontalRule('\'', 1);
-                            //FormatLine("NOTE :: A version reversion will require a program restart.", ForECol.Accent);
 
-                            //NewLine(2);
-                            Highlight(false, $"The latest library version is {highest}. The library may be reverted to the oldest library version, {lowest}. ", $"{highest}", $"{lowest}");
-                            FormatLine("The library's shelves may also be completely cleared to remove all version data.", ForECol.Normal);
-                            NewLine();
+                            string exmplRange = null, inputPlacholder = "a.bb", inputPrompt = "Revert to: ";
+                            /// IF able to revert to a version: Version reversion menu and prompts; ELSE library clearance menu and prompts
+                            if (okayToResetVersion)
+                            {
+                                /// pretext
+                                Highlight(false, $"The latest library version is {highest}. The library may be reverted to the oldest library version, {lowest}. ", $"{highest}", $"{lowest}");
+                                FormatLine("The library's shelves may also be completely cleared to remove all version data.", ForECol.Normal);
+                                NewLine();
 
-                            VerNum closestReversion;
-                            if (highest.MinorNumber - 1 < 0)
-                                closestReversion = new VerNum(highest.MajorNumber - 1, 99);
-                            else closestReversion = new VerNum(highest.MajorNumber, highest.MinorNumber - 1);
+                                /// menu and prompt
+                                VerNum closestReversion;
+                                if (highest.MinorNumber - 1 < 0)
+                                    closestReversion = new VerNum(highest.MajorNumber - 1, 99);
+                                else closestReversion = new VerNum(highest.MajorNumber, highest.MinorNumber - 1);
 
-                            string exmplRange = lowest.AsNumber != closestReversion.AsNumber ? $"{lowest.ToStringNums()} ~ {closestReversion.ToStringNums()}" : $"{lowest.ToStringNums()}";
-                            FormatLine($"Enter version to revert to ({exmplRange}) or enter any key to clear library.", ForECol.Normal);
-                            Format($"{Ind24}Revert to: ", ForECol.Normal);
-                            string input = StyledInput($"a.bb");
+                                exmplRange = lowest.AsNumber != closestReversion.AsNumber ? $"{lowest.ToStringNums()} ~ {closestReversion.ToStringNums()}" : $"{lowest.ToStringNums()}";
+                                FormatLine($"Enter version to revert to ({exmplRange}) or enter any key to clear library.", ForECol.Normal);
+                            }
+                            else
+                            {
+                                /// pretext
+                                FormatLine($"The library contains a single version's data ({lowest}), thus a true version reversion is unallowed. However, the library's shelf may be cleared to remove the existing version's data.", ForECol.Normal);
+                                NewLine();
+
+                                /// menu and prompt
+                                FormatLine($"Enter any key to clear the library's data.", ForECol.Normal);
+                                inputPrompt = "Clear Library Shelf: ";
+                                inputPlacholder = null;
+                            }
+                            /// local prompt and input
+                            Format($"{Ind24}{inputPrompt}", ForECol.Normal);
+                            string input = StyledInput(inputPlacholder);
 
                             if (input.IsNotNEW())
                             {
-                                bool isRevertingToVersion = VerNum.TryParse(input, out VerNum verRevert);                                
-
                                 /// revert to version
-                                if (isRevertingToVersion)
+                                bool isRevertingToVersion = VerNum.TryParse(input, out VerNum verRevert);
+                                if (isRevertingToVersion && okayToResetVersion)
                                 {
                                     //Program.LogState("Settings|Reversion|Version Reversion - Allowed|Revert to Version");
                                     if (verRevert.AsNumber.IsWithin(lowest.AsNumber, highest.AsNumber - 1))
@@ -850,6 +1312,11 @@ namespace HCResourceLibraryApp.Layout
                                                     Pause();
                                                 }
                                             }
+                                        }
+                                        else
+                                        {
+                                            Format($"{Ind24}Cancelled library reversion to {verRevert.ToStringNums()}.", ForECol.Incorrection);
+                                            Pause();
                                         }
                                     }
                                     else
@@ -884,7 +1351,7 @@ namespace HCResourceLibraryApp.Layout
                                 {
                                     NewLine(10);
                                     HorizontalRule(subMenuUnderline);
-                                    Important(isRevertingToVersion ? "Revert To Version" : "Clear Library");
+                                    Important(isRevertingToVersion && okayToResetVersion ? "Revert To Version" : "Clear Library");
                                     NewLine();
                                 }
                             }

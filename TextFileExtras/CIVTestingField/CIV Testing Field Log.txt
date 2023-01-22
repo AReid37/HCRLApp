@@ -1,0 +1,86 @@
+﻿## [ CONTENT INTEGRATION VERIFICATION - TESTING LOG ] ##
+Purpose:	This log will document any test cases and results of the CIV process as it browses through the folders and sub-folders for their *contents* and validates their existence. Test cases are organized in a step-by-step fashion to guide development of the CIV processing method.
+
+Syntax
+""""""
+({Test Case Result: Yes/No or True/False})		{Test Case Description/Goal (as a yes or no question)}
+
+
+
+Logs start
+-----------------
+	-> 'Content Validator' and its focused method 'Validate' herein referred to as 'CV'
+	-> 'Content Integrity Verification' process referred to as 'CIV'
+	-> 'ConValInfo' (Content Validator Info) struct used to store processing results referred to as 'InfoDock'
+-----------------
+(FALSE)		Text files or other type files for testing examples for CIV exist in example testing folder?
+(FALSE)		Testing example files are respectively organized to the example version logs? 
+(yes)		CV is capable of saving and loading all folder paths and file extensions it has been given as arguments?
+(FALSE)		CV is capable of accessing given folder paths and listing all folders and subfolders within the given folder using Dbug tool?
+(FALSE)		CV does not list any subfolders that are hidden?
+(FALSE)		CV accesses library and expands the existing Data IDs using the given legend?
+(FALSE)		CV uses expanded Data IDs and checks for matching contents within the given folder and its subfolders in combination with the given file extensions?
+(FALSE)		CIV does not directly use an file writing or reading methods to validate library contents withing given folder(s)?
+(FALSE)		CV does not match expanded Data IDs against content files that are hidden?
+(FALSE)		CV logs Data ID matching part of the CIV process using Dbug tool?
+(FALSE)		CV relays the results of each expanded Data ID checked for with InfoDock?
+(FALSE)		At the end of CIV process, CV compiles the InfoDock and saves to the appropriate field or property?
+(FALSE)		CV relays whether or not CIV was executed completely?
+-----------------
+Logs end
+
+
+
+
+## [ CIV - TESTING EXAMPLES LAYOUT ]
+> The files and subfolders existing for CIV testing as of v1.1.8 of the HCRLA program
+..............................................
+CIVTestingField [fd]
+	ExContents [fd]
+		ATVL [fd]
+			All_Tester_118'
+			ATVL - All IDS fetch.
+			Dust;
+			Glowing_Eyes.
+			Item_1845.
+			Item_1998.
+			Item_2123.
+			Item_3210.
+			Item_3923.
+			Item_4419.
+			Item_4565.
+			Item_5000.
+			NPC_12'
+			NPC_12_alt_1'
+			NPC_31'
+			NPC_31-mushy'
+			Player_0_0
+			Player_0_1
+			Projectile_717.
+			Projectile_717_2.
+			Projectile_1000.
+			Projectile_1000-1.
+			Tiles_2_Beach'
+			Tiles_27_tiny'
+			Tiles_35_large'
+			Tiles_59_2'
+			Tiles_199-gross'
+			Tiles_1987'
+			Tiles_2290'
+			Tiles_2292'
+			Tree_Branches_13;
+			Wires2.
+
+		Ex1VL [fd]
+		Ex2VL [fd]
+		Ex3VL [fd]
+		Ex4VL [fd]
+		Icon;
+
+	CIV Testing Field Log. (this)
+..............................................
+	[fd]	Folder or sub-folder
+	.		A text file (.txt) for example content
+	'		A file with extension '.tst' for example content
+	;		A file with extension '.expc' for example content	
+	[hd]	Hidden content

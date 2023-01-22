@@ -73,21 +73,148 @@ namespace HCResourceLibraryApp
         {
             const int clampSymMaxLen = 3, minimumClampLength = 5;
             string fullStr = s;
-            if (s.IsNotNEW() && maxLength >= minimumClampLength)
+            
+            maxLength = Clamp(maxLength, minimumClampLength, maxLength);
+            if (s.IsNotNEW())
             {
+                /// ensure clamping suffix is within max length
                 int clampSymLen = 0;
                 if (clampingSuffix.IsNotNEW())
                 {
                     if (!clampingSuffix.Length.IsWithin(0, clampSymMaxLen))
-                        clampingSuffix = clampingSuffix.Remove(3);
+                        clampingSuffix = clampingSuffix.Remove(clampSymMaxLen);
                     clampSymLen = clampingSuffix.Length;
                 }
-
+                
+                /// clamp string based on max length and clamp symbol
                 if (s.Length > maxLength - clampSymLen)
                 {
                     s = s.Remove(maxLength - clampSymLen);
                     fullStr = $"{s}{clampingSuffix}";
                 }
+            }
+            return fullStr;
+        }
+        /// <summary>Limits the length of strings surrouding <paramref name="focusedWord"/> based on the value of <paramref name="focusRightQ"/> and using <paramref name="clampingSuffix"/> to signify this restriction where applicable.</summary>
+        /// <param name="distance">Must be greater than or equal to 5.</param>
+        /// <param name="clampingSuffix">Maximum of 3 characters.</param>
+        /// <param name="focusedWord">Word to clamp around (only the first case-sensitive instance is focused). </param>
+        /// <param name="focusRightQ">
+        ///     Clamps to the left or right of <paramref name="focusedWord"/> dependent on boolean value: If <c>true</c>, will remove any strings to the left and clamp any strings to the right.
+        ///     <br></br>If <c>null</c>, will equally clamp left and right of the <paramref name="focusedWord"/>.
+        ///     <br></br>The relation '<c>TRUE|NULL|FALSE</c>' can be seen as '<c>START|CENTER|END</c>' with regards to <paramref name="focusedWord"/>'s position in final string.
+        /// </param>        
+        public static string Clamp(this string s, int distance, string clampingSuffix, string focusedWord, bool? focusRightQ)
+        {
+            const int minimumDistance = 5, clampSymMaxLen = 3, nonIndex = -1;
+            string fullStr = s;
+
+            distance = Clamp(distance, minimumDistance, distance);
+            if (s.IsNotNEW() && focusedWord.IsNotNEW())
+            {
+                // ensure clamping suffix is within max length
+                int clampSymLen = 0;
+                if (clampingSuffix.IsNotNE())
+                {
+                    if (!clampingSuffix.Length.IsWithin(0, clampSymMaxLen))
+                        clampingSuffix = clampingSuffix.Remove(clampSymMaxLen);
+                    clampSymLen = clampingSuffix.Length;
+                }
+
+                // find first instance of focused word and get left and right string sides
+                int minimumDistanceToClamp = minimumDistance - clampSymLen;
+                string[] splitStrings = null;
+                if (s.Length - focusedWord.Length > minimumDistanceToClamp)
+                { /// IF 'string length -minus- focused word' length is greater than 'the minimum distance to clamp (either side of string)': ...
+                    
+                    /// this grabs the first instance of focused word
+                    int fWordLen = focusedWord.Length;
+                    int fWordStartIx = nonIndex;
+                    for (int fx = 0; fx < s.Length - fWordLen && fWordStartIx == nonIndex; fx++)
+                    {
+                        string sPart = s.Substring(fx, fWordLen);
+                        if (sPart == focusedWord)
+                            fWordStartIx = fx;
+                    }
+
+                    /// gets the left and right and clamps or removes them based on value of nullable boolean 'focus...Q'
+                    if (fWordStartIx != nonIndex)
+                    {
+                        /// Example
+                        ///     s = "this is not the end"  
+                        ///     focusedWord = "not"
+                        ///     clampingSuffix = "..."
+                        ///     ---
+                        ///     clampSymLen = 3
+                        ///     ---
+                        ///     s.Length >= focusedWord.Length + ((5 - clampSymLen) * 2)  -> ??
+                        ///     [19] >= [3] + ((5 - [3]) * 2)  -> ??
+                        ///     19 >= 3 + (2 * 2)  --> ??
+                        ///     19 >= 7 --> TRUE
+                        ///     ---
+                        ///     fWordLen = 3
+                        ///     fWordIx = 8
+                        ///     ---
+                        ///     fLeft  should equal "this is "
+                        ///     fRight should equal " the end"
+                        ///     ...
+                        ///     fLeft == s.Substring(0, fWordIx)
+                        ///     fLeft == s.Substring(0, [8])
+                        ///     fLeft == "this is "
+                        ///               01234567    -> Length of '8' are indicies '0 ~ 7'
+                        ///     fLeft == "this is "  is TRUE
+                        ///     ....
+                        ///     fRight == s.Substring(fWordIx + fWordLen + 1)
+                        ///     fRight == s.Substring([8] + [3])
+                        ///     fRight == s.Substring(11)
+                        ///     fRight ==           " the end"
+                        ///              "this is not" 
+                        ///               0123456789
+                        ///                    10 + 01  -> This substring starts at index '11' and continues towards the end of string
+                        ///     fRight == " the end"   is TRUE
+                        ///     
+                        string fLeft = s.Substring(0, fWordStartIx);
+                        string fRight = s.Substring(fWordStartIx + fWordLen);
+
+                        /// is 'true' (focus left) if focus is 'null' or 'false'
+                        bool clampLeft = !focusRightQ.HasValue;
+                        /// is 'true' (focus right) if focus is 'null' or 'true'
+                        bool clampRight = !focusRightQ.HasValue; 
+                        if (focusRightQ.HasValue)
+                        {
+                            clampLeft = !focusRightQ.Value;
+                            clampRight = focusRightQ.Value;
+                        }
+
+                        /// IF focus left: (IF left string can be clamped: clamp string and add suffix before); ELSE remove left string 
+                        if (clampLeft)
+                        {
+                            if (fLeft.Length > distance - clampSymLen)
+                            {
+                                fLeft = fLeft.Substring(fLeft.Length - distance + clampSymLen);
+                                fLeft = $"{clampingSuffix}{fLeft}";
+                            }
+                        }
+                        else fLeft = "";
+                        /// IF focus right: (IF right string can be clamped: clamp string and add suffix after); ELSE remove right string
+                        if (clampRight)
+                        {
+                            if (fRight.Length > distance - clampSymLen)
+                            {
+                                fRight = fRight.Remove(distance - clampSymLen);
+                                fRight = $"{fRight}{clampingSuffix}";
+                            }
+                        }
+                        else fRight = "";
+
+                        /// set value for left and right
+                        splitStrings = new string[2] { fLeft, fRight };
+                    }
+                }
+
+                // set clamped full string and return
+                if (splitStrings.HasElements(2))
+                    fullStr = $"{splitStrings[0]}{focusedWord}{splitStrings[1]}";
             }
             return fullStr;
         }
