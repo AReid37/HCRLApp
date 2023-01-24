@@ -32,6 +32,7 @@ namespace HCResourceLibraryApp.DataHandling
         ResLibrary _libraryRef;
         List<string> _folderPaths, _fileExts, _prevFolderPaths, _prevFileExts;
         List<ConValInfo> _conValInfoDock;
+        bool? anyInvalidatedQ;
         
         // props
         public string[] FolderPaths
@@ -79,6 +80,10 @@ namespace HCResourceLibraryApp.DataHandling
                     conValInfos = _conValInfoDock.ToArray();
                 return conValInfos;
             }
+        }
+        public bool? AreAnyInvalidated
+        {
+            get => anyInvalidatedQ;
         }
         #endregion
 
@@ -210,11 +215,12 @@ namespace HCResourceLibraryApp.DataHandling
                     _libraryRef = mainLibrary;
         }
         /// the... THE MAIN PURPOSE!!
-        public void Validate(VerNum[] versionRange, string[] folderPaths, string[] fileTypeExts)
+        public bool Validate(VerNum[] versionRange, string[] folderPaths, string[] fileTypeExts)
         {
             Dbug.StartLogging("ContentValidator.Validate()");
             Dbug.Log($"Initiating Content Integrity Validation process...");
 
+            bool civProcessBegunQ = false;
             bool isLibrarySetupQ = false;
             if (_libraryRef != null)
                 isLibrarySetupQ = _libraryRef.IsSetup();
@@ -223,12 +229,352 @@ namespace HCResourceLibraryApp.DataHandling
             // it all begins here
             if (isLibrarySetupQ && versionRange.HasElements() && folderPaths.HasElements() && fileTypeExts.HasElements())
             {
-                // just for now
-                Dbug.Log("(4now) Folder paths and file extension received have been stored; ");
+                /// some global vars
+                const string relativePathClampSuffix = "...";
+                const int relativePathDist = 20, subRelativePathDist = 250;
+                bool continueToStep_gatherDataIDs = false;
+
+                // + store folder paths and file extensions +
+                Dbug.Log("Folder paths and file extensions received have been stored; ");
+                _conValInfoDock = null;
+                anyInvalidatedQ = null;
+                folderPaths = folderPaths.SortWords().ToArray();
                 FolderPaths = folderPaths;
                 FileExtensions = fileTypeExts;
+                civProcessBegunQ = true;
+
+
+                // + fetch all sub-folders within given folder paths +
+                Dbug.Log("Preparing to fetch all sub-folder paths and contents; ");
+                Dbug.NudgeIndent(true);
+                List<DirectoryInfo> allFoldersList = new();
+                foreach (string folderPath in folderPaths)
+                {                    
+                    DirectoryInfo fPathInfo = new(folderPath);
+                    Dbug.Log($"Received folder path :: {folderPath} [{(fPathInfo.Exists? "Exists" : "D.N.E!")}]");
+                    if (fPathInfo.Exists)
+                    {
+                        allFoldersList.Add(fPathInfo);
+
+                        /// this EnumerationOptions is set to: A) ignore inaccessibles
+                        EnumerationOptions EOdir_ignoreInaccessible = new();
+                        EOdir_ignoreInaccessible.IgnoreInaccessible = true;
+                        EOdir_ignoreInaccessible.RecurseSubdirectories = false;
+
+                        DirectoryInfo[] fPathSubFolders = fPathInfo.GetDirectories($"*", EOdir_ignoreInaccessible);
+                        FileInfo[] fPathFiles = fPathInfo.GetFiles($"*", EOdir_ignoreInaccessible);
+
+                        Dbug.LogPart($"Main folder contains ");
+                        if (fPathFiles != null)
+                            Dbug.LogPart($"[{fPathFiles.Length}] files and ");
+                        if (fPathSubFolders != null)
+                            Dbug.LogPart($"[{fPathSubFolders.Length}] sub-folders");
+                        else Dbug.LogPart("no sub-folders");
+                        if (!fPathFiles.HasElements() && !fPathSubFolders.HasElements())
+                            Dbug.LogPart(" (Empty? Inaccessible?)");
+                        Dbug.Log($" [Attributes: {fPathInfo.Attributes}]; ");
+
+
+                        /// IF main sub-folders have been fetched: get all sub-folders within the sub-folders
+                        if (fPathSubFolders.HasElements())
+                        {
+                            Dbug.NudgeIndent(true);                            
+                            for (int fpsx = 0; fpsx < fPathSubFolders.Length; fpsx++)
+                            {
+                                DirectoryInfo fPathSub = fPathSubFolders[fpsx];
+                                allFoldersList.Add(fPathSub);
+
+                                string relativeSubPath = fPathSub.ToString().Clamp(relativePathDist, relativePathClampSuffix, fPathSub.Name, false);
+                                Dbug.Log($"SubF {fpsx + 1}| {relativeSubPath}");
+                                Dbug.NudgeIndent(true);
+
+                                /// this EnumerationOptions is set to: A) fetch all sub-folders -- B) ignore inaccessibles
+                                EnumerationOptions EOsubDir_getAllDirs_ignoreInaccessibles = new();
+                                EOsubDir_getAllDirs_ignoreInaccessibles.IgnoreInaccessible = true;
+                                EOsubDir_getAllDirs_ignoreInaccessibles.RecurseSubdirectories = true;
+
+                                DirectoryInfo[] subDirs = fPathSub.GetDirectories("*", EOsubDir_getAllDirs_ignoreInaccessibles);
+                                FileInfo[] subDirFiles = fPathSub.GetFiles("*", EOsubDir_getAllDirs_ignoreInaccessibles);
+
+                                Dbug.LogPart($"Contains ");
+                                if (subDirFiles != null)
+                                    Dbug.LogPart($"[{subDirFiles.Length}] files and ");
+                                if (subDirs != null)
+                                    Dbug.LogPart($"[{subDirs.Length}] sub-folders{(subDirs.HasElements()? " (listed below)" : "")}");
+                                else Dbug.LogPart("no sub-folders");
+                                if (!subDirFiles.HasElements() && !subDirs.HasElements())
+                                    Dbug.LogPart(" (Empty? Inaccessible?)");
+                                Dbug.Log($" [Attributes: {fPathSub.Attributes}]; ");
+
+
+                                /// IF sub-folder's sub-folders have been fetched: add valid directories to full list and search
+                                if (subDirs.HasElements())
+                                {
+                                    List<string> deepSubDirs = new();
+                                    foreach (DirectoryInfo dir in subDirs)
+                                    {
+                                        bool addDir = true;
+                                        string dirName = $"{dir}";
+                                        if (dir.Attributes != FileAttributes.Directory)
+                                        {
+                                            addDir = false;
+                                            dirName += $" {{SKIPPED}} [Attributes: {dir.Attributes}]";
+                                        }
+
+                                        if (addDir)
+                                            allFoldersList.Add(dir);
+                                        deepSubDirs.Add(dirName);
+                                    }
+                                    deepSubDirs = deepSubDirs.ToArray().SortWords();
+
+                                    Dbug.NudgeIndent(true);
+                                    foreach (string aDSDir in deepSubDirs)
+                                        Dbug.Log($"{relativePathClampSuffix}{aDSDir.Clamp(subRelativePathDist, relativePathClampSuffix, fPathSub.Name, true)}");
+                                    Dbug.NudgeIndent(false);
+                                }
+                                Dbug.NudgeIndent(false);
+                            }                            
+                            Dbug.NudgeIndent(false);
+                        }
+                    }
+                }
+                /// confirm folders obtained (through Dbug)
+                if (allFoldersList.HasElements())
+                {
+                    continueToStep_gatherDataIDs = true;
+                    Dbug.Log($"Completed fetching all folder paths (total of '{allFoldersList.Count}'); ");
+                    Dbug.NudgeIndent(true);
+                    foreach (DirectoryInfo dir in allFoldersList)
+                        Dbug.Log(dir.ToString());
+                    Dbug.NudgeIndent(false);
+                }
+                Dbug.NudgeIndent(false);
+
+
+                // + gather all Data IDs accoring to version range, expand them, and store them as a list of ConValInfo instances +
+                List<ConValInfo> allExpandedDataIDs = new();
+                if (continueToStep_gatherDataIDs)
+                { /// wrapping ... oh what a sad excuse to do so...                    
+                    VerNum verLow, verHigh;
+                    if (versionRange.HasElements(2))
+                    {
+                        verLow = versionRange[0];
+                        verHigh = versionRange[1];
+
+                        if (verLow.AsNumber > verHigh.AsNumber)
+                        {
+                            verLow = verHigh;
+                            verHigh = versionRange[0];
+                        }
+                    }
+                    else
+                    {
+                        verLow = versionRange[0];
+                        verHigh = verLow;
+                    }
+
+                    Dbug.Log($"Gathering and expanding all Data IDs within version range: {(verLow.Equals(verHigh)? $"{verLow} only" : $"{verLow} to {verHigh}")}; ");
+                    Dbug.NudgeIndent(true);
+                    Dbug.Log($"Gathering Data IDs from library shelves; ");
+
+                    /// gather data IDs
+                    Dbug.NudgeIndent(true);
+                    List<string> allDataIDs = new();
+                    foreach (ResContents resCon in _libraryRef.Contents)
+                    {
+                        bool somethingMightHaveBeenAddedq = false;
+                        string dbugText = "";
+                        if (resCon.IsSetup())
+                        {
+                            /// ConBase
+                            if (resCon.ConBase.VersionNum.AsNumber.IsWithin(verLow.AsNumber, verHigh.AsNumber))
+                            {
+                                dbugText += $"From #{resCon.ShelfID} ({resCon.ConBase.VersionNum.ToStringNums()}) {"'" + resCon.ContentName + "'", -30}  //  CBG :: ";
+                                for (int cbgx = 0; cbgx < resCon.ConBase.CountIDs; cbgx++)
+                                {
+                                    LogDecoder.DisassembleDataID(resCon.ConBase[cbgx], out string dk, out string db, out _);
+                                    string dataID = dk + db;
+                                    if (!allDataIDs.Contains(dataID))
+                                    {
+                                        allDataIDs.Add(dataID);
+                                        dbugText += $"{dataID} ";
+                                    }
+                                }
+                                somethingMightHaveBeenAddedq = true;
+                            }
+
+                            /// ConAddits
+                            if (resCon.ConAddits.HasElements())
+                            {
+                                int caNum = 0;
+                                foreach (ContentAdditionals conAddit in resCon.ConAddits)
+                                {
+                                    caNum++;
+                                    if (conAddit.VersionAdded.AsNumber.IsWithin(verLow.AsNumber, verHigh.AsNumber))
+                                    {
+                                        if (!somethingMightHaveBeenAddedq)
+                                            dbugText += $"From #{resCon.ShelfID} ({resCon.ConBase.VersionNum.ToStringNums()}) {"'" + resCon.ContentName + "'",-30}";
+                                        dbugText += $"  //  CA#{caNum} :: ";
+                                        for (int cax = 0; cax < conAddit.CountIDs; cax++)
+                                        {
+                                            LogDecoder.DisassembleDataID(conAddit[cax], out string dk, out string db, out _);
+                                            string dataID = dk + db;
+                                            if (!allDataIDs.Contains(dataID))
+                                            {
+                                                allDataIDs.Add(dataID);
+                                                dbugText += $"{dataID} ";
+                                            }
+                                        }
+                                        somethingMightHaveBeenAddedq = true;
+                                    }
+                                }
+                            }
+                        }
+
+                        if (somethingMightHaveBeenAddedq)
+                            Dbug.Log(dbugText + "; ");
+                    }
+                    Dbug.NudgeIndent(false);
+
+                    /// expand the data IDs
+                    allDataIDs = allDataIDs.ToArray().SortWords();
+                    ConValInfo[] preExpandedIDs = new ConValInfo[allDataIDs.Count];
+                    Dbug.Log($"Gathered and sorted '{allDataIDs.Count}' Data IDs; Proceeding to expand data IDs by legend datas and create ConValInfo instances; ");
+                    Dbug.NudgeIndent(true);
+                    for (int lx = 0; lx < _libraryRef.Legends.Count; lx++)
+                    {
+                        /// non-wordy data IDs ... the regulars here
+                        LegendData legData = _libraryRef.Legends[lx];
+                        if (Extensions.CharScore(legData.Key[0]) > 0)
+                        {
+                            string expandedLegDef = $"{legData[0].Replace(' ', '_')}_";
+                            string dbugPretText = $"{legData.Key} '{expandedLegDef}'";
+                            Dbug.LogPart($"For {dbugPretText, -20}   //   ");
+                            for (int ax = 0; ax < allDataIDs.Count; ax++)
+                            {
+                                string ogDataID = allDataIDs[ax];
+                                if (ogDataID.IsNotNE())
+                                {
+                                    LogDecoder.DisassembleDataID(ogDataID, out string dk, out string db, out _);
+                                    if (dk.IsNotNE())
+                                    {
+                                        /// q7 o30-wet dl0  -->  Quail_7  OtherObj_30-wet  Door_Long_0
+                                        if (legData.Key == dk)
+                                        {
+                                            string trueDID = $"{expandedLegDef}{db}";
+                                            Dbug.LogPart($"{db} ");
+                                            preExpandedIDs[ax] = new ConValInfo(dk + db, trueDID);
+                                            allDataIDs[ax] = null;
+                                        }
+                                    }                                   
+                                }                            
+                            }
+                            Dbug.Log("; ");
+                        }
+
+                        /// wordy IDs are fetched at the end
+                        if (lx + 1 == _libraryRef.Legends.Count)
+                        {
+                            Dbug.LogPart("Wordy Data IDs (non-legend)  //  ");
+                            for (int ax2 = 0; ax2 < allDataIDs.Count; ax2++)
+                            {
+                                if (allDataIDs[ax2].IsNotNE())
+                                {
+                                    Dbug.LogPart($"{allDataIDs[ax2]} ");
+                                    preExpandedIDs[ax2] = new ConValInfo(allDataIDs[ax2], allDataIDs[ax2]);
+                                }
+                            }
+                            Dbug.Log("; ");
+                        }
+                    }   
+                    Dbug.NudgeIndent(false);
+
+                    Dbug.Log($"Created '{preExpandedIDs.Length}' ConValInfos with expanded data IDs; Moving info list to next stage; ");
+                    allExpandedDataIDs.AddRange(preExpandedIDs);
+                    Dbug.NudgeIndent(false);
+                }
+
+
+                // THE TRUE CIV PROCESS
+                // + iterate through collected folder paths, and confirm the expanded data IDs with regards to given file extensions + 
+                if (allExpandedDataIDs.HasElements() && allFoldersList.HasElements())
+                {
+                    Dbug.Log("- - - - - - - - - - - - - - - - -");
+                    Dbug.Log("Content Integrity Verification process is ready to begin; Proceeding to validate contents; ");
+                    Dbug.LogPart("File extensions in use:");
+                    foreach (string fileExt in fileTypeExts)
+                        Dbug.LogPart($" {fileExt}");
+                    Dbug.Log("; ");
+
+                    const int allValidatedNum = 0;
+                    int countInvalidated = allValidatedNum;
+
+                    Dbug.NudgeIndent(true);
+                    /// FOR each expanded data ID (ConValInfo)                    
+                    for (int cdx = 0; cdx < allExpandedDataIDs.Count; cdx++)
+                    {
+                        ConValInfo conToVal = allExpandedDataIDs[cdx];
+                        Dbug.LogPart($"Validating {$"'{conToVal.DataID}'", -25}  //  ");
+                        bool foundThisContentQ = false;
+
+                        /// FOR each folder in folders list
+                        for (int fdx = 0; fdx < allFoldersList.Count && !foundThisContentQ; fdx++)
+                        {
+                            /// this EnumerationOptions is set to: A) ignore inaccessibles
+                            EnumerationOptions EOdirToCheck_ignoreInaccessible = new();
+                            EOdirToCheck_ignoreInaccessible.IgnoreInaccessible = true;
+
+                            DirectoryInfo dirToCheck = allFoldersList[fdx];
+                            FileInfo[] dirFiles = dirToCheck.GetFiles("*", EOdirToCheck_ignoreInaccessible);
+                            if (dirFiles.HasElements())
+                                /// FOR each file in given folder
+                                for (int flx = 0; flx < dirFiles.Length && !foundThisContentQ; flx++)
+                                {
+                                    FileInfo fileToCheck = dirFiles[flx];
+                                    for (int fex = -1; fex < fileTypeExts.Length && !foundThisContentQ; fex++)
+                                    {
+                                        /// IF file extension index is greater than or equal to zero: fetch appropriate file extension
+                                        string fileExt = "";
+                                        if (fex >= 0)
+                                            fileExt = fileTypeExts[fex];
+
+                                        foundThisContentQ = fileToCheck.Name == $"{conToVal.DataID}{fileExt}";
+                                        if (foundThisContentQ)
+                                        {
+                                            string relativePath = fileToCheck.FullName.Clamp(relativePathDist, relativePathClampSuffix, fileToCheck.Name, false);
+                                            Dbug.LogPart($"VALIDATED!  Found file '{conToVal.DataID}{fileExt}' at following relative path :: {relativePath}");
+                                        }
+                                    }
+                                }
+                        }
+
+                        if (foundThisContentQ)
+                        {
+                            conToVal.ConfirmValidation();
+                            allExpandedDataIDs[cdx] = conToVal;
+                            if (allExpandedDataIDs[cdx].IsValidated)
+                                Dbug.LogPart(" [!]");
+                        }
+                        else
+                        {
+                            Dbug.LogPart("Invalidated");
+                            countInvalidated++;
+                        }
+                        Dbug.Log("; ");
+                    }
+
+                    anyInvalidatedQ = countInvalidated != allValidatedNum;
+                    Dbug.NudgeIndent(false);
+
+                    float percentValidated = (float)(allExpandedDataIDs.Count - countInvalidated) / allExpandedDataIDs.Count * 100f;
+                    string validationTurnout = $"'{allExpandedDataIDs.Count - countInvalidated}' of '{allExpandedDataIDs.Count}' ({percentValidated:0.0}%)";
+                    Dbug.Log($"Content Integrity Verification process complete; {validationTurnout} contents were validated; Moving list of ConValInfos data to be accessed by other classes; ");
+                    _conValInfoDock = allExpandedDataIDs;
+                }
             }
+
             Dbug.EndLogging();
+            return civProcessBegunQ;
         }
 
         public override bool ChangesMade()

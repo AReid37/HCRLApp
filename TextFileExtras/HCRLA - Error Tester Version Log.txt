@@ -35,6 +35,7 @@ GLOBAL RULES
 [ver : 23 : ]
 ]version: 32[
 [version: 32]
+[ version ]
 vvss [Version : 1.2]x
 [Version : 0.10]
 [version: 0.99]
@@ -56,8 +57,12 @@ ADDED
 [ADDED u,Uuu : x;Xxx ]
 [Added : x;Uxx]
 ad [ ADDED : r,Rrr]t,Ttt; o,Ooo
+0 |Uzxxys - (rr23; xx32)
 [Added : x,Uxx: y,Yvvv]
-[added: y,YYy]
+[added : u&01x145]
+[ allded ]
+[ added ]
+[added: y,YYy; zx,zy&00xx; zz,&01; ux,&11; uz,&12]
 [Added]
 -- 
 Item ff; 
@@ -72,15 +77,21 @@ t |ItemF - (ff)
 0 | - 
 1 | ItemU -
 2 | ItemV (v2223)
-3 |ItemX - 32
+3 |ItemX yx - 32
 2 |ItemV - 33; 34()
 4 |Itemxv - (35; 36~37 38,39^)
 0 |item ff - ((f0t))
 1 | ItemW - (w0;)
 -1|Itemw(44) - (w-1;-323)
 2|ItemV (rrse) - (w8)
--- testing of character keycode subs error
-4 |ItemVW - (i44&0121)
+7|Ietmzx - (ss4q)
+-- next 5: testing of character keycode subs errors
+4 |ItemVW - (x44&0121)
+3 |ItemWwZ - (xq33zz43)
+2 |Ixwz - (r22&1133)
+1 |Iwzzxi - (rr33&1288)
+0 |ixle - (qux3uz44)
+0 |wizze - (qa34&02)
 
 x|ItemX - (x2; x42j)
 
@@ -92,7 +103,9 @@ x|ItemX - (x2; x42j)
 
 
 [addtional]
-[Additional]
+[- Additional -]
+[Additional skbboo]
+> ayyx (ddks) - (ddeise)
 [aDDiTioNaL]
 abb cc - xyy zz
 aaaba > skj
@@ -116,9 +129,11 @@ aaaba > skj
 > ssttks (ccdd) - ff(ss (ts2)
 > ddex (k2) - (332)
 > ndxes (q-3) - (r32)
--- testing of character keycode subs errors
+-- next 2: testing of character keycode subs errors
 > (nnk&01skkts) - An Odd Painting
 > ndesxe (q4) - dtdkx (r32&0145)
+> 
+> dexedex (q344) - (sstk)
 
 > iiss - qoos
 
@@ -126,16 +141,22 @@ aaaba > skj
 
 [ttaa ]
 [tts : tta : nns ]
-[tta: tts : nns ]
+[: tta:]
+84 [tta : ] 32
+[tta : ] 74
+[tta 32]
 [[tta : x32]]
 [TTA : -23]
 [TTA : 4]
 5 [tta: ] 8
+[tta : 5]
 
 
 
 [uptaded]
 ->[Updated]ues
+[updated-32]
+> rqoo (ppss) - msmsoo sss
 [Updated]
 [updated]
 rrr sss - mmm oo sss
@@ -153,8 +174,8 @@ tt >
 -- testing of character keycode subs error
 > rrs (s67&011) - nostmsls
 > 
--- this is not being read because of above
-> rs ss (sts) - tms
+-- this is not being read because of above; fixed
+> rs ss (sts) - tmms
 
 > qq (pp) - tts
 
@@ -162,12 +183,16 @@ tt >
 
 [legn]
 [legend:]
+uuxx - YuYuEksEks
 [Legend]
 11 oneone
 22 - 
+[lEGEnd]
 - threethree
 44 - fourruof - fourfour
 55 - five,five
+xx - doubleX
+XX - doubleX
 -
 
 
@@ -175,6 +200,7 @@ tt >
 [smry]
 sjt][summary:]]
 [ summary ]
+> informationini 0
 [summary]
 info info info info
 [SUMMARY]
@@ -184,4 +210,6 @@ info infor inform >
 > informa 1
 > informatation 2
 > informa 1
+>
+> infrrrrromamorfni
 -- ========== ---

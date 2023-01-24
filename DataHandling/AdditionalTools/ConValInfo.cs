@@ -21,27 +21,38 @@ namespace HCResourceLibraryApp.DataHandling
         - bl IsSetup()
          */
 
-        public readonly bool validatedQ;
-        public readonly string dataID;
+        // FIELDS / PROPS
+        bool validatedQ;
+        readonly string dataID;
+        readonly string ogDataID;
         readonly bool initializedQ;
 
-        public static ConValInfo Empty { get => new ConValInfo(); }
+        public bool IsValidated { get => validatedQ; }
+        public string DataID { get => dataID; }
+        public string OriginalDataID { get => ogDataID; }
+        public static ConValInfo Empty { get => new(); }
         
-        public ConValInfo(string storedDataID, bool isValidatedQ)
+        // CONSTRUCTOR
+        public ConValInfo(string storedDataID, string expandedDataID)
         {
             validatedQ = false;
             dataID = null;
+            ogDataID = null;
             initializedQ = false;
 
             if (storedDataID.IsNotNEW())
             {
-                validatedQ = isValidatedQ;
-                dataID = storedDataID;
+                ogDataID = storedDataID;
+                dataID = expandedDataID;
                 initializedQ = true;
             }
         }
 
-
+        // METHODS
+        public void ConfirmValidation()
+        {
+            validatedQ = true;
+        }
         public bool Equals(ConValInfo other)
         {
             bool areEquals = true;
@@ -68,7 +79,7 @@ namespace HCResourceLibraryApp.DataHandling
         }
         public bool IsSetup()
         {
-            return initializedQ && dataID.IsNotNEW();
-        }
+            return initializedQ && dataID.IsNotNEW() && ogDataID.IsNotNEW();
+        }        
     }
 }

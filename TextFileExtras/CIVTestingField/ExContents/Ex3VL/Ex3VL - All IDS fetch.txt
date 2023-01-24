@@ -1,0 +1,17 @@
+[Item / i]
+445 7 21 12 22 27 64 28 32 46 45 52
+
+[Projectile / p]
+11 
+
+[Tiles / t]
+345 4 5 8 13 9 22 11 12 10
+
+[Tree Branches / tb]
+1 2 3 7
+
+[Tree Tops / tt]
+1 2 3 5 7
+
+[Misc]
+WheatGranule WheatGranules Husks_Wheat LongRiceDust Husks_LongRice ShortRiceDust Husks_ShortRice Muk Murk Murk-acidic BarleyHusks Husks_Oats FriendlyLongRice-lets UnfriendlyLongRice-lets NormalRiceDust Husks_Rice FriendlyRice-lets en-US-ItemLocalization.json

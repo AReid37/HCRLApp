@@ -43,8 +43,6 @@ PURPOSE ::
 > Rice (i9) - Reangled texture to be uniform with new rice grains&02 long and short
 > I&99L&99F_en&99Us (en&00US&00ItemLocalization.json) - Rice grains now have an item tooltip lore hinting to a history of usage as projectile weaponry
 > Rice (t14`) - Made room on the sprite sheet for grown long and short grains 
--- just for testing's sake... ughhh!
-> I&99L&99F_en&99Us (en&00US&00ItemLocalization.json) - please, stop. Get some help.
 
 [Legend]
 i - Item

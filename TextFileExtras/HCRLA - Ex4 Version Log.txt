@@ -39,7 +39,7 @@ PURPOSE ::
 [Legend]
 i - Item
 t - Tiles
-p - Projectiles
+p - Projectile
 w - Wall
 a - Armor
 b - Background

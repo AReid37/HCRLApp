@@ -486,7 +486,7 @@ namespace HCResourceLibraryApp.Layout
             {
                 // settings - ConInt main menu
                 if (activeMenuKey.IsNE())
-                    Program.LogState("Settings|Content Integrity (wip)");
+                    Program.LogState("Settings|Content Integrity");
                 Clear();
 
                 string[] conIntOptions = { "Verify Content Integrity", "View All Data IDs", $"{exitSubPagePhrase} [Enter]" };
@@ -519,7 +519,7 @@ namespace HCResourceLibraryApp.Layout
                     // verify content integrity
                     if (setConIntKey.Equals("a") && librarySetup)
                     {
-                        Program.LogState("Settings|Content Integrity (wip)|Verify Content Integrity");
+                        Program.LogState("Settings|Content Integrity|Verify Content Integrity");
                         //NewLine();
                         FormatLine($"{Ind24}Content Integrity Verification (CIV) is a process that validates the existence of contents in the resource library within a given folder.", ForECol.Normal);
                         NewLine();
@@ -649,6 +649,7 @@ namespace HCResourceLibraryApp.Layout
 
 
                         // CIV info inputs and CIV execution
+                        bool ranCIVq = false;
                         if (createdDisplayQ)
                         {
                             string[] options = new string[] { "Version Range", "Folder Path", "File Extension" };
@@ -770,6 +771,7 @@ namespace HCResourceLibraryApp.Layout
                                     int folderIx = nonFolderIx;
                                     if (inputFolder.IsNotNE())
                                     {
+                                        /// IF input contains folder levels key: prep to add folder; ELSE IF there are existing folders: fetch folder to remove number; ELSE invalidate input
                                         if (inputFolder.Contains(":\\"))
                                         {
                                             string[] pathParts = inputFolder.Split("\\", StringSplitOptions.RemoveEmptyEntries);
@@ -788,17 +790,34 @@ namespace HCResourceLibraryApp.Layout
                                                     else fetchedFolderPath += pathPart + "\\";
                                                 }
 
+                                                /// this IF checks for exact folder path...
                                                 if (!folderPaths.Contains(fetchedFolderPath))
                                                 {
+                                                    /// ...so this bit also ensures that the submitted folder path isn't a sub-folder to other existing paths
+                                                    bool isASubFolderPathQ = false;
+                                                    foreach (string fPath in folderPaths)
+                                                    {
+                                                        if (fetchedFolderPath.Contains(fPath))
+                                                        {
+                                                            isASubFolderPathQ = true;
+                                                            break;
+                                                        }
+                                                    }
+
                                                     DirectoryInfo fetchedFolderInfo = new DirectoryInfo(fetchedFolderPath);
-                                                    if (fetchedFolderInfo.Exists)
+                                                    if (fetchedFolderInfo.Exists && !isASubFolderPathQ)
                                                     {
                                                         folderPaths.Add(fetchedFolderPath);
                                                         fetchedFolderPathOrIndexQ = true;
                                                     }
-                                                    else IncorrectionMessageQueue($"Folder path '{fetchedFolderPath}' does not exist");
+                                                    else
+                                                    {
+                                                        if (!fetchedFolderInfo.Exists)
+                                                            IncorrectionMessageQueue($"Folder path '{fetchedFolderPath}' does not exist");
+                                                        else IncorrectionMessageQueue($"This folder path is a sub-folder to an existing folder path in list");
+                                                    }
                                                 }
-                                                else IncorrectionMessageQueue("This folder path already exists within folder paths list");
+                                                else IncorrectionMessageQueue("This exact folder path already exists within folder paths list");
                                             }
                                             else IncorrectionMessageQueue("No folders were specified (besides the hard drive)");
                                         }
@@ -907,21 +926,61 @@ namespace HCResourceLibraryApp.Layout
                                     IncorrectionMessageQueue(null);
                                     if (readyToRunCIVQ)
                                     {
-                                        _contentValidator.Validate(new VerNum[] { verLow, verHigh }, folderPaths.ToArray(), fileExtensions.ToArray());
-                                        Text("Wip...CIV was called");
-                                        Pause();
+                                        Format($"{Ind14}Running CIV process... ", ForECol.Correction);
+                                        Wait(1f);
+                                        Format($"Please wait...", ForECol.Normal);
+                                        Program.LogState("Settings|Content Integrity|Verify Content Integrity - Executed");
+                                        ranCIVq = _contentValidator.Validate(new VerNum[] { verLow, verHigh }, folderPaths.ToArray(), fileExtensions.ToArray());
                                     }
                                 }
                             }
                         }
-                        else endActiveMenuKey = true;
+
+                        /** POST-CIV DISPLAY TYPES (from Design Doc)
+                            - Expanded Form
+					            Every Data ID is listed; there are no ranges among sequential groups of Data IDs. If a content was verified to exist their text will have a certain dark (or normal) color attributed to them. If a content doesn't exist a bright (or highlight) color will be attributed to them.
+				            - Compact Form
+					            Every Data ID is listed and there are ranges among sequential groups of Data IDs. The color coding for non-sequential content are the same as that in 'Expanded Form'. If a sequence of Data IDs are missing contents, the missing Data IDs within the sequence are listed and bracketed (unspaced) beside the range, and the sequence and listed missing contents are highlighted.
+				            - Focused Form
+					            Only Data IDs that were not verified to exist within the resource pack contents are listed. There are no ranges among sequential groups.	
+			
+			                > Display Example
+			                .	Focused Form
+				                ...................................
+				                [Item]
+				                9 45 78 79 80 115
+				
+				                [Miscellaneous]
+				                AppleSauce_Chunks Dust
+				
+				                [Projectiles]
+				                5 6
+				
+				                [Tiles]
+				                114
+				                ................................... 
+
+                         */
+
+                        // CIV results display
+                        if (ranCIVq && _contentValidator.CivInfoDock.HasElements())
+                        {
+                            Format("CIV Complete!", ForECol.Normal);
+
+                            DisplayCivResult(_contentValidator.CivInfoDock, CivDisplayType.Expanded);
+                            Pause();
+                        }
+
+                        /// exit page
+                        if (!createdDisplayQ)
+                            endActiveMenuKey = true;
                     }
 
                     // view all data Ids
                     else if (setConIntKey.Equals("b") && librarySetup)
                     {
                         endActiveMenuKey = true;
-                        Program.LogState("Settings|Content Integrity (wip)|View All Data IDs");
+                        Program.LogState("Settings|Content Integrity|View All Data IDs");
                         Dbug.StartLogging("SettingsPage.SubPage_ContentIntegrity():ViewAllDataIds");
 
                         // gather data
@@ -1378,5 +1437,21 @@ namespace HCResourceLibraryApp.Layout
             while (!exitReversionMenu && !Program.AllowProgramRestart);
         }
 
+
+        // civ display method and useful enum
+        static void DisplayCivResult(ConValInfo[] civDatas, CivDisplayType displayType)
+        {
+            NewLine();
+            Format($"WIP; Displaying CIV Results as '{displayType}' display", ForECol.Normal);
+        }
+        enum CivDisplayType
+        {
+            /// <summary>List every data ID, no sequential groups (no ranges). Color coding dependent on validation or invalidation.</summary>
+            Expanded,
+            /// <summary>List every data ID, sequential groups allowed only for validated groups. Color coding dependent on validation or invalidation.</summary>
+            Compact,
+            /// <summary>List only invalidated data IDs, no sequential groups (no ranges).</summary>
+            Focused
+        }
     }
 }

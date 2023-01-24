@@ -1,0 +1,17 @@
+[Armor / a]
+3 4 5 6
+
+[Dust / d] (DNAE)
+2 3 0
+
+[Glow / g]
+0 2 3 4
+
+[Item / i]
+2 0 56 107 108 110 324 70 71 72 242
+
+[Tiles / t]
+1 2 73 74
+
+[Misc]
+Shr_Donut

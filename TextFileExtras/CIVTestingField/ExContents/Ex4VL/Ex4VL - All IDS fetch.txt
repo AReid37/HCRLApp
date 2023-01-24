@@ -1,0 +1,20 @@
+[Armor / a]
+7 8 9
+
+[Glow / g]
+5 6
+
+[Item / i]
+167 168 169 170 25 44 46 116 4 3 87 92 93 94
+
+[Projectile / p]
+17
+
+[Tiles / t]
+120 121 122 123 124 102 152 153
+
+[Wall / w] 
+2 3 4 10 11 28 1 0
+
+[Misc]
+Watermelon_Chunks

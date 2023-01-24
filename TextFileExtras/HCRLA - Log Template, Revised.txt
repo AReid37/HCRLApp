@@ -23,6 +23,7 @@
 -- !open --
 GUIDELINES
 * Avoid utilizing the '%' character within this log file.
+* Log decoding ends after the Summary section which must be within the 250 lines limit.
 * Use the following characters with caution as they also play a role in log decoding:
 	Start of lines ::  [  >  -
 	Within lines   ::  [  ]  (  )  -  :  ,  ;  ~

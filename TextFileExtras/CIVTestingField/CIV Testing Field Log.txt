@@ -16,16 +16,16 @@ Logs start
 (FALSE)		Text files or other type files for testing examples for CIV exist in example testing folder?
 (FALSE)		Testing example files are respectively organized to the example version logs? 
 (yes)		CV is capable of saving and loading all folder paths and file extensions it has been given as arguments?
-(FALSE)		CV is capable of accessing given folder paths and listing all folders and subfolders within the given folder using Dbug tool?
-(FALSE)		CV does not list any subfolders that are hidden?
-(FALSE)		CV accesses library and expands the existing Data IDs using the given legend?
-(FALSE)		CV uses expanded Data IDs and checks for matching contents within the given folder and its subfolders in combination with the given file extensions?
-(FALSE)		CIV does not directly use an file writing or reading methods to validate library contents withing given folder(s)?
-(FALSE)		CV does not match expanded Data IDs against content files that are hidden?
-(FALSE)		CV logs Data ID matching part of the CIV process using Dbug tool?
-(FALSE)		CV relays the results of each expanded Data ID checked for with InfoDock?
-(FALSE)		At the end of CIV process, CV compiles the InfoDock and saves to the appropriate field or property?
-(FALSE)		CV relays whether or not CIV was executed completely?
+(yes)		CV is capable of accessing given folder paths and listing all folders and subfolders within the given folder using Dbug tool?
+(yes)		CV does not list any subfolders that are hidden or inaccessible?
+(yes)		CV accesses library and expands the existing Data IDs within a given version range using the given legend?
+(yes)		CV uses expanded Data IDs and checks for matching contents within the given folder and its subfolders in combination with the given file extensions?
+(true)		CIV does not directly use an file writing or reading methods to validate library contents withing given folder(s)?
+(yes)		CV does not match expanded Data IDs against content files that are hidden or inaccessible?
+(yes)		CV logs Data ID matching part of the CIV process using Dbug tool?
+(yes)		CV relays the results of each expanded Data ID checked for with InfoDock?
+(yes)		At the end of CIV process, CV compiles the InfoDock and saves to the appropriate field or property?
+(yes)		CV relays whether or not CIV was executed completely?
 -----------------
 Logs end
 
@@ -38,9 +38,14 @@ Logs end
 CIVTestingField [fd]
 	ExContents [fd]
 		ATVL [fd]
+			--
+			HiddenFolder [fd] [hd]
+				HiddenObj.
+
 			All_Tester_118'
 			ATVL - All IDS fetch.
 			Dust;
+			Dust_23 [hd]
 			Glowing_Eyes.
 			Item_1845.
 			Item_1998.
@@ -70,17 +75,132 @@ CIVTestingField [fd]
 			Tiles_2292'
 			Tree_Branches_13;
 			Wires2.
+			--
 
 		Ex1VL [fd]
+			--
+			AppleSauce_Chunks.
+			Background_5
+			Background_11
+			Background_13
+			Background_19
+			Background_20
+			Background_21
+			Ex1_118'
+			Ex1VL - All IDS fetch.
+			Item_1;
+			Item_9;
+			Item_14;
+			Item_20;
+			Item_24;
+			Item_34;
+			Item_38;
+			Item_42;
+			Item_43;
+			Item_67;
+			Item_68;
+			Item_69;
+			Item_76;
+			Item_77;
+			Item_78;
+			Item_79;
+			Item_80;
+			Item_101;
+			Item_102;
+			Item_103;
+			Item_109;
+			Item_115;
+			Item_214;
+			Projectile_1.
+			Projectile_3.
+			Projectile_4.
+			Projectile_5.
+			Projectile_6.
+			Projectile_14.
+			Projectile_54.
+			Tiles_0'
+			Tiles_14'
+			Tiles_18'
+			Tiles_18_2'
+			Tiles_29'
+			Tiles_31'
+			Tiles_32'
+			Tiles_46'
+			Tiles_47'
+			Tiles_48'
+			Tiles_49'
+			Tiles_56'
+			Tiles_68'
+			Tiles_72'
+			Tiles_89'
+			Tiles_93'
+			Tiles_94'
+			Tiles_95'
+			Tiles_113'
+			Tiles_114'
+			Tiles_115'
+			Tiles_116'
+			Tiles_117'
+			Tiles_118'
+			Tiles_128'
+			Tiles_172'
+			--
+
 		Ex2VL [fd]
+			--
+			Armor_3'
+			Armor_4'
+			Armor_5'
+			Armor_6'
+			Ex2_118'
+			Ex2VL - All IDS fetch.
+			Glow_0.
+			Glow_2.
+			Glow_3.
+			Glow_4.
+			Item_0
+			Item_2
+			Item_56
+			Item_70
+			Item_71
+			Item_72
+			Item_107
+			Item_108
+			Item_110
+			Item_242
+			Item_324
+			Shr_Donut.
+			Tiles_1'
+			Tiles_2'
+			Tiles_73'
+			Tiles_74'
+			--
+
 		Ex3VL [fd]
+			--
+			--
+
 		Ex4VL [fd]
+			--
+			--
+
+		NoAccess [fd]
+			--
+			AccessibleContainingInaccessible [fd]
+				InaccessibleObj. [ia]
+			Inaccessible [fd] [ia]
+				UnreachableFolder [fd]
+					UnreachableObj
+			--
+
 		Icon;
 
 	CIV Testing Field Log. (this)
 ..............................................
 	[fd]	Folder or sub-folder
+	--		Folder contents start/end
 	.		A text file (.txt) for example content
 	'		A file with extension '.tst' for example content
 	;		A file with extension '.expc' for example content	
-	[hd]	Hidden content
+	[hd]	Hidden folder or file
+	[ia]	Inaccessible folder or file

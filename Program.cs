@@ -11,7 +11,7 @@ namespace HCResourceLibraryApp
     // THE ENTRANCE POINT, THE CONTROL ROOM
     public class Program
     {
-        static readonly string consoleTitle = "High Contrast Resource Library App [v1.1.8]";
+        static readonly string consoleTitle = "High Contrast Resource Library App [v1.1.9a]";
         static readonly string verLastPublishTested = "mid-v1.1.5";
         /// <summary>If <c>true</c>, the application launches for debugging/development. Otherwise, the application launches for the published version.</summary>
         public static readonly bool isDebugVersionQ = true;
@@ -286,13 +286,19 @@ namespace HCResourceLibraryApp
             //PageBase_NavigationBar,
 
             Extensions_SortWords,
+
             LogDecoder_DecodeLogInfo,
             LogSubmissionPage_DisplayLogInfo_Ex1,
             LogSubmissionPage_DisplayLogInfo_Ex3,
             LogSubmissionPage_DisplayLogInfo_AllTester,
             LogSubmissionPage_DisplayLogInfo_ErrorTester,
+
+            ContentValidator_Validate,
+
             Dbug_NestedSessions,
-            Dbug_DeactivateSessions
+            Dbug_DeactivateSessions, 
+
+            None
         }
         static void RunTests()
         {
@@ -391,6 +397,7 @@ namespace HCResourceLibraryApp
                         NewLine();
                     }
                 }
+
                 /// Extensions tests
                 else if (testToRun == Tests.Extensions_SortWords)
                 {
@@ -526,6 +533,7 @@ namespace HCResourceLibraryApp
                         }
                     }
                 }
+
                 /// Log Decoder
                 else if (testToRun == Tests.LogDecoder_DecodeLogInfo)
                 {
@@ -567,6 +575,96 @@ namespace HCResourceLibraryApp
                                 HorizontalRule('.');
                             }
                 }
+                
+                /// Content Validator
+                else if (testToRun == Tests.ContentValidator_Validate)
+                {
+                    TextLine("Preparing to run CIV process (noted in Dbug)");
+                    string[] folderPaths =
+                    {
+                        @"C:\Users\ntrc2\source\repos\HCResourceLibraryApp\TextFileExtras\CIVTestingField",
+                        @"C:\Users\ntrc2\source\repos\HCResourceLibraryApp\TextFileExtras\CIVTestingField\ExContents",
+
+                        //@"C:\Users\ntrc2\source\repos\HCResourceLibraryApp\TextFileExtras\CIVTestingField\ExContents\ATVL",
+                        //@"C:\Users\ntrc2\source\repos\HCResourceLibraryApp\TextFileExtras\CIVTestingField\ExContents\Ex1VL",
+                        //@"C:\Users\ntrc2\source\repos\HCResourceLibraryApp\TextFileExtras\CIVTestingField\ExContents\Ex2VL",
+                        //@"C:\Users\ntrc2\source\repos\HCResourceLibraryApp\TextFileExtras\CIVTestingField\ExContents\Ex3VL",
+                        //@"C:\Users\ntrc2\source\repos\HCResourceLibraryApp\TextFileExtras\CIVTestingField\ExContents\Ex4VL",
+                    };
+                    string[] fileExtensions =
+                    {
+                        ".txt", ".tst", ".expc", /*".nfe"*/
+                    };
+                    const string folderPathEnd = "<<";
+
+                    Text($"CIV Parameters :: \n{Ind14}Version Range :: (");
+                    /// FOLDER PATHS FOR TESTING
+                    /// Non-Existent Main Folder:
+                    ///     @"C:\Users\ntrc2\source\repos\HCResourceLibraryApp\TextFileExtras\CIVTestingField\ExContents\TheNonExistent"
+                    /// 
+                    /// Inaccessible Main Folder:
+                    ///     @"C:\Users\ntrc2\source\repos\HCResourceLibraryApp\TextFileExtras\CIVTestingField\ExContents\NoAccess\Inaccessible"
+                    ///     
+                    /// Main Folder with Inaccessible Sub-Folder:
+                    ///     @"C:\Users\ntrc2\source\repos\HCResourceLibraryApp\TextFileExtras\CIVTestingField\ExContents\NoAccess"
+                    ///     
+                    /// Main Folder with Inaccessible File:
+                    ///     @"C:\Users\ntrc2\source\repos\HCResourceLibraryApp\TextFileExtras\CIVTestingField\ExContents\NoAccess\AccessibleContainingInaccessible"
+                    ///     
+                    /// ---------------------
+                    /// ORIGINAL VALUE
+                    ///     folderPaths[Extensions.Random(0, folderPaths.Length - 1)]
+                    ///     
+                    string aFolderPath = folderPaths[Extensions.Random(0, folderPaths.Length - 1)];
+                    string aFileExtension = fileExtensions[Extensions.Random(0, fileExtensions.Length - 1)];
+                    VerNum[] verRange = null;
+                    if (resourceLibrary.IsSetup())
+                    {
+                        if (resourceLibrary.GetVersionRange(out VerNum low, out VerNum high))
+                        {
+                            if (low.Equals(high))
+                            {
+                                verRange = new VerNum[1] { low };
+                                Text(low.ToString());
+                            }
+                            else
+                            {
+                                verRange = new VerNum[2] { low, high };
+                                Text($"{low}, {high}");
+                            }
+                        }
+                    }
+                    TextLine($")\n{Ind14}Relative Folder Path :: {(aFolderPath + folderPathEnd).Clamp(50, "~", folderPathEnd, false).Replace(folderPathEnd, "")}");
+                    TextLine($"{Ind14}File Extension :: {aFileExtension}");
+                    NewLine();
+
+
+                    if (contentValidator.Validate(verRange, new string[1] { aFolderPath }, new string[1] { aFileExtension }))
+                    {
+                        TextLine("Post-CIV results; [Validated in green, Invalidated in Red]");
+                        if (contentValidator.CivInfoDock.HasElements())
+                        {
+                            int nli = 0;
+                            foreach (ConValInfo cvi in contentValidator.CivInfoDock)
+                                if (cvi.IsSetup())
+                                {
+                                    if (nli >= 3)
+                                    {
+                                        NewLine();
+                                        nli = 0;
+                                    }
+                                    Text($"{cvi.DataID} ({cvi.OriginalDataID}){Ind24}", cvi.IsValidated ? Color.Green : Color.Red);
+                                    nli++;
+                                }
+                        }
+                    }
+                    else TextLine("CV did not have enough data to run CIV process...");
+
+                    Pause();
+                    NewLine(2);
+                    TextLine("Do not continue usage of application after running this test!", Color.Orange);
+                }
+
                 /// Dbug
                 else if (testToRun == Tests.Dbug_NestedSessions)
                 {
@@ -780,7 +878,9 @@ namespace HCResourceLibraryApp
                             {"Surely you have not slapped yourself in the face", "slapped", "8", "...."},
                             {"moleson, matts and marks and maisons", "and", "8", ".."},
                             {"Ten carrots", "c", "5", "--"},
-                            {"Mut hut", " ", "2", ".:.:."}
+                            {"Mut hut", " ", "2", ".:.:."},
+                            {"Checking from the start", "Ch", "10", "..." },
+                            {"Looking towards the end", "nd", "10", "..."},
                         };
 
                         TextLine($"Spread of '[distance]' from '[focusWord]' with clamper '[suffix]' [darkGray]\nOG [white]{Ind34}\n\tLeft [{colLeft}] | Middle [{colMid}] | Right [{colRight}]");

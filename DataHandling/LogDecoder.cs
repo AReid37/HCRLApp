@@ -1,8 +1,6 @@
 ﻿using ConsoleFormat;
 using System;
 using System.Collections.Generic;
-using System.Data;
-using System.Runtime;
 using static ConsoleFormat.Base;
 
 namespace HCResourceLibraryApp.DataHandling
@@ -224,7 +222,8 @@ namespace HCResourceLibraryApp.DataHandling
                                 {
                                     string ldlSectionName = logDataLine.Replace(secBracL, "").Replace(secBracR, " ");
                                     // identified when [sectionName] -or- [sectionName:...] -or- [sectionName : ...]
-                                    if (ldlSectionName.ToLower().StartsWith($"{nextSectionName.ToLower()} ") || ldlSectionName.ToLower().StartsWith($"{nextSectionName.ToLower()}:"))
+                                    //if (ldlSectionName.ToLower().StartsWith($"{nextSectionName.ToLower()} ") || ldlSectionName.ToLower().StartsWith($"{nextSectionName.ToLower()}:"))
+                                    if (ldlSectionName.Trim().ToLower().StartsWith($"{nextSectionName.ToLower()}"))
                                     {
                                         parsedSectionTagQ = false;
                                         withinASectionQ = true;
@@ -330,8 +329,16 @@ namespace HCResourceLibraryApp.DataHandling
                                             }
                                             else
                                             {
-                                                Dbug.LogPart("This line is missing ':'");
-                                                decodeInfo.NoteIssue("This line is missing ':'");
+                                                if (logDataLine.ToLower().StartsWith(secVer.ToLower()))
+                                                {
+                                                    Dbug.LogPart("This line is missing ':'");
+                                                    decodeInfo.NoteIssue("This line is missing ':'");
+                                                }
+                                                else
+                                                {
+                                                    Dbug.Log($"Only section name '{currentSectionName}' must follow section tag open bracket");
+                                                    decodeInfo.NoteIssue($"Only section name '{currentSectionName}' must follow section tag open bracket");
+                                                }
                                             }
                                         }
                                     }
@@ -520,8 +527,17 @@ namespace HCResourceLibraryApp.DataHandling
                                                     }
                                                     else
                                                     {
-                                                        Dbug.LogPart("This line is missing ':'");
-                                                        decodeInfo.NoteIssue("This line is missing ':'");
+                                                        //if (logDataLine.ToLower().Replace(secAdd.ToLower(), "").IsNEW())
+                                                        if (logDataLine.ToLower().StartsWith(secAdd.ToLower()))
+                                                        {
+                                                            Dbug.LogPart("This line is missing ':'");
+                                                            decodeInfo.NoteIssue("This line is missing ':'");
+                                                        }
+                                                        else
+                                                        {
+                                                            Dbug.Log($"Only section name '{currentSectionName}' must follow section tag open bracket");
+                                                            decodeInfo.NoteIssue($"Only section name '{currentSectionName}' must follow section tag open bracket");
+                                                        }
                                                     }                                                    
                                                 }
                                                 else
@@ -552,7 +568,7 @@ namespace HCResourceLibraryApp.DataHandling
                                     }
 
                                     /// added items (become content base groups)
-                                    else
+                                    else if (parsedSectionTagQ)
                                     {
                                         // setup
                                         string addedContentName = null;
@@ -645,14 +661,35 @@ namespace HCResourceLibraryApp.DataHandling
                                                                     /// (x25 y32,33 q14)
                                                                     /// (x21 y42 q21)
                                                                     addedContsNDatas[1] = addedContsNDatas[1].Replace(";", "");
+                                                                    bool cksViolationQ = false;
+                                                                    /// IF detect CKS-comma: warn ... IF detect CKS-(any bracket or colon): warn and major issue
                                                                     if (DetectUsageOfCharacterKeycode(addedContsNDatas[1], cks01))
                                                                     {
                                                                         Dbug.LogPart($"Usage of CKS '{cks01}' in data ID groups advised against; ");
                                                                         decodeInfo.NoteIssue($"Usage of character keycode '{cks01}' in data ID groups is advised against");
                                                                     }
+                                                                    if (DetectUsageOfCharacterKeycode(addedContsNDatas[1], cks11))
+                                                                    {
+                                                                        cksViolationQ = true;
+                                                                        Dbug.LogPart($"Usage of CKS '{cks11}' in data ID groups is not allowed; ");
+                                                                        decodeInfo.NoteIssue($"Usage of character keycode '{cks11}' in data ID groups is not allowed");
+                                                                    }
+                                                                    if (DetectUsageOfCharacterKeycode(addedContsNDatas[1], cks12) && !cksViolationQ)
+                                                                    {
+                                                                        cksViolationQ = true;
+                                                                        Dbug.LogPart($"Usage of CKS '{cks12}' in data ID groups is not allowed; ");
+                                                                        decodeInfo.NoteIssue($"Usage of character keycode '{cks12}' in data ID groups is not allowed");
+                                                                    }
+                                                                    if (DetectUsageOfCharacterKeycode(addedContsNDatas[1], cks02) && !cksViolationQ)
+                                                                    {
+                                                                        cksViolationQ = true;
+                                                                        Dbug.LogPart($"Usage of CKS '{cks02}' in data ID groups is not allowed; ");
+                                                                        decodeInfo.NoteIssue($"Usage of character keycode '{cks02}' in data ID groups is not allowed");
+                                                                    }
+
                                                                     addedContsNDatas[1] = CharacterKeycodeSubstitution(addedContsNDatas[1]);
                                                                     string[] dataIdGroups = addedContsNDatas[1].Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                                                                    if (dataIdGroups.HasElements())
+                                                                    if (dataIdGroups.HasElements() && !cksViolationQ)
                                                                         foreach (string dataIDGroup in dataIdGroups)
                                                                         {
                                                                             // For invalid id groups
@@ -897,6 +934,13 @@ namespace HCResourceLibraryApp.DataHandling
                                             sectionIssueQ = false;
                                         }
                                     }
+                                    
+                                    /// no data parsing before tag issue
+                                    else
+                                    {
+                                        Dbug.LogPart("Added section tag must be parsed before decoding its data");
+                                        decodeInfo.NoteIssue("Added section tag must be parsed before decoding its data");
+                                    }
 
                                     EndSectionDbugLog("added", !wasSectionTag && !IsSectionTag());
                                 }
@@ -931,27 +975,34 @@ namespace HCResourceLibraryApp.DataHandling
                                     sectionIssueQ = true;
                                     bool isHeader = false;
                                     /// additional header (imparsable, but not an issue)
-                                    //if (logDataLine.Contains(secBracL) && logDataLine.Contains(secBracR))
                                     if (IsSectionTag())
                                     {
                                         logDataLine = RemoveEscapeCharacters(logDataLine);
 
                                         isHeader = true;
-                                        if (!parsedSectionTagQ)
+                                        if (IsValidSectionTag())
                                         {
-                                            decodeInfo.NoteResult("Additional section tag identified");
-                                            parsedSectionTagQ = true;
-                                            sectionIssueQ = false;
+                                            if (!parsedSectionTagQ)
+                                            {
+                                                decodeInfo.NoteResult("Additional section tag identified");
+                                                parsedSectionTagQ = true;
+                                                sectionIssueQ = false;
+                                            }
+                                            else
+                                            {
+                                                Dbug.Log("Additional section tag has already been parsed");
+                                                decodeInfo.NoteIssue("Additional section tag has already been parsed");
+                                            }
                                         }
                                         else
                                         {
-                                            Dbug.Log("Additional section tag has already been parsed");
-                                            decodeInfo.NoteIssue("Additional section tag has already been parsed");
-                                        }                                        
+                                            Dbug.Log($"Only section name '{currentSectionName}' must be within section tag brackets");
+                                            decodeInfo.NoteIssue($"Only section name '{currentSectionName}' must be within section tag brackets");
+                                        }
                                     }
 
                                     /// additional contents
-                                    if (!isHeader)
+                                    if (!isHeader && parsedSectionTagQ)
                                     {
                                         Dbug.LogPart("Identified additional data; ");
                                         logDataLine = RemoveEscapeCharacters(logDataLine); 
@@ -1563,6 +1614,13 @@ namespace HCResourceLibraryApp.DataHandling
                                         }
                                     }
 
+                                    /// no data parsing before tag issue
+                                    if (!isHeader && !parsedSectionTagQ)
+                                    {
+                                        Dbug.LogPart("Additional section tag must be parsed before decoding its data");
+                                        decodeInfo.NoteIssue("Additional section tag must be parsed before decoding its data");
+                                    }
+
                                     EndSectionDbugLog("additional", !IsSectionTag());
                                 }
 
@@ -1727,8 +1785,16 @@ namespace HCResourceLibraryApp.DataHandling
                                             }
                                             else
                                             {
-                                                Dbug.LogPart("This line is missing ':'");
-                                                decodeInfo.NoteIssue("This line is missing ':'");
+                                                if (logDataLine.ToLower().StartsWith(secTTA.ToLower()))
+                                                {
+                                                    Dbug.LogPart("This line is missing ':'");
+                                                    decodeInfo.NoteIssue("This line is missing ':'");
+                                                }
+                                                else
+                                                {
+                                                    Dbug.Log($"Only section name '{currentSectionName}' must follow section tag open bracket");
+                                                    decodeInfo.NoteIssue($"Only section name '{currentSectionName}' must follow section tag open bracket");
+                                                }                                                
                                             }
                                         }
                                     }
@@ -1788,31 +1854,41 @@ namespace HCResourceLibraryApp.DataHandling
                                         logDataLine = RemoveEscapeCharacters(logDataLine);
                                         
                                         isHeader = true;
-                                        if (!parsedSectionTagQ)
+                                        if (IsValidSectionTag())
                                         {
-                                            decodeInfo.NoteResult("Updated section tag identified");
-                                            sectionIssueQ = false;
-                                            parsedSectionTagQ = true;
+                                            /// ....
+                                            if (!parsedSectionTagQ)
+                                            {
+                                                decodeInfo.NoteResult("Updated section tag identified");
+                                                sectionIssueQ = false;
+                                                parsedSectionTagQ = true;
+                                            }
+                                            else
+                                            {
+                                                Dbug.Log("Updated section tag has already been parsed");
+                                                decodeInfo.NoteIssue("Updated section tag has already been parsed");
+                                            }
                                         }
                                         else
                                         {
-                                            Dbug.Log("Updated section tag has already been parsed");
-                                            decodeInfo.NoteIssue("Updated section tag has already been parsed");
+                                            Dbug.Log($"Only section name '{currentSectionName}' must be within section tag brackets");
+                                            decodeInfo.NoteIssue($"Only section name '{currentSectionName}' must be within section tag brackets");
                                         }
                                     }
 
                                     /// updated contents
-                                    if (!isHeader)
+                                    if (!isHeader && parsedSectionTagQ)
                                     {
                                         Dbug.LogPart("Identified updated data; ");
                                         logDataLine = RemoveEscapeCharacters(logDataLine);
                                         if (logDataLine.StartsWith('>') && logDataLine.CountOccuringCharacter('>') == 1)
                                         {
                                             /// Taco Sauce (y32) - Fixed to look much saucier
-                                            /// (q42) - Redesigned to look cooler
-                                            logDataLine = logDataLine.Replace(">", "");
+                                            /// (q42) - Redesigned to look cooler                                            
                                             if (logDataLine.Contains('-') && logDataLine.CountOccuringCharacter('-') == 1)
                                             {
+                                                logDataLine = logDataLine.Replace(">", "");
+
                                                 /// Taco Sauce (y32)  <-->  Fixed to look much saucier
                                                 /// (q42)  <-->  Redesigned to look cooler
                                                 Dbug.LogPart("Contains '-'; ");
@@ -2033,6 +2109,13 @@ namespace HCResourceLibraryApp.DataHandling
                                         }
                                     }
 
+                                    /// no data parsing before tag issue
+                                    if (!isHeader && !parsedSectionTagQ)
+                                    {
+                                        Dbug.LogPart("Updated section tag must be parsed before decoding its data");
+                                        decodeInfo.NoteIssue("Updated section tag must be parsed before decoding its data");
+                                    }
+
                                     EndSectionDbugLog("updated", !IsSectionTag());
 
                                 }
@@ -2065,21 +2148,29 @@ namespace HCResourceLibraryApp.DataHandling
                                         logDataLine = RemoveEscapeCharacters(logDataLine);
                                         
                                         isHeader = true;
-                                        if (!parsedSectionTagQ)
+                                        if (IsValidSectionTag())
                                         {
-                                            decodeInfo.NoteResult("Legend section tag identified");
-                                            sectionIssueQ = false;
-                                            parsedSectionTagQ = true;
+                                            if (!parsedSectionTagQ)
+                                            {
+                                                decodeInfo.NoteResult("Legend section tag identified");
+                                                sectionIssueQ = false;
+                                                parsedSectionTagQ = true;
+                                            }
+                                            else
+                                            {
+                                                Dbug.Log("Legend section tag has already been parsed");
+                                                decodeInfo.NoteIssue("Legend section tag has already been parsed");
+                                            }
                                         }
                                         else
                                         {
-                                            Dbug.Log("Legend section tag has already been parsed");
-                                            decodeInfo.NoteIssue("Legend section tag has already been parsed");
-                                        }                                        
+                                            Dbug.Log($"Only section name '{currentSectionName}' must be within section tag brackets");
+                                            decodeInfo.NoteIssue($"Only section name '{currentSectionName}' must be within section tag brackets");
+                                        }
                                     }
 
                                     /// legend data
-                                    if (!isHeader) 
+                                    if (!isHeader && parsedSectionTagQ) 
                                     {
                                         if (logDataLine.Contains('-') && logDataLine.CountOccuringCharacter('-') == 1)
                                         {
@@ -2194,6 +2285,13 @@ namespace HCResourceLibraryApp.DataHandling
                                         }
                                     }
 
+                                    /// no data parsing before tag issue
+                                    if (!isHeader && !parsedSectionTagQ)
+                                    {
+                                        Dbug.LogPart("Legend section tag must be parsed before decoding its data");
+                                        decodeInfo.NoteIssue("Legend section tag must be parsed before decoding its data");
+                                    }
+
                                     EndSectionDbugLog("legend", !IsSectionTag());
                                 }
 
@@ -2228,21 +2326,29 @@ namespace HCResourceLibraryApp.DataHandling
                                         logDataLine = RemoveEscapeCharacters(logDataLine);
                                         
                                         isHeader = true;
-                                        if (!parsedSectionTagQ)
+                                        if (IsValidSectionTag())
                                         {
-                                            decodeInfo.NoteResult("Summary section tag identified");
-                                            sectionIssueQ = false;
-                                            parsedSectionTagQ = true;
+                                            if (!parsedSectionTagQ)
+                                            {
+                                                decodeInfo.NoteResult("Summary section tag identified");
+                                                sectionIssueQ = false;
+                                                parsedSectionTagQ = true;
+                                            }
+                                            else
+                                            {
+                                                Dbug.LogPart("Summary section tag has already been parsed");
+                                                decodeInfo.NoteIssue("Summary section tag has already been parsed");
+                                            }
                                         }
                                         else
                                         {
-                                            Dbug.LogPart("Summary section tag has already been parsed");
-                                            decodeInfo.NoteIssue("Summary section tag has already been parsed");
+                                            Dbug.Log($"Only section name '{currentSectionName}' must be within section tag brackets");
+                                            decodeInfo.NoteIssue($"Only section name '{currentSectionName}' must be within section tag brackets");
                                         }
                                     }
 
                                     /// summary data
-                                    if (!isHeader)
+                                    if (!isHeader && parsedSectionTagQ)
                                     {
                                         logDataLine = logDataLine.Trim();
                                         Dbug.LogPart("Identified summary data; ");
@@ -2300,6 +2406,13 @@ namespace HCResourceLibraryApp.DataHandling
                                         }
                                     }
 
+                                    /// no data parsing before tag issue
+                                    if (!isHeader && !parsedSectionTagQ)
+                                    {
+                                        Dbug.LogPart("Summary section tag must be parsed before decoding its data");
+                                        decodeInfo.NoteIssue("Summary section tag must be parsed before decoding its data");
+                                    }
+
                                     EndSectionDbugLog("summary", !IsSectionTag());
                                 }
 
@@ -2322,7 +2435,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                 DecodeInfo dI = decodingInfoDock[px];
                                                 if (!prevDI.Equals(dI))
                                                 {
-                                                    changedIndex = $"@{px.ToString()}";
+                                                    changedIndex = $"@{px}";
                                                     /// determine if changes is an insert or an edit
                                                     /// IF next DI is fetchable: (IF next DI is same as previous' DI: consider change 'insert'; ELSE consider change 'edit n add'); 
                                                     /// ELSE consider change 'edit'
@@ -2334,7 +2447,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                         else
                                                         {
                                                             changeType = "Edit n Add";
-                                                            changedIndex += $" @{px + 1}";
+                                                            changedIndex += $"~@{decodingInfoDock.Count - 1}";
                                                         }
                                                     }
                                                     else changeType = "Edit";
@@ -2374,6 +2487,10 @@ namespace HCResourceLibraryApp.DataHandling
 
                             
                             // method
+                            bool IsValidSectionTag()
+                            {
+                                return logDataLine.ToLower().Contains($"[{currentSectionName.ToLower()}]");
+                            }
                             bool IsSectionTag()
                             {
                                 return RemoveEscapeCharacters(logDataLine).StartsWith(secBracL) && RemoveEscapeCharacters(logDataLine).EndsWith(secBracR);
@@ -2696,6 +2813,14 @@ namespace HCResourceLibraryApp.DataHandling
                         endFileReading = true;
                         string forcedEndReason = llx + 1 >= readingTimeOut ? $"reading timeout - max {readingTimeOut} lines" : "file ends";
                         Dbug.Log($" --> Decoding from file complete (forced: {forcedEndReason}) ... ending file reading <cap-{capacityPercentage:0}%>");
+
+                        /// "File Too Long" issue
+                        if (llx + 1 >= readingTimeOut)
+                        {
+                            DecodeInfo tooLongDi = new ("Decoder Issue; <no source line>", secVer);
+                            tooLongDi.NoteIssue($"File reading has been forced to end: Version Log is too long (limit of {readingTimeOut} lines)");
+                            decodingInfoDock.Add(tooLongDi);
+                        }    
                     }
                     else if (endFileReading)
                         Dbug.Log($" --> Decoding from file complete ... ending file reading <cap-{capacityPercentage:0}%>");

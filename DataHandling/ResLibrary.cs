@@ -48,7 +48,7 @@ namespace HCResourceLibraryApp.DataHandling
         List<ResLibIntegrationInfo> rliInfoDock;
 
         // public
-        public const string LooseResConName = "!LooseContent!";
+        public const string LooseResConName = "!Loose%Content!";
         public List<ResContents> Contents
         {
             private set => _contents = value;

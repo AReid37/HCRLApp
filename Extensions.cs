@@ -130,7 +130,7 @@ namespace HCResourceLibraryApp
                     /// this grabs the first instance of focused word
                     int fWordLen = focusedWord.Length;
                     int fWordStartIx = nonIndex;
-                    for (int fx = 0; fx < s.Length - fWordLen && fWordStartIx == nonIndex; fx++)
+                    for (int fx = 0; fx <= s.Length - fWordLen && fWordStartIx == nonIndex; fx++)
                     {
                         string sPart = s.Substring(fx, fWordLen);
                         if (sPart == focusedWord)
