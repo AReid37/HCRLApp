@@ -124,10 +124,26 @@ namespace HCResourceLibraryApp.DataHandling
             VersionIntroduced = verIntroduced;
             if (definitions.HasElements())
             {
+                /// this process should be as through as 'AddKeyDefinition(str)' ... not a push over definition entry 
                 _definitions = new List<string>();
                 foreach (string def in definitions)
+                {
                     if (def.IsNotNEW())
-                        _definitions.Add(def.Trim());
+                    {
+                        bool addNewDef = true;
+                        if (_definitions.HasElements())
+                            foreach (string addedDef in _definitions)
+                            {
+                                if (addedDef.ToLower() == def.Trim().ToLower())
+                                {
+                                    addNewDef = false;
+                                    break;
+                                }
+                            }
+                        if (addNewDef)
+                            _definitions.Add(def.Trim());
+                    }   
+                }
             }
         }
 
@@ -294,7 +310,7 @@ namespace HCResourceLibraryApp.DataHandling
             }
             return areEquals;
         }
-        /// <summary>Has this instance of <see cref="ResContents"/> been initialized with the appropriate information?</summary>
+        /// <summary>Has this instance of <see cref="LegendData"/> been initialized with the appropriate information?</summary>
         /// <returns>A boolean stating whether the legend key, version introduced, and definitions have been given values, at minimum.</returns>
         public override bool IsSetup()
         {

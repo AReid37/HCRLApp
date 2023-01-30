@@ -34,7 +34,7 @@ PURPOSE ::
 > (Husks_Oats) - (t9)
 > Thrown Long Rice And Debris (FriendlyLongRice&00lets,UnfriendlyLongRice&00lets) - (p11)
 > Rice Stalk Particles (NormalRiceDust,Husks_Rice) - Rice Stalk (t11)
-> Rice Debris (FriendlyRice&00lets) - Rice (p6)
+> Rice Debris (FriendlyRice&00lets) - Rice (p5)
 > (en&00US&00ItemLocalization.json) - Item Localization File &11English&02 U&99S&12
 
 [TTA : 54]

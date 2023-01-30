@@ -65,6 +65,7 @@ namespace HCResourceLibraryApp.Layout
             // styles within this list
             List<string[]> styleSheet = new List<string[]>
             {
+                // NOTE :: null or empty lines are filtered out in final display
                 /// 0: for old title design
                 new string[]
                 {
@@ -98,8 +99,8 @@ namespace HCResourceLibraryApp.Layout
                     "133 3    3157 55   755",
                     " 1111111111 55  55555 ",
 
-                    "",
-                    HSNL(0,1) == 1 ? "" : null,
+                    " ",
+                    HSNL(0,1) == 1 ? " " : null,
                     /// 'R.L.A' with a 3D-like effect
                     "  88.     8.       8.    ",
                     "  8.8.    8.      8.8.   ",

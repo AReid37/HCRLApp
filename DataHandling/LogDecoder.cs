@@ -542,8 +542,9 @@ namespace HCResourceLibraryApp.DataHandling
                                                 }
                                                 else
                                                 {
-                                                    Dbug.LogPart("Additional section tag identified");
-                                                    decodeInfo.NoteResult("Additional section tag identified");
+                                                    Dbug.LogPart("Added section tag identified");
+                                                    decodeInfo.NoteResult("Added section tag identified");
+                                                    parsedSectionTagQ = true;
                                                 }
                                             }
                                         }   

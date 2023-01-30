@@ -3,7 +3,14 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net5.0</TargetFramework>
+    <PackageIcon>HCINC-L6 (Acronym).png</PackageIcon>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="TextFileExtras\CIVTestingField\ExContents\NoAccess\**" />
+    <EmbeddedResource Remove="TextFileExtras\CIVTestingField\ExContents\NoAccess\**" />
+    <None Remove="TextFileExtras\CIVTestingField\ExContents\NoAccess\**" />
+  </ItemGroup>
 
   <ItemGroup>
     <Reference Include="ConsoleFormat">
@@ -17,6 +24,13 @@
     <Folder Include="TextFileExtras\CIVTestingField\ExContents\Ex2VL\" />
     <Folder Include="TextFileExtras\CIVTestingField\ExContents\Ex4VL\" />
     <Folder Include="TextFileExtras\CIVTestingField\ExContents\Ex3VL\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\..\OneDrive\Pictures\High Contrast Textures\IconImage\psp projects\HCU-Layers+\HCINC-L6 (Acronym).png">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
   </ItemGroup>
 
 </Project>

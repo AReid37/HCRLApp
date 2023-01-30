@@ -72,6 +72,7 @@ namespace HCResourceLibraryApp.Layout
                         TableRowDivider(subMenuUnderline, false, GetPrefsForeColor(ForECol.Accent));
 
                         Program.ToggleFormatUsageVerification();
+                        ToggleWordWrappingFeature(false);
 
                         /// table header
                         HoldNextListOrTable();
@@ -90,11 +91,13 @@ namespace HCResourceLibraryApp.Layout
                             
                             HoldNextListOrTable();                            
                             Table(tDivSize, tabKeyInfo, '|', tabDat1Info);
-                            Highlight(true, LatestTablePrintText.Replace("\n","").Replace(replaceBacktick, backtick), $" {tableLeg.Key} ", tableLeg[0]);
+                            Highlight(true, LatestTablePrintText.Replace("\n"," ").Replace(replaceBacktick, backtick), $" {tableLeg.Key} ", tableLeg[0]);
                             if (HSNL(0, 2) - 2 == 0)
                                 HorizontalRule('-');
                         }
+                        
                         Program.ToggleFormatUsageVerification();
+                        ToggleWordWrappingFeature(true);
                     }
                     Format($"{Ind14}All Log Legends from latest library version ({latestVersion}). ", ForECol.Accent);
                     Pause();

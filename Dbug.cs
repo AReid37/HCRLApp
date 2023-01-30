@@ -48,6 +48,7 @@ namespace HCResourceLibraryApp
 
                     if (!ongoingNestedLogsQ)
                     {
+                        partialLog = null;
                         SetIndent(-1);
                         if (relayDbugLogs)
                             Debug.WriteLine("\n--------------------"); // 20x '-'
@@ -56,6 +57,7 @@ namespace HCResourceLibraryApp
                     }
                     else if (!ignoreNestedSessionQ)
                     {
+                        partialLog = null;
                         NudgeIndent(true);
                         nestedBaseIndentLevel = Debug.IndentLevel;
                         if (relayDbugLogs)
@@ -89,6 +91,7 @@ namespace HCResourceLibraryApp
 
                     if (!ongoingNestedLogsQ)
                     {
+                        partialLog = null;
                         SetIndent(-1);
                         if (relayDbugLogs)
                             Debug.WriteLine("\n--------------------"); // 20x '-'
@@ -104,6 +107,7 @@ namespace HCResourceLibraryApp
                     }
                     else if (!ignoreNestedSessionQ)
                     {
+                        partialLog = null;
                         NudgeIndent(true);
                         nestedBaseIndentLevel = Debug.IndentLevel;
                         if (relayDbugLogs)
@@ -198,7 +202,7 @@ namespace HCResourceLibraryApp
             //SetIndent(-1);
         }
         
-        /// <summary>Increments or decrement the indentation level based on <paramref name="isIncrement"/>'s value.</summary>
+        /// <summary>Increments or decrements the indentation level based on <paramref name="isIncrement"/>'s value.</summary>
         public static void NudgeIndent(bool isIncrement)
         {
             if (IsWithinNestedLimit() && !deactivateNextSessionQ)

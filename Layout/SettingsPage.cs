@@ -158,7 +158,7 @@ namespace HCResourceLibraryApp.Layout
                         #endregion
 
                         NewLine();
-                        FormatLine("A restart is required after changing the window dimensions.", ForECol.Accent);
+                        FormatLine("A restart is required to apply any changes to window dimensions.", ForECol.Accent);
                         FormatLine("Enter the new dimensions as H,W below using the table above.", ForECol.Normal);
 
                         Format($"{Ind14}Change dimensions >> ", ForECol.Normal);
@@ -220,8 +220,6 @@ namespace HCResourceLibraryApp.Layout
                                 {
                                     string newDimsTxt = $"{newDimH} {newDimW} ({newDimH.GetScaleFactorH() * 100:0}% {newDimW.GetScaleFactorW() * 100:0}%)";
                                     Highlight(true, $"{Ind24}The newly selected window dimensions are (as HxW): {newDimsTxt}", newDimsTxt);
-                                    //Format($"{Ind24}Do you wish to update preferences to these dimensions? ", ForECol.Warning);
-                                    //string confirmInput = StyledInput("y/n");
                                     
                                     bool validResponse = Confirmation($"{Ind24}Do you wish to update preferences to these dimensions? ", false, out bool bResult);
                                     if (validResponse && bResult)
@@ -462,7 +460,7 @@ namespace HCResourceLibraryApp.Layout
             }
             while (!exitSetPrefsMenu && !Program.AllowProgramRestart);
         }
-        // not done...
+        // done
         static void SubPage_ContentIntegrity()
         {
             bool exitContentIntegrityMenu = false;            
@@ -636,6 +634,7 @@ namespace HCResourceLibraryApp.Layout
                                 }
                             }
                             else FormatLine("1 |(none)", ForECol.Normal);
+                            FormatLine("CIV parameters are saved after running CIV (Version Range excluded).", ForECol.Accent);
                             NewLine(2);
 
                             createdDisplayQ = true;
@@ -649,7 +648,7 @@ namespace HCResourceLibraryApp.Layout
 
 
                         // CIV info inputs and CIV execution
-                        bool ranCIVq = false;
+                        bool ranCIVq = false, prepToRunCivq = false;
                         if (createdDisplayQ)
                         {
                             string[] options = new string[] { "Version Range", "Folder Path", "File Extension" };
@@ -743,14 +742,28 @@ namespace HCResourceLibraryApp.Layout
                                 // folder path edits
                                 else if (optNum == 2)
                                 {
-                                    FormatLine("Folder paths provide the CIV process with a destination to execute content validation. Multipler folder paths may be provided for content validation.", ForECol.Normal);
+                                    int folderCondensingDist = WSLL(64, Console.LargestWindowWidth - 10);
+                                    const int endPeekNum = 8;
+                                    FormatLine("Folder paths provide the CIV process with a destination to execute content validation. Multiple folder paths may be provided for content validation.", ForECol.Normal);
                                     NewLine();
 
                                     string placeHolder = @"C:\__\__";
                                     if (folderPaths.HasElements())
                                     {
-                                        FormatLine($"{Ind14}The following folder paths have been provided: ", ForECol.Normal);
-                                        List(OrderType.Ordered_Numeric, folderPaths.ToArray());
+                                        List<string> fPathsCondensed = new();
+                                        foreach (string fPath in folderPaths)
+                                        {
+                                            if (fPath.Length > folderCondensingDist)
+                                            {
+                                                string shortFPath = fPath.Clamp((folderCondensingDist / 2) - endPeekNum, "...");
+                                                shortFPath += fPath.Clamp(folderCondensingDist / 2, null, fPath.Substring(fPath.Length - endPeekNum).ToString(), false);
+                                                fPathsCondensed.Add(shortFPath);
+                                            }
+                                            else fPathsCondensed.Add(fPath);
+                                        }
+
+                                        FormatLine($"{Ind14}The following (relative) folder paths have been provided: ", ForECol.Normal);
+                                        List(OrderType.Ordered_Numeric, fPathsCondensed.ToArray());
                                         NewLine();
 
                                         FormatLine($"{Ind14}An existing folder path may be removed by using their list number shown above.", ForECol.Accent);
@@ -926,6 +939,7 @@ namespace HCResourceLibraryApp.Layout
                                     IncorrectionMessageQueue(null);
                                     if (readyToRunCIVQ)
                                     {
+                                        prepToRunCivq = true;
                                         Format($"{Ind14}Running CIV process... ", ForECol.Correction);
                                         Wait(1f);
                                         Format($"Please wait...", ForECol.Normal);
@@ -965,9 +979,60 @@ namespace HCResourceLibraryApp.Layout
                         // CIV results display
                         if (ranCIVq && _contentValidator.CivInfoDock.HasElements())
                         {
-                            Format("CIV Complete!", ForECol.Normal);
+                            CivDisplayType civDisplayStyle = CivDisplayType.Compact;
+                            bool exitCivResultPageQ = false;
+                            int contentCount = _contentValidator.CivInfoDock.Length;
 
-                            DisplayCivResult(_contentValidator.CivInfoDock, CivDisplayType.Expanded);
+                            do
+                            {
+                                Clear();
+                                Title(titleText, subMenuUnderline, 1);
+                                Important($"CIV Results - {civDisplayStyle} View");
+                                HorizontalRule('-');
+
+                                DisplayCivResults(_contentValidator.CivInfoDock, civDisplayStyle);
+
+                                HorizontalRule('-');
+                                Highlight(true, $"Percentage of contents verified: {_contentValidator.ValidationPercentage:0.0}% of '{contentCount}' contents.", $"{_contentValidator.ValidationPercentage:0.0}%");
+                                NewLine();
+
+                                Format("Current display type is highlighted :: ");
+                                ChangeNextHighlightColors(ForECol.Accent, ForECol.Normal);
+                                Highlight(true, $"{CivDisplayType.Expanded} | {CivDisplayType.Compact} | {CivDisplayType.Focused}", civDisplayStyle.ToString());
+                                Format($"{Ind14}Press [Enter] to toggle display type. Enter any key to exit CIV view >> ");
+
+                                string civVInput = StyledInput(null);
+                                if (civVInput.IsNEW())
+                                {
+                                    civDisplayStyle = (CivDisplayType)((civDisplayStyle.GetHashCode() + 1) % Enum.GetNames(typeof(CivDisplayType)).Length);
+                                    NewLine();
+                                    string displayShortDesc = "";
+                                    switch (civDisplayStyle)
+                                    {
+                                        case CivDisplayType.Expanded:
+                                            displayShortDesc = "All IDs, No Ranges";
+                                            break;
+
+                                        case CivDisplayType.Compact:
+                                            displayShortDesc = "All IDs, Condensed";
+                                            break;
+
+                                        case CivDisplayType.Focused:
+                                            displayShortDesc = "Unverified IDs Only, No Ranges";
+                                            break;
+                                    }
+                                    Highlight(false, $"{Ind24}Switching to '{civDisplayStyle}' display: {displayShortDesc}... ", displayShortDesc, civDisplayStyle.ToString());
+                                    Wait(2.5f);
+                                }
+                                else exitCivResultPageQ = true;
+                            }
+                            while (!exitCivResultPageQ);
+                            
+                        }
+                        else if (prepToRunCivq)
+                        {
+                            NewLine();
+                            Format($"{Ind24}Unable to collect and display CIV results.", ForECol.Incorrection);
                             Pause();
                         }
 
@@ -988,6 +1053,7 @@ namespace HCResourceLibraryApp.Layout
                         const string miscPhrase = "Miscellaneous";
                         List<string> legendKeys = new() { miscPhrase }, legendDefs = new() { miscPhrase };
                         List<string> legendSymbols = new();
+                        string legendKeysString = "";
                         Dbug.Log("Fetching Legend Keys (and Definitions) --> ");
                         Dbug.NudgeIndent(true);
                         foreach (LegendData legDat in _resLibrary.Legends)
@@ -995,9 +1061,10 @@ namespace HCResourceLibraryApp.Layout
                             Dbug.LogPart($"Key '{legDat.Key}' | Added? {IsNotSymbol(legDat.Key)}");
                             if (IsNotSymbol(legDat.Key))
                             {
-                                legendKeys.Add(legDat.Key);
-                                /// adding key before definition so they are sorted similarly
-                                legendDefs.Add($"{legDat.Key} {legDat[0]}");
+                                /// adding definition before key so they are sorted properly
+                                legendKeys.Add($"{legDat[0]} {legDat.Key}");
+                                legendDefs.Add($"{legDat[0]}");
+                                legendKeysString += $"{legDat.Key} ";
                                 Dbug.LogPart($" | and Definition '{legDat[0]}'");
                             }
                             else legendSymbols.Add(legDat.Key);
@@ -1062,11 +1129,13 @@ namespace HCResourceLibraryApp.Layout
                             Dbug.NudgeIndent(true);
                             for (int lx = 0; lx < legendKeys.Count; lx++)
                             {
-                                string legendKey = legendKeys[lx];
-                                string legendDef = legendKey != miscPhrase ? legendDefs[lx].Replace($"{legendKey} ", "") : legendDefs[lx];
+                                string legendDef = legendDefs[lx];
+                                string legendKey = legendDef != miscPhrase ? legendKeys[lx].Replace($"{legendDef} ", "") : legendKeys[lx];
+                                bool isMiscCategoryQ = legendKey == miscPhrase;
                                 Dbug.Log($"Category '{legendKey}' [{legendDef}]");
-
                                 Dbug.NudgeIndent(true);
+
+                                // get data IDs for category (legend key)
                                 string dataIDList = "";
                                 int dataIDCount = 0;
                                 for (int dx = 0; dx < allDataIds.Count; dx++)
@@ -1076,7 +1145,7 @@ namespace HCResourceLibraryApp.Layout
                                     string datID = allDataIds[dx];
 
                                     // print numeric data IDs
-                                    if (legendKey != miscPhrase)
+                                    if (!isMiscCategoryQ)
                                     {
                                         if (!LogDecoder.IsNumberless(datID))
                                         {
@@ -1094,7 +1163,7 @@ namespace HCResourceLibraryApp.Layout
                                         else
                                         {
                                             LogDecoder.DisassembleDataID(datID, out string dk, out string db, out _);
-                                            if (!legendKeys.Contains(dk) && db.IsNotNE())
+                                            if (!legendKeysString.Contains($"{dk} ") && db.IsNotNE())
                                             {
                                                 datIDToPrint = datID;
                                                 
@@ -1113,32 +1182,60 @@ namespace HCResourceLibraryApp.Layout
                                     }
                                 }
 
-                                if (legendKey != miscPhrase)
-                                {
-                                    Dbug.Log(" ..  Condensing with ranges; ");
-                                    string dataIDListWithRanges = Extensions.CreateNumericDataIDRanges(dataIDList.Split(" "));
-                                    bool uncondensedQ = false;
-                                    if (dataIDList.Contains(dataIDListWithRanges))
+                                // condense string of numbers (and stuff) with ranges
+                                if (dataIDList.IsNotNE())
+                                { /// wrapping
+                                    // for misc
+                                    if (isMiscCategoryQ)
                                     {
-                                        Dbug.LogPart("Remains uncondensed; ");
-                                        uncondensedQ = true;
+                                        Dbug.Log(" .. Grouping and condensing misc data IDs; ");
+                                        const string miscGroupSplitKey = "//misc//";
+                                        string[] miscIDs = MiscDataIDGrouping(dataIDList, miscGroupSplitKey, true);
+
+                                        string preReBuiltDataIdList = "";
+                                        if (miscIDs.HasElements())
+                                            for (int mx = 0; mx < miscIDs.Length; mx++)
+                                            {
+                                                preReBuiltDataIdList += $"\n{miscIDs[mx]}";
+                                                if (mx + 1 < miscIDs.Length)
+                                                    Dbug.Log($":: {miscIDs[mx]};");
+                                                else Dbug.LogPart($":: {miscIDs[mx]}; ");
+                                            }
+                                        if (preReBuiltDataIdList.IsNotNE())
+                                            dataIDList = preReBuiltDataIdList;
                                     }
 
-                                    if (dataIDListWithRanges.IsNotNE() && !uncondensedQ)
+                                    // for regulars
+                                    else
                                     {
-                                        Dbug.LogPart($":: {dataIDListWithRanges}");
-                                        dataIDList = dataIDListWithRanges;
+                                        Dbug.Log(" ..  Condensing with ranges; ");
+                                        string dataIDListWithRanges = Extensions.CreateNumericDataIDRanges(dataIDList.Split(" "));
+                                        bool uncondensedQ = false;
+                                        if (dataIDList.Contains(dataIDListWithRanges))
+                                        {
+                                            Dbug.LogPart("Remains uncondensed; ");
+                                            uncondensedQ = true;
+                                        }
+
+                                        if (dataIDListWithRanges.IsNotNE() && !uncondensedQ)
+                                        {
+                                            Dbug.LogPart($":: {dataIDListWithRanges}");
+                                            dataIDList = dataIDListWithRanges;
+                                        }
                                     }
                                 }
+                                else Dbug.LogPart(" .. No data IDs to condense .."); 
                                 Dbug.LogPart($" .. Counted '{dataIDCount}' data IDs; ");
 
                                 // all printing here
-                                if (legendKey != miscPhrase || (legendKey == miscPhrase && dataIDList.IsNotNE()))
+                                if (!isMiscCategoryQ || (isMiscCategoryQ && dataIDList.IsNotNE()))
                                 {
                                     //Highlight(HSNL(0, 2) > 1, $"[{legendDef}] ('{dataIDCount}' IDs){Ind14}", $"[{legendDef}] ('{dataIDCount}' IDs)");
                                     Format($"[{legendDef}] ", ForECol.Highlight);
                                     Format($"<{dataIDCount}>{Ind14}", ForECol.Accent);
-                                    HSNLPrint(0, HSNL(0, 2).Clamp(0, 1));
+                                    if (isMiscCategoryQ)
+                                        NewLine();
+                                    else HSNLPrint(0, HSNL(0, 2).Clamp(0, 1));
 
                                     Format(dataIDList.Trim(), ForECol.Normal);
                                     NewLine(lx + 1 != legendKeys.Count ? 2 : 1);
@@ -1152,9 +1249,6 @@ namespace HCResourceLibraryApp.Layout
                             NewLine(HSNL(0, 2) > 1 ? 3 : 2);
                             FormatLine("-------", ForECol.Accent);
                             Highlight(false, $"Total Contents :: {allDataIds.Count}.", allDataIds.Count.ToString());
-                            //Highlight(false, $"Total Textures Added :: {allDataIds.Count}.", allDataIds.Count.ToString());
-
-                            //Format("All Data IDs found within library are displayed above.", ForECol.Accent);
                             Pause();
                         }
                         Dbug.EndLogging();
@@ -1438,13 +1532,297 @@ namespace HCResourceLibraryApp.Layout
         }
 
 
-        // civ display method and useful enum
-        static void DisplayCivResult(ConValInfo[] civDatas, CivDisplayType displayType)
+        // civ display method and useful enum -- public, for testing
+        public static void DisplayCivResults(ConValInfo[] civDatas, CivDisplayType displayType)
         {
-            NewLine();
-            Format($"WIP; Displaying CIV Results as '{displayType}' display", ForECol.Normal);
+            Dbug.StartLogging("SettingsPage.DisplayCivResults()");
+            if (civDatas.HasElements())
+            {
+                Dbug.Log($"Received ConValInfo array with '{civDatas.Length}' elements and a display type of '{displayType}'; ");
+                Dbug.Log("Fetching all data IDs and generating Legend Data instances from ConValInfos received; ");
+
+                // Get legend data from library
+                const string miscPhrase = "Miscellaneous", invalidatedTag = DataHandlerBase.Sep;
+                const string miscGroupSplitKey = "\\mSplit\\";
+                LegendData[] legends = Array.Empty<LegendData>();
+                if (_resLibrary.IsSetup())
+                {
+                    List<LegendData> allLegends = new();
+                    List<string> legendDefs = new();
+                    foreach (LegendData legDat in _resLibrary.Legends)
+                        if (legDat.IsSetup())
+                        {
+                            allLegends.Add(legDat);
+                            legendDefs.Add(legDat[0]);
+                        }
+
+                    allLegends.Add(new LegendData(miscPhrase, VerNum.None, miscPhrase));
+                    legendDefs.Add(miscPhrase);
+                    legendDefs = legendDefs.ToArray().SortWords();
+                    legends = new LegendData[legendDefs.Count];
+
+                    for (int ldx = 0; ldx < legendDefs.Count; ldx++)
+                    {
+                        LegendData aLegData = null;
+                        for (int lgx = 0; lgx < allLegends.Count && aLegData == null; lgx++)
+                        {
+                            if (allLegends[lgx][0] == legendDefs[ldx])
+                                aLegData = allLegends[lgx];
+                        }
+                        if (aLegData != null)
+                            legends[ldx] = aLegData;
+                    }                   
+                }
+                Dbug.Log($" -> Fetched '{legends.Length}' Legend Datas from ResLibrary; ");
+
+
+                // Categorize, print and indicate verification of data IDs
+                if (legends.HasElements())
+                {
+                    Dbug.Log($"Proceeding to categorize, print, and indicate verification of all IDs; Display type: {displayType}; ");
+                    Dbug.Log($"Any Data ID marked with '{invalidatedTag}' has been invalidated by CIV process; ");
+                    List<string> legendKeysList = new();
+                    foreach (LegendData ld in legends)
+                        legendKeysList.Add(ld.Key);
+
+                    Program.ToggleFormatUsageVerification();
+                    Dbug.NudgeIndent(true);
+                    for (int lx = 0; lx < legends.Length; lx++)
+                    {
+                        LegendData legDat = legends[lx];
+                        List<string> invalidDataIDsList = new();
+                        Dbug.Log($"Category '{legDat.Key}' [{legDat[0]}]");
+
+                        Dbug.NudgeIndent(true);
+                        string dataIDList = "";
+                        int dataIDCount = 0, dataIDinvalidatedCount = 0;
+                        bool isMiscCategoryQ = legDat.Key == miscPhrase;
+                        // obtain data IDs as a long string and mark all dependent on their verification status
+                        for (int cx = 0; cx < civDatas.Length; cx++)
+                        {
+                            string dataIDToPrint = "";
+                            ConValInfo civInfo = civDatas[cx];
+
+                            /// BYPASS ID or not?
+                            ///     Bypass if: 
+                            ///         is validated && focused Display
+                            ///         
+                            ///     Allow if:
+                            ///         not validated && focused Display
+                            ///         ... && not focused Display
+                            ///             validated && not focused Display
+                            ///             not validated && not focused Display
+                            ///         
+                            bool bypassIDToPrintq = civInfo.IsValidated && displayType == CivDisplayType.Focused;
+                            if (!bypassIDToPrintq)
+                            {
+                                // print numeric data IDs
+                                if (!isMiscCategoryQ)
+                                {
+                                    LogDecoder.DisassembleDataID(civInfo.OriginalDataID, out string dk, out string db, out _);
+                                    if (dk == legDat.Key)
+                                        dataIDToPrint = db;
+                                }
+
+                                // print wordy data IDs
+                                else
+                                {
+                                    LogDecoder.DisassembleDataID(civInfo.OriginalDataID, out string dk, out string db, out _);
+                                    if (dk.IsNE())
+                                        dataIDToPrint = db;
+                                    else
+                                    {
+                                        if (!legendKeysList.Contains(dk) && db.IsNotNE())
+                                            dataIDToPrint = civInfo.OriginalDataID;
+                                    }
+                                }
+
+                                
+                                if (!dataIDToPrint.IsNE())
+                                {
+                                    if (!civInfo.IsValidated)
+                                    {
+                                        invalidDataIDsList.Add($"{dataIDToPrint}");
+                                        dataIDToPrint = invalidatedTag + dataIDToPrint;
+                                        dataIDinvalidatedCount++;
+                                    }
+
+                                    Dbug.LogPart($"{dataIDToPrint} ");
+                                    dataIDList += $"{dataIDToPrint} ";
+                                    dataIDCount++;
+                                }
+                            }
+                        }
+
+                        // group misc data IDs and condense if allowed 
+                        string[] miscDataIDListWithRanges = null;
+                        if (isMiscCategoryQ)
+                        {
+                            Dbug.Log("; ");
+                            Dbug.Log("Splitting misc data IDs into letter groups; ");
+                            miscDataIDListWithRanges = MiscDataIDGrouping(dataIDList, miscGroupSplitKey, displayType == CivDisplayType.Compact, invalidatedTag, ' ', false);
+                            if (miscDataIDListWithRanges.HasElements())
+                                foreach (string mDataList in miscDataIDListWithRanges)
+                                Dbug.Log($":: {mDataList}; ");
+                        }
+
+                        // condense to ranges if allowed (Compact Only)
+                        if (displayType == CivDisplayType.Compact && !isMiscCategoryQ)
+                        {
+                            Dbug.Log(" ..  Condensing with ranges; ");
+                            string dataIDListWithRanges = Extensions.CreateNumericDataIDRanges(dataIDList.Split(" "), false);
+                            bool uncondensedQ = false;
+                            if (dataIDList.Contains(dataIDListWithRanges))
+                            {
+                                Dbug.LogPart("Remains uncondensed; ");
+                                uncondensedQ = true;
+                            }
+
+                            if (dataIDListWithRanges.IsNotNE() && !uncondensedQ)
+                            {
+                                Dbug.LogPart($":: {dataIDListWithRanges}");
+                                dataIDList = dataIDListWithRanges;
+                            }
+                        }
+                        Dbug.LogPart($" .. Counted '{dataIDCount}' data IDs, '{dataIDinvalidatedCount}' were invalidated; ");
+
+
+                        // all printing here
+                        if ((!isMiscCategoryQ && dataIDList.IsNotNE()) || (isMiscCategoryQ && dataIDList.IsNotNE()))
+                        {
+                            float percentValid = (float)(dataIDCount - dataIDinvalidatedCount) / dataIDCount * 100;
+                            Dbug.LogPart($"[{percentValid:0}%]; ");
+
+                            Format($"[{legDat[0]}] ", ForECol.Highlight);
+                            if (displayType != CivDisplayType.Focused)
+                                Format($"<{dataIDCount} | {percentValid:0}% valid>{Ind14}", ForECol.Accent);
+                            else Format($"<{dataIDCount}>{Ind14}", ForECol.Accent);
+                            HSNLPrint(0, HSNL(0, 2).Clamp(0, 1));
+
+                            string[] dataIDsToPrint = dataIDList.Split(' ');
+                            if (isMiscCategoryQ && miscDataIDListWithRanges.HasElements())
+                                dataIDsToPrint = miscDataIDListWithRanges;
+
+                            int countPrints = 0;
+                            foreach (string dataID in dataIDsToPrint)
+                            {
+                                if (dataID.IsNotNEW())
+                                {
+                                    const ForECol letterRangeCol = ForECol.Accent;
+                                    bool isMiscLetterRangeQ = dataID.StartsWith("[");
+                                    if (isMiscCategoryQ)
+                                        NewLine();
+
+                                    if (dataID.Contains(invalidatedTag))
+                                        Format($"{(countPrints == 0? "" : " ")}{dataID.Replace(invalidatedTag, "")}", isMiscLetterRangeQ ? letterRangeCol : ForECol.Incorrection);
+                                    else Format($"{(countPrints == 0 ? "" : " ")}{dataID}", isMiscLetterRangeQ ? letterRangeCol : ForECol.Correction);
+                                }
+                                if (!isMiscCategoryQ)
+                                    countPrints++;
+                            }
+                            NewLine(lx + 1 != legends.Length ? 2 : 1);
+                        }
+                        Dbug.Log($" //  End '{legDat.Key}'");
+                        Dbug.NudgeIndent(false);
+                    }
+                    Dbug.NudgeIndent(false);
+                    Program.ToggleFormatUsageVerification();
+
+                    /**
+                        for (int lx = 0; lx < legendKeys.Count; lx++)
+                        {
+                            string legendKey = legendKeys[lx];
+                            string legendDef = legendKey != miscPhrase ? legendDefs[lx].Replace($"{legendKey} ", "") : legendDefs[lx];
+                            Dbug.Log($"Category '{legendKey}' [{legendDef}]");
+
+                            Dbug.NudgeIndent(true);
+                            string dataIDList = "";
+                            int dataIDCount = 0;
+                            for (int dx = 0; dx < allDataIds.Count; dx++)
+                            {
+                                bool disableOrignalLogPrintQ = false;
+                                string datIDToPrint = "";
+                                string datID = allDataIds[dx];
+
+                                // print numeric data IDs
+                                if (legendKey != miscPhrase)
+                                {
+                                    if (!LogDecoder.IsNumberless(datID))
+                                    {
+                                        LogDecoder.DisassembleDataID(datID, out string dk, out string db, out _);
+                                        if (dk == legendKey)
+                                            datIDToPrint = db;
+                                    }
+                                }
+
+                                // print wordy data IDs (numberless)
+                                else
+                                {
+                                    if (LogDecoder.IsNumberless(datID))
+                                        datIDToPrint = datID;
+                                    else
+                                    {
+                                        LogDecoder.DisassembleDataID(datID, out string dk, out string db, out _);
+                                        if (!legendKeys.Contains(dk) && db.IsNotNE())
+                                        {
+                                            datIDToPrint = datID;
+                                                
+                                            disableOrignalLogPrintQ = true;
+                                            Dbug.LogPart($"<{datIDToPrint}> ");
+                                        }
+                                    }
+                                }
+
+                                if (!disableOrignalLogPrintQ)
+                                    Dbug.LogPart($"{datIDToPrint} ");
+                                if (datIDToPrint.IsNotNE())
+                                {
+                                    dataIDList += $"{datIDToPrint} ";
+                                    dataIDCount++;
+                                }
+                            }
+
+                            if (legendKey != miscPhrase)
+                            {
+                                Dbug.Log(" ..  Condensing with ranges; ");
+                                string dataIDListWithRanges = Extensions.CreateNumericDataIDRanges(dataIDList.Split(" "));
+                                bool uncondensedQ = false;
+                                if (dataIDList.Contains(dataIDListWithRanges))
+                                {
+                                    Dbug.LogPart("Remains uncondensed; ");
+                                    uncondensedQ = true;
+                                }
+
+                                if (dataIDListWithRanges.IsNotNE() && !uncondensedQ)
+                                {
+                                    Dbug.LogPart($":: {dataIDListWithRanges}");
+                                    dataIDList = dataIDListWithRanges;
+                                }
+                            }
+                            Dbug.LogPart($" .. Counted '{dataIDCount}' data IDs; ");
+
+                            // all printing here
+                            if (legendKey != miscPhrase || (legendKey == miscPhrase && dataIDList.IsNotNE()))
+                            {
+                                //Highlight(HSNL(0, 2) > 1, $"[{legendDef}] ('{dataIDCount}' IDs){Ind14}", $"[{legendDef}] ('{dataIDCount}' IDs)");
+                                Format($"[{legendDef}] ", ForECol.Highlight);
+                                Format($"<{dataIDCount}>{Ind14}", ForECol.Accent);
+                                HSNLPrint(0, HSNL(0, 2).Clamp(0, 1));
+
+                                Format(dataIDList.Trim(), ForECol.Normal);
+                                NewLine(lx + 1 != legendKeys.Count ? 2 : 1);
+                            }
+                            Dbug.Log($" //  End '{legendKey}'");
+                            Dbug.NudgeIndent(false);
+                        }
+                     
+                     */
+                }
+            }
+            else Dbug.Log("Received no ConValInfos data to create a display; ");
+            Dbug.EndLogging();
         }
-        enum CivDisplayType
+        public enum CivDisplayType
         {
             /// <summary>List every data ID, no sequential groups (no ranges). Color coding dependent on validation or invalidation.</summary>
             Expanded,
@@ -1452,6 +1830,60 @@ namespace HCResourceLibraryApp.Layout
             Compact,
             /// <summary>List only invalidated data IDs, no sequential groups (no ranges).</summary>
             Focused
+        }
+
+        static string[] MiscDataIDGrouping(string dataIDList, string groupSplitKey, bool condenseQ, string invalidatedTag = null, char splitChar = ' ', bool sortIDs = true, bool separateFromLetterRangeQ = true)
+        {
+            string[] miscGroupedAndSortedIDs = null;
+            string[] filteredDataIDs = null;
+            if (splitChar.IsNotNull() && dataIDList.IsNotNE())
+                filteredDataIDs = dataIDList.Split(splitChar, StringSplitOptions.RemoveEmptyEntries);
+
+            if (filteredDataIDs.HasElements() && groupSplitKey.IsNotNEW())
+            {
+                string miscDataIDList = "", partMiscDIDList = "", letterRange = "";
+                int dataIDCount = filteredDataIDs.Length;
+                int groupSize = dataIDCount / (dataIDCount / 10).Clamp(1, 5);
+                for (int mx = 0; mx < dataIDCount; mx++)
+                {
+                    string mDatId = filteredDataIDs[mx];
+                    bool endGroupingQ = mx + 1 == dataIDCount;    
+                    partMiscDIDList += $"{mDatId} ";
+                    if (mx % groupSize == 0 || endGroupingQ)
+                    {
+                        if (!letterRange.IsNE())
+                        {
+                            if (invalidatedTag.IsNotNEW())
+                                letterRange += $"{mDatId.Replace(invalidatedTag, "")[0]}]";
+                            else letterRange += $"{mDatId[0]}]";
+
+                            if (separateFromLetterRangeQ)
+                                miscDataIDList += $"{letterRange}{groupSplitKey}{partMiscDIDList}{groupSplitKey}";
+                            else miscDataIDList += $"{letterRange}{Ind24}{partMiscDIDList}{groupSplitKey}";
+                            partMiscDIDList = "";
+                        }
+
+                        if (!endGroupingQ)
+                        {
+                            string mDatIDForLetterTag = mDatId;
+                            if (miscDataIDList.IsNotNE())
+                                mDatIDForLetterTag = filteredDataIDs[mx + 1];
+
+                            if (invalidatedTag.IsNotNEW())
+                                letterRange = $"[{mDatIDForLetterTag.Replace(invalidatedTag, "")[0]}~";
+                            else letterRange = $"[{mDatIDForLetterTag[0]}~";
+                        }
+                    }
+                }
+
+                if (miscDataIDList.IsNotNE())
+                {
+                    if (condenseQ)
+                        miscGroupedAndSortedIDs = Extensions.CreateNumericDataIDRanges(miscDataIDList, groupSplitKey, ' ', sortIDs);
+                    else miscGroupedAndSortedIDs = miscDataIDList.Split(groupSplitKey, StringSplitOptions.RemoveEmptyEntries);
+                }
+            }
+            return miscGroupedAndSortedIDs;
         }
     }
 }

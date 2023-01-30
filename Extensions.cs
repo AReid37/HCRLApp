@@ -219,10 +219,10 @@ namespace HCResourceLibraryApp
             return fullStr;
         }
         /// <summary>
-        ///   Recieves an array of numbers (as strings) then condenses any sequences of numbers into ranges (Ex. '0 1 2 4' becomes '0~2 4')
+        ///   Recieves an array of numeric data IDs (as strings) then condenses any sequences of numbers into ranges (Ex. '0 1 2 4' becomes '0~2 4'). The numbers may be sorted before being condensed into ranges dependent on <paramref name="sortWordsQ"/>.
         /// </summary>
         /// <returns>A condensed string of numbers with number ranges. Is empty if no numbers were given.</returns>
-        public static string CreateNumericDataIDRanges(string[] numbers)
+        public static string CreateNumericDataIDRanges(string[] numbers, bool sortWordsQ = true)
         {
             string rangedNumbers = "";
             if (numbers.HasElements())
@@ -235,11 +235,10 @@ namespace HCResourceLibraryApp
                     if (numT.IsNotNEW())
                         fltNumbers.Add(numT);
 
-                if (fltNumbers.HasElements())
+                if (fltNumbers.HasElements() && sortWordsQ)
                     fltNumbers = fltNumbers.ToArray().SortWords();
-                Dbug.Log($"Filtered down to '{fltNumbers.Count}' numbers; Sorted numbers; Creating Ranges; ");
+                Dbug.Log($"Filtered down to '{fltNumbers.Count}' numbers; {(sortWordsQ? "Sorted numbers; " : "")}Creating Ranges; ");
                 Dbug.Log($"LEGEND :: Range Enter '{{' -- Range Exit '}}' -- Base Num '@#' --  End Range Num '!' -- Last Num Ends Range '>' -- Incompatibility Range Break '*' -- Range Indicators [' .]");
-                //Dbug.Log($"LEGEND :: Range Enter Key '{{' -- Range Exit Key '}}' -- Base Number 'b.# ' --  End Range Number 'e.#'");
 
                 string baseNumT = null, baseOddNumT = null;
                 bool withinRangeQ = false, withinOddRangeQ = false;
@@ -537,84 +536,6 @@ namespace HCResourceLibraryApp
                         }
                         
                     }
-                    /// 124_0 125_0:125_1:125_2:125_3 126_1 128_2 131_0:131_1.131_3:131_4 133_0 141_0:141_1:141_2 // End
-                    ///justPrintQ = false;
-                    ///if (prevEndNum + 1 == currEndNum)
-                    ///    Dbug.LogPart($":{currNumT}");
-                    ///else Dbug.LogPart($".{currNumT}");
-
-                    #region old-code
-                    //if (int.TryParse(currNumT, out int currNum))
-                    //{
-                    //    if (int.TryParse(prevNumT, out int prevNum))
-                    //    {
-                    //        /// IF this num is next in sequence; ELSE this num is beyond sequence 
-                    //        if (prevNum + 1 == currNum)
-                    //        {
-                    //            /// is not within range |
-                    //            if (!withinRangeQ)
-                    //            {
-                    //                Dbug.LogPart(" {");
-                    //                withinRangeQ = true;
-                    //                baseNumT = prevNum.ToString();
-
-                    //                Dbug.LogPart($"@{baseNumT}'{currNumT}");
-
-                    //                /// IF there is preceding sequences AND there is base sequence number: remove last-printed number in sequence
-                    //                if (rangedNumbers.IsNotNE() && baseNumT.IsNotNE())
-                    //                    rangedNumbers = rangedNumbers.Remove((rangedNumbers.Length - baseNumT.Length - 1).Clamp(0, rangedNumbers.Length - 1));
-
-                    //                /// IF more numbers follow: print base sequence number; ELSE print base sequence number and this/last number
-                    //                if (!lastNumberQ)
-                    //                    numToPrint = baseNumT;
-                    //                else
-                    //                {
-                    //                    Dbug.LogPart($"!}}> ");
-                    //                    numToPrint = $"{baseNumT},{currNum}";
-                    //                }
-
-                    //            }
-                    //            else
-                    //            {
-                    //                /// is within range | IF more numbers follow: don't print number; ELSE print sequence-ending/last number
-                    //                if (!lastNumberQ)
-                    //                    Dbug.LogPart($"'{currNumT}");
-                    //                else
-                    //                {
-                    //                    Dbug.LogPart($"'{currNumT}!}}> ");
-                    //                    numToPrint = "~" + currNumT;
-                    //                }
-                    //            }
-                    //        }
-                    //        else
-                    //        {
-                    //            /// IF was within range (IF sequence of 2: print as normal; IF number to print unset, sequence of 3+: print sequence-ending number)
-                    //            if (withinRangeQ)
-                    //            {
-                    //                if (int.TryParse(baseNumT, out int baseNum))
-                    //                    if (baseNum + 1 == prevNum)
-                    //                        numToPrint = $",{prevNumT},";
-                    //                if (numToPrint.IsNE())
-                    //                    numToPrint = $"~{prevNumT},";
-
-                    //                Dbug.LogPart($"!}}");
-                    //            }
-
-                    //            Dbug.LogPart($" {currNumT}");
-                    //            numToPrint += $"{currNumT},";
-
-                    //            withinRangeQ = false;
-                    //            baseNumT = null;
-                    //        }
-                    //    }
-                    //    else
-                    //    {
-                    //        Dbug.LogPart($" {currNumT}");
-                    //        numToPrint += $"{currNumT},";
-                    //    }
-                    //}
-                    #endregion
-
 
                     if (numToPrint.IsNotNE())
                         rangedNumbers += numToPrint;
@@ -660,18 +581,23 @@ namespace HCResourceLibraryApp
             }
         }
         /// <summary>
-        ///   Recieves a string of numbers and a separating characters then condenses any sequences of numbers into ranges (Ex. '0 1 2 4' becomes '0~2 4')
+        ///   Receives a string of numeric data IDs and a group-separating string that will seperate the given numeric range into different sequences of numbers. Each sequence of numbers is separately condensed into ranges by <see cref="CreateNumericDataIDRanges(string[], bool)"/> after being split into individual numbers using <paramref name="splitChar"/>. The number groups may be sorted before being condensed into ranges dependent on <paramref name="sortWordsQ"/>.
         /// </summary>
-        /// <returns>A condensed string of numbers with number ranges. Is empty if no numbers were given.</returns>
-        public static string CreateNumericDataIDRanges(string numbers, char splitChar)
+        /// <returns>An array of groups of condensed strings of numbers with numeric ranges. An empty array is returned if any parameters do not contain a valid value.</returns>
+        public static string[] CreateNumericDataIDRanges(string numbers, string groupSplitter, char splitChar, bool sortWordsQ = true)
         {
-            string rangedNumbers = "";
-            if (numbers.IsNotNEW() && splitChar.IsNotNull())
+            List<string> numberRanges = new();
+            if (numbers.IsNotNEW() && groupSplitter.IsNotNEW() && splitChar.IsNotNull())
             {
-                if (numbers.Contains(splitChar))
-                    rangedNumbers = CreateNumericDataIDRanges(numbers.Split(splitChar));
+                if (numbers.Contains(groupSplitter))
+                {
+                    string[] numRanges = numbers.Split(groupSplitter, StringSplitOptions.RemoveEmptyEntries);
+                    if (numRanges.HasElements())
+                        foreach (string aNumRange in numRanges)
+                            numberRanges.Add(CreateNumericDataIDRanges(aNumRange.Split(splitChar), sortWordsQ));
+                }
             }
-            return rangedNumbers;
+            return numberRanges.ToArray();
         }
         #endregion
 

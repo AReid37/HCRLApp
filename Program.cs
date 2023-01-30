@@ -11,8 +11,8 @@ namespace HCResourceLibraryApp
     // THE ENTRANCE POINT, THE CONTROL ROOM
     public class Program
     {
-        static readonly string consoleTitle = "High Contrast Resource Library App [v1.1.9a]";
-        static readonly string verLastPublishTested = "mid-v1.1.5";
+        static readonly string consoleTitle = "High Contrast Resource Library App [v1.1.9b]";
+        static readonly string verLastPublishTested = "mid-v1.1.9b";
         /// <summary>If <c>true</c>, the application launches for debugging/development. Otherwise, the application launches for the published version.</summary>
         public static readonly bool isDebugVersionQ = true;
         static readonly bool verifyFormatUsageBase = true;
@@ -61,7 +61,8 @@ namespace HCResourceLibraryApp
                 SettingsPage.GetPreferencesReference(preferences);
                 SettingsPage.GetResourceLibraryReference(resourceLibrary);
                 SettingsPage.GetContentValidatorReference(contentValidator);
-                LogLegendPage.GetResourceLibraryReference(resourceLibrary);                
+                LogLegendPage.GetResourceLibraryReference(resourceLibrary);
+                LibrarySearch.GetResourceLibraryReference(resourceLibrary);
 
                 // testing site
                 if (isDebugVersionQ)
@@ -92,7 +93,7 @@ namespace HCResourceLibraryApp
                         LogState("Main Menu");
                         Clear();
                         bool isValidMMOpt = ListFormMenu(out string mainMenuOptKey, "Main Menu", null, $"{Ind24}Option >> ", "a~g", true,
-                            "Logs Submission, Library Search, Log Legend View, Version Summaries, Generate Steam Log, Settings, Quit".Split(", "));
+                            "Logs Submission, Library Search (Rudimentary), Log Legend View, Version Summaries, Generate Steam Log, Settings, Quit".Split(", "));
                         MenuMessageQueue(mainMenuOptKey == null, false, null);
 
                         if (isValidMMOpt)
@@ -103,6 +104,9 @@ namespace HCResourceLibraryApp
                                 // logs submission page
                                 if (mainMenuOptKey.Equals("a"))
                                     LogSubmissionPage.OpenPage(resourceLibrary);
+                                /// rudimentary library search page
+                                else if (mainMenuOptKey.Equals("b"))
+                                    LibrarySearch.OpenPage();
                                 // log legend view page
                                 else if (mainMenuOptKey.Equals("c"))
                                     LogLegendPage.OpenPage();
@@ -120,7 +124,8 @@ namespace HCResourceLibraryApp
                             // quit
                             else
                             {
-                                TextLine("\n\nExiting Program");
+                                TextLine("\n\nExiting Program...");
+                                Wait(0.4f);
                                 mainMenuQ = false;
                             }
                         }
@@ -200,8 +205,7 @@ namespace HCResourceLibraryApp
 
         public static void RequireRestart()
         {
-            // for now
-            //SaveData();
+            LogState("Requiring Program Restart");
             AllowProgramRestart = true;
         }
         /// <summary>Note as "Page|Subpage" or "State|Substate"</summary>
@@ -231,10 +235,6 @@ namespace HCResourceLibraryApp
             if (savedDataQ)
                 FormatLine(discreteQ? "auto-save: S." : "Auto-saving data ... success.", discreteQ? ForECol.Accent : ForECol.Correction);
             else FormatLine(discreteQ? "auto-save: F." : "Auto-saving data ... failed.", discreteQ ? ForECol.Accent : ForECol.Incorrection);
-               
-            /// After saving data...
-            ///   The "previous self" states of the objects that have been saved should be updated to match what was just saved.
-            ///   By doing this, SaveData() cannot be triggered again from any check of ChangesMade() {in this situation, may also be perceived as "UnsavedChangesQ"}
 
             Wait(savedDataQ ? 2f : 5);
             return savedDataQ;
@@ -271,7 +271,7 @@ namespace HCResourceLibraryApp
 
         // TESTING STUFF
         static readonly bool runTest = false;
-        static readonly Tests testToRun = Tests.LogSubmissionPage_DisplayLogInfo_ErrorTester;
+        static readonly Tests testToRun = Tests.MiscRoom;
         enum Tests
         {
             /// <summary>For random tests that need their own space, but no specific test name (variable tests)</summary>
@@ -584,9 +584,9 @@ namespace HCResourceLibraryApp
                     {
                         @"C:\Users\ntrc2\source\repos\HCResourceLibraryApp\TextFileExtras\CIVTestingField",
                         @"C:\Users\ntrc2\source\repos\HCResourceLibraryApp\TextFileExtras\CIVTestingField\ExContents",
+                        @"C:\Users\ntrc2\source\repos\HCResourceLibraryApp\TextFileExtras\CIVTestingField\ExContents\ATVL",
+                        @"C:\Users\ntrc2\source\repos\HCResourceLibraryApp\TextFileExtras\CIVTestingField\ExContents\Ex1VL",
 
-                        //@"C:\Users\ntrc2\source\repos\HCResourceLibraryApp\TextFileExtras\CIVTestingField\ExContents\ATVL",
-                        //@"C:\Users\ntrc2\source\repos\HCResourceLibraryApp\TextFileExtras\CIVTestingField\ExContents\Ex1VL",
                         //@"C:\Users\ntrc2\source\repos\HCResourceLibraryApp\TextFileExtras\CIVTestingField\ExContents\Ex2VL",
                         //@"C:\Users\ntrc2\source\repos\HCResourceLibraryApp\TextFileExtras\CIVTestingField\ExContents\Ex3VL",
                         //@"C:\Users\ntrc2\source\repos\HCResourceLibraryApp\TextFileExtras\CIVTestingField\ExContents\Ex4VL",
@@ -629,38 +629,73 @@ namespace HCResourceLibraryApp
                             }
                             else
                             {
-                                verRange = new VerNum[2] { low, high };
-                                Text($"{low}, {high}");
+                                /// IF ..: (IF ..: choose one from range; ELSE create range between ranges); ELSE full version range
+                                if (Extensions.Random(0, 2) == 1)
+                                {
+                                    if (Extensions.Random(0, 1) == 0)
+                                        verRange = new VerNum[1] { new VerNum(Extensions.Random(low.AsNumber, high.AsNumber)) };
+                                    else 
+                                        verRange = new VerNum[2]
+                                        {
+                                            new VerNum(Extensions.Random(low.AsNumber, (low.AsNumber + high.AsNumber) / 2)), 
+                                            new VerNum(Extensions.Random((low.AsNumber + high.AsNumber) / 2, high.AsNumber))
+                                        };
+                                }
+                                else
+                                    verRange = new VerNum[2] { low, high };
+
+                                if (verRange.HasElements(2))
+                                    Text($"{verRange[0]}, {verRange[1]}");
+                                else Text(verRange[0].ToString());                 
                             }
                         }
                     }
                     TextLine($")\n{Ind14}Relative Folder Path :: {(aFolderPath + folderPathEnd).Clamp(50, "~", folderPathEnd, false).Replace(folderPathEnd, "")}");
                     TextLine($"{Ind14}File Extension :: {aFileExtension}");
+                    Text($"Press [Enter] to run CIV", Color.DarkGray);
+                    Pause();
                     NewLine();
 
 
                     if (contentValidator.Validate(verRange, new string[1] { aFolderPath }, new string[1] { aFileExtension }))
                     {
-                        TextLine("Post-CIV results; [Validated in green, Invalidated in Red]");
-                        if (contentValidator.CivInfoDock.HasElements())
+                        NewLine(2);
+                        for (int vx = 0; vx < 3; vx++)
                         {
-                            int nli = 0;
-                            foreach (ConValInfo cvi in contentValidator.CivInfoDock)
-                                if (cvi.IsSetup())
-                                {
-                                    if (nli >= 3)
-                                    {
-                                        NewLine();
-                                        nli = 0;
-                                    }
-                                    Text($"{cvi.DataID} ({cvi.OriginalDataID}){Ind24}", cvi.IsValidated ? Color.Green : Color.Red);
-                                    nli++;
-                                }
+                            SettingsPage.CivDisplayType displayType = (SettingsPage.CivDisplayType)vx;
+
+                            Important($"CIV Results - {displayType} View");
+                            HorizontalRule('-');
+                            SettingsPage.DisplayCivResults(contentValidator.CivInfoDock, displayType);
+                            HorizontalRule('-');
+
+                            Pause();
+                            NewLine(5);
                         }
+                        #region old code
+                        //TextLine("Post-CIV results; [Validated in green, Invalidated in Red]");
+                        //if (contentValidator.CivInfoDock.HasElements())
+                        //{
+                        //    int nli = 0;
+                        //    foreach (ConValInfo cvi in contentValidator.CivInfoDock)
+                        //        if (cvi.IsSetup())
+                        //        {
+                        //            if (nli >= 3)
+                        //            {
+                        //                NewLine();
+                        //                nli = 0;
+                        //            }
+                        //            Text($"{cvi.DataID} ({cvi.OriginalDataID}){Ind24}", cvi.IsValidated ? Color.Green : Color.Red);
+                        //            nli++;
+                        //        }
+                        //}
+                        //Pause();
+                        //NewLine(2);
+                        //TextLine("Do not continue usage of application after running this test!", Color.Orange);
+                        #endregion
                     }
                     else TextLine("CV did not have enough data to run CIV process...");
 
-                    Pause();
                     NewLine(2);
                     TextLine("Do not continue usage of application after running this test!", Color.Orange);
                 }
@@ -761,9 +796,29 @@ namespace HCResourceLibraryApp
                 /// Misc Room
                 else if (testToRun == Tests.MiscRoom)
                 {
+                    char miscKey = 'd';
+                    string miscTestName = "<None>";
+                    switch (miscKey)
+                    {
+                        case 'a':
+                            miscTestName = "Settings Page: Create Numeric Data ID Ranges";
+                            break;
+
+                        case 'b':
+                            miscTestName = "Log Decoder: Compare Non-wordy Data ID Parsing Functions";
+                            break;
+
+                        case 'c':
+                            miscTestName = "Extensions: str.Clamp(4 params) Variations";
+                            break;
+
+                        case 'd':
+                            miscTestName = "Page Base: Word Wrap Testing";
+                            break;
+                    }
+
                     /// DON'T DELETE THIS HEADER | provide test name
-                    TextLine("Extensions: str.Clamp(4 params) variations", Color.DarkGray);
-                    char miscKey = 'c';
+                    TextLine(miscTestName, Color.DarkGray);
 
                     #region miscA: settingsPage: CreateNumericDataIDRanges
                     if (miscKey == 'a')
@@ -778,7 +833,7 @@ namespace HCResourceLibraryApp
                         NewLine(2);
                         numbers = "20 22 30 31 32 33 34 35 36 37 39 40 41 42 43 45 46 48 57 58 60 61 62 64";
                         TextLine($"Creating range from numbers:\n\t{numbers}");
-                        TextLine($"  Result: {Extensions.CreateNumericDataIDRanges(numbers, ' ')}", resultCol);
+                        TextLine($"  Result: {Extensions.CreateNumericDataIDRanges(numbers.Split(" "))}", resultCol);
 
                         NewLine(2);
                         numbers = "56 57 59 60 61 64 66 69 70";
@@ -861,7 +916,7 @@ namespace HCResourceLibraryApp
                     }
                     #endregion
 
-                    #region miscC: extensions: str.Clamp(4 params) variations
+                    #region miscC: extensions: str.Clamp(4 params)variations
                     if (miscKey == 'c')
                     {
                         hasDebugQ = false;
@@ -919,6 +974,194 @@ namespace HCResourceLibraryApp
                                 }
                             }
                         }
+                    }
+                    #endregion
+
+                    #region miscD: pageBase: wordWrapTesting
+                    if (miscKey == 'd')
+                    {
+                        hasDebugQ = false;
+                        Color wrapLevelCol = Color.NavyBlue, wrapOff = Color.Gray;
+                        ForECol wrapOn = ForECol.Highlight;
+
+                        TextLine("The narrowest window settings required for this test.", Color.DarkGray);
+                        TextLine($"Word Wrapping off [{wrapOff}]; Word Wrapping On [{GetPrefsForeColor(wrapOn)}];");
+                        NewLine(2);
+
+                        bool disableExRepeatQ = true; // print both Format() and FormatLine() uses for same testing example?
+                        bool endExamples = false;
+                        for (int ex = 0; !endExamples; ex++)
+                        {
+                            char divChar = '\0';
+                            string wrapLevelText = "", exampleText = "";
+                            switch (ex)
+                            {
+                                case 0:
+                                    wrapLevelText = "Determine Wrapping Usage";
+                                    exampleText = "On basis of resource control: not every text requires wrapping; exhibit A.";
+                                    break;
+                                //                |-                   -                         -                        -          -| <--  clipped here (Ch:135 cuts to next line)
+                                case 1:
+                                    wrapLevelText = "Wrap Clipped Word to Next Line";
+                                    exampleText = "The first level wrapping test only requires a clipped word to be wholly displayed upon the next line.";
+                                    break;
+                                //                |-                   -                         -                        -          -|
+                                case 2:
+                                case 3:
+                                    wrapLevelText = "Wrap Word and Indent on Next Line";
+                                    if (ex == 2)
+                                        exampleText = "\tThere is a small amount of joy to have once a word wraps to the next line, however, an indentation is furthermore appreciated.";
+                                    //                |-                   -                         -                        -          -|
+                                    else
+                                    {
+                                        exampleText = "\t\t  Over-indenting isn't supported though. Further indents should be taken care of in another way... or just deal with it scrub!";
+                                        wrapLevelText += " II";
+                                    }
+                                    break;
+                                case 4:
+                                case 5:
+                                    wrapLevelText = "Breaking Apart Words that are too large";
+                                    if (ex == 4)
+                                    {
+                                        exampleText = "Sometimes words cannot be simply wrapped, they must be separated among multiple lines. For example a lengthy folder path: ";
+                                        exampleText +="'C:\\Documents\\TextCharacters\\En_Num_Letters\\AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz'. ";
+                                        exampleText +="These super-lengthy words need to be broken apart and have their remainders wrapped to the next lines.";
+                                    //                |-                   -                         -                        -          -|
+                                    }
+                                    else
+                                    {
+                                        wrapLevelText += " II";
+                                        exampleText = $"{Ind24}Here is another, but this time we are indented: ";
+                                        exampleText +="'C:\\Users\\TheConsumerOfMagicalConfections\\HyperDrive\\Pictures\\OtherProjects\\TextCharactersIcons\\Nums_Letters\\En_Letters_Nums\\RegularSizeCharacters\\LastUnnecessaryDirectory\\Boldened2.txt'";
+                                    //                |-                   -                         -                        -          -|
+                                    }
+                                    break;
+                                case 6:
+                                case 7:
+                                    wrapLevelText = "Dealing with Newline escape characters";
+                                    if (ex == 6)
+                                    {
+                                        exampleText = "While the tab escape character '\\t' is the equivalent of 8 spaces. The new line key '\\n' is a bit wonkier. Upon a newline: \n";
+                                        exampleText +="The wrapping should reset it's printing position to the start.";
+                                    //                |-                   -                         -                        -          -|
+                                    }
+                                    else
+                                    {
+                                        wrapLevelText += " II";
+                                        exampleText = "\tIf that works, then the next question is: \nHow does this work in an indented wrapping situation? Perfectly!";
+                                    //                |-                   -                         -                        -          -|
+                                    }
+                                    break;
+                                
+
+                                //                |-                   -                         -                        -          -|
+                                //                |-                   -                         -                        -          -|
+                                //                |-                   -                         -                        -          -|
+
+
+                                // end
+                                default: endExamples = true; break;
+                            }
+
+                            if (exampleText.IsNotNE() && wrapLevelText.IsNotNE() && !endExamples)
+                            {
+                                TextLine($"Lvl{ex + 1}: {wrapLevelText}", wrapLevelCol);
+                                //TextLine($"Examples as 'Text/TextLine()' for wrapping off, and 'Format/Formatline()' for wrapping on");                            
+
+                                // wrap prints here
+                                for (int wx = 0; wx < 2; wx++)
+                                {
+                                    bool wrapOnQ = wx == 1;
+                                    if (!disableExRepeatQ)
+                                        switch (wx)
+                                        {
+                                            case 0:
+                                                TextLine($"Using Text(), wrapping off", Color.DarkGray);
+                                                break;
+
+                                            case 1:
+                                                NewLine();
+                                                TextLine($"Using Format() and FormatLine(), wrapping ON", Color.DarkGray);
+                                                break;
+                                        }
+                                    else if (wx == 0)
+                                        TextLine("Using Text() [wrap off] vs. Format() [wrap ON]", Color.DarkGray);
+
+                                    /// IF ... test multiple texts wrapping; ELSE test single line wrapping
+                                    if (divChar.IsNotNull())
+                                    {
+                                        if (exampleText.Contains(divChar))
+                                        {
+                                            string[] manyExampleTexts = exampleText.Split(divChar, StringSplitOptions.RemoveEmptyEntries);
+                                            if (manyExampleTexts.HasElements())
+                                                for (int tx = 0; tx < 2; tx++)
+                                                {
+                                                    bool lineVariantQ = tx == 1;
+                                                    for (int ix = 0; ix < manyExampleTexts.Length; ix++)
+                                                    {
+                                                        bool lastExTextQ = ix + 1 == manyExampleTexts.Length;
+                                                        string anExampleText = manyExampleTexts[ix];
+                                                        if (wrapOnQ)
+                                                        {
+                                                            if (lastExTextQ && lineVariantQ)
+                                                            {
+                                                                if (!disableExRepeatQ)
+                                                                    FormatLine(anExampleText, wrapOn);
+                                                                else NewLine();
+                                                            }
+                                                            else Format(anExampleText, wrapOn);
+                                                        }
+                                                        else
+                                                        {                                                            
+                                                            Text(anExampleText, wrapOff);
+                                                            if (lastExTextQ)
+                                                            {
+                                                                if (!disableExRepeatQ)
+                                                                    NewLine();
+                                                                else ExampleDiv();
+                                                            }
+                                                        }
+                                                    }
+                                                    ExampleDiv();
+                                                }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        if (wrapOnQ)
+                                        {
+                                            Format(exampleText, wrapOn);
+                                            if (!disableExRepeatQ)
+                                            {
+                                                ExampleDiv();
+                                                FormatLine(exampleText, wrapOn);
+                                            }
+                                            else NewLine();
+                                        }
+                                        else
+                                        {
+                                            Text(exampleText, wrapOff);
+                                            if (!disableExRepeatQ)
+                                                NewLine();
+                                            else ExampleDiv();
+                                        }
+                                    }
+                                }
+
+
+                                Text(" >> Continue To Next Wrap Level [Enter] >> ", Color.DarkGray);
+                                Pause();
+                                NewLine(2);
+
+                                static void ExampleDiv()
+                                {
+                                    NewLine();
+                                    TextLine("----------", Color.DarkGray);
+                                }
+                            }                          
+                        }
+
+                        Text("End of Word Wrapping Tests...");
                     }
                     #endregion
                 }

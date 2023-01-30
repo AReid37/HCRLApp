@@ -232,7 +232,7 @@ namespace HCResourceLibraryApp.DataHandling
 				prevSummaryParts = _prevSummaryParts.ToArray();
 			return new SummaryData(_prevSummaryVersion, _prevTtaNumber, prevSummaryParts);
 		}
-		/// <summary>Has this instance of <see cref="ResContents"/> been initialized with the appropriate information?</summary>
+		/// <summary>Has this instance of <see cref="SummaryData"/> been initialized with the appropriate information?</summary>
 		/// <returns>A boolean stating whether the summary version, tta number, and summary parts have been given values, at minimum.</returns>
 		public override bool IsSetup()
 		{

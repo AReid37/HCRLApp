@@ -51,13 +51,17 @@ namespace HCResourceLibraryApp.Layout
         #region fields / props
         // PRIVATE \ PROTECTED
         static Preferences _preferencesRef;
-        static readonly string FormatUsageKey = "`";
+        const string FormatUsageKey = "`", WordWrapUsageKey = "▌";
+        const string WordWrapNewLineKey = "▌\\W/▐"; // ▌\W/▐
+        const int WordWrapIndentLim = 8; // equivalent of one '\t'
         const char DefaultTitleUnderline = cTHB;
         static string _menuMessage, _incorrectionMessage;
-        static bool _isMenuMessageInQueue, _isWarningMenuMessageQ;
+        static bool _isMenuMessageInQueue, _isWarningMenuMessageQ, _enableWordWrapQ = true;
+        static ForECol? _normalAlt, _highlightAlt;
 
 
         // PUBLIC
+        public const int PageSizeLimit = 500;
         /// <summary>Light Shade (░).</summary>
         public const char cLS = '\x2591';
         /// <summary>Medium Shade (▒).</summary>
@@ -98,9 +102,8 @@ namespace HCResourceLibraryApp.Layout
                 /// tbd...
                 _preferencesRef.GetScreenDimensions(out int tHeight, out int tWidth);
                 Console.SetWindowSize(tWidth, tHeight);
-                Console.SetBufferSize(tWidth, 500);
-                //Console.SetWindowSize(120, 30);
-                //Console.SetBufferSize(120, 9001);
+                Console.SetBufferSize(tWidth, 9001); /// this, while the library search page is in WIP version
+                //Console.SetBufferSize(tWidth, PageSizeLimit);
 
                 // minimal customization
                 CustomizeMinimal(MinimalMethod.List, _preferencesRef.Normal, _preferencesRef.Accent);
@@ -158,30 +161,34 @@ namespace HCResourceLibraryApp.Layout
             }
             return col;
         }
-        public static void Format(string text, ForECol foreElementCol)
+        public static void Format(string text, ForECol foreElementCol = ForECol.Normal)
         {
             if (text.IsNotNE())
             {
-                WordWrap(text);
+                text = WordWrap(text);
                 if (VerifyFormatUsage)
                 {
-                    Text(FormatUsageKey, Color.DarkGray);
+                    Text(FormatUsageKey, Color.DarkGray);                    
                     if (text.Contains("\n"))
                         text = text.Replace("\n", $"\n{FormatUsageKey}");
+                    if (text.Contains(WordWrapNewLineKey))
+                        text = text.Replace(WordWrapNewLineKey, $"\n{WordWrapUsageKey}");
                 }
                 Text(text, GetPrefsForeColor(foreElementCol));
             }
         }
-        public static void FormatLine(string text, ForECol foreElementCol)
+        public static void FormatLine(string text, ForECol foreElementCol = ForECol.Normal)
         {
             if (text.IsNotNE())
             {
-                WordWrap(text);
+                text = WordWrap(text);
                 if (VerifyFormatUsage)
                 {
-                    Text(FormatUsageKey, Color.DarkGray);
+                    Text(FormatUsageKey, Color.DarkGray);                    
                     if (text.Contains("\n"))
                         text = text.Replace("\n", $"\n{FormatUsageKey}");
+                    if (text.Contains(WordWrapNewLineKey))
+                        text = text.Replace(WordWrapNewLineKey, $"\n{WordWrapUsageKey}");
                 }
                 TextLine(text, GetPrefsForeColor(foreElementCol));
             }
@@ -190,7 +197,236 @@ namespace HCResourceLibraryApp.Layout
         public static string WordWrap(string text)
         {
             /// from 'left' to 'right - 1' char spaces
+            if (text.IsNotNE() && _enableWordWrapQ)
+            {
+                Dbug.DeactivateNextLogSession();
+                Dbug.StartLogging("PageBase.WordWrap(str)");
+                Dbug.Log($"Received text :: {text.Replace("\n", "\\n").Replace("\t", "\\t")}");
+
+                // -- First determine if word requires wrapping --
+                int wrapBuffer = Console.BufferWidth - (VerifyFormatUsage ? 1 : 0);
+                int wrapStartPos = Console.CursorLeft;
+
+                if (wrapBuffer - wrapStartPos <= text.Length)
+                {
+                    const string newLineReplace = "▌nL ", tabReplace = "        ";
+
+                    // -- Prep text to wrap --
+                    text = text.Replace("\n", newLineReplace).Replace("\t", tabReplace);
+                    Dbug.LogPart($"Wrapping Text: {wrapBuffer} spaces starting at '{wrapStartPos}'; ");
+                    Dbug.Log($"Replaced any newline escape characters (\\n) with '{newLineReplace}'; Replaced any 'tab' escape characters (\\t) with 8 spaces; ");
+
+                    // -- Separate words into bits --
+                    List<string> textsToWrap = new();
+                    string partTexts = "";
+                    bool wasSpaceCharQ = false;
+                    Dbug.Log("Separating text into wrappable pieces :: ");
+                    Dbug.NudgeIndent(true);
+                    Dbug.LogPart($" >|");
+                    for (int tx = 0; tx < text.Length; tx++)
+                    {
+                        char c = text[tx];
+                        bool isStartQ = tx == 0, isEndQ = tx + 1 == text.Length;
+                        bool isSpaceCharQ = c == ' ';
+
+                        if (!isStartQ)
+                        {
+                            if ((wasSpaceCharQ && !isSpaceCharQ) || isEndQ)
+                            {
+                                if (isEndQ)
+                                    partTexts += c.ToString();
+
+                                textsToWrap.Add(partTexts);
+                                Dbug.LogPart($"{partTexts}{(isEndQ ? "" : "|")}");
+                                partTexts = "";
+                            }
+                        }
+                        partTexts += c.ToString();
+                        wasSpaceCharQ = isSpaceCharQ;
+                    }
+                    Dbug.Log($"|< ");
+                    Dbug.NudgeIndent(false);
+
+
+                    // -- It's time to WRAP! --
+                    Dbug.Log("Words have been separated: proceeding to wrap words; ");
+                    if (textsToWrap.HasElements())
+                    { /// wrapping ... as to hide within...
+                        Dbug.NudgeIndent(true);
+                        Dbug.LogPart("> :|");
+                        string wrappedText = "";
+                        int currWrapPos = wrapStartPos;
+                        int wrapIndentLevel = 0;
+                        for (int wx = 0; wx < textsToWrap.Count; wx++)
+                        {
+                            bool isStartQ = wx == 0, isEndQ = wx + 1 == textsToWrap.Count;
+                            string wText = textsToWrap[wx];
+
+                            //if (isStartQ && wText.Replace(" ", "").IsNE() && currWrapPos < WordWrapIndentLim)
+                            //{
+                            //    wrapIndentLevel = Extensions.CountOccuringCharacter(wText, ' ').Clamp(0, WordWrapIndentLim);
+                            //    Dbug.LogPart($" [Ind{wrapIndentLevel}8] ");
+                            //}
+                            if (isStartQ && currWrapPos < WordWrapIndentLim)
+                            {
+                                if (wText.Replace(" ", "").IsNE())
+                                {
+                                    wrapIndentLevel = Extensions.CountOccuringCharacter(wText, ' ').Clamp(0, WordWrapIndentLim);
+                                    Dbug.LogPart($" [Ind{wrapIndentLevel}8] ");
+                                }
+                                else
+                                {
+                                    wrapIndentLevel = currWrapPos.Clamp(0, WordWrapIndentLim);
+                                    Dbug.LogPart($" [StrInd{wrapIndentLevel}8] ");
+                                }
+                            }
+
+
+                            /// IF printing this text will not exceed buffer width AND text to print is not newline: print text; ELSE...
+                            if (currWrapPos + wText.Length < wrapBuffer && !wText.Contains(newLineReplace))
+                            {
+                                wrappedText += wText;
+                                Dbug.LogPart($"{wText}");
+                            }
+                            /// IF ...; ELSE wrap text to next line OR print newline
+                            else
+                            {
+                                string wrapIndText = "";
+                                if (wrapIndentLevel > 0)
+                                {
+                                    for (int wix = 0; wix < wrapIndentLevel; wix++)
+                                        wrapIndText += " ";
+                                }
+
+                                /// IF text is not newline (...); ELSE print newline
+                                if (!wText.Contains(newLineReplace))
+                                {
+                                    /// IF text fits within buffer width: Normal word wrap; ELSE wrap and break word
+                                    if (wText.Length < wrapBuffer)
+                                    {
+                                        wText = wrapIndText + wText;
+
+                                        currWrapPos = 0;
+                                        if (VerifyFormatUsage)
+                                            wrappedText += $"{WordWrapNewLineKey}{wText}";
+                                        else wrappedText += $"\n{wText}";
+
+                                        Dbug.Log("|-> ");
+                                        Dbug.LogPart($" ->|{wText}");
+                                    }
+                                    else
+                                    {
+                                        int remainingSpace = wrapBuffer - currWrapPos;
+                                        int breakNWrapCount = ((wText.Length - remainingSpace) / wrapBuffer) + 1;
+                                        for (int wlx = 0; wlx <= breakNWrapCount; wlx++)
+                                        {
+                                            bool isRemainderQ = wlx == 0, isBreakEndQ = false;
+                                            int wTSubIndex = isRemainderQ ? 0 : remainingSpace + ((wlx - 1) * wrapBuffer) - ((wlx - 1) * wrapIndentLevel);
+                                            int wTSubLen = isRemainderQ ? remainingSpace : wrapBuffer - wrapIndentLevel;
+                                            string wTSubText = isRemainderQ ? "" : wrapIndText;
+
+                                            /// 
+                                            if (wText.Length > wTSubIndex)
+                                            {
+                                                if (wText.Length - wTSubIndex - 1 < wTSubLen)
+                                                {
+                                                    isBreakEndQ = true;
+                                                    wTSubText += wText.Substring(wTSubIndex);
+                                                    /// for debug vv
+                                                    wTSubLen = wText.Length - wTSubIndex - 1;
+                                                }
+                                                else wTSubText += wText.Substring(wTSubIndex, wTSubLen);
+                                            }
+
+                                            /// 
+                                            if (wTSubText.IsNotNE())
+                                            {
+                                                //Dbug.LogPart($"[ix{wTSubIndex}~{wTSubIndex + wTSubLen - 1}: {wTSubText}]");
+                                                string subTextIxRange = $"[ix{wTSubIndex}~{wTSubIndex + wTSubLen - 1}]";
+                                                if (isBreakEndQ)
+                                                {
+                                                    Dbug.LogPart($" =>|{subTextIxRange}{wTSubText}");
+                                                    if (VerifyFormatUsage)
+                                                        wrappedText += $"{WordWrapNewLineKey}{wTSubText}";
+                                                    else wrappedText += $"\n{wTSubText}";
+
+                                                    currWrapPos = wTSubLen;
+                                                    wText = "";
+                                                }
+                                                else
+                                                {
+                                                    if (isRemainderQ)
+                                                    {
+                                                        Dbug.Log($"{subTextIxRange}{wTSubText}|=> ");
+                                                        wrappedText += $"{wTSubText}";
+                                                    }
+                                                    else
+                                                    {
+                                                        Dbug.Log($" =>|{subTextIxRange}{wTSubText}|=> ");
+                                                        if (VerifyFormatUsage)
+                                                            wrappedText += $"{WordWrapNewLineKey}{wTSubText}";
+                                                        else wrappedText += $"\n{wTSubText}";
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    if (wText.Equals(newLineReplace))
+                                    {
+                                        currWrapPos = 0;
+                                        wText = wrapIndText;
+
+                                        Dbug.Log("|>> ");
+                                        Dbug.LogPart($" >>|{wText}");
+                                        if (VerifyFormatUsage)
+                                            wrappedText += $"{WordWrapNewLineKey}{wText}";
+                                        else wrappedText += $"\n{wText}";
+                                    }
+                                    else //if (wText.EndsWith(newLineReplace))
+                                    {
+                                        currWrapPos = 0;
+
+                                        string fltWText = wText.Replace(newLineReplace, "");
+                                        Dbug.Log($"{fltWText}|<> ");
+
+                                        wText = wrapIndText;
+                                        Dbug.LogPart($" <>|{wText}");
+
+                                        if (VerifyFormatUsage)
+                                            wrappedText += $"{fltWText}{WordWrapNewLineKey}{wText}";
+                                        else wrappedText += $"{fltWText}\n{wText}";
+                                    }
+                                }
+                            }
+                            if (!isEndQ)
+                                Dbug.LogPart("|");
+                            currWrapPos += wText.Length;
+                        }
+                        Dbug.Log("|: <");
+                        Dbug.NudgeIndent(false);
+
+
+                        // return wrapped text
+                        Dbug.Log($"Finshed wrapping text :: {wrappedText.Replace("\n", $"{newLineReplace.Trim()}{cRHB}")}");
+                        text = wrappedText;
+                    }
+                }
+                else Dbug.Log($"This text does not require wrapping: '{wrapBuffer - wrapStartPos - text.Length}' character spaces remain after printing this text.");
+                Dbug.EndLogging();
+            }
             return text;
+        }
+        public static void ToggleWordWrappingFeature(bool? enabledQ = null)
+        {
+            if (enabledQ.HasValue)
+                _enableWordWrapQ = enabledQ.Value;
+            else
+            {
+                _enableWordWrapQ = !_enableWordWrapQ;
+            }
         }
         /// <summary>
         ///     Highlights words or phrases within a larger text.
@@ -253,6 +489,21 @@ namespace HCResourceLibraryApp.Layout
                     textWords = testWordsCompile.ToArray();
                 }
 
+
+                /// set custom colors if possible
+                ForECol fecNormal = ForECol.Normal, fecHighlight = ForECol.Highlight;
+                if (_normalAlt.HasValue || _highlightAlt.HasValue)
+                {
+                    if (_normalAlt.HasValue)
+                        fecNormal = _normalAlt.Value;
+                    if (_highlightAlt.HasValue)
+                        fecHighlight = _highlightAlt.Value;
+
+                    _normalAlt = null;
+                    _highlightAlt = null;
+                }
+
+                /// print and highlight words
                 for (int c = 0; c < textWords.Length; c++)
                 {
                     Dbug.LogPart($".. |");
@@ -277,8 +528,8 @@ namespace HCResourceLibraryApp.Layout
                                     if (word == subKey)
                                     {
                                         if (!end || !newLine)
-                                            Format(replacePhrase, ForECol.Highlight);
-                                        else FormatLine(replacePhrase, ForECol.Highlight);
+                                            Format(replacePhrase, fecHighlight);
+                                        else FormatLine(replacePhrase, fecHighlight);
                                         Dbug.LogPart($"'[{replacePhrase}]'");
                                     }
 
@@ -290,20 +541,20 @@ namespace HCResourceLibraryApp.Layout
                                         string[] splitWord = word.Split(subKey);
                                         if (splitWord[0].IsNotNE())
                                         {
-                                            Format(splitWord[0], ForECol.Normal);
+                                            Format(splitWord[0], fecNormal);
                                             Dbug.LogPart($"{splitWord[0]}");
                                         }
 
                                         if (!splitWord[1].IsNotNE() && end && newLine)
-                                            FormatLine(replacePhrase, ForECol.Highlight);
-                                        else Format(replacePhrase, ForECol.Highlight);
+                                            FormatLine(replacePhrase, fecHighlight);
+                                        else Format(replacePhrase, fecHighlight);
                                         Dbug.LogPart($"[{replacePhrase}]");
 
                                         if (splitWord[1].IsNotNE())
                                         {
                                             if (!end || !newLine)
-                                                Format(splitWord[1], ForECol.Normal);
-                                            else FormatLine(splitWord[1], ForECol.Normal);
+                                                Format(splitWord[1], fecNormal);
+                                            else FormatLine(splitWord[1], fecNormal);
                                             Dbug.LogPart($"{splitWord[1]}");
                                         }
 
@@ -317,8 +568,8 @@ namespace HCResourceLibraryApp.Layout
                         else
                         {
                             if (!end || !newLine)
-                                Format(word, ForECol.Normal);
-                            else FormatLine(word, ForECol.Normal);
+                                Format(word, fecNormal);
+                            else FormatLine(word, fecNormal);
                             Dbug.Log($"format normal word >> '{word}' (on newline? {end && newLine})");
                         }
 
@@ -329,6 +580,12 @@ namespace HCResourceLibraryApp.Layout
 
 
             Dbug.EndLogging();
+        }
+        /// <summary>Temporarily changes the foreground element colors used on the next call to <see cref="Highlight(bool, string, string[])"/></summary>
+        public static void ChangeNextHighlightColors(ForECol normalAlt, ForECol highlightAlt)
+        {
+            _normalAlt = normalAlt;
+            _highlightAlt = highlightAlt;
         }
         /// <summary>Input placeholder character limit: 50 characters. <br></br>Placeholder color cannot be changed.</summary>
         public static string StyledInput(string placeholder)
@@ -382,7 +639,28 @@ namespace HCResourceLibraryApp.Layout
                 NewLine(numOfNewLines);
             }
         }
-
+        /// <summary>Width Sensitive Line Length.</summary>
+        /// <returns>A line length number between a given range dependent on Width Scale of console window.</returns>
+        public static int WSLL(int minimumLL, int maximumLL)
+        {
+            int lineLengthNum = 0;
+            if (minimumLL <= maximumLL && _preferencesRef != null)
+            {
+                float range = maximumLL - minimumLL;
+                /// x -> variable prefs width factor
+                /// n -> minimum prefs width factor
+                /// m -> maximum prefs width factor
+                /// rngFac --> range factor (must be value between 0 and 1)
+                /// 
+                /// Formula synthesis
+                ///     > m - n = fixed factor range (denominator)
+                ///     > x - n = variable range (numerator)
+                ///     > rngFac = (x - n) / (m - n)
+                float rangeFactor = (_preferencesRef.WidthScale.GetScaleFactorW() - DimWidth.Thin.GetScaleFactorW()) / (DimWidth.Fill.GetScaleFactorW() - DimWidth.Thin.GetScaleFactorW());
+                lineLengthNum = minimumLL + (int)(rangeFactor * range);
+            }
+            return lineLengthNum;
+        }
 
 
         // -- -- Validations -- --
