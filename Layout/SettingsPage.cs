@@ -1024,11 +1024,13 @@ namespace HCResourceLibraryApp.Layout
                                 Clear();
                                 Title(titleText, subMenuUnderline, 1);
                                 Important($"CIV Results - {civDisplayStyle} View");
-                                HorizontalRule('-');
 
+                                // should i display civ parameters somewhere here as well?  perhaps....
+
+                                HorizontalRule('-');
                                 DisplayCivResults(_contentValidator.CivInfoDock, civDisplayStyle);
-
                                 HorizontalRule('-');
+
                                 Highlight(true, $"Percentage of contents verified: {_contentValidator.ValidationPercentage:0.0}% of '{contentCount}' contents.", $"{_contentValidator.ValidationPercentage:0.0}%");
                                 NewLine();
 
@@ -1691,15 +1693,32 @@ namespace HCResourceLibraryApp.Layout
                         }
 
                         // group misc data IDs and condense if allowed 
-                        string[] miscDataIDListWithRanges = null;
+                        List<string> miscDataIDListWithRanges = new();
                         if (isMiscCategoryQ)
                         {
                             Dbug.Log("; ");
                             Dbug.Log("Splitting misc data IDs into letter groups; ");
-                            miscDataIDListWithRanges = MiscDataIDGrouping(dataIDList, miscGroupSplitKey, displayType == CivDisplayType.Compact, invalidatedTag, ' ', false);
-                            if (miscDataIDListWithRanges.HasElements())
-                                foreach (string mDataList in miscDataIDListWithRanges)
-                                Dbug.Log($":: {mDataList}; ");
+                            string[] preMiscDataIDListWithRanges = MiscDataIDGrouping(dataIDList, miscGroupSplitKey, displayType == CivDisplayType.Compact, invalidatedTag, ' ', false);
+                            if (preMiscDataIDListWithRanges.HasElements())
+                                foreach (string mDataList in preMiscDataIDListWithRanges)
+                                {
+                                    bool brokenToPartsQ = false;
+                                    string dbgText = "";
+                                    if (mDataList.Contains(' '))
+                                    {
+                                        string[] mDataListParts = mDataList.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                                        if (mDataListParts.HasElements())
+                                        {
+                                            brokenToPartsQ = true;
+                                            dbgText = $"Broken into '{mDataListParts.Length}' data ID bits; ";
+                                            miscDataIDListWithRanges.AddRange(mDataListParts);
+                                        }
+                                    }
+
+                                    if (!brokenToPartsQ)
+                                        miscDataIDListWithRanges.Add(mDataList);
+                                    Dbug.Log($":: {mDataList}; {dbgText}");
+                                }
                         }
 
                         // condense to ranges if allowed (Compact Only)
@@ -1726,18 +1745,18 @@ namespace HCResourceLibraryApp.Layout
                         // all printing here
                         if ((!isMiscCategoryQ && dataIDList.IsNotNE()) || (isMiscCategoryQ && dataIDList.IsNotNE()))
                         {
-                            float percentValid = (float)(dataIDCount - dataIDinvalidatedCount) / dataIDCount * 100;
-                            Dbug.LogPart($"[{percentValid:0}%]; ");
+                            float percentValid = ((float)(dataIDCount - dataIDinvalidatedCount)) / dataIDCount * 100f;
+                            Dbug.LogPart($"[{percentValid:0.#}% valid]; ");
 
                             Format($"[{legDat[0]}] ", ForECol.Highlight);
                             if (displayType != CivDisplayType.Focused)
-                                Format($"<{dataIDCount} | {percentValid:0}% valid>{Ind14}", ForECol.Accent);
+                                Format($"<{dataIDCount} | {(int)percentValid}% valid>{Ind14}", ForECol.Accent);
                             else Format($"<{dataIDCount}>{Ind14}", ForECol.Accent);
                             HSNLPrint(0, HSNL(0, 2).Clamp(0, 1));
 
                             string[] dataIDsToPrint = dataIDList.Split(' ');
                             if (isMiscCategoryQ && miscDataIDListWithRanges.HasElements())
-                                dataIDsToPrint = miscDataIDListWithRanges;
+                                dataIDsToPrint = miscDataIDListWithRanges.ToArray();
 
                             int countPrints = 0;
                             foreach (string dataID in dataIDsToPrint)
@@ -1746,12 +1765,19 @@ namespace HCResourceLibraryApp.Layout
                                 {
                                     const ForECol letterRangeCol = ForECol.Accent;
                                     bool isMiscLetterRangeQ = dataID.StartsWith("[");
-                                    if (isMiscCategoryQ)
+                                    string miscIDPad = isMiscCategoryQ ? " " : "";
+
+                                    /// {\n}[A~Z]...
+                                    if (isMiscCategoryQ && isMiscLetterRangeQ)
                                         NewLine();
 
                                     if (dataID.Contains(invalidatedTag))
-                                        Format($"{(countPrints == 0? "" : " ")}{dataID.Replace(invalidatedTag, "")}", isMiscLetterRangeQ ? letterRangeCol : ForECol.Incorrection);
-                                    else Format($"{(countPrints == 0 ? "" : " ")}{dataID}", isMiscLetterRangeQ ? letterRangeCol : ForECol.Correction);
+                                        Format($"{(countPrints == 0? "" : " ")}{dataID.Replace(invalidatedTag, "")}{miscIDPad}", isMiscLetterRangeQ ? letterRangeCol : ForECol.Incorrection);
+                                    else Format($"{(countPrints == 0 ? "" : " ")}{dataID}{miscIDPad}", isMiscLetterRangeQ ? letterRangeCol : ForECol.Correction);
+
+                                    /// ...[A~Z]{\n}
+                                    if (isMiscCategoryQ && isMiscLetterRangeQ)
+                                        NewLine();
                                 }
                                 if (!isMiscCategoryQ)
                                     countPrints++;

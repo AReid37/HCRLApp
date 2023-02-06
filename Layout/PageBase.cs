@@ -199,7 +199,7 @@ namespace HCResourceLibraryApp.Layout
             /// from 'left' to 'right - 1' char spaces
             if (text.IsNotNE() && _enableWordWrapQ)
             {
-                //Dbug.DeactivateNextLogSession();
+                Dbug.DeactivateNextLogSession();
                 Dbug.StartLogging("PageBase.WordWrap(str)");
                 Dbug.Log($"Received text :: {text.Replace("\n", "\\n").Replace("\t", "\\t")}");
 

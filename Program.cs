@@ -11,8 +11,8 @@ namespace HCResourceLibraryApp
     // THE ENTRANCE POINT, THE CONTROL ROOM
     public class Program
     {
-        static readonly string consoleTitle = "High Contrast Resource Library App [v1.1.9c]";
-        static readonly string verLastPublishTested = "v1.1.9c";
+        static readonly string consoleTitle = "High Contrast Resource Library App [v1.1.9d]";
+        static readonly string verLastPublishTested = "v1.1.9d";
         /// <summary>If <c>true</c>, the application launches for debugging/development. Otherwise, the application launches for the published version.</summary>
         public static readonly bool isDebugVersionQ = true;
         static readonly bool verifyFormatUsageBase = true;
@@ -230,12 +230,13 @@ namespace HCResourceLibraryApp
         public static bool SaveData(bool discreteQ)
         {
             LogState("Saving Data");
-            bool savedDataQ = dataHandler.SaveToFile(preferences, logDecoder, contentValidator, resourceLibrary);
             NewLine(2);
             Format($"{saveIcon}\t", ForECol.Accent);
+
+            bool savedDataQ = dataHandler.SaveToFile(preferences, logDecoder, contentValidator, resourceLibrary);            
             if (savedDataQ)
-                FormatLine(discreteQ? "auto-save: S." : "Auto-saving data ... success.", discreteQ? ForECol.Accent : ForECol.Correction);
-            else FormatLine(discreteQ? "auto-save: F." : "Auto-saving data ... failed.", discreteQ ? ForECol.Accent : ForECol.Incorrection);
+                Format(discreteQ? "auto-save: S." : "Auto-saving data ... success.", discreteQ? ForECol.Accent : ForECol.Correction);
+            else Format(discreteQ? "auto-save: F." : "Auto-saving data ... failed.", discreteQ ? ForECol.Accent : ForECol.Incorrection);
 
             Wait(savedDataQ ? 2f : 5);
             return savedDataQ;
@@ -272,7 +273,7 @@ namespace HCResourceLibraryApp
 
         // TESTING STUFF
         static readonly bool runTest = false;
-        static readonly Tests testToRun = Tests.MiscRoom;
+        static readonly Tests testToRun = Tests.ContentValidator_Validate;
         enum Tests
         {
             /// <summary>For random tests that need their own space, but no specific test name (variable tests)</summary>
