@@ -256,24 +256,35 @@ namespace HCResourceLibraryApp.Layout
                                         DrawPixel(Color.Black, inkToUse.Value.inkPattern.Value, inkToUse.Value.inkCol);
                                     else DrawPixel(inkToUse.Value.inkCol);
                                 }
-                                else DrawPixel(Color.Black);
+                                //else DrawPixel(Color.Black);
+                                else
+                                {
+                                    if (csix + 1 < styleLine.Length)
+                                        DrawPixel(Color.Black);
+                                        //Text("  ");
+                                    //else Text(":");
+                                }
+
                             }
 
                             //lineIsAsWideAsBufferQ = bufferWidth <= lineWidth;
                             lineIsAsWideAsBufferQ = bufferWidth <= trueLineWidth;
 
                             /// a bit of debug
+                            //NewLine();
                             //if (bufferWidth <= lineWidth)
                             //    Text(" [BW <= LW] ", Color.Red);
                             //if (bufferWidth <= trueLineWidth)
                             //    Text(" [BW <= TLW] ", Color.Maroon);
                             //if (endOfStyleQ)
                             //    Text(" [END] ", Color.Magenta);
+                            //NewLine();
                         }
 
                         //if (chosenStyle[csi] != null)
                         if (chosenStyle[csi] != null && (!lineIsAsWideAsBufferQ || endOfStyleQ))
                             NewLine();
+                            //TextLine("n", Color.Orange);
                     }
                 }
 

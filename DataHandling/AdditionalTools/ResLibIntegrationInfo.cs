@@ -37,10 +37,11 @@ namespace HCResourceLibraryApp.DataHandling
             }
         }
 
-        /// <returns>A boolean relaying whether there is an info type, relevant info has bee provided for type, and info of the connecting base content has been provided.</returns>
+        /// <returns>A boolean relaying whether there is an info type, relevant info has been provided for type, and info of the connecting base content has been provided.</returns>
         public bool IsSetup()
         {
-            return !infoType.IsNone() && ((adtOptName.IsNotNE() && adtDataIDs.IsNotNE()) || (updDataID.IsNotNE() && updShortDesc.IsNotNE())) && connectionName.IsNotNE() && connectionDataID.IsNotNE();
+            /// adtOptName is the only one that doesn't require information
+            return !infoType.IsNone() && (adtDataIDs.IsNotNE() || (updDataID.IsNotNE() && updShortDesc.IsNotNE())) && connectionName.IsNotNE() && connectionDataID.IsNotNE();
         }
     }
 }

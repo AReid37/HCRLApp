@@ -11,8 +11,8 @@ namespace HCResourceLibraryApp
     // THE ENTRANCE POINT, THE CONTROL ROOM
     public class Program
     {
-        static readonly string consoleTitle = "High Contrast Resource Library App [v1.1.9b]";
-        static readonly string verLastPublishTested = "mid-v1.1.9b";
+        static readonly string consoleTitle = "High Contrast Resource Library App [v1.1.9c]";
+        static readonly string verLastPublishTested = "v1.1.9c";
         /// <summary>If <c>true</c>, the application launches for debugging/development. Otherwise, the application launches for the published version.</summary>
         public static readonly bool isDebugVersionQ = true;
         static readonly bool verifyFormatUsageBase = true;
@@ -45,7 +45,7 @@ namespace HCResourceLibraryApp
                 // setup                
                 /// program function
                 Console.Title = consoleTitle + (isDebugVersionQ? " (debug)" : "");
-                Tools.DisableWarnError = !isDebugVersionQ? DisableWE.Warnings /*Disable.All*/ : DisableWE.None;
+                Tools.DisableWarnError = !isDebugVersionQ? DisableWE.All : DisableWE.None;
                 /// data
                 dataHandler = new DataHandlerBase();
                 preferences = new Preferences();
@@ -150,7 +150,8 @@ namespace HCResourceLibraryApp
             while (restartProgram);
 
             Dbug.EndLogging();
-            TextLine($"\n\n**REMEMBER** Test the published version of the application frequently!!\n\tVersion last tested: {verLastPublishTested}".ToUpper(), Color.White);
+            if (isDebugVersionQ)
+                TextLine($"\n\n**REMEMBER** Test the published version of the application frequently!!\n\tVersion last tested: {verLastPublishTested}".ToUpper(), Color.White);
 
             // report all warnings and errors into dbug file??  interesting idea....
             Dbug.StartLogging("Report Caught Errors and Warnings");
@@ -615,7 +616,7 @@ namespace HCResourceLibraryApp
                     /// ORIGINAL VALUE
                     ///     folderPaths[Extensions.Random(0, folderPaths.Length - 1)]
                     ///     
-                    string aFolderPath = folderPaths[Extensions.Random(0, folderPaths.Length - 1)];
+                    string aFolderPath = /*ContentValidator.FolderPathDisabledToken +*/ folderPaths[Extensions.Random(0, folderPaths.Length - 1)];
                     string aFileExtension = fileExtensions[Extensions.Random(0, fileExtensions.Length - 1)];
                     VerNum[] verRange = null;
                     if (resourceLibrary.IsSetup())
@@ -1020,6 +1021,7 @@ namespace HCResourceLibraryApp
                                     break;
                                 case 4:
                                 case 5:
+                                case 6:
                                     wrapLevelText = "Breaking Apart Words that are too large";
                                     if (ex == 4)
                                     {
@@ -1028,33 +1030,56 @@ namespace HCResourceLibraryApp
                                         exampleText +="These super-lengthy words need to be broken apart and have their remainders wrapped to the next lines.";
                                     //                |-                   -                         -                        -          -|
                                     }
-                                    else
+                                    else if (ex == 5)
                                     {
                                         wrapLevelText += " II";
-                                        exampleText = $"{Ind24}Here is another, but this time we are indented: ";
+                                        exampleText =$"{Ind24}Here is another, but this time we are indented: ";
                                         exampleText +="'C:\\Users\\TheConsumerOfMagicalConfections\\HyperDrive\\Pictures\\OtherProjects\\TextCharactersIcons\\Nums_Letters\\En_Letters_Nums\\RegularSizeCharacters\\LastUnnecessaryDirectory\\Boldened2.txt'";
                                     //                |-                   -                         -                        -          -|
                                     }
+                                    else
+                                    {
+                                        wrapLevelText += " III";
+                                        exampleText = $"{Ind24}Again indented, in another case where the word itself matches screen width: ";
+                                        exampleText +=@"'C:\Users\JalapenoFaceBusiness\Documents\TheHistoryOfPeppersAtWarWithOmnivores.png'";
+                                     //                |-                   -                         -                        -          -|
+                                    }
                                     break;
-                                case 6:
                                 case 7:
+                                case 8:
+                                case 9:
                                     wrapLevelText = "Dealing with Newline escape characters";
-                                    if (ex == 6)
+                                    if (ex == 7)
                                     {
                                         exampleText = "While the tab escape character '\\t' is the equivalent of 8 spaces. The new line key '\\n' is a bit wonkier. Upon a newline: \n";
                                         exampleText +="The wrapping should reset it's printing position to the start.";
                                     //                |-                   -                         -                        -          -|
                                     }
-                                    else
+                                    else if (ex == 8)
                                     {
                                         wrapLevelText += " II";
                                         exampleText = "\tIf that works, then the next question is: \nHow does this work in an indented wrapping situation? Perfectly!";
                                     //                |-                   -                         -                        -          -|
                                     }
+                                    else
+                                    {
+                                        wrapLevelText += " III";
+                                        exampleText = "  In some rarer instances, an 'in-text' newline is placed at the end of a string \n where it is not required. Those newlines are removed and the nature of wrapping will take care of the rest.";
+                                    //                |-                   -                         -                        -          -|
+                                    }
                                     break;
-                                
-
+                                case 10:
+                                    wrapLevelText = $"Multi-printed line wrapping";
+                                    exampleText = "For some lines% text is printed% multiple time% before requiring% a wrap.% This %is% one% of those% examples.% Things should% continue as normal!";
+                                    divChar = '%';
+                                    break;
                                 //                |-                   -                         -                        -          -|
+                                case 11:
+                                    wrapLevelText = $"Indented multi-printed line wrapping (with long word)";
+                                    exampleText = "Ex.2: %";
+                                    exampleText+=@"'C:\Users\JalapenoFaceBusiness\Documents\TheHistoryOfPeppersAtWarWithCold.bt";
+                                    divChar = '%';
+                                    break;
                                 //                |-                   -                         -                        -          -|
                                 //                |-                   -                         -                        -          -|
 
@@ -1112,7 +1137,7 @@ namespace HCResourceLibraryApp
                                                             else Format(anExampleText, wrapOn);
                                                         }
                                                         else
-                                                        {                                                            
+                                                        {         
                                                             Text(anExampleText, wrapOff);
                                                             if (lastExTextQ)
                                                             {
@@ -1122,9 +1147,9 @@ namespace HCResourceLibraryApp
                                                             }
                                                         }
                                                     }
-                                                    ExampleDiv();
                                                 }
                                         }
+                                        ExampleDiv();
                                     }
                                     else
                                     {

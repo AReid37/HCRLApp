@@ -2,14 +2,22 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net5.0</TargetFramework>
+    <TargetFramework>net5.0-windows</TargetFramework>
     <PackageIcon>HCINC-L6 (Acronym).png</PackageIcon>
+    <Version>1.1.9.3</Version>
+    <StartupObject></StartupObject>
+    <FileVersion>1.1.9.3</FileVersion>
+    <ApplicationIcon>HCINC-L6 (Acronym).ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
     <Compile Remove="TextFileExtras\CIVTestingField\ExContents\NoAccess\**" />
     <EmbeddedResource Remove="TextFileExtras\CIVTestingField\ExContents\NoAccess\**" />
     <None Remove="TextFileExtras\CIVTestingField\ExContents\NoAccess\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="HCINC-L6 (Acronym).ico" />
   </ItemGroup>
 
   <ItemGroup>

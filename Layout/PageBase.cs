@@ -199,12 +199,12 @@ namespace HCResourceLibraryApp.Layout
             /// from 'left' to 'right - 1' char spaces
             if (text.IsNotNE() && _enableWordWrapQ)
             {
-                Dbug.DeactivateNextLogSession();
+                //Dbug.DeactivateNextLogSession();
                 Dbug.StartLogging("PageBase.WordWrap(str)");
                 Dbug.Log($"Received text :: {text.Replace("\n", "\\n").Replace("\t", "\\t")}");
 
                 // -- First determine if word requires wrapping --
-                int wrapBuffer = Console.BufferWidth - (VerifyFormatUsage ? 1 : 0);
+                int wrapBuffer = Console.BufferWidth - 1;
                 int wrapStartPos = Console.CursorLeft;
 
                 if (wrapBuffer - wrapStartPos <= text.Length)
@@ -262,11 +262,6 @@ namespace HCResourceLibraryApp.Layout
                             bool isStartQ = wx == 0, isEndQ = wx + 1 == textsToWrap.Count;
                             string wText = textsToWrap[wx];
 
-                            //if (isStartQ && wText.Replace(" ", "").IsNE() && currWrapPos < WordWrapIndentLim)
-                            //{
-                            //    wrapIndentLevel = Extensions.CountOccuringCharacter(wText, ' ').Clamp(0, WordWrapIndentLim);
-                            //    Dbug.LogPart($" [Ind{wrapIndentLevel}8] ");
-                            //}
                             if (isStartQ && currWrapPos < WordWrapIndentLim)
                             {
                                 if (wText.Replace(" ", "").IsNE())
@@ -304,20 +299,32 @@ namespace HCResourceLibraryApp.Layout
                                     /// IF text fits within buffer width: Normal word wrap; ELSE wrap and break word
                                     if (wText.Length < wrapBuffer)
                                     {
-                                        wText = wrapIndText + wText;
+                                        bool justFitsQ = wText.Length + currWrapPos == wrapBuffer && isEndQ;
+
+                                        if (!justFitsQ)
+                                            wText = wrapIndText + wText;
 
                                         currWrapPos = 0;
-                                        if (VerifyFormatUsage)
-                                            wrappedText += $"{WordWrapNewLineKey}{wText}";
-                                        else wrappedText += $"\n{wText}";
+                                        if (!justFitsQ)
+                                        {
+                                            if (VerifyFormatUsage)
+                                                wrappedText += $"{WordWrapNewLineKey}{wText}";
+                                            else wrappedText += $"\n{wText}";
 
-                                        Dbug.Log("|-> ");
-                                        Dbug.LogPart($" ->|{wText}");
+                                            Dbug.Log("|-> ");
+                                            Dbug.LogPart($" ->|{wText}");
+                                        }
+                                        else
+                                        {
+                                            wrappedText += wText;
+
+                                            Dbug.LogPart($"|{wText}|-- ");
+                                        }
                                     }
                                     else
                                     {
                                         int remainingSpace = wrapBuffer - currWrapPos;
-                                        int breakNWrapCount = ((wText.Length - remainingSpace) / wrapBuffer) + 1;
+                                        int breakNWrapCount = ((wText.Length - remainingSpace) / (wrapBuffer - wrapIndentLevel)) + 1;
                                         for (int wlx = 0; wlx <= breakNWrapCount; wlx++)
                                         {
                                             bool isRemainderQ = wlx == 0, isBreakEndQ = false;
@@ -325,7 +332,8 @@ namespace HCResourceLibraryApp.Layout
                                             int wTSubLen = isRemainderQ ? remainingSpace : wrapBuffer - wrapIndentLevel;
                                             string wTSubText = isRemainderQ ? "" : wrapIndText;
 
-                                            /// 
+                                            /// IF text length is greater than splitIndex: 
+                                            ///     (IF text after splitIndex is under splitLength: get remaining text; ELSE substring text from splitIndex at splitLength length);
                                             if (wText.Length > wTSubIndex)
                                             {
                                                 if (wText.Length - wTSubIndex - 1 < wTSubLen)
@@ -338,10 +346,11 @@ namespace HCResourceLibraryApp.Layout
                                                 else wTSubText += wText.Substring(wTSubIndex, wTSubLen);
                                             }
 
-                                            /// 
+                                            /// IF obtained subText: 
+                                            ///     (IF last break: print last of text and continue regular wrapping;
+                                            ///     ELSE (IF first break: print remainder of text and continue wrap-n-break; ELSE print part of text and continue wrap-n-break) )
                                             if (wTSubText.IsNotNE())
                                             {
-                                                //Dbug.LogPart($"[ix{wTSubIndex}~{wTSubIndex + wTSubLen - 1}: {wTSubText}]");
                                                 string subTextIxRange = $"[ix{wTSubIndex}~{wTSubIndex + wTSubLen - 1}]";
                                                 if (isBreakEndQ)
                                                 {
@@ -374,6 +383,7 @@ namespace HCResourceLibraryApp.Layout
                                 }
                                 else
                                 {
+                                    /// IF text to wrap is only newline: simulate newline; ELSE simulate newline and print remaining texts
                                     if (wText.Equals(newLineReplace))
                                     {
                                         currWrapPos = 0;
@@ -408,10 +418,11 @@ namespace HCResourceLibraryApp.Layout
                         Dbug.Log("|: <");
                         Dbug.NudgeIndent(false);
 
-
                         // return wrapped text
                         Dbug.Log($"Finshed wrapping text :: {wrappedText.Replace("\n", $"{newLineReplace.Trim()}{cRHB}")}");
                         text = wrappedText;
+
+                        Dbug.Log("LEGEND ///  Word divider  |  //  Start|End  > :|: <  //  Wrap  ->  (Just Fits  --)  //  Break'N'Wrap  =>  //  NewLine  >>  (with word  <>)  /// END LEGEND");
                     }
                 }
                 else Dbug.Log($"This text does not require wrapping: '{wrapBuffer - wrapStartPos - text.Length}' character spaces remain after printing this text.");

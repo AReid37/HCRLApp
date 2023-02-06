@@ -45,11 +45,7 @@ namespace HCResourceLibraryApp.Layout
 
             if (libraryIsSetup)
             {
-                FormatLine("Press [Enter] to exit search page. Enter any key to switch toggle sorting. ", ForECol.Accent);
-                Format($"Enter a number to select a content from below: ");
-                int cursorLeft = Console.CursorLeft;
-                int cursorTop = Console.CursorTop;
-                NewLine();
+                NewLine(3);
 
                 // alphabetically sort res contents
                 List<ResContents> resContents = new();
@@ -99,10 +95,14 @@ namespace HCResourceLibraryApp.Layout
                 }
                 HorizontalRule(subMenuUnderline);
 
-                Wait(0.1f);
-                Console.CursorLeft = cursorLeft;
-                Console.CursorTop = cursorTop;
-                Wait(0.1f);
+                Wait(0.05f);
+                Console.CursorLeft = 0;
+                Console.CursorTop = 0;
+                Wait(0.05f);
+
+                NewLine(4);
+                FormatLine("Press [Enter] to exit search page. Enter any key to toggle sorting style. ", ForECol.Accent);
+                Format($"Enter a number to select a content from below: ");
 
                 // input validation
                 if (StyledInput("###").IsNotNE())

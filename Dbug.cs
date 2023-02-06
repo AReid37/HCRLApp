@@ -13,7 +13,7 @@ namespace HCResourceLibraryApp
         // IDEA -- Give Dbug.cs file-writing ability so that debug's can be logged and viewed outside of IDE
         //          ^^ only if a file does not exist with this functionality ... Checked >> FILE DOES NOT EXIST
         const int indentSize = 4, nestLimitNum = 2;
-        static bool relayDbugLogs, ongoingNestedLogsQ, ignoreNextSessionQ, ignoreNestedSessionQ, deactivateNextSessionQ;
+        static bool relayDbugLogs, ongoingNestedLogsQ, ignoreNextSessionQ, ignoreNestedSessionQ, deactivateNextSessionQ, deactivateNestedSessionQ;
         static string sessionName, nestedSessionName;
         static string partialLog;
         static int countSessions = 0, nestedBaseIndentLevel = 0;
@@ -175,7 +175,11 @@ namespace HCResourceLibraryApp
             }
 
             if (deactivateNextSessionQ)
-                deactivateNextSessionQ = false;
+            {
+                if (deactivateNestedSessionQ)
+                    deactivateNestedSessionQ = false;
+                else deactivateNextSessionQ = false;
+            }
         }
         /// <summary>Place before any <see cref="StartLogging"/> to skip logging this session into the Debug Ouput window.</summary>
         /// <remarks>Must not be used at the same time as <see cref="DeactivateNextLogSession"/>.</remarks>
@@ -188,9 +192,12 @@ namespace HCResourceLibraryApp
         /// <remarks>Must not be used at the same time as <see cref="IgnoreNextLogSession"/>.</remarks>
         public static void DeactivateNextLogSession()
         {
-            //ignoreNextSessionQ = true;
             if (!ignoreNextSessionQ)
+            {
+                if (deactivateNextSessionQ)
+                    deactivateNestedSessionQ = true;
                 deactivateNextSessionQ = true;
+            }
         }
         /// <summary>Unaffected by <see cref="IgnoreNextLogSession"/> and <see cref="DeactivateNextLogSession"/> calls.</summary>
         public static void SingleLog(string logSessionName, string log)

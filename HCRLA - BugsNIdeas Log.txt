@@ -40,7 +40,7 @@
 
 [X] 4# Each category within 'Settings->ConInt->ViewAllDataIDs' should show how many Data IDs they contain
 
-[ ] 5# The Miscellaneous category within 'Settings->ConInt->ViewAllDataIDs' can seperate its IDs into alphanumeric groups when there are many of them. Ex, A-M group and N-Z group.
+[X] 5# The Miscellaneous category within 'Settings->ConInt->ViewAllDataIDs' can seperate its IDs into alphanumeric groups when there are many of them. Ex, A-M group and N-Z group.
 
 [ ] 6# Fuse Legend View and Summary View pages into one ('Log Legends and Summaries').
 
@@ -58,4 +58,6 @@
 
 [X] 12# Version reversion may only allow the ability to clear the library's data if only one version's data exists (instead of shunning the user to add more data).
 
-[ ] 13# ...
+[X] 13# Content Validator's 'Folder Paths' parameter could also allow enabling/disabling a certain folder path during the CIV process. A much better approach than to keep adding and removing folder paths for each CIV process.
+
+[ ] 14# ...

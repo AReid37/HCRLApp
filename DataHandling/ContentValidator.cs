@@ -38,6 +38,7 @@ namespace HCResourceLibraryApp.DataHandling
         // public 
         /// <summary>Replaces the space character (' ') when expanding data IDs for validating content files.</summary>
         public const string SpaceReplace = "_";
+        public const string FolderPathDisabledToken = "[fdpEn:Fl]";
 
         
         // props
@@ -261,7 +262,7 @@ namespace HCResourceLibraryApp.DataHandling
                 foreach (string folderPath in folderPaths)
                 {                    
                     DirectoryInfo fPathInfo = new(folderPath);
-                    Dbug.Log($"Received folder path :: {folderPath} [{(fPathInfo.Exists? "Exists" : "D.N.E!")}]");
+                    Dbug.Log($"Received folder path :: {folderPath} [{(fPathInfo.Exists? "Exists" : (fPathInfo.ToString().StartsWith(FolderPathDisabledToken) ? "Disabled" : "D.N.E!"))}]");
                     if (fPathInfo.Exists)
                     {
                         allFoldersList.Add(fPathInfo);
@@ -323,16 +324,11 @@ namespace HCResourceLibraryApp.DataHandling
                                     List<string> deepSubDirs = new();
                                     foreach (DirectoryInfo dir in subDirs)
                                     {
-                                        bool addDir = true;
                                         string dirName = $"{dir}";
                                         if (dir.Attributes != FileAttributes.Directory)
-                                        {
-                                            addDir = false;
-                                            dirName += $" {{SKIPPED}} [Attributes: {dir.Attributes}]";
-                                        }
+                                            dirName += $" [Attributes: {dir.Attributes}]";
 
-                                        if (addDir)
-                                            allFoldersList.Add(dir);
+                                        allFoldersList.Add(dir);
                                         deepSubDirs.Add(dirName);
                                     }
                                     deepSubDirs = deepSubDirs.ToArray().SortWords();

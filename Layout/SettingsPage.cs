@@ -575,6 +575,8 @@ namespace HCResourceLibraryApp.Layout
 
 
                         // CIV info review display
+                        const string FPDTRep = "(Omit) "; /// folder path disabled token replacement
+                        int countOmittedFolderPaths = 0;
                         bool createdDisplayQ = false;
                         if (HSNL(0, 2) > 0)
                             Title("CIV Parameters Review", subMenuUnderline);
@@ -613,11 +615,19 @@ namespace HCResourceLibraryApp.Layout
                             FormatLine("Folder Paths", heading3Col);
                             if (folderPaths.HasElements())
                             {
+                                countOmittedFolderPaths = 0;
                                 for (int fpx = 0; fpx < folderPaths.Count; fpx++)
                                 {
-                                    Format($"{fpx + 1,-2}|", ForECol.Normal);
-                                    FormatLine(folderPaths[fpx], ForECol.Highlight);
+                                    string folderPath = folderPaths[fpx];
+                                    if (!folderPath.StartsWith(ContentValidator.FolderPathDisabledToken))
+                                    {
+                                        Format($"{fpx + 1 - countOmittedFolderPaths,-2}|", ForECol.Normal);
+                                        FormatLine(folderPath, ForECol.Highlight);
+                                    }
+                                    else countOmittedFolderPaths++;                                    
                                 }
+                                if (countOmittedFolderPaths > 0)
+                                    FormatLine($"Excluding '{countOmittedFolderPaths}' folder paths from CIV process.", ForECol.Accent);
                             }
                             else FormatLine("1 |(none)", ForECol.Normal);
                             NewLine();
@@ -755,7 +765,7 @@ namespace HCResourceLibraryApp.Layout
                                         {
                                             if (fPath.Length > folderCondensingDist)
                                             {
-                                                string shortFPath = fPath.Clamp((folderCondensingDist / 2) - endPeekNum, "...");
+                                                string shortFPath = fPath.Replace(ContentValidator.FolderPathDisabledToken, FPDTRep).Clamp((folderCondensingDist / 2) - endPeekNum, "...");
                                                 shortFPath += fPath.Clamp(folderCondensingDist / 2, null, fPath.Substring(fPath.Length - endPeekNum).ToString(), false);
                                                 fPathsCondensed.Add(shortFPath);
                                             }
@@ -766,8 +776,10 @@ namespace HCResourceLibraryApp.Layout
                                         List(OrderType.Ordered_Numeric, fPathsCondensed.ToArray());
                                         NewLine();
 
-                                        FormatLine($"{Ind14}An existing folder path may be removed by using their list number shown above.", ForECol.Accent);
-                                        Format($"{Ind14}Remove/submit folder path >> ", ForECol.Normal);
+                                        //FormatLine($"{Ind14}An existing folder path may be removed by using their list number.", ForECol.Accent);
+                                        //FormatLine($"{Ind14}Toggle usability or remove a folder path by using their list number above.", ForECol.Accent);
+                                        FormatLine($"{Ind14}An existing folder path may be edited by using their list number.", ForECol.Accent);
+                                        Format($"{Ind14}Edit/remove/submit folder path >> ", ForECol.Normal);
                                         placeHolder = $"#  /OR/  " + placeHolder;
                                     }
                                     else
@@ -827,7 +839,7 @@ namespace HCResourceLibraryApp.Layout
                                                     {
                                                         if (!fetchedFolderInfo.Exists)
                                                             IncorrectionMessageQueue($"Folder path '{fetchedFolderPath}' does not exist");
-                                                        else IncorrectionMessageQueue($"This folder path is a sub-folder to an existing folder path in list");
+                                                        else IncorrectionMessageQueue($"This folder path is a sub-folder to an existing (enabled) folder path in list");
                                                     }
                                                 }
                                                 else IncorrectionMessageQueue("This exact folder path already exists within folder paths list");
@@ -859,9 +871,29 @@ namespace HCResourceLibraryApp.Layout
                                             Format($"{Ind24}Added new item to folder paths list:\n{Ind34}{folderPaths[^1]}.", ForECol.Correction);
                                         else
                                         {
-                                            string removedPath = folderPaths[folderIx];
-                                            folderPaths.RemoveAt(folderIx);
-                                            Format($"{Ind24}Removed folder path #{folderIx + 1} from paths list:\n{Ind34}{removedPath}.", ForECol.Correction);
+                                            NewLine();
+                                            FormatLine($"{Ind14}Press [Enter] to enable/disable usage of this folder path.", ForECol.Accent);
+                                            Format($"{Ind14}Remove / toggle usability of this folder path >> ");
+                                            if (StyledInput("#a /OR/ __").IsNE())
+                                            {
+                                                string editedFPath = folderPaths[folderIx];
+                                                bool disabledFPq = true;
+                                                if (editedFPath.StartsWith(ContentValidator.FolderPathDisabledToken))
+                                                {
+                                                    editedFPath = editedFPath.Replace(ContentValidator.FolderPathDisabledToken, "");
+                                                    disabledFPq = false;
+                                                }
+                                                else editedFPath = ContentValidator.FolderPathDisabledToken + editedFPath;
+
+                                                folderPaths[folderIx] = editedFPath;
+                                                Format($"{Ind24}{(disabledFPq? "Disabled" : "Enabled")} folder path #{folderIx + 1} in paths list: \n{Ind34}{editedFPath.Replace(ContentValidator.FolderPathDisabledToken, FPDTRep)}.", ForECol.Correction);
+                                            }
+                                            else
+                                            {
+                                                string removedPath = folderPaths[folderIx];
+                                                folderPaths.RemoveAt(folderIx);
+                                                Format($"{Ind24}Removed folder path #{folderIx + 1} from paths list:\n{Ind34}{removedPath}.", ForECol.Correction);
+                                            }
                                         }
                                         Pause();
                                     }
@@ -926,11 +958,15 @@ namespace HCResourceLibraryApp.Layout
                                 {
                                     NewLine();
                                     /// check data before running CIV
-                                    bool readyToRunCIVQ = folderPaths.HasElements() && fileExtensions.HasElements();
+                                    bool readyToRunCIVQ = folderPaths.HasElements() && fileExtensions.HasElements() && countOmittedFolderPaths < folderPaths.Count;
                                     if (!readyToRunCIVQ)
                                     {
                                         if (folderPaths.HasElements())
-                                            IncorrectionMessageQueue("At least one file extension is required before running CIV.");
+                                        {
+                                            if (countOmittedFolderPaths >= folderPaths.Count)
+                                                IncorrectionMessageQueue("At least one folder path must be enabled to run CIV.");
+                                            else IncorrectionMessageQueue("At least one file extension is required before running CIV.");
+                                        }
                                         else IncorrectionMessageQueue("At least one folder path is required before running CIV.");
                                     }
 
@@ -1488,7 +1524,7 @@ namespace HCResourceLibraryApp.Layout
                                     if (yesNo)
                                     {
                                         NewLine();
-                                        Highlight(true, $"\t\b\b\b\bEnter the phrase '{clearLibPhrase}' below to clear library shelves.", clearLibPhrase);
+                                        Highlight(true, $"{Ind24}Enter the phrase '{clearLibPhrase}' below to clear library shelves.", clearLibPhrase);
                                         Format($"{Ind24}Phrase to reset library >> ", ForECol.Warning);
                                         input = StyledInput(null);                                  
                                     }

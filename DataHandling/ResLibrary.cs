@@ -935,12 +935,12 @@ namespace HCResourceLibraryApp.DataHandling
 
                 Dbug.Log($"Encoded ResLibrary? {noIssue}");
                 encodedQ = noIssue;
-
-                if (encodedQ)
-                    SetPreviousSelf();
             }
             else Dbug.Log("Not enough data within ResLibrary to proceed with encoding; ");
-            
+
+            if (encodedQ)
+                SetPreviousSelf();
+
             Dbug.EndLogging();
             return encodedQ;
         }
