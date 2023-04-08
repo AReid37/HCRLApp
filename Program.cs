@@ -11,7 +11,7 @@ namespace HCResourceLibraryApp
     // THE ENTRANCE POINT, THE CONTROL ROOM
     public class Program
     {
-        static readonly string consoleTitle = "High Contrast Resource Library App [v1.1.9d]";
+        static readonly string consoleTitle = "High Contrast Resource Library App [v1.2.0]";
         static readonly string verLastPublishTested = "v1.1.9d";
         /// <summary>If <c>true</c>, the application launches for debugging/development. Otherwise, the application launches for the published version.</summary>
         public static readonly bool isDebugVersionQ = true;
@@ -61,8 +61,9 @@ namespace HCResourceLibraryApp
                 SettingsPage.GetPreferencesReference(preferences);
                 SettingsPage.GetResourceLibraryReference(resourceLibrary);
                 SettingsPage.GetContentValidatorReference(contentValidator);
-                LogLegendPage.GetResourceLibraryReference(resourceLibrary);
+                LogLegendNSummaryPage.GetResourceLibraryReference(resourceLibrary);
                 LibrarySearch.GetResourceLibraryReference(resourceLibrary);
+                GenSteamLogPage.GetResourceLibraryReference(resourceLibrary);
 
                 // testing site
                 if (isDebugVersionQ)
@@ -84,22 +85,22 @@ namespace HCResourceLibraryApp
                         /// Main Menu
                         /// ->  Logs Submission
                         /// ->  Library Search
-                        /// ->  Log Legend View
-                        /// ->  Version Summaries
+                        /// ->  Log Legend View     --> Log Legends and Summaries
+                        /// ->  Version Summaries   ^^
                         /// ->  Generate Steam Log
                         /// ->  Settings Page
                         ///     Quit
 
                         LogState("Main Menu");
                         Clear();
-                        bool isValidMMOpt = ListFormMenu(out string mainMenuOptKey, "Main Menu", null, $"{Ind24}Option >> ", "a~g", true,
-                            "Logs Submission, Library Search (Rudimentary), Log Legend View, Version Summaries, Generate Steam Log, Settings, Quit".Split(", "));
+                        bool isValidMMOpt = ListFormMenu(out string mainMenuOptKey, "Main Menu", null, $"{Ind24}Option >> ", "a~f", true,
+                            "Logs Submission, Library Search (Rudimentary), Log Legend and Summaries, Generate Steam Log, Settings, Quit".Split(", "));
                         MenuMessageQueue(mainMenuOptKey == null, false, null);
 
                         if (isValidMMOpt)
                         {
                             // other options
-                            if (!mainMenuOptKey.Contains('g'))
+                            if (!mainMenuOptKey.Contains('f'))
                             {
                                 // logs submission page
                                 if (mainMenuOptKey.Equals("a"))
@@ -107,11 +108,14 @@ namespace HCResourceLibraryApp
                                 /// rudimentary library search page
                                 else if (mainMenuOptKey.Equals("b"))
                                     LibrarySearch.OpenPage();
-                                // log legend view page
+                                // log legend and summaries view page
                                 else if (mainMenuOptKey.Equals("c"))
-                                    LogLegendPage.OpenPage();
+                                    LogLegendNSummaryPage.OpenPage();
+                                // generate steam log page
+                                else if (mainMenuOptKey.Equals("d"))
+                                    GenSteamLogPage.OpenPage();
                                 // settings page
-                                else if (mainMenuOptKey.Equals("f"))
+                                else if (mainMenuOptKey.Equals("e"))
                                     SettingsPage.OpenPage();
 
                                 else
@@ -273,7 +277,7 @@ namespace HCResourceLibraryApp
 
         // TESTING STUFF
         static readonly bool runTest = false;
-        static readonly Tests testToRun = Tests.ContentValidator_Validate;
+        static readonly Tests testToRun = Tests.LogSubmissionPage_DisplayLogInfo_AllTester;
         enum Tests
         {
             /// <summary>For random tests that need their own space, but no specific test name (variable tests)</summary>

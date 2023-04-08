@@ -42,13 +42,13 @@
 
 [X] 5# The Miscellaneous category within 'Settings->ConInt->ViewAllDataIDs' can seperate its IDs into alphanumeric groups when there are many of them. Ex, A-M group and N-Z group.
 
-[ ] 6# Fuse Legend View and Summary View pages into one ('Log Legends and Summaries').
+[X] 6# Fuse Legend View and Summary View pages into one ('Log Legends and Summaries').
 
-[ ] 7# When displaying the decoded version logs, if there is a decode issue, the text may also display or highlight where the error occured when possible (highlight or note where in the text the issue occured).
+[.] 7# When displaying the decoded version logs, if there is a decode issue, the text may also display or highlight where the error occured when possible (highlight or note where in the text the issue occured).
 
 [X] 8# Within Log Submission Page, encoding save data can be triggered once the main submission page is being exited, rather than after each submitted version log. This allows a proper [file] reversion of log 'session' and greatly decreases any bloating of the Dbug session flush file.
 
-[ ] 9# Reversion; Version Reversion, specific version removal is possible, however only if the version's contents is not referenced in future version (Either allowed or denied reversion thereafter; Generally useful only the case of overwriting a log version's info)
+[.] 9# Reversion; Version Reversion, specific version removal is possible, however only if the version's contents is not referenced in future version (Either allowed or denied reversion thereafter; Generally useful only the case of overwriting a log version's info)
     
     [ ] alt.9# Log Submission; If a Version Log is submitted containing version information that already exists within the library, the option to overwrite the pre-existing information may be available (must include a report on the results of overwriting previous information) 
 
@@ -60,4 +60,6 @@
 
 [X] 13# Content Validator's 'Folder Paths' parameter could also allow enabling/disabling a certain folder path during the CIV process. A much better approach than to keep adding and removing folder paths for each CIV process.
 
-[ ] 14# ...
+[X] 14# An extra syntax change for 'Updated' section that allows self-updating for entries that need to be updated to content that has been added in the same version.
+
+[ ] 15# ...

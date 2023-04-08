@@ -67,6 +67,11 @@ The encoding syntax for the Legend Data object has been changed from from '{key}
 	+ Due to the idea of version reversion, Legend Data requires a record of when it was introduced to co-operate with the this function.
 
 9#
-With regards to the Code Design Structure outlined in the Design Doc, clases 'ContentVerificationSystem' and 'ReversionHandler' does not exist.
+With regards to the Code Design Structure outlined in the Design Doc, classes 'ContentVerificationSystem' and 'ReversionHandler' do not exist.
 	- The processes of reversion and content verification would be designated to their own classes.
 	+ Reversion is handled between the ResLibrary and DataHandlerBase classes. The content verification process class is simply being renamed to the 'ContentValidator' class.
+
+10#
+With regards to the Version Summary display outlined in the Design Doc, this format has been rejected for a sleek structure.
+	- The prior format requires more lines to be displayed.
+	+ The current format occupies less lines and is more suitable for the information to display.

@@ -53,7 +53,7 @@ namespace HCResourceLibraryApp.DataHandling
         v0.99;;Npc #12;n12
          **/
         public const string cks00 = "&00 -", cks01 = "&01 ,", cks02 = "&02 :", cks11 = "&11 (", cks12 = "&12 )", cks99 = "&99 ";
-        const char legRangeKey = '~';
+        const char legRangeKey = '~', updtSelfKey = ':';
         readonly bool enableSelfUpdatingFunction = true, testLibConAddUpdConnectionQ = false;
         static string _prevRecentDirectory, _recentDirectory;
         bool _hasDecodedQ;
@@ -1884,17 +1884,45 @@ namespace HCResourceLibraryApp.DataHandling
                                         logDataLine = RemoveEscapeCharacters(logDataLine);
                                         if (logDataLine.StartsWith('>') && logDataLine.CountOccuringCharacter('>') == 1)
                                         {
+                                            
                                             /// Taco Sauce (y32) - Fixed to look much saucier
                                             /// (q42) - Redesigned to look cooler                                            
                                             if (logDataLine.Contains('-') && logDataLine.CountOccuringCharacter('-') == 1)
                                             {
+                                                bool haltQ = false;
+                                                bool selfUpdatingAllowed = false;
+                                                if (logDataLine.Contains(updtSelfKey) && logDataLine.CountOccuringCharacter(updtSelfKey) == 1)
+                                                {
+                                                    if (logDataLine.Contains($">{updtSelfKey}"))
+                                                    {
+                                                        selfUpdatingAllowed = true;
+                                                        logDataLine = logDataLine.Replace(":", "");
+                                                        Dbug.LogPart($"Self-updating enabled, contains '>{updtSelfKey}'; ");
+                                                    }
+                                                    else
+                                                    {
+                                                        Dbug.LogPart($"Character '{updtSelfKey}' may only follow after '>' to enable self-updating function");
+                                                        decodeInfo.NoteIssue($"Character '{updtSelfKey}' may only follow after '>' to enable self-updating function");
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    if (logDataLine.CountOccuringCharacter(updtSelfKey) > 1)
+                                                    {
+                                                        Dbug.LogPart($"This line contains too many '{updtSelfKey}'");
+                                                        decodeInfo.NoteIssue($"This line contains too many '{updtSelfKey}'");
+                                                        haltQ = true;
+                                                    }
+                                                }
+                                                    
+
                                                 logDataLine = logDataLine.Replace(">", "");
 
                                                 /// Taco Sauce (y32)  <-->  Fixed to look much saucier
                                                 /// (q42)  <-->  Redesigned to look cooler
                                                 Dbug.LogPart("Contains '-'; ");
                                                 string[] splitLogLine = logDataLine.Split('-');
-                                                if (splitLogLine.HasElements(2))
+                                                if (splitLogLine.HasElements(2) && !haltQ)
                                                     if (splitLogLine[0].IsNotNEW() && splitLogLine[1].IsNotNEW())
                                                     {
                                                         Dbug.Log($"Got updated content info ({splitLogLine[0]}) and change description ({splitLogLine[1]}); ");
@@ -1979,7 +2007,7 @@ namespace HCResourceLibraryApp.DataHandling
 
                                                             /// testing... and now enabled, self updating contents aren't loose
                                                             bool isSelfConnected = false;
-                                                            if (enableSelfUpdatingFunction)
+                                                            if (enableSelfUpdatingFunction && selfUpdatingAllowed)
                                                             {
                                                                 Dbug.LogPart("[SELF-UPDATING] Searching for connection in 'Decoded Library' -- ");
 
@@ -2213,12 +2241,13 @@ namespace HCResourceLibraryApp.DataHandling
                                                             for (int dx = 0; dx < decodingInfoDock.Count && editDiIx == -1; dx++)
                                                             {
                                                                 DecodeInfo diToCheck = decodingInfoDock[dx];
-                                                                if (diToCheck.resultingInfo.Contains(matchingLegDat.ToString()))
-                                                                {
-                                                                    editDiIx = dx;
-                                                                    newDecInfo = new DecodeInfo($"{diToCheck.logLine}\n{logDataLine}", currentSectionName);
-                                                                    newDecInfo.NoteResult(diToCheck.resultingInfo);
-                                                                }
+                                                                if (diToCheck.NotedResultQ)
+                                                                    if (diToCheck.resultingInfo.Contains(matchingLegDat.ToString()))
+                                                                    {
+                                                                        editDiIx = dx;
+                                                                        newDecInfo = new DecodeInfo($"{diToCheck.logLine}\n{logDataLine}", currentSectionName);
+                                                                        newDecInfo.NoteResult(diToCheck.resultingInfo);
+                                                                    }
                                                             }
 
                                                             

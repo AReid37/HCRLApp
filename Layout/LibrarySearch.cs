@@ -32,6 +32,7 @@ namespace HCResourceLibraryApp.Layout
 
                 /// this for now
                 exitSearchPageQ = SubPage_RudimentarySearching();
+                /// NOTE :: Page Layout buffer dimensions have been changed to accomadate the rudimentary setup. Remember to reset once official library search page is completed.
             }
             while (!exitSearchPageQ);
         }

@@ -93,6 +93,8 @@ Syntax: > {InternalName} ({RelatedDataID}*) - {ChangeDesc}*
 	{ChangeDesc} : A description of the changes made to the specified content.
 	Ex. > PotPie (i42) - Crispier looking surface and creamier filling
 		> PotPie (t23) - Changed texture to match new item design
+	Note: To enable self-updating content, place ':' after '>'.
+		Ex. >: Ambient Pineapple Huts (t152) - Made chunks more visible
 _____
 [Legend]
 Syntax: {Key}* - {KeyDef}*
@@ -109,7 +111,6 @@ AVAILABLE LEGEND KEYS (v1.30)
 ` - Layer of Translucent Black
 ^ - Overhauled
 b - Background
-c - Coin
 d - Dust
 f - Flame
 g - Glow

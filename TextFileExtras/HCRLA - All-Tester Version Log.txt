@@ -51,9 +51,12 @@ PURPOSE ::
 	Tests in this section are always self-updating contents
 	Entry #1 tests for character keycode substitutions
 	Entry #2 tests for connecting a ConChanges without including suffixes (ei, '`' is not required in this instance)
+	Entry #3 and #4 are discard entry that tests for disabled self-updating function (normal update)
 -- !close --
-> Mc&99Des&99Truffle&11thrown&12 (p1000) - Their dearest truffle seems more friendly &02&12 ... and mushy
-> Grand Podium (t35_large) - It just wasn't large enough the first time.
+>: Mc&99Des&99Truffle&11thrown&12 (p1000) - Their dearest truffle seems more friendly &02&12 ... and mushy
+>: Grand Podium (t35_large) - It just wasn't large enough the first time.
+> Leek (t45) - "What are you doing here?"
+> Leh'sKale (t1987) - Added Lehaim's signature to their kale.
 
 
 [LEGEND]

@@ -176,7 +176,10 @@ tt >
 > 
 -- this is not being read because of above; fixed
 > rs ss (sts) - tmms
-
+-- testing of proper syntax for self updating
+> : qq (pp) - tts
+> qq (pp) - : tst
+>: qq (pp): - tts
 > qq (pp) - tts
 
 
