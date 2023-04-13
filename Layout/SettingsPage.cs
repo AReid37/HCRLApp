@@ -219,7 +219,7 @@ namespace HCResourceLibraryApp.Layout
                                 else
                                 {
                                     string newDimsTxt = $"{newDimH} {newDimW} ({newDimH.GetScaleFactorH() * 100:0}% {newDimW.GetScaleFactorW() * 100:0}%)";
-                                    Highlight(true, $"{Ind24}The newly selected window dimensions are (as HxW): {newDimsTxt}", newDimsTxt);
+                                    Highlight(true, $"{Ind24}The selected window dimensions are (as HxW): {newDimsTxt}", newDimsTxt);
                                     
                                     bool validResponse = Confirmation($"{Ind24}Do you wish to update preferences to these dimensions? ", false, out bool bResult);
                                     if (validResponse && bResult)

@@ -314,8 +314,12 @@ namespace HCResourceLibraryApp.DataHandling
                                 shelfNums.Add(newRC.ShelfID);
 
                                 /// add to content library
-                                Contents.Add(newRC);
-                                Dbug.Log($"Added :: {newRC}");
+                                if (newRC.IsSetup())
+                                {
+                                    Contents.Add(newRC);
+                                    Dbug.Log($"Added :: {newRC}");
+                                }
+                                else Dbug.Log($"Rejected :: Unset RC; No ContentBaseGroup.");
                             }
                             else Dbug.Log($"Rejected duplicate :: {newRC}");
                         }

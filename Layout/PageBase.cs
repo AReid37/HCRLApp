@@ -53,7 +53,8 @@ namespace HCResourceLibraryApp.Layout
         static Preferences _preferencesRef;
         const string FormatUsageKey = "`", WordWrapUsageKey = "▌";
         const string WordWrapNewLineKey = "▌\\W/▐"; // ▌\W/▐
-        const int WordWrapIndentLim = 8; // equivalent of one '\t'
+        const int WordWrapIndentLim = 8, wrapUnholdNum = -1; // equivalent of one '\t'
+        static int _wrapIndentHold = wrapUnholdNum, _wrapSource = 0;
         const char DefaultTitleUnderline = cTHB;
         static string _menuMessage, _incorrectionMessage;
         static bool _isMenuMessageInQueue, _isWarningMenuMessageQ, _enableWordWrapQ = true;
@@ -165,6 +166,7 @@ namespace HCResourceLibraryApp.Layout
         {
             if (text.IsNotNE())
             {
+                _wrapSource = 0;
                 text = WordWrap(text);
                 if (VerifyFormatUsage)
                 {
@@ -181,6 +183,7 @@ namespace HCResourceLibraryApp.Layout
         {
             if (text.IsNotNE())
             {
+                _wrapSource = 1;
                 text = WordWrap(text);
                 if (VerifyFormatUsage)
                 {
@@ -193,28 +196,70 @@ namespace HCResourceLibraryApp.Layout
                 TextLine(text, GetPrefsForeColor(foreElementCol));
             }
         }
+        /// <summary>Specifically for <see cref="SFormatterHandler"/> methods. Will retain the indentation level across multiple prints.</summary>
+        public static void Format(string text, Color color, bool newLine = false)
+        {
+            if (text.IsNotNE())
+            {
+                _wrapSource = 2;
+                text = WordWrap(text, true);
+                if (VerifyFormatUsage)
+                {
+                    Text(FormatUsageKey, Color.DarkGray);
+                    if (text.Contains("\n"))
+                        text = text.Replace("\n", $"\n{FormatUsageKey}");
+                    if (text.Contains(WordWrapNewLineKey))
+                        text = text.Replace(WordWrapNewLineKey, $"\n{WordWrapUsageKey}");
+                }
+                if (newLine)
+                    TextLine(text, color);
+                else Text(text, color);
+            }
+        }
         // public for testing purposes
-        public static string WordWrap(string text)
+        public static string WordWrap(string text, bool holdIndentQ = false)
         {
             /// from 'left' to 'right - 1' char spaces
             if (text.IsNotNE() && _enableWordWrapQ)
             {
                 Dbug.DeactivateNextLogSession();
                 Dbug.StartLogging("PageBase.WordWrap(str)");
+                Dbug.LogPart($"Source :: {(_wrapSource == 0 ? "Format()" : (_wrapSource == 1 ? "FormatLine()" : "overload Format()"))}  //  ");
                 Dbug.Log($"Received text :: {text.Replace("\n", "\\n").Replace("\t", "\\t")}");
 
                 // -- First determine if word requires wrapping --
                 int wrapBuffer = Console.BufferWidth - 1;
                 int wrapStartPos = Console.CursorLeft;
+                const string newLineReplace = "▌nL ", tabReplace = "        ";
 
+                // wrap indent holding, for SFormatterHandler multilines
+                string copyText = text.Replace("\n", newLineReplace).Replace("\t", tabReplace);
+                if (copyText.Length > WordWrapIndentLim + 2)
+                    copyText = copyText.Remove(WordWrapIndentLim + 1);
+                if (holdIndentQ && _wrapIndentHold == wrapUnholdNum)
+                {
+                    string trimmedCopyText = (copyText.TrimStart().IsNE() ? "" : copyText.TrimStart());
+                    int spaceIndent = copyText.Length - trimmedCopyText.Length;
+
+                    _wrapIndentHold = (spaceIndent == 0 && wrapStartPos.IsWithin(0, WordWrapIndentLim) ? wrapStartPos : spaceIndent).Clamp(0, WordWrapIndentLim);
+                    //_wrapIndentHold = Extensions.CountOccuringCharacter(copyText, ' ').Clamp(0, WordWrapIndentLim);
+                    Dbug.Log($"Set and held a wrapping indent position :: {_wrapIndentHold}; ");
+                }
+                else if (!holdIndentQ && _wrapIndentHold != wrapUnholdNum)
+                {
+                    Dbug.Log($"Released held wrapping indent position :: {_wrapIndentHold}; ");
+                    _wrapIndentHold = wrapUnholdNum;
+                }
+
+
+                // -- If requires wrapping, WRAP! --
                 if (wrapBuffer - wrapStartPos <= text.Length)
                 {
-                    const string newLineReplace = "▌nL ", tabReplace = "        ";
-
                     // -- Prep text to wrap --
                     text = text.Replace("\n", newLineReplace).Replace("\t", tabReplace);
                     Dbug.LogPart($"Wrapping Text: {wrapBuffer} spaces starting at '{wrapStartPos}'; ");
                     Dbug.Log($"Replaced any newline escape characters (\\n) with '{newLineReplace}'; Replaced any 'tab' escape characters (\\t) with 8 spaces; ");
+                    
 
                     // -- Separate words into bits --
                     List<string> textsToWrap = new();
@@ -252,29 +297,39 @@ namespace HCResourceLibraryApp.Layout
                     Dbug.Log("Words have been separated: proceeding to wrap words; ");
                     if (textsToWrap.HasElements())
                     { /// wrapping ... as to hide within...
-                        Dbug.NudgeIndent(true);
-                        Dbug.LogPart("> :|");
+                        
                         string wrappedText = "";
                         int currWrapPos = wrapStartPos;
                         int wrapIndentLevel = 0;
+                        //Dbug.Log($"Extra info :: currWrapPos = {wrapStartPos}, helpWrapPos = {_wrapIndentHold};");
+
+                        Dbug.NudgeIndent(true);
+                        Dbug.LogPart("> :|");
                         for (int wx = 0; wx < textsToWrap.Count; wx++)
                         {
                             bool isStartQ = wx == 0, isEndQ = wx + 1 == textsToWrap.Count;
                             string wText = textsToWrap[wx];
 
-                            if (isStartQ && currWrapPos < WordWrapIndentLim)
+                            /// determine wrapping indent level here
+                            if (isStartQ && currWrapPos < WordWrapIndentLim && _wrapIndentHold == wrapUnholdNum)
                             {
                                 if (wText.Replace(" ", "").IsNE())
                                 {
                                     wrapIndentLevel = Extensions.CountOccuringCharacter(wText, ' ').Clamp(0, WordWrapIndentLim);
                                     Dbug.LogPart($" [Ind{wrapIndentLevel}8] ");
                                 }
-                                else
-                                {
-                                    wrapIndentLevel = currWrapPos.Clamp(0, WordWrapIndentLim);
-                                    Dbug.LogPart($" [StrInd{wrapIndentLevel}8] ");
-                                }
+                                /// this won't run anyway, I'm sure
+                                //else
+                                //{
+                                //    wrapIndentLevel = currWrapPos.Clamp(0, WordWrapIndentLim);
+                                //    Dbug.LogPart($" [LimInd{wrapIndentLevel}8] ");
+                                //}
                             }
+                            else if (isStartQ && _wrapIndentHold != wrapUnholdNum)
+                            {
+                                wrapIndentLevel = _wrapIndentHold.Clamp(0, WordWrapIndentLim);
+                                Dbug.LogPart($" [HldInd{wrapIndentLevel}8] ");
+                            }    
 
 
                             /// IF printing this text will not exceed buffer width AND text to print is not newline: print text; ELSE...
@@ -426,6 +481,7 @@ namespace HCResourceLibraryApp.Layout
                     }
                 }
                 else Dbug.Log($"This text does not require wrapping: '{wrapBuffer - wrapStartPos - text.Length}' character spaces remain after printing this text.");
+
                 Dbug.EndLogging();
             }
             return text;

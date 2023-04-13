@@ -11,7 +11,7 @@ namespace HCResourceLibraryApp
     // THE ENTRANCE POINT, THE CONTROL ROOM
     public class Program
     {
-        static readonly string consoleTitle = "High Contrast Resource Library App [v1.2.0]";
+        static readonly string consoleTitle = "High Contrast Resource Library App [v1.2.1]";
         static readonly string verLastPublishTested = "v1.1.9d";
         /// <summary>If <c>true</c>, the application launches for debugging/development. Otherwise, the application launches for the published version.</summary>
         public static readonly bool isDebugVersionQ = true;
@@ -27,6 +27,7 @@ namespace HCResourceLibraryApp
         static LogDecoder logDecoder;
         static ContentValidator contentValidator;
         static ResLibrary resourceLibrary;
+        static SFormatterData formatterData;
 
         // PUBLIC
         public static bool AllowProgramRestart { get => _programRestartQ; private set => _programRestartQ = value; }
@@ -52,6 +53,7 @@ namespace HCResourceLibraryApp
                 logDecoder = new LogDecoder();
                 contentValidator = new ContentValidator();
                 resourceLibrary = new ResLibrary();
+                formatterData = new SFormatterData();
                 LoadData();
                 contentValidator.GetResourceLibraryReference(resourceLibrary);
                 /// --v printing and pages
@@ -64,6 +66,7 @@ namespace HCResourceLibraryApp
                 LogLegendNSummaryPage.GetResourceLibraryReference(resourceLibrary);
                 LibrarySearch.GetResourceLibraryReference(resourceLibrary);
                 GenSteamLogPage.GetResourceLibraryReference(resourceLibrary);
+                GenSteamLogPage.GetSteamFormatterReference(formatterData);
 
                 // testing site
                 if (isDebugVersionQ)
@@ -237,7 +240,7 @@ namespace HCResourceLibraryApp
             NewLine(2);
             Format($"{saveIcon}\t", ForECol.Accent);
 
-            bool savedDataQ = dataHandler.SaveToFile(preferences, logDecoder, contentValidator, resourceLibrary);            
+            bool savedDataQ = dataHandler.SaveToFile(preferences, logDecoder, contentValidator, resourceLibrary, formatterData);            
             if (savedDataQ)
                 Format(discreteQ? "auto-save: S." : "Auto-saving data ... success.", discreteQ? ForECol.Accent : ForECol.Correction);
             else Format(discreteQ? "auto-save: F." : "Auto-saving data ... failed.", discreteQ ? ForECol.Accent : ForECol.Incorrection);
@@ -248,7 +251,8 @@ namespace HCResourceLibraryApp
         public static void LoadData()
         {
             LogState("Loading Data");
-            dataHandler.LoadFromFile(preferences, logDecoder, contentValidator, resourceLibrary);
+            bool outCome = dataHandler.LoadFromFile(preferences, logDecoder, contentValidator, resourceLibrary, formatterData);
+            Dbug.SingleLog("Program.LoadData()", $"Outcome of data loading :: {outCome};");
         }
         public static bool SaveReversion()
         {
@@ -277,7 +281,7 @@ namespace HCResourceLibraryApp
 
         // TESTING STUFF
         static readonly bool runTest = false;
-        static readonly Tests testToRun = Tests.LogSubmissionPage_DisplayLogInfo_AllTester;
+        static readonly Tests testToRun = Tests.MiscRoom;
         enum Tests
         {
             /// <summary>For random tests that need their own space, but no specific test name (variable tests)</summary>
@@ -288,7 +292,6 @@ namespace HCResourceLibraryApp
             PageBase_Wait,
             PageBase_TableFormMenu,
             PageBase_ColorMenu,
-            PageBase_WordWrapping,
             //PageBase_NavigationBar,
 
             Extensions_SortWords,
@@ -303,6 +306,8 @@ namespace HCResourceLibraryApp
 
             Dbug_NestedSessions,
             Dbug_DeactivateSessions, 
+
+            SFormatter_ColorCode,
 
             None
         }
@@ -386,21 +391,6 @@ namespace HCResourceLibraryApp
                         valid = ColorMenu("example menu", out Color col, cToExempt);
                         attempts--;
                         NewLine(3);
-                    }
-                }
-                else if (testToRun == Tests.PageBase_WordWrapping)
-                {
-                    hasDebugQ = false;
-                    string[] examplesToTest =
-                    {
-                        "",
-                    };
-
-                    foreach (string example in examplesToTest)
-                    {
-                        TextLine(example, Color.Gray);
-                        TextLine(example, Color.Yellow);
-                        NewLine();
                     }
                 }
 
@@ -798,6 +788,102 @@ namespace HCResourceLibraryApp
                     Dbug.EndLogging();
                 }
 
+                /// SFormatter
+                else if (testToRun == Tests.SFormatter_ColorCode)
+                {
+                    hasDebugQ = false;
+                    TextLine("Color coding testing of SFormatter.ColorCode() method");
+                    NewLine();
+
+                    /** Language sytnax snippet (General)
+                        Language Syntax
+                        > General
+                            Handled by SFormatterHandler.cs
+                            syntax          outcome
+                            _________________________________
+                            // abc123       line comment. Must be placed at beginning of line
+                            abc123          code
+                            "abc123"        plain text
+                            &00;            plain text '"'
+                            {abc123}        library reference
+                            $abc123         steam formatting reference
+                            if # = #:       keyword, control; compares two given values to be equal. Prints following line if condition is true (values are equal). Placed at start of line.
+                            else:           keyword, control; Prints following line if the condition of an immediately preceding 'if # = #' is false (values are not equal). Placed at start of line.
+                            repeat #:       keyword, control; repeats line '#' times incrementing from one to given number '#'. Any occuring '#' in following line is replaced with this incrementing number. Placed at start of line.
+                    */
+                    string[] lines = new string[]
+                    {
+                        /// comments
+                        "// this is a comment",
+                        "  // even if indented...",
+
+                        /// code
+                        " -- // not a comment",
+                        "this is code",
+
+
+                        /// plain text
+                        "\"plain text\"",
+                        "\"plain\" code \"plain\" and code",
+                        "\"plaintext\"codestuff",
+                        "codestuff\"plaintext\"",
+
+                        /// plain text w/ escape
+                        "\"&00;\"",
+                        "&00; \"plain text &00; escape\" &00;",
+
+                        /// keywords (if, else, repeat)
+                        "if keyword here",
+                        "else keyword here",
+                        "repeat keyword here",
+                        "Not keywords when if else repeat",
+                        "Not keywords when \"if else repeat\"",
+
+                        /// operators (=)
+                        "Operator one is '='",
+                        "This \"=\" is not operator",
+
+                        /// references (library, steam)
+                        "{this} is library reference",
+                        "$this is steam reference",
+                        "these $can be {placed} anywhere",
+                        "\"{this}\" is not a \"$reference\"",
+                        "{the$se} have equal $prece{dence}",
+
+                        /// precedence list
+                        "Precedences (in descending order)",
+                        "comment, plain, escape, reference,",
+                        "keyword, operator, code"
+                    };
+
+                    Table2Division tDiv = Table2Division.Even;
+                    char div = '.';
+                    for (int lx = 0; lx < lines.Length; lx++)
+                    {
+                        string data1 = lines[lx];
+                        
+                        // header
+                        if (lx == 0)
+                        {
+                            TableRowDivider(true);
+                            TableRowDivider('-', true, null);
+                            Table(tDiv, "INPUT", div, "OUTPUT");
+                            TableRowDivider(false);
+                        }
+                        
+                        if (data1.IsNotNE())
+                        {
+                            HoldNextListOrTable();
+                            Table(tDiv, data1, div, null);
+                            if (LatestTablePrintText.IsNotNE())
+                            {
+                                Text(LatestTablePrintText.Replace("\n", ""));
+                                SFormatterHandler.ColorCode(data1, true);
+                                NewLine();
+                            }
+                        }
+                    }
+                }
 
                 /// Misc Room
                 else if (testToRun == Tests.MiscRoom)
@@ -994,12 +1080,12 @@ namespace HCResourceLibraryApp
                         TextLine($"Word Wrapping off [{wrapOff}]; Word Wrapping On [{GetPrefsForeColor(wrapOn)}];");
                         NewLine(2);
 
-                        bool disableExRepeatQ = true; // print both Format() and FormatLine() uses for same testing example?
                         bool endExamples = false;
-                        for (int ex = 0; !endExamples; ex++)
+                        for (int ex = 9; !endExamples; ex++)
                         {
                             char divChar = '\0';
                             string wrapLevelText = "", exampleText = "";
+                            bool enableFormatOverloadQ = false;
                             switch (ex)
                             {
                                 case 0:
@@ -1075,17 +1161,25 @@ namespace HCResourceLibraryApp
                                     break;
                                 case 10:
                                     wrapLevelText = $"Multi-printed line wrapping";
-                                    exampleText = "For some lines% text is printed% multiple time% before requiring% a wrap.% This %is% one% of those% examples.% Things should% continue as normal!";
+                                    exampleText = "For some lines% text is printed% multiple times% before requiring% a wrap.% This %is% one% of those% examples.% Things should% continue as normal!";
                                     divChar = '%';
+                                    enableFormatOverloadQ = true;
                                     break;
                                 //                |-                   -                         -                        -          -|
                                 case 11:
-                                    wrapLevelText = $"Indented multi-printed line wrapping (with long word)";
-                                    exampleText = "Ex.2: %";
-                                    exampleText+=@"'C:\Users\JalapenoFaceBusiness\Documents\TheHistoryOfPeppersAtWarWithCold.bt";
+                                    wrapLevelText = $"Indented multi-printed line wrapping";
+                                    exampleText = "  Multiple lines% may be printed% but what% about indent% lines?% The% wrapper% needs% to% know the% indentation% level.";
                                     divChar = '%';
+                                    enableFormatOverloadQ = true;
                                     break;
                                 //                |-                   -                         -                        -          -|
+                                case 12:
+                                    wrapLevelText = $"Indented multi-printed line wrapping (with long word)";
+                                    exampleText = "Ex.2: %";
+                                    exampleText+=@"'C:\Users\JalapenoFaceBusiness\Documents\TheHistoryOfPeppersAtWarWithCold_Chap3.bt'";
+                                    divChar = '%';
+                                    enableFormatOverloadQ = true;
+                                    break;
                                 //                |-                   -                         -                        -          -|
 
 
@@ -1095,27 +1189,14 @@ namespace HCResourceLibraryApp
 
                             if (exampleText.IsNotNE() && wrapLevelText.IsNotNE() && !endExamples)
                             {
-                                TextLine($"Lvl{ex + 1}: {wrapLevelText}", wrapLevelCol);
-                                //TextLine($"Examples as 'Text/TextLine()' for wrapping off, and 'Format/Formatline()' for wrapping on");                            
+                                TextLine($"Lvl{ex + 1}: {wrapLevelText}", wrapLevelCol);                      
 
                                 // wrap prints here
-                                for (int wx = 0; wx < 2; wx++)
+                                for (int wx = 0; wx < (enableFormatOverloadQ ? 3 : 2); wx++)
                                 {
-                                    bool wrapOnQ = wx == 1;
-                                    if (!disableExRepeatQ)
-                                        switch (wx)
-                                        {
-                                            case 0:
-                                                TextLine($"Using Text(), wrapping off", Color.DarkGray);
-                                                break;
-
-                                            case 1:
-                                                NewLine();
-                                                TextLine($"Using Format() and FormatLine(), wrapping ON", Color.DarkGray);
-                                                break;
-                                        }
-                                    else if (wx == 0)
-                                        TextLine("Using Text() [wrap off] vs. Format() [wrap ON]", Color.DarkGray);
+                                    bool wrapOnQ = wx >= 1;
+                                    if (!wrapOnQ) 
+                                        TextLine($"Using Text() [wrap off] vs. Format() [wrap ON] {(enableFormatOverloadQ ? "+ ovrld Format() [wrap ON, 2nd]" : "")}", Color.DarkGray);
 
                                     /// IF ... test multiple texts wrapping; ELSE test single line wrapping
                                     if (divChar.IsNotNull())
@@ -1124,58 +1205,36 @@ namespace HCResourceLibraryApp
                                         {
                                             string[] manyExampleTexts = exampleText.Split(divChar, StringSplitOptions.RemoveEmptyEntries);
                                             if (manyExampleTexts.HasElements())
-                                                for (int tx = 0; tx < 2; tx++)
+                                                for (int ix = 0; ix < manyExampleTexts.Length; ix++)
                                                 {
-                                                    bool lineVariantQ = tx == 1;
-                                                    for (int ix = 0; ix < manyExampleTexts.Length; ix++)
+                                                    string anExampleText = manyExampleTexts[ix];
+                                                    if (wrapOnQ)
                                                     {
-                                                        bool lastExTextQ = ix + 1 == manyExampleTexts.Length;
-                                                        string anExampleText = manyExampleTexts[ix];
-                                                        if (wrapOnQ)
-                                                        {
-                                                            if (lastExTextQ && lineVariantQ)
-                                                            {
-                                                                if (!disableExRepeatQ)
-                                                                    FormatLine(anExampleText, wrapOn);
-                                                                else NewLine();
-                                                            }
-                                                            else Format(anExampleText, wrapOn);
-                                                        }
-                                                        else
-                                                        {         
-                                                            Text(anExampleText, wrapOff);
-                                                            if (lastExTextQ)
-                                                            {
-                                                                if (!disableExRepeatQ)
-                                                                    NewLine();
-                                                                else ExampleDiv();
-                                                            }
-                                                        }
+                                                        if (enableFormatOverloadQ && wx == 2)
+                                                            Format(anExampleText, GetPrefsForeColor(wrapOn));
+                                                        else Format(anExampleText, wrapOn);
                                                     }
+                                                    else
+                                                        Text(anExampleText, wrapOff);
                                                 }
                                         }
-                                        ExampleDiv();
                                     }
                                     else
                                     {
                                         if (wrapOnQ)
                                         {
-                                            Format(exampleText, wrapOn);
-                                            if (!disableExRepeatQ)
-                                            {
-                                                ExampleDiv();
-                                                FormatLine(exampleText, wrapOn);
-                                            }
-                                            else NewLine();
+                                            if (enableFormatOverloadQ && wx == 2)
+                                                Format(exampleText, GetPrefsForeColor(wrapOn));
+                                            else Format(exampleText, wrapOn);
                                         }
                                         else
-                                        {
                                             Text(exampleText, wrapOff);
-                                            if (!disableExRepeatQ)
-                                                NewLine();
-                                            else ExampleDiv();
-                                        }
+
                                     }
+
+                                    if (!wrapOnQ)
+                                        ExampleDiv();
+                                    else NewLine(2);
                                 }
 
 

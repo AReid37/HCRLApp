@@ -143,6 +143,7 @@ namespace HCResourceLibraryApp.DataHandling
         #region methods
         /// <summary>Stores a <see cref="ContentAdditionals"/> instance related to this <see cref="ResContents"/>'s ConBase.</summary>
         /// <param name="newCA">New instance is checked to be setup and not a duplicate.</param>
+        /// <remarks>A <see cref="ContentAdditionals"/> will not be stored if this instance <see cref="IsSetup()"/> is '<c>false</c>'</remarks>
         public bool StoreConAdditional(ContentAdditionals newCA)
         {
             bool storedCAq = false;
@@ -170,6 +171,7 @@ namespace HCResourceLibraryApp.DataHandling
         }
         /// <summary>Stores a <see cref="ContentChanges"/> instance related to this <see cref="ResContents"/>'s ConBase or ConAddits.</summary>
         /// <param name="newCC">New instance is checked to be setup and not a duplicate.</param>
+        /// <remarks>A <see cref="ContentChanges"/> will not be stored if this instance <see cref="IsSetup()"/> is '<c>false</c>'</remarks>
         public bool StoreConChanges(ContentChanges newCC)
         {
             bool storedCCq = false;
