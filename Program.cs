@@ -11,7 +11,7 @@ namespace HCResourceLibraryApp
     // THE ENTRANCE POINT, THE CONTROL ROOM
     public class Program
     {
-        static readonly string consoleTitle = "High Contrast Resource Library App [v1.2.1]";
+        static readonly string consoleTitle = "High Contrast Resource Library App [v1.2.2]";
         static readonly string verLastPublishTested = "v1.1.9d";
         /// <summary>If <c>true</c>, the application launches for debugging/development. Otherwise, the application launches for the published version.</summary>
         public static readonly bool isDebugVersionQ = true;
@@ -280,8 +280,8 @@ namespace HCResourceLibraryApp
 
 
         // TESTING STUFF
-        static readonly bool runTest = false;
-        static readonly Tests testToRun = Tests.MiscRoom;
+        static readonly bool runTest = true;
+        static readonly Tests testToRun = Tests.SFormatter_CheckSyntax;
         enum Tests
         {
             /// <summary>For random tests that need their own space, but no specific test name (variable tests)</summary>
@@ -292,7 +292,6 @@ namespace HCResourceLibraryApp
             PageBase_Wait,
             PageBase_TableFormMenu,
             PageBase_ColorMenu,
-            //PageBase_NavigationBar,
 
             Extensions_SortWords,
 
@@ -308,6 +307,7 @@ namespace HCResourceLibraryApp
             Dbug_DeactivateSessions, 
 
             SFormatter_ColorCode,
+            SFormatter_CheckSyntax,
 
             None
         }
@@ -830,18 +830,20 @@ namespace HCResourceLibraryApp
 
                         /// plain text w/ escape
                         "\"&00;\"",
-                        "&00; \"plain text &00; escape\" &00;",
+                        "&00; \"plain text & &00; escape\" &00;",
 
                         /// keywords (if, else, repeat)
                         "if keyword here",
                         "else keyword here",
                         "repeat keyword here",
-                        "Not keywords when if else repeat",
+                        "Still keywords when if else repeat",
                         "Not keywords when \"if else repeat\"",
 
                         /// operators (=)
-                        "Operator one is '='",
-                        "This \"=\" is not operator",
+                        "Operator equal is '='",
+                        "This \"=\" is not operator equal",
+                        "Operator unequal is '!='",
+                        "This \"!=\" is not operator unequal",
 
                         /// references (library, steam)
                         "{this} is library reference",
@@ -883,6 +885,106 @@ namespace HCResourceLibraryApp
                             }
                         }
                     }
+                }
+                else if (testToRun == Tests.SFormatter_CheckSyntax)
+                {
+                    TextLine("Testing syntax checking of SFormatter.CheckSyntax() method");
+
+                    NewLine();
+                    const string secHeader = "|header|";
+                    string[] lines = new string[]
+                    { /// enter many incorrect entries, and at least one correct entry
+
+                        // GENERA SYNTAX CHECKING
+                        /// Code errors [000]
+                        $"{secHeader}Code Errors [000]",
+                        "/ \"comment not\"", "\"the\" /", "\"what\" // \"oh no\"", "//", /// comments
+                        "\"butter", "butter\"", "\"butter\" \"", "\"lemon\"", /// plain text  
+                        "&", "&;", ";", "& 00;", "; &", "\"&;&\"", "\"&;;\"", "\"&00;\"", /// escape character
+                        "{", "}", "{{}", "{}}", "{ }", "{    }", "} tta {", "}{}{", "{TTA}", /// lib ref
+                        "$", "$ h q", "q$", "$[]", "$][", "]$[", "[$]", "]$", "[ $", "[", "]", "[]", "][", "[ ]", "] [", "$h", "$list[]", /// steam ref 
+                        "if ", "if   :", "if:", ":if", "if 1 = 1: \"if\"", /// if keyword
+                        "else", "else :", "else \" \"", ": else", "else: \"if\"", /// else keyword
+                        "repeat", "repeat:", "repeat  :", ": repeat", "repeat 2: \"rep2\"", /// repeat keyword
+                        /// Plain Text Errors [001-002]
+                        $"{secHeader}Plain Text Errors [001-002]",
+                        "\"\"", "\"butter", "shea \"butter", "\"butter\"",
+                        /// Escape Character Errors [003]
+                        $"{secHeader}Escape Character Errors [003]",
+                        "\"&;\"", "\"&  ;\"", "\"&01;\"", "\"&abxr;\"", "\"&00;\"",
+                        /// Library Reference Errors [004-006]
+                        $"{secHeader}Library Reference Errors [004-006]",
+                        "{melon", "{}", "{    }", "{ nuke }", "{TTA} { nuke'em }", $"{{Addit:1,ids}}",
+                        /// Steam Format Reference Errors [007-008]
+                        $"{secHeader}Steam Format Reference Errors [007-008]",
+                        "$ ", "$carl", "$urll", "$hh $tible", "$hhhh", "$nl", "$i $hr",
+
+
+                        "",
+                        "",
+                        "",
+                        "",
+                    };
+
+                    bool displayAllMessageQ = false;
+                    SFormatterHandler.CheckSyntax(lines);
+                    Table2Division tDiv = Table2Division.KCSmall;
+                    const char div = '|', divAlt = ' ';
+                    for (int lx = -1; lx < lines.Length; lx++)
+                    {
+                        if (lx >= 0)
+                        {
+                            string data1 = lines[lx];
+                            int lineNum = lx + 1;
+                            char trueDiv = lx % 2 == 0 ? div : divAlt;
+
+                            if (data1.IsNotNEW())
+                            {
+                                if (!data1.StartsWith(secHeader))
+                                {
+                                    SFormatterInfo[] errors = SFormatterHandler.GetErrors(lineNum);
+                                    if (errors.HasElements())
+                                    {
+                                        string data2 = "";
+                                        for (int x = 0; x < errors.Length; x++)
+                                        {
+                                            SFormatterInfo sfi = errors[x];
+                                            if (!displayAllMessageQ)
+                                            {
+                                                if (x == 0)
+                                                    data2 = $"{sfi.errorCode} - {sfi.errorMessage} ";
+                                                if (x != 0)
+                                                    data2 += $" +{sfi.errorCode}";
+                                            }
+                                            else Table(tDiv, x == 0 ? data1 : "", trueDiv, $"{(x == 0 ? "" : Ind14)}{sfi.errorCode} - {sfi.errorMessage}");
+                                        }
+                                        if (!displayAllMessageQ)
+                                            Table(tDiv, data1, trueDiv, data2);
+                                    }
+                                    else Table(tDiv, data1, trueDiv, "--");
+                                }
+                                else
+                                {
+                                    Pause();
+                                    NewLine(1);
+                                    Important(data1.Replace(secHeader, ""));
+                                    TableRowDivider(true);
+                                    TableRowDivider('_', true, null);
+                                    Table(tDiv, "LINE", div, "ERRORS");
+                                    TableRowDivider(false);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            NewLine();
+                            TextLine("Syntax Checking Tools have been tested, please check the debug.", Color.Orange);
+                            SFormatterHandler.TestSyntaxCheckTools();
+                            //Pause();
+                            HorizontalRule('_', 3);
+                        }
+                    }
+
                 }
 
                 /// Misc Room
@@ -1265,10 +1367,5 @@ namespace HCResourceLibraryApp
             }
         }
 
-
-        // THOUGHTS...
-        // I am able to set the Cursor position within the console window
-        // With this, maybe I can truly create the kind of search page I have only dreamed about!
-        // Console.CursorLeft and Console.CursorTop
     }
 }

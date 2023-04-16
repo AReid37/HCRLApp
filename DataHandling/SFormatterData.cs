@@ -199,6 +199,26 @@ namespace HCResourceLibraryApp.DataHandling
                 }
             }
         }
+        /// <summary>Fetches the formatting line from the line data list of a formattng profile.</summary>
+        /// <param name="isFormat1Q">If <c>true</c>, will delete from line data of formatting profile #1.</param>
+        /// <param name="lineNum">The line number to fetch.</param>
+        /// <returns>The formatting profile's value from <paramref name="lineNum"/> in line data list. Returns <c>null</c> if line does not exist.</returns>
+        public string GetLine(bool isFormat1Q, int lineNum)
+        {
+            string lineData = null;
+            int index = lineNum - 1;
+            if (isFormat1Q && _lineData1.HasElements())
+            {
+                if (index.IsWithin(0, _lineData1.Count - 1))
+                    lineData = _lineData1[index];
+            }
+            if (!isFormat1Q && _lineData2.HasElements())
+            {
+                if (index.IsWithin(0, _lineData2.Count - 1))
+                    lineData = _lineData2[index];
+            }
+            return lineData;
+        }
         /// <summary>Compares two instances for similarities against: setup state, using native color, name1, name2, lineData1, lineData2.</summary>
         public bool Equals(SFormatterData sfd)
         {
@@ -354,7 +374,7 @@ namespace HCResourceLibraryApp.DataHandling
                             {
                                 noIssuesQ = Base.FileWrite(false, formatterTag2, _lineData2.ToArray());
                                 for (int l2x = 0; l2x < _lineData2.Count && noIssuesQ; l2x++)
-                                    Dbug.Log($" + Encoded line {l2x + 1} :: {_lineData1[l2x]}; ");
+                                    Dbug.Log($" + Encoded line {l2x + 1} :: {_lineData2[l2x]}; ");
                             }
                             else Dbug.Log($" + No line data to encode; ");
                         }

@@ -15,8 +15,8 @@ namespace HCResourceLibraryApp.Layout
         static readonly char subMenuUnderline = '+';
         static SFormatterLibRef _sfLibraryRef = new();
         static bool isUsingFormatterNo1Q = true;
-        static List<SFormatterHistory> _editorHistory = new();
-        static int historyActionNumber;
+        static List<SFormatterHistory> _editorHistory1 = new(), _editorHistory2 = new();
+        static int historyActionNumber1, historyActionNumber2;
 
         public static void GetResourceLibraryReference(ResLibrary mainLibrary)
         {
@@ -454,7 +454,7 @@ namespace HCResourceLibraryApp.Layout
         // TO BE DONE
         static void SubPage_SteamFormatter()
         {
-            bool exitFormatterSubPageQ = true;
+            bool exitFormatterSubPageQ;
             do
             {
                 Program.LogState("Generate Steam Log|Steam Formatter (WIP)");
@@ -463,32 +463,46 @@ namespace HCResourceLibraryApp.Layout
                 FormatLine("Allows editting and selecting a format to use when generating a steam log.", ForECol.Accent);
                 NewLine(2);
 
-                // ver log info exits for formatter
+                // display editing info
+                if (_formatterData != null)
+                {
+                    Title("Formatter Editor Settings");
+                    string formatterInUse = $"Editing Formatter Profile #{(isUsingFormatterNo1Q ? 1 : 2)} - {(isUsingFormatterNo1Q ? _formatterData.Name1 : _formatterData.Name2)}";
+                    string nativeColCode = $"Using Native Color Code? {(_formatterData.UseNativeColorCodeQ ? "Yes" : "No (Custom)")}";
+
+                    List(OrderType.Unordered, formatterInUse, nativeColCode);
+                    NewLine();
+                }
+
+
+                // ver log info exits for formatter   ... tbh, only the log generator page needs to worry about this...
                 if (_sfLibraryRef.IsSetup() || true) /// just to bypass for easy testing
                 {
                     exitFormatterSubPageQ = false;
-                    bool validMenuKey = ListFormMenu(out string fMenuKey, "Formatter Menu", null, null, null, true, $"Select Formatting,Formatting Editor,{exitSubPagePhrase} [Enter]".Split(','));
+                    bool validMenuKey = ListFormMenu(out string fMenuKey, "Formatter Menu", null, null, null, true, $"Toggle Native Color Coding,Toggle Formatter Profile,Open Formatting Editor, {exitSubPagePhrase} [Enter]".Split(','));
                     MenuMessageQueue(!validMenuKey && fMenuKey.IsNotNE(), false, null);
 
                     if (validMenuKey)
                     {
-                        // select formatting
-                        if (fMenuKey.Equals("a"))
+                        // toggle native color coding
+                        if (fMenuKey.Equals("a") && _formatterData != null)
                         {
-                            Text("-- tbd... in queue --");
+                            _formatterData.UseNativeColorCodeQ = !_formatterData.UseNativeColorCodeQ;
+                            Format($"{Ind34}{(_formatterData.UseNativeColorCodeQ ? "Enabled" : "Disabled")} native color coding.", ForECol.Correction);
                             Pause();
-                            /// tbd.. will have to wait until some stuff are figured out
+                        }
+
+                        // toggle formatter to edit
+                        else if (fMenuKey.Equals("b") && _formatterData != null)
+                        {
+                            isUsingFormatterNo1Q = !isUsingFormatterNo1Q;
+                            Format($"{Ind34}Now editing Formatter Profile #{(isUsingFormatterNo1Q ? 1 : 2)} :: '{(isUsingFormatterNo1Q ? _formatterData.Name1 : _formatterData.Name2)}'.", ForECol.Correction);
+                            Pause();
                         }
 
                         // open formatting editor
-                        else if (fMenuKey.Equals("b"))
-                        {
-                            //NewLine(2);
-                            //Text("-- subMenu?: edit format 1/2 (sensitive to 'select formatting') --");
-                            //Pause();
-
+                        else if (fMenuKey.Equals("c"))
                             FormattingEditor();
-                        }
 
                         // exit
                         else validMenuKey = false;
@@ -635,7 +649,7 @@ namespace HCResourceLibraryApp.Layout
                     . Examples where error checking occurs is for code, proper references, keywords and their placementse
                     . Any line that starts with a comments remains unparsed; no error checking, it is ignorable
                 - Error messaging occurs where expected syntax is not followed
-                    . Each error message will be identified with a unique four-digit number and a token signifitying the type of error: G - General, R - Reference (Library and Steam Format specific). Every error has a unique four-digit number regardless of type. 'G0001' and 'R0001' cannot simultaneously exist, they are both '0001'
+                    . Each error message will be identified with a unique three-digit number and a token signifitying the type of error: G - General, R - Reference (Library and Steam Format specific). Every error has a unique four-digit number regardless of type. 'G001' and 'R001' cannot simultaneously exist, they are both '001'
                     . Each error message will be displayed below the line of code with those errors (see 'Editing Area Concept')
             
             > Data-saving
@@ -668,7 +682,7 @@ namespace HCResourceLibraryApp.Layout
                         R0023: Missing argument after steam format reference '$i' to italicize.
             
                     L5 "That thing is a mustache?""
-                        G0005: Unexpected token '""'. Plain text is missing end token '"'.
+                        G005  G003
                     ...........................................................
 
                 - History List Concept
@@ -708,7 +722,7 @@ namespace HCResourceLibraryApp.Layout
 
             const char divCodeView = '-', divHelpChar = ':', divEditingArea = '.';
             const string editorHelpPhrase = "!help"; 
-            const string editorCmdAdd = "add", editorCmdEdit = "edit", editorCmdDelete = "delete", editorCmdUndo = "<", editorCmdRedo = ">", editorCmdRename = "rename";
+            const string editorCmdAdd = "add", editorCmdEdit = "edit", editorCmdDelete = "delete", editorCmdUndo = "<", editorCmdRedo = ">", editorCmdRename = "rename", editorCmdCopy = "copy", editorCmdAppender = "~~";
             bool exitFormatEditorQ = false, formatterIsSetupQ = false, showHistoryQ = false;
 
             const int noLineToEdit = -1, lineMaximum = (int)(PageSizeLimit * 0.4f); // DBG"10"   OG"(int)(PageSizeLimit * 0.4f)"
@@ -720,13 +734,37 @@ namespace HCResourceLibraryApp.Layout
             Dbug.Log($"RECORDING :: Formatting Editor Actions and processes -- FProfile#1? {isUsingFormatterNo1Q}");
             Dbug.NudgeIndent(true);
 
-            if (_editorHistory == null)
-                _editorHistory = new List<SFormatterHistory>();
-            if (!_editorHistory.HasElements())
+            List<SFormatterHistory> _editorHistory;
+            int historyActionNumber;
+            if (isUsingFormatterNo1Q)
             {
-                historyActionNumber = historyActionInitial;
-                _editorHistory.Add(new SFormatterHistory("Openned Formatter", "--", "--"));
-                Dbug.Log($"Added 'open formatter' history to history list; Initialized history action number; ");
+                if (_editorHistory1 == null)
+                    _editorHistory1 = new List<SFormatterHistory>();
+
+                if (!_editorHistory1.HasElements())
+                {
+                    historyActionNumber1 = historyActionInitial;
+                    _editorHistory1.Add(new SFormatterHistory("Openned Formatter", "--", "--"));
+                    Dbug.Log($"Added 'open formatter' history to history list; Initialized history action number; ");
+                }
+
+                _editorHistory = _editorHistory1;
+                historyActionNumber = historyActionNumber1;
+            }
+            else
+            {
+                if (_editorHistory2 == null)
+                    _editorHistory2 = new List<SFormatterHistory>();
+
+                if (!_editorHistory2.HasElements())
+                {
+                    historyActionNumber2 = historyActionInitial;
+                    _editorHistory2.Add(new SFormatterHistory("Openned Formatter", "--", "--"));
+                    Dbug.Log($"Added 'open formatter' history to history list; Initialized history action number; ");
+                }
+
+                _editorHistory = _editorHistory2;
+                historyActionNumber = historyActionNumber2;
             }
 
             // THE EDITOR
@@ -837,26 +875,50 @@ namespace HCResourceLibraryApp.Layout
 
                          */
 
-                        // Main displays here
+                        // Editing Area (part 1)
                         bool makingEdit = lineToEdit != noLineToEdit;
                         int editCursorTop = 0, editCursorLeft = 0;
+                        SFormatterHandler.CheckSyntax(formatToDisplay.ToArray());
                         for (int lx = 0; lx < formatToDisplay.Count; lx++)
                         {
+                            int lineNumber = lx + 1;
+                            bool isLineToEditQ = lineToEdit == lineNumber;
+
+                            /// line displays
                             Format($"L{lx + 1,-3}", ForECol.Accent);
-                            //FormatLine(formatToDisplay[lx]);
                             SFormatterHandler.ColorCode(formatToDisplay[lx], _formatterData.UseNativeColorCodeQ, true);
 
-                            // Editing Area (part 1)
-                            if (makingEdit && lineToEdit - 1 == lx)
+                            /// the editing area
+                            if (makingEdit && isLineToEditQ)
                             {
                                 HorizontalRule(divEditingArea);
-                                FormatLine($"Editing Line {lx + 1} -- [Enter] to end edits. '!help' for formatter language help.", ForECol.Accent);
+                                FormatLine($"Editing Line {lineNumber} -- [Enter] to end edits. '!help' for formatter language help.", ForECol.Accent);
                                 Format(">> ");
                                 editCursorTop = Console.CursorTop;
                                 editCursorLeft = Console.CursorLeft;
                                 NewLine(3);
                                 HorizontalRule(divEditingArea);
                             }
+
+                            /// error displays
+                            SFormatterInfo[] linErrors = SFormatterHandler.GetErrors(lineNumber);
+                            if (linErrors.HasElements())
+                                for (int ex = 0; ex < linErrors.Length; ex++)
+                                {
+                                    SFormatterInfo error = linErrors[ex];
+
+                                    /// IF editing this line: Expand errors with code and messages; ELSE show only error codes below line
+                                    if (isLineToEditQ && makingEdit)
+                                        SFormatterHandler.ColorCode($"{Ind34}{error.errorCode} {error.errorMessage}", _formatterData.UseNativeColorCodeQ, true, true);
+                                    else
+                                    {
+                                        if (ex == 0)
+                                            Format(Ind34);
+                                        SFormatterHandler.ColorCode($"{error.errorCode}{Ind24}", _formatterData.UseNativeColorCodeQ, false, true);
+                                        if (ex + 1 == linErrors.Length)
+                                            NewLine();
+                                    }
+                                }
                         }
 
                         // Editing Area (part 2)
@@ -881,6 +943,7 @@ namespace HCResourceLibraryApp.Layout
                                     TableRowDivider(true);
                                     TableRowDivider(divCodeView, true, GetPrefsForeColor(ForECol.Accent));
 
+                                    // the great help page info
                                     string[,] syntaxes = new string[,]
                                     {
                                         // GENERAL
@@ -908,8 +971,8 @@ namespace HCResourceLibraryApp.Layout
                                         { "&00;",       "Escape character. Used within plain text to print double quote character (\")."},
                                         { "{text}",     $"Library reference. References a value based on the information received from a submitted version log.{nxt}Refer to 'Library Reference' below for more information."},
                                         { "$text",      $"Steam format reference. References a styling element to use against plain text or another value when generating steam log.{nxt}Refer to 'Steam Format References' below for more information."},
-                                        { "if # = #:",  $"Keyword. Must be placed at the start of the line.{nxt}A control command that compares two given values to be equal. If the condition is 'true' (values are equal) then the line's remaining data will be parsed into the formatting string."},
-                                        { "else:",      $"Keyword. Must be placed at the start of the line. Must be placed following an 'if' keyword line.{nxt}A control command that will parse the line's remaining data when a preceding 'if' command is false (values are not equal)."},
+                                        { "if # = #:",  $"Keyword. Must be placed at the start of the line.{nxt}A control command that compares two values for a true or false condition. If the condition is 'true' then the line's remaining data will be parsed into the formatting string.{nxt}The operator '=' compares two values to be equal. The operator '!=' compares two values to be unequal."},
+                                        { "else:",      $"Keyword. Must be placed at the start of the line. Must be placed following an 'if' keyword line.{nxt}A control command that will parse the line's remaining data when the condition of a preceding 'if' command is false."},
                                         { "repeat #:",  $"Keyword. Must be placed at the start of the line.{nxt}A control command that repeats a line's remaining data '#' number of times. An incrementing number from one to given number '#' will replace any occuring '#' in the line's remaining data."},
 
 
@@ -940,16 +1003,16 @@ namespace HCResourceLibraryApp.Layout
                                         { null, "Library reference values are provided by the information obtained from the version log submitted for steam log generation."},
                                         { "{Version}",          "Value. Gets the log version number (ex 1.00)."},
                                         { "{AddedCount}",       "Value. Gets the number of added item entries available."},
-                                        { "{Added:#,prop}",     $"Value Array. Gets value 'prop' from added entry number '#'.{nxt}Values for 'prop': ids, name."},
+                                        { "{Added:#,prop}",     $"Value Array. Gets value 'prop' from one-based added entry number '#'.{nxt}Values for 'prop': ids, name."},
                                         { "{AdditCount}",       "Value. Gets the number of additional item entries available."},
-                                        { "{Addit:#,prop}",     $"Value Array. Gets value 'prop' from additional entry number '#'.{nxt}Values for 'prop': ids, optionalName, relatedContent (related content name), relatedID."},
+                                        { "{Addit:#,prop}",     $"Value Array. Gets value 'prop' from one-based additional entry number '#'.{nxt}Values for 'prop': ids, optionalName, relatedContent (related content name), relatedID."},
                                         { "{TTA}",              "Value. Gets the number of total textures/contents added."},
                                         { "{UpdatedCount}",     "Value. Gets the number of updated item entries available."},
-                                        { "{Updated:#,prop}",   $"Value Array. Gets value 'prop' from updated entry number '#'.{nxt}Values for 'prop': changeDesc, id, name."},
+                                        { "{Updated:#,prop}",   $"Value Array. Gets value 'prop' from one-based updated entry number '#'.{nxt}Values for 'prop': changeDesc, id, name."},
                                         { "{LegendCount}",      "Value. Gets the number of legend entries available."},
-                                        { "{Legend:#,prop}",    $"Value Array. Gets value 'prop' from legend entry number '#'.{nxt}Values for 'prop': definition, key, keyNum (unique number based on legend key).{nxt}Using a plain text value for '#' will implicitly convert and replace the text into a 'keyNum' value after an edit."},
+                                        { "{Legend:#,prop}",    $"Value Array. Gets value 'prop' from one-based legend entry number '#'.{nxt}Values for 'prop': definition, key, keyNum (unique number based on legend key).{nxt}Using a plain text value for '#' will implicitly convert and replace the text into a 'keyNum' value after an edit."},
                                         { "{SummaryCount}",     "Value. Gets the number of summary parts available."},
-                                        { "{Summary:#}",        "Value Array. Gets the value for summary part number '#'."},
+                                        { "{Summary:#}",        "Value Array. Gets the value for one-based summary part number '#'."},
 
 
                                         // STEAM FORMAT
@@ -982,15 +1045,15 @@ namespace HCResourceLibraryApp.Layout
 
                                         */
                                         { "STEAM FORMAT REFERENCES", null},
-                                        { null, "Steam format references are styling element calls that will affect the look of any text or value placed after it. Simple command references may be combined with other simple commands unless otherwise unpermitted. Complex commands require a text or value to be placed in a described parameter surrounded by single quote characters (')."},
+                                        { null, $"Steam format references are styling element calls that will affect the look of any text or value placed after it on log generation.\n{Ind14}Simple command references may be combined with other simple commands unless otherwise unpermitted.\n{Ind14}Complex commands require a text or value to be placed in a described parameter surrounded by single quote characters (')."},
                                         /// simple
-                                        { "$h",     "Simple command. Header text."},
+                                        { "$h",     $"Simple command. Header text. Must be placed at the start of the line. May not be combined with other simple commands.{nxt}There are three levels of header text. The header level follows the number of 'h's in reference. Example, a level three header text is '$hhh'."},
                                         { "$b",     "Simple command. Bold text."},
                                         { "$u",     "Simple command. Underlined text."},
                                         { "$i",     "Simple command. Italicized text."},
                                         { "$s",     "Simple command. Strikethrough text."},
                                         { "$sp",    "Simple command. Spoiler text."},
-                                        { "np",     "Simple command. No parse. Doesn't parse steam format tags when generating steam log."},
+                                        { "$np",     "Simple command. No parse. Doesn't parse steam format tags when generating steam log."},
                                         { "$c",     "Simple command. Code text. Fixed width font, preserves space."},
                                         { "$hr",    "Simple command. Horizontal rule. Must be placed on its own line. May not be combined with other simple commands."},
                                         { "$nl",    "Simple command. New line."},
@@ -1004,10 +1067,17 @@ namespace HCResourceLibraryApp.Layout
                                         { "$td='clm1','clm2'",      $"Complex command. Must be placed on its own line.{nxt}Used within a table block to create a table data row. Separate multiple columns of data with ','."},
 
 
-                                        // SYNTAX EXCEPTIONS 
+                                        // SYNTAX EXCEPTIONS
                                         { "SYNTAX EXCEPTIONS", null},
-                                        { "if # = #: $text",    "A (complex) steam format reference may be preceded by either keyword 'if' or 'else'"},
-                                        { "repeat#: if # = #:", "The keyword 'repeat' may precede the keyword 'if'. This 'if' keyword cannot trigger an 'else' keyword line."}
+                                        { "if # = #: $text",    "A (complex) steam format reference may be preceded by any keyword: 'if', 'else' or 'repeat'."},
+                                        { "else: if # = #:", "The keyword 'else' may precede the keyword 'if'. This 'if' keyword will trigger a following 'else' keyword line."},
+                                        { "repeat#: if # = #:", "The keyword 'repeat' may precede the keyword 'if'. This 'if' keyword cannot trigger an 'else' keyword line."},
+
+
+                                        // EDITING SUPPLEMENT
+                                        { "EDITING SUPPLEMENT", null},
+                                        { null, "The following only applies to the editing area when editing a line."},
+                                        { editorCmdAppender, $"Appendder supplement. Allows adding or inserting code into the currently edited line. There are three functions:{nxt}Append the new edit to the end of the line: '*text'.{nxt}Insert the new edit to the start of the line: 'text*'.{nxt}Insert the new edit between two words within the line: 'word1*text*word2'.".Replace("*", editorCmdAppender)}
                                     };
 
                                     for (int i = 0; i < syntaxes.GetLength(0); i++)
@@ -1078,9 +1148,107 @@ namespace HCResourceLibraryApp.Layout
                                 /// make edit
                                 else
                                 {
-                                    commandPrompt = $"{editorCmdEdit}{lineToEdit}\n{editInput}";
-                                    //Text(" - pause; end edit here -");
-                                    //Pause();
+                                    /// appender functions
+                                    if (editInput.Contains(editorCmdAppender))
+                                    {
+                                        Dbug.Log($"Appender used in editing area; Received input :: {editInput}");
+                                        Dbug.LogPart("  >|");
+
+                                        bool oneAppenderOnLineQ = editInput.CountOccuringCharacter(editorCmdAppender[0]) == editorCmdAppender.Length;
+                                        string newEditInput = null, newEdit = "";
+                                        string lineInfo = _formatterData.GetLine(isUsingFormatterNo1Q, lineToEdit);
+
+                                        /// append after
+                                        if (editInput.StartsWith(editorCmdAppender) && oneAppenderOnLineQ)
+                                        {
+                                            newEdit = editInput.Substring(editorCmdAppender.Length);
+                                            Dbug.LogPart("Append After; ");
+                                            if (newEdit.IsNotNE())
+                                            {
+                                                newEditInput = lineInfo + newEdit;
+                                                Dbug.LogPart($"Resulting Edit :: '{lineInfo}' + '{newEdit}'");
+                                            }
+                                            else
+                                            {
+                                                Dbug.LogPart("No new edit to append");
+                                                IncorrectionMessageQueue("There is no new edit to append to line");
+                                            }
+                                        }
+                                        /// insert before
+                                        else if (editInput.EndsWith(editorCmdAppender) && oneAppenderOnLineQ)
+                                        {
+                                            newEdit = editInput.Substring(0, editInput.Length - editorCmdAppender.Length);
+                                            Dbug.LogPart("Insert Before; ");
+                                            if (newEdit.IsNotNE())
+                                            {
+                                                newEditInput = newEdit + lineInfo;
+                                                Dbug.LogPart($"Resulting Edit :: '{newEdit}' + '{lineInfo}'");
+                                            }
+                                            else
+                                            {
+                                                Dbug.LogPart("No new edit to insert");
+                                                IncorrectionMessageQueue("There is no new edit to insert before line");
+                                            }
+                                        }
+                                        /// insert between
+                                        else if (editInput.CountOccuringCharacter(editorCmdAppender[0]) == 2 * editorCmdAppender.Length)
+                                        {
+                                            Dbug.LogPart($"Insert within; ");
+                                            string[] editParts = editInput.Split(editorCmdAppender);
+                                            if (editParts.HasElements(3))
+                                            {
+                                                string word1 = editParts[0], word2 = editParts[2];
+                                                newEdit = editParts[1];
+
+                                                if (word1.IsNotNE() && word2.IsNotNE())
+                                                {
+                                                    Dbug.LogPart($"Parting words: after '{word1}' and before '{word2}'; ");
+                                                    string[] lineParts = lineInfo.Split(word1 + word2);
+                                                    if (lineParts.HasElements(2))
+                                                    {
+                                                        lineParts[0] += word1;
+                                                        lineParts[1] = word2 + lineParts[1];
+
+                                                        newEditInput = lineParts[0] + newEdit + lineParts[1];
+                                                        Dbug.LogPart($"Resulting Edit :: '{lineParts[0]}' + '{newEdit}' + '{lineParts[1]}'");
+                                                    }
+                                                    else
+                                                    {
+                                                        Dbug.LogPart($"Could not find placement '{word1 + word2}' within line");
+                                                        IncorrectionMessageQueue($"Could not find phrase '{word1 + word2}' within line");
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    Dbug.LogPart("No parting words to identify placement within line");
+                                                    if (word1.IsNE())
+                                                        IncorrectionMessageQueue("Missing identifiable word to place new edit 'after'");
+                                                    else IncorrectionMessageQueue("Missing identifiable word to place new edit 'before'");
+                                                }
+                                            }
+                                            else Dbug.LogPart("Parting words and new edit could not be fetched");
+                                        }
+                                        /// what? what! do what!?
+                                        else
+                                        {
+                                            Dbug.LogPart("Uncertain appender usage");
+                                            IncorrectionMessageQueue($"Uncertain appender usage (plain text may not contain '{editorCmdAppender}')");
+                                        }
+                                        Dbug.Log("; ");
+
+                                        /// giving user feedback for appender usage
+                                        IncorrectionMessageTrigger($"{Ind24}Appender Issue: ", ".");
+                                        IncorrectionMessageQueue(null);
+
+                                        if (newEditInput.IsNotNE())
+                                            editInput = newEditInput;
+                                        else editInput = null;
+                                    }
+
+                                    /// IF got a valid editing command: send it; ELSE bypass prompts and return to editing (probs cause appender failed) 
+                                    if (editInput != null)
+                                        commandPrompt = $"{editorCmdEdit}{lineToEdit}\n{editInput}";
+                                    else commandPrompt = $"{editorCmdEdit}{lineToEdit}";
                                 }
                             }
                             else
@@ -1090,7 +1258,11 @@ namespace HCResourceLibraryApp.Layout
                             lineToEdit = noLineToEdit;
                         }
                     }
-                    else FormatLine("L-   ", ForECol.Accent);
+                    else
+                    {
+                        Format("L-   ", ForECol.Accent);
+                        SFormatterHandler.ColorCode("// Add a new line to get started.", _formatterData.UseNativeColorCodeQ, true);
+                    }
                 }
                 else
                 {
@@ -1100,6 +1272,7 @@ namespace HCResourceLibraryApp.Layout
                     SFormatterHandler.ColorCode("// Add a new line to get started.", _formatterData.UseNativeColorCodeQ, true);
                 }
                 HorizontalRule(divCodeView);
+
 
 
                 // ++   HISTORY LIST   ++
@@ -1185,8 +1358,9 @@ namespace HCResourceLibraryApp.Layout
                         string[,] editorCmds = new string[,]
                         {
                             { $"{editorCmdRename} {{newName}}", "Allows renaming this formatting profile to value 'newName'." },
-                            { $"{editorCmdAdd}#", $"Inserts a new line after line number '#'. If a number is not provided will add a new line to bottom of code view. Line limit of {lineMaximum}."},
+                            { $"{editorCmdAdd}#", $"Inserts a new line after line number '#'. No provided line number will add a new line to bottom of code view. Providing line number '0', will insert a line before the top-most line. Line limit of {lineMaximum}."},
                             { $"{editorCmdEdit}#", "Opens editing area on line number '#', allowing for an edit."},
+                            { $"{editorCmdCopy}#,#", "Copies the line data of a given line to another line."},
                             { $"{editorCmdDelete}#", "Deletes line number '#'."},
                             { $"{editorCmdUndo}", "Undoes an available editor action in history."},
                             { $"{editorCmdRedo}", "Redoes an available editor action in history."},
@@ -1247,6 +1421,41 @@ namespace HCResourceLibraryApp.Layout
                                 else IncorrectionMessageQueue($"Line #{editLineNum} does not exist.");
                             }
                             else IncorrectionMessageQueue("Line number was not a number.");
+                        }
+
+                        /// copy command?
+                        else if (editorInput.StartsWith(editorCmdCopy))
+                        {
+                            string numsInput = editorInput.Replace(editorCmdCopy, "").Trim();
+                            if (numsInput.IsNotNE())
+                            {
+                                if (numsInput.Contains(",") && numsInput.CountOccuringCharacter(',') == 1)
+                                {
+                                    string[] splitNumsInput = numsInput.Split(',');
+                                    if (int.TryParse(splitNumsInput[0], out int numToCopyFrom) && int.TryParse(splitNumsInput[1], out int numToCopyTo))
+                                    {
+                                        if (numToCopyFrom.IsWithin(lineMinimum, lineCount) && hasLinesQ)
+                                        {
+                                            if (numToCopyTo.IsWithin(lineMinimum, lineCount) && hasLinesQ)
+                                            {
+                                                if (numToCopyFrom != numToCopyTo)
+                                                    commandPrompt = $"{editorCmdCopy}{numToCopyFrom},{numToCopyTo}";
+                                                else IncorrectionMessageQueue("Cannot copy to the same line.");
+                                            }
+                                            else IncorrectionMessageQueue($"Line #{numToCopyTo} does not exist.");
+                                        }
+                                        else IncorrectionMessageQueue($"Line #{numToCopyFrom} does not exist.");
+                                    }
+                                    else IncorrectionMessageQueue("One or more of the line numbers were not a number.");
+                                }
+                                else
+                                {
+                                    if (numsInput.Contains(","))
+                                        IncorrectionMessageQueue("Only one comma (,) may be used in this command.");
+                                    else IncorrectionMessageQueue("This command requires two line numbers (missing ',' character).");
+                                }
+                            }
+                            else IncorrectionMessageQueue("No line numbers were provided for this command.");
                         }
 
                         /// delete command?
@@ -1434,7 +1643,7 @@ namespace HCResourceLibraryApp.Layout
                             Dbug.LogPart("Edit Cmd --> ");
                             if (commandPrompt.Contains("\n"))
                             {
-                                Dbug.LogPart("From Editing Area :: ");
+                                Dbug.LogPart(wasHistoryActionQ? "From History Action :: " : "From Editing Area :: ");
                                 string[] editParts = commandPrompt.Split("\n");
                                 if (int.TryParse(editParts[0].Replace(editorCmdEdit, ""), out int editLineNum))
                                 {
@@ -1463,6 +1672,23 @@ namespace HCResourceLibraryApp.Layout
 
                             }
                         }
+                        /// copy command
+                        else if (commandPrompt.StartsWith(editorCmdCopy))
+                        {
+                            Dbug.LogPart("Copy Cmd --> ");
+                            string[] copyParts = commandPrompt.Replace(editorCmdCopy, "").Split(',');
+                            if (int.TryParse(copyParts[0], out int copyFrom) && int.TryParse(copyParts[1], out int copyTo))
+                            {
+                                string copyData = _formatterData.GetLine(isUsingFormatterNo1Q, copyFrom);
+                                _formatterData.EditLine(isUsingFormatterNo1Q, copyTo, copyData, out string prevEdit);
+                                Dbug.LogPart($"Copied from line #{copyFrom} ('{copyData}') to line #{copyTo} (replaces '{prevEdit}')");
+
+                                histName = $"Copied Line {copyFrom} to Line {copyTo}";
+                                histRedo = commandPrompt;
+                                histUndo = $"{editorCmdEdit}{copyTo}\n{prevEdit}";
+                            }
+                            else Dbug.LogPart("line numbers??");
+                        }
                         /// deleted command
                         else if (commandPrompt.StartsWith(editorCmdDelete))
                         {
@@ -1470,7 +1696,7 @@ namespace HCResourceLibraryApp.Layout
                             if (int.TryParse(commandPrompt.Replace(editorCmdDelete, ""), out int delLineNum))
                             {
                                 _formatterData.DeleteLine(isUsingFormatterNo1Q, delLineNum, out string deletedLine);
-                                Dbug.LogPart($"Delete at line# {delLineNum}");
+                                Dbug.LogPart($"Delete at line #{delLineNum}");
 
                                 histName = $"Delete Line {delLineNum}";
                                 histRedo = commandPrompt;
@@ -1578,7 +1804,13 @@ namespace HCResourceLibraryApp.Layout
             }
             while (!exitFormatEditorQ);
 
+            
             Dbug.NudgeIndent(false);
+            if (isUsingFormatterNo1Q)
+                historyActionNumber1 = historyActionNumber;
+            else historyActionNumber2 = historyActionNumber;
+            Dbug.Log($"Saved history action number '{historyActionNumber}' (editor history counts '{_editorHistory.Count}') to formatter profile #{(isUsingFormatterNo1Q? 1 : 2)}");
+            
             Dbug.Log($"RECORDING END");
             Dbug.EndLogging();
         }
