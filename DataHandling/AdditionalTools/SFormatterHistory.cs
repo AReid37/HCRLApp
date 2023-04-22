@@ -19,6 +19,7 @@ namespace HCResourceLibraryApp.DataHandling
         
          */
 
+        public const string histNLRep = "\x2590\x2584";
         public readonly string actionName;
         public readonly string redoneCommand;
         public readonly string undoneCommand;
@@ -36,7 +37,7 @@ namespace HCResourceLibraryApp.DataHandling
         }
         public override string ToString()
         {
-            return $"SFH: name[{actionName}] redo[{redoneCommand.Replace("\n","\\n")}] undo[{undoneCommand.Replace("\n", "\\n")}]";
+            return $"SFH: name[{actionName}] redo[{redoneCommand.Replace("\n",histNLRep)}] undo[{undoneCommand.Replace("\n", histNLRep)}]";
         }
     }
 }

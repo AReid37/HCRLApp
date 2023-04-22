@@ -6,6 +6,21 @@ using HCResourceLibraryApp.DataHandling;
 
 namespace HCResourceLibraryApp
 {
+    /// <summary>Options that modify the returned value of <see cref="Extensions.SnippetText(string, string, string, Snip[])"/></summary>
+    public enum Snip
+    {
+        /// <summary>Will include start and ending words in snippet.</summary>
+        Inc, 
+        /// <summary>Will ensure that the ending word comes after starting word in snippet.</summary>
+        EndAft,
+        /// <summary>Will ensure that the snippet ends with the second occurence of the ending word after starting word.</summary>
+        End2nd,
+        /// <summary>Will ensure that the snippet ends with the last occurence of the ending word after starting word.</summary>
+        EndLast,
+        /// <summary>Utilizies Snippet Options: <see cref="Inc"/>, <see cref="EndAft"/>, <see cref="EndLast"/>.</summary>
+        All
+    }
+
     public static class Extensions
     {
         // GENERAL  --> STRINGS and CHARS
@@ -601,13 +616,29 @@ namespace HCResourceLibraryApp
             }
             return numberRanges.ToArray();
         }
-        /// <summary>Fetches a snippet of data within a line containing <paramref name="startingWith"/> and <paramref name="endingWith"/> and returns anything that is between them.</summary>
-        /// <param name="includeStartEndQ">If <c>true</c>, will return the snippet with the values of <paramref name="startingWith"/> and <paramref name="endingWith"/>.</param>
-        /// <param name="endAfterStartQ">If <c>true</c>, will ensure to fetch a snippet with <paramref name="endingWith"/> after <paramref name="startingWith"/>.</param>
-        /// <param name="lastOfEndQ">If <c>true</c>, will ensure to fetch a snippet where <paramref name="endingWith"/> is its last occurence within <paramref name="line"/>.</param>
-        /// <returns>A snippet of <paramref name="line"/> between two other strings. Is <c>null</c> if <paramref name="startingWith"/> does not exist, and <see cref="String.Empty"/> when <paramref name="endingWith"/> comes before <paramref name="startingWith"/> or does not exist after it when <paramref name="endAfterStartQ"/> is <c>true</c>.</returns>
-        public static string SnippetText(this string line, string startingWith, string endingWith, bool includeStartEndQ = false, bool endAfterStartQ = false, bool lastOfEndQ = false)
+        /// <summary>Fetches a snippet of data within a line containing <paramref name="startingWith"/> and <paramref name="endingWith"/> and returns anything that is between them.</summary>     
+        /// <param name="snipOpts">Snippet options that will affect the outcome of the returned snippet. Many options may be combined.</param>
+        /// <returns>A snippet of <paramref name="line"/> between two other strings. Is <c>null</c> if <paramref name="startingWith"/> does not exist, and <see cref="String.Empty"/> when <paramref name="endingWith"/> comes before <paramref name="startingWith"/> or does not exist after it with option <see cref="Snip.EndAft"/>.</returns>
+        public static string SnippetText(this string line, string startingWith, string endingWith, params Snip[] snipOpts)
         {
+            /// options setup here
+            bool includeStartEndQ = false, endAfterStartQ = false, end2ndQ = false, lastOfEndQ = false;
+            if (snipOpts.HasElements())
+            {
+                foreach (Snip snipOpt in snipOpts)
+                {
+                    if (snipOpt == Snip.Inc || snipOpt == Snip.All)
+                        includeStartEndQ = true;
+                    if (snipOpt == Snip.EndAft || snipOpt == Snip.All || snipOpt == Snip.End2nd)
+                        endAfterStartQ = true;
+                    if (snipOpt == Snip.End2nd)
+                        end2ndQ = true;
+                    if (snipOpt == Snip.EndLast || snipOpt == Snip.All)
+                        lastOfEndQ = true;
+                }
+            }
+
+            /// snipping heree
             string snippet = null;
             if (line.IsNotNEW() && startingWith.IsNotNE() && endingWith.IsNotNE())
             {
@@ -618,25 +649,41 @@ namespace HCResourceLibraryApp
                 {
                     if (endAfterStartQ)
                     {
-                        indexEnd = (lastOfEndQ ? line.Substring(indexStart).LastIndexOf(endingWith) : line.Substring(indexStart).IndexOf(endingWith)) + indexStart;
-                        if (startingWith == endingWith)
+                        if (lastOfEndQ)
+                            indexEnd = line.Substring(indexStart + startingWith.Length).LastIndexOf(endingWith);
+                        else
+                            indexEnd = line.Substring(indexStart + startingWith.Length).IndexOf(endingWith);
+
+                        if (indexEnd != -1)
                         {
-                            if (line.Length > indexStart + 1)
+                            indexEnd += indexStart + startingWith.Length;
+
+                            if (!lastOfEndQ && end2ndQ && indexEnd + 1 < line.Length)
                             {
-                                if (lastOfEndQ)
-                                    indexEnd = line.Substring(indexStart + 1).LastIndexOf(endingWith) + indexStart;
-                                else indexEnd = line.Substring(indexStart + 1).IndexOf(endingWith) + indexStart;
-                                if (includeStartEndQ)
-                                    indexEnd += 1;
+                                int indexEnd1st = indexEnd;
+                                int indexEndNext = line.Substring(indexEnd1st + endingWith.Length).IndexOf(endingWith);
+
+                                if (indexEndNext != -1)
+                                    indexEnd = indexEndNext + indexEnd1st + endingWith.Length;
                             }
                         }
+                        //else indexEnd = 0;
                     }
-                    else indexEnd = lastOfEndQ ? line.LastIndexOf(endingWith) : line.IndexOf(endingWith);
+                    else
+                    {
+                        if (lastOfEndQ)
+                            indexEnd = line.LastIndexOf(endingWith);
+                        else indexEnd = line.IndexOf(endingWith);
+                    }
+                    if (includeStartEndQ && indexEnd != -1)
+                        indexEnd += endingWith.Length;
 
                     if (indexStart < indexEnd)
                     {
                         if (includeStartEndQ)
-                            snippet = line.Substring(indexStart, indexEnd - indexStart + endingWith.Length);
+                        {
+                            snippet = line.Substring(indexStart, indexEnd - indexStart);
+                        }
                         else
                         {
                             int othStartIx = indexStart + startingWith.Length, othEndIx = indexEnd - endingWith.Length + 1;

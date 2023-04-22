@@ -856,6 +856,7 @@ namespace HCResourceLibraryApp.DataHandling
         // DATA HANDLING METHODS
         protected override bool EncodeToSharedFile()
         {
+            Dbug.IgnoreNextLogSession();
             Dbug.StartLogging("ResLibrary.EncodeToSharedFile()");
             bool encodedQ = true;
             
@@ -950,6 +951,7 @@ namespace HCResourceLibraryApp.DataHandling
         }
         protected override bool DecodeFromSharedFile()
         {
+            Dbug.IgnoreNextLogSession();
             Dbug.StartLogging("ResLibrary.DecodeFromSharedFile()");
             bool noDataButIsOkay = true;
             if (Base.FileRead(stampRLSavedDataTag, out string[] hasDataLine))

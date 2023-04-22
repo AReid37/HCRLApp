@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using ConsoleFormat;
 
 namespace HCResourceLibraryApp.DataHandling
@@ -41,9 +42,10 @@ namespace HCResourceLibraryApp.DataHandling
         readonly new string commonFileTag = "frmt";
         const string formatterTag1 = "frmt1", formatterTag2 = "frmt2";
         const string defaultName1 = "New Formatting 1", defaultName2 = "New Formatting 2", addNewLineText = "// +";
-        bool _nativeColCodeQ, _prevNativeColCodeQ;
+        bool _nativeColCodeQ, _prevNativeColCodeQ, _editProf1Q, _prevEditProf1Q;
         string _fName1, _fName2, _prevFName1, _prevFName2;
         List<string> _lineData1, _lineData2, _prevLineData1, _prevLineData2;
+        List<SfdGroupInfo> _groupInfo1, _groupInfo2, _prevGroupInfo1, _prevGroupInfo2;
 
         // public
         public bool UseNativeColorCodeQ
@@ -56,6 +58,18 @@ namespace HCResourceLibraryApp.DataHandling
                     _prevNativeColCodeQ = _nativeColCodeQ;
                     _nativeColCodeQ = value;
                 }                
+            }
+        }
+        public bool EditProfileNo1Q
+        {
+            get => _editProf1Q;
+            set
+            {
+                if (_editProf1Q != value)
+                {
+                    _prevEditProf1Q = _editProf1Q;
+                    _editProf1Q = value;
+                }
             }
         }
         public string Name1
@@ -94,17 +108,22 @@ namespace HCResourceLibraryApp.DataHandling
 
 
         // CONSTRUCTORS
-        public SFormatterData() { }
+        public SFormatterData()
+        {
+            _editProf1Q = true;
+            _prevEditProf1Q = true;
+        }
 
 
         #region methods
+        // Line Methods
         /// <summary>Adds or inserts a new formatting line to formatting profile.</summary>
         /// <param name="isFormat1Q">If <c>true</c>, will add or insert the line into formatting profile #1.</param>
         /// <param name="lineNum">The line number to insert a new line after. If <c>null</c>, will add a line at end of line data list.</param>
         /// <param name="reEditLine">Immediately edits the added line in line data. Used for undoing a deletion.</param>
-        public void AddLine(bool isFormat1Q, int? lineNum, string reEditLine = null)
-        {
-            if (isFormat1Q)
+        public void AddLine(int? lineNum, string reEditLine = null)
+        {            
+            if (EditProfileNo1Q)
             {
                 //if (_lineData1 == null)
                 //    _lineData1 = new List<string>();
@@ -112,36 +131,37 @@ namespace HCResourceLibraryApp.DataHandling
                 int index;
                 if (lineNum.HasValue && _lineData1.HasElements())
                 {
-                    index = lineNum.Value;
+                    index = lineNum.Value - 1;
                     if (index.IsWithin(0, _lineData1.Count - 1))
                         _lineData1.Insert(index, addNewLineText);
                 }
                 else
                 {
-                    _lineData1.Add(addNewLineText);
                     index = _lineData1.Count;
+                    _lineData1.Add(addNewLineText);
                 }
-                EditLine(isFormat1Q, index + 1, reEditLine, out _);
+                EditLine(index + 1, reEditLine, out _);
+                EditGroupInfos(index + 1, true);
             }
             else
             {
                 //if (_lineData2 == null)
                 //    _lineData2 = new List<string>();
                 _lineData2 ??= new List<string>();
-
                 int index;
                 if (lineNum.HasValue && _lineData2.HasElements())
                 {
-                    index = lineNum.Value;
+                    index = lineNum.Value - 1;
                     if (index.IsWithin(0, _lineData2.Count - 1))
                         _lineData2.Insert(index, addNewLineText);
                 }
                 else
                 {
-                    _lineData2.Add(addNewLineText);
                     index = _lineData2.Count;
+                    _lineData2.Add(addNewLineText);
                 }
-                EditLine(isFormat1Q, index + 1, reEditLine, out _);
+                EditLine(index + 1, reEditLine, out _);
+                EditGroupInfos(index + 1, true);
             }
         }
         /// <summary>Edits the formatting line in the line data list of a formatting profile</summary>
@@ -149,13 +169,13 @@ namespace HCResourceLibraryApp.DataHandling
         /// <param name="lineNum">The line number to edit.</param>
         /// <param name="editedLine">The edited formatting line that will replace the existing formatting line in line data list.</param>
         /// <param name="prevEditedLine">The previous formatting line that was replace. Is returned with a value if <paramref name="editedLine"/> has a value.</param>
-        public void EditLine(bool isFormat1Q, int lineNum, string editedLine, out string prevEditedLine)
+        public void EditLine(int lineNum, string editedLine, out string prevEditedLine)
         {
             prevEditedLine = null;
             if (editedLine.IsNotNE())
             {
                 int index = lineNum - 1;
-                if (isFormat1Q && _lineData1.HasElements())
+                if (EditProfileNo1Q && _lineData1.HasElements())
                 {
                     if (index.IsWithin(0, _lineData1.Count - 1))
                     {
@@ -164,7 +184,7 @@ namespace HCResourceLibraryApp.DataHandling
                     }
                 }
 
-                if (!isFormat1Q && _lineData2.HasElements())
+                if (!EditProfileNo1Q && _lineData2.HasElements())
                 {
                     if (index.IsWithin(0, _lineData2.Count - 1))
                     {
@@ -178,24 +198,26 @@ namespace HCResourceLibraryApp.DataHandling
         /// <param name="isFormat1Q">If <c>true</c>, will delete from line data of formatting profile #1.</param>
         /// <param name="lineNum">The line number to delete.</param>
         /// <param name="deletedLine">The formatting line value that was deleted.</param>
-        public void DeleteLine(bool isFormat1Q, int lineNum, out string deletedLine)
+        public void DeleteLine(int lineNum, out string deletedLine)
         {
             deletedLine = null;
             int index = lineNum - 1;
-            if (isFormat1Q && _lineData1.HasElements())
+            if (EditProfileNo1Q && _lineData1.HasElements())
             {
                 if (index.IsWithin(0, _lineData1.Count - 1))
                 {
                     deletedLine = _lineData1[index];
                     _lineData1.RemoveAt(index);
+                    EditGroupInfos(lineNum, false);
                 }
             }
-            if (!isFormat1Q && _lineData2.HasElements())
+            if (!EditProfileNo1Q && _lineData2.HasElements())
             {
                 if (index.IsWithin(0, _lineData2.Count - 1))
                 {
                     deletedLine = _lineData2[index];
                     _lineData2.RemoveAt(index);
+                    EditGroupInfos(lineNum, false);
                 }
             }
         }
@@ -203,23 +225,276 @@ namespace HCResourceLibraryApp.DataHandling
         /// <param name="isFormat1Q">If <c>true</c>, will delete from line data of formatting profile #1.</param>
         /// <param name="lineNum">The line number to fetch.</param>
         /// <returns>The formatting profile's value from <paramref name="lineNum"/> in line data list. Returns <c>null</c> if line does not exist.</returns>
-        public string GetLine(bool isFormat1Q, int lineNum)
+        public string GetLine(int lineNum)
         {
             string lineData = null;
             int index = lineNum - 1;
-            if (isFormat1Q && _lineData1.HasElements())
+            if (EditProfileNo1Q && _lineData1.HasElements())
             {
                 if (index.IsWithin(0, _lineData1.Count - 1))
                     lineData = _lineData1[index];
             }
-            if (!isFormat1Q && _lineData2.HasElements())
+            if (!EditProfileNo1Q && _lineData2.HasElements())
             {
                 if (index.IsWithin(0, _lineData2.Count - 1))
                     lineData = _lineData2[index];
             }
             return lineData;
         }
-        /// <summary>Compares two instances for similarities against: setup state, using native color, name1, name2, lineData1, lineData2.</summary>
+        /// <summary>Creates a new line group for a given formatting profile.</summary>
+        /// <param name="groupName">Name of group.</param>
+        /// <param name="startLine">Starting line of group line.</param>
+        /// <param name="endLine">Ending line of group line.</param>
+        
+        // Group Info Methods
+        public void CreateGroup(string groupName, int startLine, int endLine)
+        {
+            SfdGroupInfo newGroup = new(groupName, startLine, endLine);
+            if (newGroup.IsSetup())
+            {
+                bool isDupeQ = false;
+                if (EditProfileNo1Q)
+                {
+                    _groupInfo1 ??= new List<SfdGroupInfo>();
+                    if (_groupInfo1.HasElements())
+                        foreach (SfdGroupInfo fp1Group in _groupInfo1)
+                            if (fp1Group.Equals(newGroup))
+                            {
+                                isDupeQ = true;
+                                break;
+                            }
+
+                    if (!isDupeQ)
+                        _groupInfo1.Add(newGroup);
+                }
+                else
+                {
+                    _groupInfo2 ??= new List<SfdGroupInfo>();
+                    if (_groupInfo2.HasElements())
+                        foreach (SfdGroupInfo fp2Group in _groupInfo2)
+                            if (fp2Group.Equals(newGroup))
+                            {
+                                isDupeQ = true;
+                                break;
+                            }
+
+                    if (!isDupeQ)
+                        _groupInfo2.Add(newGroup);
+                }
+            }
+        }
+        /// <summary>Checks if a group with a given name exists within the formatting line data of a formatter profile.</summary>
+        /// <param name="groupName"></param>
+        /// <returns>A boolean confirming the existence of a named group.</returns>
+        public bool GroupExists(string groupName)
+        {
+            bool existsQ = false;
+            if (groupName.IsNotNEW())
+            {
+                if (EditProfileNo1Q && _groupInfo1.HasElements())
+                {
+                    for (int g1x = 0; g1x < _groupInfo1.Count && !existsQ; g1x++)
+                    {
+                        existsQ = _groupInfo1[g1x].groupName == groupName;
+                    }
+                }
+                if (!EditProfileNo1Q && _groupInfo2.HasElements())
+                {
+                    for (int g2x = 0; g2x < _groupInfo2.Count && !existsQ; g2x++)
+                    {
+                        existsQ = _groupInfo2[g2x].groupName == groupName;
+                    }
+                }
+            }
+            return existsQ;
+        }
+        /// <summary>Removes a line group from a formatting profile.</summary>
+        /// <param name="groupName"></param>
+        public void DeleteGroup(string groupName, out SfdGroupInfo deletedGroup)
+        {
+            deletedGroup = null;
+            if (groupName.IsNotNEW())
+            {
+                bool deletedQ = false;
+                if (EditProfileNo1Q && _groupInfo1.HasElements())
+                {
+                    for (int g1x = 0; g1x < _groupInfo1.Count && !deletedQ; g1x++)
+                    {
+                        if (_groupInfo1[g1x].groupName == groupName)
+                        {
+                            deletedQ = true;
+                            deletedGroup = _groupInfo1[g1x];
+                            _groupInfo1.RemoveAt(g1x);
+                        }
+                    }
+                }
+                if (!EditProfileNo1Q && _groupInfo2.HasElements())
+                {
+                    for (int g2x = 0; g2x < _groupInfo2.Count && !deletedQ; g2x++)
+                    {
+                        if (_groupInfo2[g2x].groupName == groupName)
+                        {
+                            deletedQ = true;
+                            deletedGroup = _groupInfo2[g2x];
+                            _groupInfo2.RemoveAt(g2x);
+                        }
+                    }
+                }
+            }
+        }
+        /// <summary>Toggles a named group's expansion state (expand or collapse).</summary>
+        /// <param name="groupName"></param>
+        /// <returns>A boolean that reflects the line group's new expansion state (is expanded if <c>true</c>).</returns>
+        public bool? ToggleGroupExpansion(string groupName)
+        {
+            bool? expansionState = null;
+            if (groupName.IsNotNE())
+            {
+                if (EditProfileNo1Q && _groupInfo1.HasElements())
+                {
+                    for (int g1x = 0; g1x < _groupInfo1.Count; g1x++)
+                    {
+                        if (_groupInfo1[g1x].groupName == groupName)
+                        {
+                            _groupInfo1[g1x].isExpandedQ = !_groupInfo1[g1x].isExpandedQ;
+                            expansionState = _groupInfo1[g1x].isExpandedQ;
+                        }
+                    }
+                }
+                if (!EditProfileNo1Q && _groupInfo2.HasElements())
+                {
+                    for (int g2x = 0; g2x < _groupInfo2.Count; g2x++)
+                    {
+                        if (_groupInfo2[g2x].groupName == groupName)
+                        {
+                            _groupInfo2[g2x].isExpandedQ = !_groupInfo2[g2x].isExpandedQ;
+                            expansionState = _groupInfo2[g2x].isExpandedQ;
+                        }
+                    }
+                }
+            }
+            return expansionState;
+        }
+        /// <summary>Checks if a formatting line in the line data list is within a line group. If the line is in a line group, details about the group are returned.</summary>
+        /// <param name="lineNum">The formatting line to check as being within a group.</param>
+        /// <param name="groupName">Name of group formatting line exists in.</param>
+        /// <param name="position">Formatting line's position in group: <c>1</c> if at group starting line, <c>-1</c> if at group ending line, <c>0</c> if within group bounding lines.</param>
+        /// <param name="isExpandedQ">The group's expansion state (expanded or collapsed).</param>
+        /// <returns>A boolean determining the existence of this line within a named group. Also determines if group info will be returned.</returns>
+        public bool IsLineInGroup(int lineNum, out string groupName, out int position, out bool isExpandedQ)
+        {
+            bool isLineInGroupQ = false;
+            groupName = null;
+            position = 0;
+            isExpandedQ = true;
+            if (IsLineInGroup(lineNum, out SfdGroupInfo groupInfo))
+            {
+                isLineInGroupQ = true;
+                groupName = groupInfo.groupName;
+                position = lineNum == groupInfo.startLineNum ? 1 : (lineNum == groupInfo.endLineNum ? -1 : 0);
+                isExpandedQ = groupInfo.isExpandedQ;
+            }
+            return isLineInGroupQ;
+        }
+        /// <summary>/// <summary>Checks if a formatting line in the line data list is within a line group. If the line is in a line group, details about the group are returned.</summary></summary>
+        /// <param name="lineNum">The formatting line to check as being within a group.</param>
+        /// <param name="lineGroup">The group the formatting line exists within.</param>
+        /// <returns>A boolean determining the existence of this line within a named group. Also determines if group info will be returned.</returns>
+        bool IsLineInGroup(int lineNum, out SfdGroupInfo lineGroup)
+        {
+            lineGroup = null;
+            if (EditProfileNo1Q && _groupInfo1.HasElements())
+            {
+                for (int g1x = 0; g1x < _groupInfo1.Count && lineGroup == null; g1x++)
+                {
+                    SfdGroupInfo group1s = _groupInfo1[g1x];
+                    if (lineNum.IsWithin(group1s.startLineNum, group1s.endLineNum))
+                        lineGroup = group1s;
+                }
+            }
+            if (!EditProfileNo1Q && _groupInfo2.HasElements())
+            {
+                for (int g2x = 0; g2x < _groupInfo2.Count && lineGroup == null; g2x++)
+                {
+                    SfdGroupInfo group2s = _groupInfo2[g2x];
+                    if (lineNum.IsWithin(group2s.startLineNum, group2s.endLineNum))
+                        lineGroup = group2s;
+                }
+            }
+            return lineGroup != null;
+        }
+        /// <summary>
+        ///     Edits a line group's information dependent on an add or delete action.
+        /// </summary>
+        void EditGroupInfos(int lineNum, bool lineAddedQ)
+        {
+            /// when to edit line group?
+            ///     -> if a line group exists
+            ///     ----
+            ///     -> if line number is within group: ON 'Add' (start inclusive, end inclusive: grow end range by 1 [within(start,end)])
+            ///     -> if line number is out of group: ON 'Add' (line before start, shift range down 1)
+            ///     -----
+            ///     -> if line number is within group: ON 'Del' (start inclusive, end inclusive, end-1 > start: shrink end range by 1 [within(start,end)])
+            ///     -> if line number is out of group: ON 'Del' (line before start, shift range up 1)
+
+            if (EditProfileNo1Q && _groupInfo1.HasElements())
+            {
+                for (int g1x = 0; g1x < _groupInfo1.Count; g1x++)
+                {
+                    SfdGroupInfo group1s = _groupInfo1[g1x];
+                    if (lineNum.IsWithin(group1s.startLineNum, group1s.endLineNum))
+                    {
+                        if (lineAddedQ)
+                            group1s.endLineNum += 1;
+                        else if (group1s.endLineNum - 1 > group1s.startLineNum)
+                            group1s.endLineNum -= 1;
+                    }
+                    else if (lineNum < group1s.startLineNum)
+                    {
+                        if (lineAddedQ)
+                        {
+                            group1s.startLineNum += 1;
+                            group1s.endLineNum += 1;
+                        }
+                        else
+                        {
+                            group1s.startLineNum -= 1;
+                            group1s.endLineNum -= 1;
+                        }
+                    }
+                }   
+            }
+            if (!EditProfileNo1Q && _groupInfo2.HasElements())
+            {
+                for (int g2x = 0; g2x < _groupInfo2.Count; g2x++)
+                {
+                    SfdGroupInfo group2s = _groupInfo2[g2x];
+                    if (lineNum.IsWithin(group2s.startLineNum, group2s.endLineNum))
+                    {
+                        if (lineAddedQ)
+                            group2s.endLineNum += 1;
+                        else if (group2s.endLineNum - 1 > group2s.startLineNum)
+                            group2s.endLineNum -= 1;
+                    }
+                    else if (lineNum < group2s.startLineNum)
+                    {
+                        if (lineAddedQ)
+                        {
+                            group2s.startLineNum += 1;
+                            group2s.endLineNum += 1;
+                        }
+                        else
+                        {
+                            group2s.startLineNum -= 1;
+                            group2s.endLineNum -= 1;
+                        }
+                    }
+                }
+            }
+        }
+
+
+        /// <summary>Compares two instances for similarities against: setup state, using native color, name1, name2, lineData1, lineData2, groupInfo1, groupInfo2.</summary>
         public bool Equals(SFormatterData sfd)
         {
             bool areEquals = false;
@@ -228,12 +503,14 @@ namespace HCResourceLibraryApp.DataHandling
 
             if (areEquals)
             {
-                for (int ax = 0; ax < 5 && areEquals; ax++)
+                for (int ax = 0; ax < 7 && areEquals; ax++)
                 {
                     switch (ax)
                     {
                         case 0:
                             areEquals = UseNativeColorCodeQ == sfd.UseNativeColorCodeQ;
+                            if (areEquals)
+                                areEquals = EditProfileNo1Q == sfd.EditProfileNo1Q;
                             break;
 
                         case 1:
@@ -265,6 +542,29 @@ namespace HCResourceLibraryApp.DataHandling
                                         areEquals = LineData2[l2x] == sfd.LineData2[l2x];
                             }
                             break;
+
+
+                        case 5:
+                            areEquals = _groupInfo1.HasElements() == sfd._groupInfo1.HasElements();
+                            if (_groupInfo1.HasElements())
+                            {
+                                areEquals = _groupInfo1.Count == sfd._groupInfo1.Count;
+                                if (areEquals)
+                                    for (int g1x = 0; g1x < _groupInfo1.Count && areEquals; g1x++)
+                                        areEquals = _groupInfo1[g1x].Equals(sfd._groupInfo1[g1x]);
+                            }
+                            break;
+
+                        case 6:
+                            areEquals = _groupInfo2.HasElements() == sfd._groupInfo2.HasElements();
+                            if (_groupInfo2.HasElements())
+                            {
+                                areEquals = _groupInfo2.Count == sfd._groupInfo2.Count;
+                                if (areEquals)
+                                    for (int g2x = 0; g2x < _groupInfo2.Count && areEquals; g2x++)
+                                        areEquals = _groupInfo2[g2x].Equals(sfd._groupInfo2[g2x]);
+                            }
+                            break;
                     }
                 }
             }
@@ -289,6 +589,7 @@ namespace HCResourceLibraryApp.DataHandling
         void SetPreviousSelf()
         {
             _prevNativeColCodeQ = _nativeColCodeQ;
+            _prevEditProf1Q = _editProf1Q;
             _prevFName1 = _fName1;
             _prevFName2 = _fName2;
 
@@ -302,11 +603,22 @@ namespace HCResourceLibraryApp.DataHandling
                 _prevLineData2 = new List<string>();
                 _prevLineData2.AddRange(_lineData2.ToArray());
             }
+            if (_groupInfo1.HasElements())
+            {
+                _prevGroupInfo1 = new List<SfdGroupInfo>();
+                _prevGroupInfo1.AddRange(_groupInfo1.ToArray());
+            }
+            if (_groupInfo2.HasElements())
+            {
+                _prevGroupInfo2 = new List<SfdGroupInfo>();
+                _prevGroupInfo2.AddRange(_groupInfo2.ToArray());
+            }
         }
         SFormatterData GetPreviousSelf()
         {
             SFormatterData prevSelf = new();
             prevSelf._nativeColCodeQ = _prevNativeColCodeQ;
+            prevSelf._editProf1Q = _prevEditProf1Q;
             prevSelf._fName1 = _prevFName1;
             prevSelf._fName2 = _prevFName2;
             if (_prevLineData1.HasElements())
@@ -319,6 +631,16 @@ namespace HCResourceLibraryApp.DataHandling
                 prevSelf._lineData2 = new List<string>();
                 prevSelf._lineData2.AddRange(_prevLineData2.ToArray());
             }
+            if (_prevGroupInfo1.HasElements())
+            {
+                prevSelf._groupInfo1 = new List<SfdGroupInfo>();
+                prevSelf._groupInfo1.AddRange(_prevGroupInfo1.ToArray());
+            }
+            if (_prevGroupInfo2.HasElements())
+            {
+                prevSelf._groupInfo2 = new List<SfdGroupInfo>();
+                prevSelf._groupInfo2.AddRange(_prevGroupInfo2.ToArray());
+            }
 
             return prevSelf;
         }
@@ -330,6 +652,9 @@ namespace HCResourceLibraryApp.DataHandling
             /// file encoding syntax
             /// tag "frmt"    
             ///     - usingNative {bool}
+            ///     - editProf1 {bool}
+            ///     - groupInfo1 1***{group1Info}***
+            ///     - groupInfo2 2***{group2Info}***
             /// tag "frmt1"
             ///     - name1 {string}
             ///     - lineData1 {lines of strings}
@@ -343,13 +668,57 @@ namespace HCResourceLibraryApp.DataHandling
             {
                 switch (enx)
                 {
+                    /// frmt -> usingNative, editProf1, group Infos 1 & 2
                     case 0:
-                        noIssuesQ = Base.FileWrite(false, commonFileTag, _nativeColCodeQ.ToString());
-                        Dbug.Log($"Encoded 'Use Native Color Code' :: {_nativeColCodeQ}");
+                        const string triSep = Sep + Sep + Sep;
+                        for (int f0x = 0; f0x < 4 && noIssuesQ; f0x++)
+                        {
+                            switch (f0x)
+                            {
+                                case 0:
+                                    noIssuesQ = Base.FileWrite(false, commonFileTag, _nativeColCodeQ.ToString());
+                                    Dbug.Log($"Encoded 'Use Native Color Code Q' :: {_nativeColCodeQ}");
+                                    break;
+
+                                case 1:
+                                    noIssuesQ = Base.FileWrite(false, commonFileTag, _editProf1Q.ToString());
+                                    Dbug.Log($"Encoded 'Edit Profile 1 Q' :: {_editProf1Q}");
+                                    break;
+
+                                case 2:
+                                    string group1DataLine = "GOnes";
+                                    if (_groupInfo1.HasElements())
+                                    {
+                                        Dbug.Log("Encoding Profile 1 Groups; ");
+                                        foreach (SfdGroupInfo group1s in _groupInfo1)
+                                        {
+                                            group1DataLine += $"{triSep}{group1s.Encode()}";
+                                            Dbug.Log($" + Encoded :: {group1s}");
+                                        }
+                                    }
+                                    noIssuesQ = Base.FileWrite(false, commonFileTag, group1DataLine);
+                                    break;
+
+                                case 3:
+                                    string group2DataLine = "GTwos";
+                                    if (_groupInfo2.HasElements())
+                                    {
+                                        Dbug.Log("Encoding Profile 2 Groups; ");
+                                        foreach (SfdGroupInfo group2s in _groupInfo2)
+                                        {
+                                            group2DataLine += $"{triSep}{group2s.Encode()}";
+                                            Dbug.Log($" + Encoded :: {group2s}");
+                                        }
+                                    }
+                                    noIssuesQ = Base.FileWrite(false, commonFileTag, group2DataLine);
+                                    break;
+                            }
+                        }
                         break;
 
+                    /// frmt1 -> formatting prof 1 lines
                     case 1:
-                        Dbug.Log("Encoding Formattig profile 1; ");
+                        Dbug.Log("Encoding Formatting profile 1; ");
                         noIssuesQ = Base.FileWrite(false, formatterTag1, _fName1.IsNEW() ? defaultName1 : _fName1);
                         if (noIssuesQ)
                         {
@@ -363,9 +732,10 @@ namespace HCResourceLibraryApp.DataHandling
                             else Dbug.Log($" + No line data to encode; ");
                         }
                         break;
-
+                    
+                    /// frmt2 -> formatting profile 2 lines
                     case 2:
-                        Dbug.Log("Encoding Formattig profile 2; ");
+                        Dbug.Log("Encoding Formatting profile 2; ");
                         noIssuesQ = Base.FileWrite(false, formatterTag2, _fName2.IsNEW() ? defaultName2 : _fName2);
                         if (noIssuesQ)
                         {
@@ -400,23 +770,83 @@ namespace HCResourceLibraryApp.DataHandling
                 switch (dcx)
                 {
                     case 0:
-                        Dbug.LogPart("Fetching 'Use Native Color Code'");
+                        Dbug.Log("Fetching General Data and Groups Data; ");
+                        Dbug.NudgeIndent(true);
                         decodedQ = Base.FileRead(commonFileTag, out string[] frmtData);
-                        if (decodedQ && frmtData.HasElements())
+                        if (decodedQ && frmtData.HasElements(4))
                         {
+                            /// use nativeQ
+                            Dbug.LogPart("- Fetching 'Use Native Color Code Q' :: ");
                             if (bool.TryParse(frmtData[0], out bool useNativeQ))
                             {
-                                Dbug.LogPart($"; Fetched 'Use Native Color Code' :: {useNativeQ}");
+                                Dbug.LogPart(useNativeQ.ToString());
                                 _nativeColCodeQ = useNativeQ;
                             }
-                            else Dbug.LogPart($"; Value could not be parsed");
+                            else Dbug.LogPart($" ??? ");
+                            Dbug.Log("; ");
+
+                            /// edit prof 1Q
+                            Dbug.LogPart("- Fetching 'Edit Profile 1 Q' :: ");
+                            if (bool.TryParse(frmtData[1], out bool edit1Q))
+                            {
+                                Dbug.LogPart(edit1Q.ToString());
+                                _editProf1Q = edit1Q;
+                            }
+                            else Dbug.LogPart($" ??? ");
+                            Dbug.Log("; ");
+
+                            const string triSep = Sep + Sep + Sep;
+
+                            /// group 1
+                            Dbug.LogPart("- Fetching 'Group 1 Data Line'");
+                            string[] groupOneInfo = frmtData[2].Split(triSep);
+                            if (groupOneInfo.HasElements(2))
+                            {
+                                Dbug.Log("; ");
+                                _groupInfo1 ??= new List<SfdGroupInfo>();
+                                for (int g1x = 0; g1x < groupOneInfo.Length; g1x++)
+                                {
+                                    if (g1x != 0)
+                                    {
+                                        SfdGroupInfo group1s = new();
+                                        if (group1s.Decode(groupOneInfo[g1x]))
+                                        {
+                                            _groupInfo1.Add(group1s);
+                                            Dbug.Log($"    Decoded :: {group1s}");
+                                        }                                  
+                                    }
+                                }
+                            }
+                            else Dbug.Log(" :: No Group 1s data to decode; ");
+
+                            /// group 2
+                            Dbug.LogPart("- Fetching 'Group 2 Data Line'");
+                            string[] groupTwoInfo = frmtData[3].Split(triSep);
+                            if (groupTwoInfo.HasElements(2))
+                            {
+                                Dbug.Log("; ");
+                                _groupInfo2 ??= new List<SfdGroupInfo>();
+                                for (int g2x = 0; g2x < groupTwoInfo.Length; g2x++)
+                                {
+                                    if (g2x != 0)
+                                    {
+                                        SfdGroupInfo group2s = new();
+                                        if (group2s.Decode(groupTwoInfo[g2x]))
+                                        {
+                                            _groupInfo2.Add(group2s);
+                                            Dbug.Log($"    Decoded :: {group2s}");
+                                        }
+                                    }
+                                }
+                            }
+                            else Dbug.Log(" :: No Group 2s data to decode; ");
                         }
                         else
                         {
                             crossCompatibilityIssue = true;
-                            Dbug.LogPart($"; Could not fetch value");
+                            Dbug.Log($"Could not fetch general formatting data values; ");
                         }
-                        Dbug.Log("; ");
+                        Dbug.NudgeIndent(false);
                         break;
 
                     case 1:
@@ -469,7 +899,7 @@ namespace HCResourceLibraryApp.DataHandling
 
             if (crossCompatibilityIssue)
             {
-                Dbug.Log($"Cross-compatibility issue: previous versions do not contain guaranteed line for 'SFormatterData:UseNativeColorCode'; Decoding is okay'd; ");
+                Dbug.Log($"Cross-compatibility issue: previous versions do not contain guaranteed lines for general data; Decoding is okay'd; ");
                 decodedQ = true;
             }
 
@@ -478,5 +908,6 @@ namespace HCResourceLibraryApp.DataHandling
             return decodedQ;
         }
         #endregion
+
     }
 }

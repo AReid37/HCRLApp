@@ -11,7 +11,7 @@ namespace HCResourceLibraryApp
     // THE ENTRANCE POINT, THE CONTROL ROOM
     public class Program
     {
-        static readonly string consoleTitle = "High Contrast Resource Library App [v1.2.2]";
+        static readonly string consoleTitle = "High Contrast Resource Library App [v1.2.3]";
         static readonly string verLastPublishTested = "v1.1.9d";
         /// <summary>If <c>true</c>, the application launches for debugging/development. Otherwise, the application launches for the published version.</summary>
         public static readonly bool isDebugVersionQ = true;
@@ -280,7 +280,7 @@ namespace HCResourceLibraryApp
 
 
         // TESTING STUFF
-        static readonly bool runTest = true;
+        static readonly bool runTest = false;
         static readonly Tests testToRun = Tests.SFormatter_CheckSyntax;
         enum Tests
         {
@@ -891,21 +891,23 @@ namespace HCResourceLibraryApp
                     TextLine("Testing syntax checking of SFormatter.CheckSyntax() method");
 
                     NewLine();
-                    const string secHeader = "|header|";
+                    const string secHeader = "|header|Key", secBreak = "|break|", lineRep = "%%%%%%%";
+                    string skipToHeaderStartingAs = $"{secHeader}";
                     string[] lines = new string[]
                     { /// enter many incorrect entries, and at least one correct entry
 
-                        // GENERA SYNTAX CHECKING
+                        // GENERAL SYNTAX CHECKING
                         /// Code errors [000]
                         $"{secHeader}Code Errors [000]",
                         "/ \"comment not\"", "\"the\" /", "\"what\" // \"oh no\"", "//", /// comments
                         "\"butter", "butter\"", "\"butter\" \"", "\"lemon\"", /// plain text  
                         "&", "&;", ";", "& 00;", "; &", "\"&;&\"", "\"&;;\"", "\"&00;\"", /// escape character
                         "{", "}", "{{}", "{}}", "{ }", "{    }", "} tta {", "}{}{", "{TTA}", /// lib ref
-                        "$", "$ h q", "q$", "$[]", "$][", "]$[", "[$]", "]$", "[ $", "[", "]", "[]", "][", "[ ]", "] [", "$h", "$list[]", /// steam ref 
-                        "if ", "if   :", "if:", ":if", "if 1 = 1: \"if\"", /// if keyword
-                        "else", "else :", "else \" \"", ": else", "else: \"if\"", /// else keyword
-                        "repeat", "repeat:", "repeat  :", ": repeat", "repeat 2: \"rep2\"", /// repeat keyword
+                        "$", "$ h q", "q$", "$[]", "$][", "]$[", "[$]", "]$", "[ $", "[", "]", "[]", "][", "[ ]", "] [", "$h", "$list[]", "$url = 'www.L.com' : 'The L'", /// steam ref 
+                        "if ", "if   ;", "if;", ";if", "if 0 = 0; if ;", "if 3 = 4;;", "if 1 = 0; \"no\";", "if 1 = 1; \"if\"", /// if keyword
+                        "else", "else ;", "else \" \"", "; else", "else; ;", "if 0 = 0; \"else\"", "else; \"if\"", /// else keyword
+                        "repeat", "repeat;", "repeat  ;", "; repeat", "repeat 1;;", "#", "repeat 2; \"rep\"#", /// repeat keyword
+                        "jump", "jump;", "jump ;", "; jump", "jump ;; ;", "jump r;; 0;", "if 1 = 1; jump 200; 33", /// jump keyword
                         /// Plain Text Errors [001-002]
                         $"{secHeader}Plain Text Errors [001-002]",
                         "\"\"", "\"butter", "shea \"butter", "\"butter\"",
@@ -917,10 +919,34 @@ namespace HCResourceLibraryApp
                         "{melon", "{}", "{    }", "{ nuke }", "{TTA} { nuke'em }", $"{{Addit:1,ids}}",
                         /// Steam Format Reference Errors [007-008]
                         $"{secHeader}Steam Format Reference Errors [007-008]",
-                        "$ ", "$carl", "$urll", "$hh $tible", "$hhhh", "$nl", "$i $hr",
+                        "$ ", "$carl", "$urll", "$hh $tible", "$hhhh", "$", "$nl", "$i $hr",
+                        /// Keyword errors [009-019]
+                        $"{secHeader}Keyword Errors [009-023]",
+                        "if 1 = 1", "else", "repeat 2", "if 2 != 2; \"#ok\"", /// general keyword - no end colon  
+                        "$i if", "\"plant\" else", "else else;", "\"plant\" repeat", "repeat; repeat", "if 8 = 8; if 1 = 2; \"Go!\"", /// general keyword - keyword at front
+                        "if 0 = 0;", "else;  ", "repeat 2; ", /// general keyword - missing execution line
+                        "if 1 != 0; \"plant\" if 0 = 0;", "else; \"plant\" jump 256;", "repeat 3; \"u\" if 2 = 4;", /// general keyword - misplaced if / jump 
+                        "else; if 1 = 2; jump 4;", "repeat 1; if 2 = 3; jump 9;", "if 2 != \"2\"; jump 300; \"good\"", /// general keyword - exceed keyword limit
+                        $"{secBreak}If", "if", "if ; 2", "if $i; 0", "if", "if {CTA};", "if 4 = 1; if \"no\" = 2; 0", "if {Added:2,name}; 0", /// if - first value expected
+                        "if 4 =! 4; 0", "if 0 = 2; if 4 == 10;", "if !! ;", "if 0 = 1; 0", "if # != 1; 1", /// if - op expected / op invalid
+                        "if 9 = q; 2", "if 7 != $t; ", "if {tta} == 232; ", "if 3 = 2; if q != r; 1", "if {SummaryCount}=5; if2=2; \"#yes\"", /// if - second value expected
+                        $"{secBreak}Else","else; \"no\"", "repeat 1; if 0 = 2; \"uh\"", "else; \"nope\"", "if 0 = 0; if 1 = 1; \"yup\"", "else; if 2 = 3; \"yep\"", "else; \"mhmm\"", /// else
+                        $"{secBreak}Repeat","repeat;", "repeat ;", "repeat \"w\"; \"no\"", "repeat r; 4", "repeat 0; 10", "repeat {Added:#,ids}; \"l\"", "repeat \"8\"; {TTA}", "repeat 4; \"he\"", "repeat {AddedCount}; \"8\"", "repeat 13; if # != 1; \"donzo\"", /// repeat
+                        $"{secBreak}Jump","jump ;", "jump w;", "jump \"13\"", "jump {TTA};", "jump 20;", "repeat 4; jump 300;", "if 0 = 0; jump 300;", "else; jump 350;", /// jump
+                        
 
-
+                        // LIBRARY REFERENCE ERRORS
+                        $"{secHeader}Soon...",
                         "",
+                        "",
+                        "",
+                        "",
+                        "",
+                        "",
+                        "",
+                        "",
+
+
                         "",
                         "",
                         "",
@@ -929,49 +955,87 @@ namespace HCResourceLibraryApp
                     bool displayAllMessageQ = false;
                     SFormatterHandler.CheckSyntax(lines);
                     Table2Division tDiv = Table2Division.KCSmall;
-                    const char div = '|', divAlt = ' ';
+
+                    bool skippingSections = skipToHeaderStartingAs.Substring(secHeader.Length).IsNotNEW();
+                    const char div = '|';
                     for (int lx = -1; lx < lines.Length; lx++)
                     {
                         if (lx >= 0)
                         {
                             string data1 = lines[lx];
                             int lineNum = lx + 1;
-                            char trueDiv = lx % 2 == 0 ? div : divAlt;
 
                             if (data1.IsNotNEW())
                             {
-                                if (!data1.StartsWith(secHeader))
+                                if (skippingSections && data1.StartsWith(skipToHeaderStartingAs))
+                                    skippingSections = false;
+
+                                if (!skippingSections)
                                 {
-                                    SFormatterInfo[] errors = SFormatterHandler.GetErrors(lineNum);
-                                    if (errors.HasElements())
+                                    if (!data1.StartsWith(secHeader))
                                     {
-                                        string data2 = "";
-                                        for (int x = 0; x < errors.Length; x++)
+                                        if (!data1.StartsWith(secBreak))
                                         {
-                                            SFormatterInfo sfi = errors[x];
-                                            if (!displayAllMessageQ)
+                                            SFormatterInfo[] errors = SFormatterHandler.GetErrors(lineNum);
+                                            if (errors.HasElements())
                                             {
-                                                if (x == 0)
-                                                    data2 = $"{sfi.errorCode} - {sfi.errorMessage} ";
-                                                if (x != 0)
-                                                    data2 += $" +{sfi.errorCode}";
+                                                string data2 = "";
+                                                for (int x = 0; x < errors.Length; x++)
+                                                {
+                                                    SFormatterInfo sfi = errors[x];
+                                                    if (!displayAllMessageQ)
+                                                    {
+                                                        if (x == 0)
+                                                            data2 = $"{sfi.errorCode} - {sfi.errorMessage} ";
+                                                        if (x != 0)
+                                                            data2 += $" +{sfi.errorCode}";
+                                                        if (x + 1 == errors.Length)
+                                                            data2 += $" {lineRep}";
+                                                    }
+                                                    else
+                                                    {
+                                                        HoldNextListOrTable();
+                                                        Table(tDiv, x == 0 ? data1 : "", div, $"{(x == 0 ? "" : Ind14)}{sfi.errorCode} - {sfi.errorMessage} {(x == 0 ? lineRep : "")}");
+                                                        PrintTable();
+                                                    }
+                                                }
+                                                if (!displayAllMessageQ)
+                                                {
+                                                    HoldNextListOrTable();
+                                                    Table(tDiv, data1, div, data2);
+                                                    PrintTable();
+                                                }
                                             }
-                                            else Table(tDiv, x == 0 ? data1 : "", trueDiv, $"{(x == 0 ? "" : Ind14)}{sfi.errorCode} - {sfi.errorMessage}");
+                                            else
+                                            {
+                                                HoldNextListOrTable();
+                                                Table(tDiv, data1, div, "--");
+                                                PrintTable();
+                                            }
+
+                                            void PrintTable()
+                                            {
+                                                if (LatestTablePrintText.IsNotNE())
+                                                    Text(LatestTablePrintText.Replace(lineRep, $"   L{lineNum,-3}"), lineNum % 2 == 0 ? Color.Gray : Color.Yellow);
+                                            }
+
                                         }
-                                        if (!displayAllMessageQ)
-                                            Table(tDiv, data1, trueDiv, data2);
+                                        else
+                                        {
+                                            TextLine($"----- -- {data1.Replace(secBreak, "")} -- -----", Color.DarkGray);
+                                        }
+
                                     }
-                                    else Table(tDiv, data1, trueDiv, "--");
-                                }
-                                else
-                                {
-                                    Pause();
-                                    NewLine(1);
-                                    Important(data1.Replace(secHeader, ""));
-                                    TableRowDivider(true);
-                                    TableRowDivider('_', true, null);
-                                    Table(tDiv, "LINE", div, "ERRORS");
-                                    TableRowDivider(false);
+                                    else
+                                    {
+                                        Pause();
+                                        NewLine(1);
+                                        Important(data1.Replace(secHeader, ""));
+                                        TableRowDivider(true);
+                                        TableRowDivider('_', true, Color.DarkGray);
+                                        Table(tDiv, $"LINE    (#{lineNum}+)", div, "ERRORS");
+                                        TableRowDivider(false);
+                                    }
                                 }
                             }
                         }
@@ -980,8 +1044,7 @@ namespace HCResourceLibraryApp
                             NewLine();
                             TextLine("Syntax Checking Tools have been tested, please check the debug.", Color.Orange);
                             SFormatterHandler.TestSyntaxCheckTools();
-                            //Pause();
-                            HorizontalRule('_', 3);
+                            HorizontalRule('_', 2);
                         }
                     }
 
@@ -1178,12 +1241,12 @@ namespace HCResourceLibraryApp
                         Color wrapLevelCol = Color.NavyBlue, wrapOff = Color.Gray;
                         ForECol wrapOn = ForECol.Highlight;
 
-                        TextLine("The narrowest window settings required for this test.", Color.DarkGray);
+                        TextLine("The narrowest window settings required for this test.", Color.Forest);
                         TextLine($"Word Wrapping off [{wrapOff}]; Word Wrapping On [{GetPrefsForeColor(wrapOn)}];");
                         NewLine(2);
 
                         bool endExamples = false;
-                        for (int ex = 9; !endExamples; ex++)
+                        for (int ex = 0; !endExamples; ex++)
                         {
                             char divChar = '\0';
                             string wrapLevelText = "", exampleText = "";

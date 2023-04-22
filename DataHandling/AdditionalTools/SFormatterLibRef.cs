@@ -190,7 +190,7 @@ namespace HCResourceLibraryApp.DataHandling
             /// Added Props -- ids, name
             /// Addit Props -- ids, optname, relID, relName
             /// Updat Props -- relID, name, changeDesc
-            /// Legen Props -- key, definition, keyNum
+            /// Legen Props -- key, definition, [removed: keyNum]
             /// Summa Props -- sumPart
 
             const string div = "|";
@@ -266,14 +266,12 @@ namespace HCResourceLibraryApp.DataHandling
                         dbgStr += $"Legend @{entryNum} = {_legend[entryNum].Replace(PropSep, div)}   [key/definition/keyNum]";
 
                         string[] legProps = _legend[entryNum].Split(PropSep);
-                        if (legProps.HasElements(3))
+                        if (legProps.HasElements(2))
                         {
                             if (prop == LibRefProp.Key)
                                 propValue = legProps[0];
                             else if (prop == LibRefProp.Definition)
                                 propValue = legProps[1];
-                            else if (prop == LibRefProp.KeyNum)
-                                propValue = legProps[2];
                         }
                     }
                     else dbgStr += $"No data in '{section}'";
@@ -325,8 +323,6 @@ namespace HCResourceLibraryApp.DataHandling
         Key,
         /// <summary>Applies only to <see cref="DecodedSection.Legend"/>; Fetches legend key definition.</summary>
         Definition,
-        /// <summary>Applies only to <see cref="DecodedSection.Legend"/>; Fetches legend key's unique identity number.</summary>
-        KeyNum,
         /// <summary>Applies only to <see cref="DecodedSection.Summary"/>; Fetches summary parts.</summary>
         SummaryPart
     }

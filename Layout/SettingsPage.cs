@@ -286,7 +286,7 @@ namespace HCResourceLibraryApp.Layout
                         FormatLine(previewDiv, ForECol.Accent);
                         #endregion
                         HSNL(0, 2);
-                        FormatLine($"#These element colors also affects the title: {HomePage.primaryCol}, {HomePage.secondaryCol}, {HomePage.tertiaryCol}.", ForECol.Accent);
+                        FormatLine($"#These Numbered Elements Affect: 'Title Art' [137], 'Color Coding' [123459].", ForECol.Accent);
                         ShowPrefsColors(newForeCols);                        
                         FormatLine("0|Reset to defaults", ForECol.Normal);
                         NewLine();

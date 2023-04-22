@@ -470,7 +470,10 @@ namespace HCResourceLibraryApp.Layout
                     string formatterInUse = $"Editing Formatter Profile #{(isUsingFormatterNo1Q ? 1 : 2)} - {(isUsingFormatterNo1Q ? _formatterData.Name1 : _formatterData.Name2)}";
                     string nativeColCode = $"Using Native Color Code? {(_formatterData.UseNativeColorCodeQ ? "Yes" : "No (Custom)")}";
 
+                    HoldNextListOrTable();
                     List(OrderType.Unordered, formatterInUse, nativeColCode);
+                    if (LatestListPrintText.IsNotNE())
+                        FormatLine(LatestListPrintText.Replace("\t", Ind14));
                     NewLine();
                 }
 
@@ -480,7 +483,7 @@ namespace HCResourceLibraryApp.Layout
                 {
                     exitFormatterSubPageQ = false;
                     bool validMenuKey = ListFormMenu(out string fMenuKey, "Formatter Menu", null, null, null, true, $"Toggle Native Color Coding,Toggle Formatter Profile,Open Formatting Editor, {exitSubPagePhrase} [Enter]".Split(','));
-                    MenuMessageQueue(!validMenuKey && fMenuKey.IsNotNE(), false, null);
+                    MenuMessageQueue(!validMenuKey && LastInput.IsNotNE(), false, null);
 
                     if (validMenuKey)
                     {
@@ -495,20 +498,22 @@ namespace HCResourceLibraryApp.Layout
                         // toggle formatter to edit
                         else if (fMenuKey.Equals("b") && _formatterData != null)
                         {
-                            isUsingFormatterNo1Q = !isUsingFormatterNo1Q;
+                            _formatterData.EditProfileNo1Q = !_formatterData.EditProfileNo1Q;
+                            isUsingFormatterNo1Q = _formatterData.EditProfileNo1Q;
                             Format($"{Ind34}Now editing Formatter Profile #{(isUsingFormatterNo1Q ? 1 : 2)} :: '{(isUsingFormatterNo1Q ? _formatterData.Name1 : _formatterData.Name2)}'.", ForECol.Correction);
                             Pause();
                         }
 
                         // open formatting editor
-                        else if (fMenuKey.Equals("c"))
+                        else if (fMenuKey.Equals("c") && _formatterData != null)
                             FormattingEditor();
 
-                        // exit
-                        else validMenuKey = false;
+                        //// exit
+                        else //if (fMenuKey.Equals("d"))
+                            exitFormatterSubPageQ = true;
                     }
 
-                    if (!validMenuKey)
+                    if (!validMenuKey && LastInput.IsNE())
                         exitFormatterSubPageQ = true;
                 }
                 // no ver log info
@@ -720,14 +725,16 @@ namespace HCResourceLibraryApp.Layout
 
              **/
 
+            isUsingFormatterNo1Q = _formatterData.EditProfileNo1Q;
             const char divCodeView = '-', divHelpChar = ':', divEditingArea = '.';
             const string editorHelpPhrase = "!help"; 
-            const string editorCmdAdd = "add", editorCmdEdit = "edit", editorCmdDelete = "delete", editorCmdUndo = "<", editorCmdRedo = ">", editorCmdRename = "rename", editorCmdCopy = "copy", editorCmdAppender = "~~";
+            const string editorCmdAdd = "add", editorCmdEdit = "edit", editorCmdDelete = "delete", editorCmdUndo = "<", editorCmdRedo = ">", editorCmdRename = "rename", editorCmdCopy = "copy", editorCmdAppender = "~~", editorCmdGroup = "group";
+            const string multiHistKey = "\n\n\n", histNLRep = SFormatterHistory.histNLRep;
             bool exitFormatEditorQ = false, formatterIsSetupQ = false, showHistoryQ = false;
 
             const int noLineToEdit = -1, lineMaximum = (int)(PageSizeLimit * 0.4f); // DBG"10"   OG"(int)(PageSizeLimit * 0.4f)"
             const int historyLimit = 25, historyActionInitial = 1;
-            int lineToEdit = noLineToEdit, countCycles = 0, historySpan = HSNL(1, 5).Clamp(1, 3);
+            int lineToEdit = noLineToEdit, lineToEditSpan = HSNL(3, 7).Clamp(0, 5), countCycles = 0, historySpan = HSNL(1, 5).Clamp(1, 3);
 
             Program.LogState("Generate Steam Log|Steam Formatter (WIP)|Formatting Editor (WIP)");
             Dbug.StartLogging();
@@ -744,7 +751,7 @@ namespace HCResourceLibraryApp.Layout
                 if (!_editorHistory1.HasElements())
                 {
                     historyActionNumber1 = historyActionInitial;
-                    _editorHistory1.Add(new SFormatterHistory("Openned Formatter", "--", "--"));
+                    _editorHistory1.Add(new SFormatterHistory("Opened Formatter", "--", "--"));
                     Dbug.Log($"Added 'open formatter' history to history list; Initialized history action number; ");
                 }
 
@@ -759,7 +766,7 @@ namespace HCResourceLibraryApp.Layout
                 if (!_editorHistory2.HasElements())
                 {
                     historyActionNumber2 = historyActionInitial;
-                    _editorHistory2.Add(new SFormatterHistory("Openned Formatter", "--", "--"));
+                    _editorHistory2.Add(new SFormatterHistory("Opened Formatter", "--", "--"));
                     Dbug.Log($"Added 'open formatter' history to history list; Initialized history action number; ");
                 }
 
@@ -830,7 +837,7 @@ namespace HCResourceLibraryApp.Layout
                 Clear();
                 Title("Formatting Editor", subMenuUnderline, 2);
 
-                string commandPrompt = null;
+                string commandPrompt = null, appenderHistNamePart = null;
 
                 // ++   CODE VIEW   ++
                 /// header
@@ -883,10 +890,40 @@ namespace HCResourceLibraryApp.Layout
                         {
                             int lineNumber = lx + 1;
                             bool isLineToEditQ = lineToEdit == lineNumber;
+                            bool displayLines = !makingEdit || (makingEdit && lineNumber.IsWithin(lineToEdit - lineToEditSpan, lineToEdit + lineToEditSpan));
+                            bool spanEdge = makingEdit && lineNumber.IsWithin(lineToEdit - lineToEditSpan - 1, lineToEdit + lineToEditSpan + 1);
+
+                            bool isInGroupQ = _formatterData.IsLineInGroup(lineNumber, out string groupName, out int pos, out bool expandedQ);
+                            bool collapseGroupQ = isInGroupQ && !expandedQ && !makingEdit;
+
+                            /// group expanded top region tag \ group collapsed tag
+                            if (isInGroupQ && pos == 1)
+                            {
+                                if (!collapseGroupQ)
+                                {
+                                    if ((displayLines || spanEdge))
+                                        FormatLine($"{Ind24}--  Group '{groupName}'  -- ", ForECol.Accent);
+                                }
+                                else FormatLine($"{Ind24}====  Group '{groupName}'  ====", ForECol.Accent);
+                            }
+
+                            /// group inner-lines tag
+                            string innerGroupKey = "";
+                            if (isInGroupQ && !collapseGroupQ)
+                                innerGroupKey = $"{groupName[0]}| ";
 
                             /// line displays
-                            Format($"L{lx + 1,-3}", ForECol.Accent);
-                            SFormatterHandler.ColorCode(formatToDisplay[lx], _formatterData.UseNativeColorCodeQ, true);
+                            if (!collapseGroupQ)
+                            {
+                                if (displayLines)
+                                {
+                                    Format($"L{lx + 1,-3} {innerGroupKey}", ForECol.Accent);
+                                    SFormatterHandler.ColorCode(formatToDisplay[lx], _formatterData.UseNativeColorCodeQ, true);
+                                }
+                                else if (spanEdge)
+                                    FormatLine($"L{lx + 1,-3} {innerGroupKey}...", ForECol.Accent);
+                            }
+
 
                             /// the editing area
                             if (makingEdit && isLineToEditQ)
@@ -902,7 +939,7 @@ namespace HCResourceLibraryApp.Layout
 
                             /// error displays
                             SFormatterInfo[] linErrors = SFormatterHandler.GetErrors(lineNumber);
-                            if (linErrors.HasElements())
+                            if (linErrors.HasElements() && displayLines && !collapseGroupQ)
                                 for (int ex = 0; ex < linErrors.Length; ex++)
                                 {
                                     SFormatterInfo error = linErrors[ex];
@@ -919,7 +956,13 @@ namespace HCResourceLibraryApp.Layout
                                             NewLine();
                                     }
                                 }
+
+
+                            /// group expanded bottom region tag
+                            if (isInGroupQ && pos == -1 && !collapseGroupQ && (displayLines || spanEdge))
+                                FormatLine($"{Ind24}--  END Group '{groupName}'  --", ForECol.Accent);
                         }
+
 
                         // Editing Area (part 2)
                         if (makingEdit)
@@ -938,7 +981,7 @@ namespace HCResourceLibraryApp.Layout
                                     Clear();
                                     Title("Formatting Language Syntax", subMenuUnderline, 2);
 
-                                    Table2Division divStyle = Table2Division.KCSmall;
+                                    Table2Division divStyle = WSLL(0, 2) == 2 ? Table2Division.KCTiny : Table2Division.KCSmall;
                                     const char nxt = '%'; // used to force parts of table data into parts (Outcome side only)
                                     TableRowDivider(true);
                                     TableRowDivider(divCodeView, true, GetPrefsForeColor(ForECol.Accent));
@@ -959,21 +1002,22 @@ namespace HCResourceLibraryApp.Layout
                                             &00;            plain text '"'
                                             {abc123}        library reference
                                             $abc123         steam formatting reference
-                                            if # = #:       keyword, control; compares two given values to be equal. Prints following line if condition is true (values are equal). Placed at start of line.
-                                            else:           keyword, control; Prints following line if the condition of a preceding 'if # = #' is false (values are not equal). Placed at start of line.
-                                            repeat #:       keyword, control; repeats line '#' times incrementing from one to given number '#'. Any occuring '#' in following line is replaced with this incrementing number. Placed at start of line.
+                                            if # = #;       keyword, control; compares two given values to be equal. Prints following line if condition is true (values are equal). Placed at start of line.
+                                            else;           keyword, control; Prints following line if the condition of a preceding 'if # = #' is false (values are not equal). Placed at start of line.
+                                            repeat #;       keyword, control; repeats line '#' times incrementing from one to given number '#'. Any occuring '#' in following line is replaced with this incrementing number. Placed at start of line.
                                         */
                                         { "GENERAL SYNTAX", null},
-                                        { null, "This functional language is case-sensitive."},
+                                        { null, $"This functional language is case-sensitive.\nA value describes any input that derives from: a number, plain text, or (the property of) a library reference."},
                                         { "// text",    "Line comment. Must be placed at the start of the line. Commenting renders a line imparsable."},
                                         { "text",       "Code. Anything that is not commented is code and is parsable on steam log generation."},
                                         { "\"text\"",   "Plain text. Represents any text that will be parsed into the generated steam log."},
                                         { "&00;",       "Escape character. Used within plain text to print double quote character (\")."},
                                         { "{text}",     $"Library reference. References a value based on the information received from a submitted version log.{nxt}Refer to 'Library Reference' below for more information."},
                                         { "$text",      $"Steam format reference. References a styling element to use against plain text or another value when generating steam log.{nxt}Refer to 'Steam Format References' below for more information."},
-                                        { "if # = #:",  $"Keyword. Must be placed at the start of the line.{nxt}A control command that compares two values for a true or false condition. If the condition is 'true' then the line's remaining data will be parsed into the formatting string.{nxt}The operator '=' compares two values to be equal. The operator '!=' compares two values to be unequal."},
-                                        { "else:",      $"Keyword. Must be placed at the start of the line. Must be placed following an 'if' keyword line.{nxt}A control command that will parse the line's remaining data when the condition of a preceding 'if' command is false."},
-                                        { "repeat #:",  $"Keyword. Must be placed at the start of the line.{nxt}A control command that repeats a line's remaining data '#' number of times. An incrementing number from one to given number '#' will replace any occuring '#' in the line's remaining data."},
+                                        { "if # = #;",  $"Keyword. Must be placed at the start of the line.{nxt}A control command that compares two values for a true or false condition. If the condition is 'true' then the line's remaining data will be parsed into the formatting string.{nxt}The operator '=' compares two values to be equal. The operator '!=' compares two values to be unequal."},
+                                        { "else;",      $"Keyword. Must be placed at the start of the line. Must be placed following an 'if' keyword line.{nxt}A control command that will parse the line's remaining data when the condition of a preceding 'if' command is false."},
+                                        { "repeat #;",  $"Keyword. Must be placed at the start of the line.{nxt}A control command that repeats a line's remaining data '#' number of times. An incrementing number from one to given number '#' will replace any occuring '#' in the line's remaining data."},
+                                        { "jump #;",    $"Keyword. Can only be placed following an 'if' or 'else' keyword.{nxt}A control command the allows skipping ahead to a given line. Only direct numbers are accepted as a value.{nxt}Note that no execution line is required after this keyword." },
 
 
                                         // LIBRARY
@@ -1000,7 +1044,7 @@ namespace HCResourceLibraryApp.Layout
 
                                      */
                                         { "LIBRARY REFERENCES", null},
-                                        { null, "Library reference values are provided by the information obtained from the version log submitted for steam log generation."},
+                                        { null, "Library reference values are provided by the information obtained from the version log submitted for steam log generation.\nValues returned from library references are as plain text."},
                                         { "{Version}",          "Value. Gets the log version number (ex 1.00)."},
                                         { "{AddedCount}",       "Value. Gets the number of added item entries available."},
                                         { "{Added:#,prop}",     $"Value Array. Gets value 'prop' from one-based added entry number '#'.{nxt}Values for 'prop': ids, name."},
@@ -1010,7 +1054,7 @@ namespace HCResourceLibraryApp.Layout
                                         { "{UpdatedCount}",     "Value. Gets the number of updated item entries available."},
                                         { "{Updated:#,prop}",   $"Value Array. Gets value 'prop' from one-based updated entry number '#'.{nxt}Values for 'prop': changeDesc, id, name."},
                                         { "{LegendCount}",      "Value. Gets the number of legend entries available."},
-                                        { "{Legend:#,prop}",    $"Value Array. Gets value 'prop' from one-based legend entry number '#'.{nxt}Values for 'prop': definition, key, keyNum (unique number based on legend key).{nxt}Using a plain text value for '#' will implicitly convert and replace the text into a 'keyNum' value after an edit."},
+                                        { "{Legend:#,prop}",    $"Value Array. Gets value 'prop' from one-based legend entry number '#'.{nxt}Values for 'prop': definition, key"},
                                         { "{SummaryCount}",     "Value. Gets the number of summary parts available."},
                                         { "{Summary:#}",        "Value Array. Gets the value for one-based summary part number '#'."},
 
@@ -1045,7 +1089,7 @@ namespace HCResourceLibraryApp.Layout
 
                                         */
                                         { "STEAM FORMAT REFERENCES", null},
-                                        { null, $"Steam format references are styling element calls that will affect the look of any text or value placed after it on log generation.\n{Ind14}Simple command references may be combined with other simple commands unless otherwise unpermitted.\n{Ind14}Complex commands require a text or value to be placed in a described parameter surrounded by single quote characters (')."},
+                                        { null, $"Steam format references are styling element calls that will affect the look of any text or value placed after it on log generation.\nSimple command references may be combined with other simple commands unless otherwise unpermitted. Simple commands affect only one value that follows them.\nComplex commands require a text or value to be placed in a described parameter surrounded by single quote characters (')."},
                                         /// simple
                                         { "$h",     $"Simple command. Header text. Must be placed at the start of the line. May not be combined with other simple commands.{nxt}There are three levels of header text. The header level follows the number of 'h's in reference. Example, a level three header text is '$hhh'."},
                                         { "$b",     "Simple command. Bold text."},
@@ -1053,31 +1097,31 @@ namespace HCResourceLibraryApp.Layout
                                         { "$i",     "Simple command. Italicized text."},
                                         { "$s",     "Simple command. Strikethrough text."},
                                         { "$sp",    "Simple command. Spoiler text."},
-                                        { "$np",     "Simple command. No parse. Doesn't parse steam format tags when generating steam log."},
+                                        { "$np",    "Simple command. No parse. Doesn't parse steam format tags when generating steam log."},
                                         { "$c",     "Simple command. Code text. Fixed width font, preserves space."},
                                         { "$hr",    "Simple command. Horizontal rule. Must be placed on its own line. May not be combined with other simple commands."},
                                         { "$nl",    "Simple command. New line."},
                                         /// complex
-                                        { "$url='link':'name'",     $"Complex command. Must be placed on its own line.{nxt}Creates a website link by using URL address 'link' to create a hyperlink text described as 'name'."},
+                                        { "$url= 'link':'name'",     $"Complex command. Must be placed on its own line.{nxt}Creates a website link by using URL address 'link' to create a hyperlink text described as 'name'."},
                                         { "$list[or]",              $"Complex command. Must be placed on its own line.{nxt}Starts a list block. The optional parameter within square brackets, 'or', will initiate an ordered (numbered) list. Otherwise, an unordered list is initiated."},
                                         { "$*",                     $"Simple command. Must be placed on its own line.{nxt}Used within a list block to create a list item. Simple commands may follow to style the list item value or text."},
-                                        { "$q='author':'quote'",    $"Complex command. Must be placed on its own line.{nxt}Generates a quote block that will reference an 'author' and display their original text 'quote'."},
+                                        { "$q= 'author':'quote'",    $"Complex command. Must be placed on its own line.{nxt}Generates a quote block that will reference an 'author' and display their original text 'quote'."},
                                         { "$table[nb,ec]",          $"Complex command. Must be placed on its own line.{nxt}Starts a table block. There are two optional parameters within square brackets: parameter 'nb' will generate a table with no borders, parameter 'ec' will generate a table with equal cells."},
-                                        { "$th='clm1','clm2'",      $"Complex command. Must be placed on its own line.{nxt}Used within a table block to create a table header row. Separate multiple columns of data with ','. Must follow immediately after a table block has started."},
-                                        { "$td='clm1','clm2'",      $"Complex command. Must be placed on its own line.{nxt}Used within a table block to create a table data row. Separate multiple columns of data with ','."},
+                                        { "$th= 'clm1','clm2'",      $"Complex command. Must be placed on its own line.{nxt}Used within a table block to create a table header row. Separate multiple columns of data with ','. Must follow immediately after a table block has started."},
+                                        { "$td= 'clm1','clm2'",      $"Complex command. Must be placed on its own line.{nxt}Used within a table block to create a table data row. Separate multiple columns of data with ','."},
 
 
                                         // SYNTAX EXCEPTIONS
                                         { "SYNTAX EXCEPTIONS", null},
-                                        { "if # = #: $text",    "A (complex) steam format reference may be preceded by any keyword: 'if', 'else' or 'repeat'."},
-                                        { "else: if # = #:", "The keyword 'else' may precede the keyword 'if'. This 'if' keyword will trigger a following 'else' keyword line."},
-                                        { "repeat#: if # = #:", "The keyword 'repeat' may precede the keyword 'if'. This 'if' keyword cannot trigger an 'else' keyword line."},
+                                        { "if # = #; if # = #;", "The keyword 'if' may precede the keyword 'if' once more. The second 'if' may trigger a following 'else' keyword line." },
+                                        { "else; if # = #;", "The keyword 'else' may precede the keyword 'if'. This 'if' keyword may trigger a following 'else' keyword line."},
+                                        { "repeat#; if # = #;", "The keyword 'repeat' may precede the keyword 'if'. This 'if' keyword cannot trigger an 'else' keyword line."},
 
 
                                         // EDITING SUPPLEMENT
                                         { "EDITING SUPPLEMENT", null},
                                         { null, "The following only applies to the editing area when editing a line."},
-                                        { editorCmdAppender, $"Appendder supplement. Allows adding or inserting code into the currently edited line. There are three functions:{nxt}Append the new edit to the end of the line: '*text'.{nxt}Insert the new edit to the start of the line: 'text*'.{nxt}Insert the new edit between two words within the line: 'word1*text*word2'.".Replace("*", editorCmdAppender)}
+                                        { editorCmdAppender, $"Appendder supplement. Allows adding or inserting code into the currently edited line. There are four functions:{nxt}Append the new edit to the end of the line: '*text'.{nxt}Insert the new edit to the start of the line: 'text*'.{nxt}Insert the new edit between two words within the line: 'word1*text*word2'.{nxt}Insert and replace occuring word in the line: 'word*text'.".Replace("*", editorCmdAppender)}
                                     };
 
                                     for (int i = 0; i < syntaxes.GetLength(0); i++)
@@ -1156,7 +1200,7 @@ namespace HCResourceLibraryApp.Layout
 
                                         bool oneAppenderOnLineQ = editInput.CountOccuringCharacter(editorCmdAppender[0]) == editorCmdAppender.Length;
                                         string newEditInput = null, newEdit = "";
-                                        string lineInfo = _formatterData.GetLine(isUsingFormatterNo1Q, lineToEdit);
+                                        string lineInfo = _formatterData.GetLine(lineToEdit);
 
                                         /// append after
                                         if (editInput.StartsWith(editorCmdAppender) && oneAppenderOnLineQ)
@@ -1166,6 +1210,7 @@ namespace HCResourceLibraryApp.Layout
                                             if (newEdit.IsNotNE())
                                             {
                                                 newEditInput = lineInfo + newEdit;
+                                                appenderHistNamePart = "Append";
                                                 Dbug.LogPart($"Resulting Edit :: '{lineInfo}' + '{newEdit}'");
                                             }
                                             else
@@ -1182,12 +1227,56 @@ namespace HCResourceLibraryApp.Layout
                                             if (newEdit.IsNotNE())
                                             {
                                                 newEditInput = newEdit + lineInfo;
+                                                appenderHistNamePart = "Insert Before";
                                                 Dbug.LogPart($"Resulting Edit :: '{newEdit}' + '{lineInfo}'");
                                             }
                                             else
                                             {
                                                 Dbug.LogPart("No new edit to insert");
                                                 IncorrectionMessageQueue("There is no new edit to insert before line");
+                                            }
+                                        }
+                                        /// replace occurence
+                                        else if (oneAppenderOnLineQ)
+                                        {
+                                            Dbug.LogPart("$Replace occurence within; ");
+                                            string[] editParts = editInput.Split(editorCmdAppender);
+                                            if (editParts.HasElements(2))
+                                            {
+                                                string word1 = editParts[0];
+                                                newEdit = editParts[1];
+
+                                                if (word1.IsNotNE() && newEdit.IsNotNE())
+                                                {
+                                                    Dbug.LogPart($"Replacing any '{word1}' with '{newEdit}'");
+
+                                                    if (lineInfo.Contains(word1) && word1 != newEdit)
+                                                    {
+                                                        newEditInput = lineInfo.Replace(word1, newEdit);
+                                                        appenderHistNamePart = "Replace";
+                                                        Dbug.LogPart($"Resulting Edit :: '{lineInfo.Replace(word1, $"[{newEdit}]")}'");
+                                                    }
+                                                    else
+                                                    {
+                                                        if (word1 == newEdit)
+                                                        {
+                                                            Dbug.LogPart("Unnecessary replacement (word equals new edit)");
+                                                            IncorrectionMessageQueue("Word to replace and new edit are the same");
+                                                        }
+                                                        else
+                                                        {
+                                                            Dbug.LogPart($"Could not find placement '{word1}' within line");
+                                                            IncorrectionMessageQueue($"Could not find word '{word1}' within line");
+                                                        }
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    Dbug.LogPart("Could not proceed to replace word with new edit");
+                                                    if (word1.IsNotNE())
+                                                        IncorrectionMessageQueue("There is no new edit to insert within line");
+                                                    else IncorrectionMessageQueue("Missing identifiable word to replace with new edit");
+                                                }
                                             }
                                         }
                                         /// insert between
@@ -1200,7 +1289,7 @@ namespace HCResourceLibraryApp.Layout
                                                 string word1 = editParts[0], word2 = editParts[2];
                                                 newEdit = editParts[1];
 
-                                                if (word1.IsNotNE() && word2.IsNotNE())
+                                                if (word1.IsNotNE() && word2.IsNotNE() && newEdit.IsNotNE())
                                                 {
                                                     Dbug.LogPart($"Parting words: after '{word1}' and before '{word2}'; ");
                                                     string[] lineParts = lineInfo.Split(word1 + word2);
@@ -1210,6 +1299,7 @@ namespace HCResourceLibraryApp.Layout
                                                         lineParts[1] = word2 + lineParts[1];
 
                                                         newEditInput = lineParts[0] + newEdit + lineParts[1];
+                                                        appenderHistNamePart = "Insert Within";
                                                         Dbug.LogPart($"Resulting Edit :: '{lineParts[0]}' + '{newEdit}' + '{lineParts[1]}'");
                                                     }
                                                     else
@@ -1220,10 +1310,18 @@ namespace HCResourceLibraryApp.Layout
                                                 }
                                                 else
                                                 {
-                                                    Dbug.LogPart("No parting words to identify placement within line");
-                                                    if (word1.IsNE())
-                                                        IncorrectionMessageQueue("Missing identifiable word to place new edit 'after'");
-                                                    else IncorrectionMessageQueue("Missing identifiable word to place new edit 'before'");
+                                                    if (newEdit.IsNotNE())
+                                                    {
+                                                        Dbug.LogPart("No parting words to identify placement within line");
+                                                        if (word1.IsNE())
+                                                            IncorrectionMessageQueue("Missing identifiable word to place new edit 'after'");
+                                                        else IncorrectionMessageQueue("Missing identifiable word to place new edit 'before'");
+                                                    }
+                                                    else
+                                                    {
+                                                        Dbug.LogPart("No new edit to insert between parting words");
+                                                        IncorrectionMessageQueue("There is no new edit to insert within line");
+                                                    }
                                                 }
                                             }
                                             else Dbug.LogPart("Parting words and new edit could not be fetched");
@@ -1314,7 +1412,15 @@ namespace HCResourceLibraryApp.Layout
                         {
                             FormatLine($"H{thisHistNum,-2}| {(thisHistNum == historyActionNumber ? "-> " : "")}{history.actionName}", foreCol);
                             if (Program.isDebugVersionQ && enableHistoryExtraInfoQ)
-                                FormatLine($"{Ind34}Undo {history.undoneCommand.Replace("\n", "\\n")}  |  Redo {history.redoneCommand.Replace("\n", "\\n")}", ForECol.Accent);
+                            {
+                                if (history.undoneCommand.Contains(multiHistKey))
+                                {
+                                    FormatLine($"{Ind34}UNDO {history.undoneCommand.Replace("\n", histNLRep)}", ForECol.Accent);
+                                    FormatLine($"{Ind34}REDO {history.redoneCommand.Replace("\n", histNLRep)}", ForECol.Accent);
+                                }
+                                else
+                                    FormatLine($"{Ind34}UNDO {history.undoneCommand.Replace("\n", histNLRep)}  |  REDO {history.redoneCommand.Replace("\n", histNLRep)}", ForECol.Accent);
+                            }
                         }
                         else
                         {
@@ -1336,7 +1442,7 @@ namespace HCResourceLibraryApp.Layout
                     Format($"Command >> ");
                     editorInput = StyledInput("___");
                 }
-                if (editorInput.IsNotNEW() && _formatterData != null)
+                if (editorInput.IsNotNEW())
                 {
                     Dbug.LogPart($"Editor Bar recieved input :: {editorInput}");
 
@@ -1358,12 +1464,13 @@ namespace HCResourceLibraryApp.Layout
                         string[,] editorCmds = new string[,]
                         {
                             { $"{editorCmdRename} {{newName}}", "Allows renaming this formatting profile to value 'newName'." },
-                            { $"{editorCmdAdd}#", $"Inserts a new line after line number '#'. No provided line number will add a new line to bottom of code view. Providing line number '0', will insert a line before the top-most line. Line limit of {lineMaximum}."},
+                            { $"{editorCmdAdd}#", $"Inserts a new line before line number '#'. No provided line number will add a new line to bottom of code view. Line limit of {lineMaximum}."},
                             { $"{editorCmdEdit}#", "Opens editing area on line number '#', allowing for an edit."},
                             { $"{editorCmdCopy}#,#", "Copies the line data of a given line to another line."},
                             { $"{editorCmdDelete}#", "Deletes line number '#'."},
-                            { $"{editorCmdUndo}", "Undoes an available editor action in history."},
-                            { $"{editorCmdRedo}", "Redoes an available editor action in history."},
+                            { $"{editorCmdUndo}", $"Undoes an available editor action in history (limit of {historyLimit - 1})."},
+                            { $"{editorCmdRedo}", $"Redoes an available editor action in history (limit of {historyLimit - 1})."},
+                            { $"{editorCmdGroup}#,#,{{name}}", $"Allows labelling a sequence of lines with given value 'name'. Calling an existing group by 'name' will toggle its expansion. Name cannot contain '{DataHandlerBase.Sep}' character. To remove a group, precede the group name with '0,0'. Minimum size of '2' lines."}
                         };
                         for (int i = 0; i < editorCmds.GetLength(0); i++)
                             Table(divStyle, $"{Ind24}{editorCmds[i, 0]}", divHelpChar, editorCmds[i, 1]);
@@ -1398,7 +1505,7 @@ namespace HCResourceLibraryApp.Layout
                                 IncorrectionMessageQueue($"The line limit of '{lineMaximum}' has been reached.");
                             else if (int.TryParse(editorInput.Replace(editorCmdAdd, ""), out int addLineNum))
                             {
-                                if (addLineNum.IsWithin(lineMinimum - 1, lineCount) && hasLinesQ)
+                                if (addLineNum.IsWithin(lineMinimum, lineCount) && hasLinesQ)
                                 {
                                     if (addLineNum == lineCount)
                                         commandPrompt = editorCmdAdd;
@@ -1470,7 +1577,7 @@ namespace HCResourceLibraryApp.Layout
                             else IncorrectionMessageQueue("Line number was not a number.");
                         }
 
-                        /// undo / redo command
+                        /// undo / redo command?
                         else if (editorInput.Trim().Equals(editorCmdUndo) || editorInput.Trim().Equals(editorCmdRedo))
                         {
                             if (editorInput.Contains(editorCmdRedo))
@@ -1484,6 +1591,82 @@ namespace HCResourceLibraryApp.Layout
                                 if (historyActionNumber < historyLimit && historyActionNumber < _editorHistory.Count)
                                     commandPrompt = editorCmdUndo;
                                 else IncorrectionMessageQueue("There is no action in history to undo.");
+                            }
+                        }
+
+                        /// group command?
+                        else if (editorInputRaw.ToLower().StartsWith(editorCmdGroup))
+                        {
+                            /// 1st & 3rd function - create group
+                            if (editorInputRaw.CountOccuringCharacter(',') == 2)
+                            {
+                                string[] groupParameters = editorInputRaw.Substring(editorCmdGroup.Length).Split(',');
+                                if (int.TryParse(groupParameters[0], out int lineStart) && int.TryParse(groupParameters[1], out int lineEnd))
+                                {
+                                    string newGroupName = groupParameters[2];
+                                    if (newGroupName.IsNotNEW())
+                                    {
+                                        newGroupName = newGroupName.Trim();
+                                        if (!newGroupName.Contains(DataHandlerBase.Sep))
+                                        {
+                                            /// IF ...: 3rd function (remove); ELSE IF ...: 1st function (create)
+                                            if (lineStart == 0 && lineStart == lineEnd)
+                                            {
+                                                if (_formatterData.GroupExists(newGroupName))
+                                                    commandPrompt = $"{editorCmdGroup}{lineStart},{lineEnd},{newGroupName}";
+                                                else IncorrectionMessageQueue($"A group named '{newGroupName}' does not exist.");
+                                            }
+                                            else if (lineStart.IsWithin(lineMinimum, lineCount) && lineEnd.IsWithin(lineMinimum, lineCount))
+                                            {
+                                                bool startLineInOtherGroupQ = _formatterData.IsLineInGroup(lineStart, out _, out _, out _);
+                                                bool endLineInOtherGroupQ = _formatterData.IsLineInGroup(lineEnd, out _, out _, out _);
+                                                if (!startLineInOtherGroupQ && !endLineInOtherGroupQ)
+                                                {
+                                                    if (lineStart < lineEnd && !_formatterData.GroupExists(newGroupName))
+                                                        commandPrompt = $"{editorCmdGroup}{lineStart},{lineEnd},{newGroupName}";
+                                                    else
+                                                    {
+                                                        if (lineStart < lineEnd)
+                                                            IncorrectionMessageQueue($"A group with name '{newGroupName}' already exists.");
+                                                        else IncorrectionMessageQueue($"Starting Line #{lineStart} must occur before Ending Line #{lineEnd}.");
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    if (startLineInOtherGroupQ)
+                                                        IncorrectionMessageQueue($"Line #{lineStart} is already within another group.");
+                                                    else IncorrectionMessageQueue($"Line #{lineEnd} is already within another group.");
+                                                }                                                
+                                            }
+                                            else
+                                            {
+                                                if (lineStart.IsWithin(lineMinimum, lineCount))
+                                                    IncorrectionMessageQueue($"Line #{lineEnd} does not exist.");
+                                                else IncorrectionMessageQueue($"Line #{lineStart} does not exist.");
+                                            }
+                                        }
+                                        else IncorrectionMessageQueue($"Group name may not contain '{DataHandlerBase.Sep}' character.");
+                                    }
+                                    else IncorrectionMessageQueue("A group name was not provided.");
+                                }
+                                else IncorrectionMessageQueue("One or more line numbers were not a number.");
+                            }
+                            /// 2nd function - toggle group expansion
+                            else
+                            {
+                                if (!editorInputRaw.Contains(','))
+                                {
+                                    string groupName = editorInputRaw.Substring(editorCmdGroup.Length);
+                                    if (groupName.IsNotNEW())
+                                    {
+                                        groupName = groupName.Trim();
+                                        if (_formatterData.GroupExists(groupName))
+                                            commandPrompt = $"{editorCmdGroup} {groupName}";
+                                        else IncorrectionMessageQueue($"A group named '{groupName}' does not exist.");
+                                    }
+                                    else IncorrectionMessageQueue("A group name was not provided.");
+                                }
+                                else IncorrectionMessageQueue("Group command requires only two commas (',').");
                             }
                         }
 
@@ -1506,19 +1689,30 @@ namespace HCResourceLibraryApp.Layout
                 }
 
                 // Editor Command Execution
-                if (commandPrompt.IsNotNEW() && _formatterData != null)
+                if (commandPrompt.IsNotNEW())
                 {
                     int lineCount = isUsingFormatterNo1Q ?
                             (_formatterData.LineData1.HasElements() ? _formatterData.LineData1.Count : 0)
                             : (_formatterData.LineData2.HasElements() ? _formatterData.LineData2.Count : 0);
 
                     string histName = null, histRedo = null, histUndo = null;
-                    bool isHistoryActionQ = false;
+                    bool isHistoryActionQ;
+                    int countHistoryCmdActions = 0;
+                    List<string> historyCommandPrompts = new();
                     do
                     {
-                        bool wasHistoryActionQ = isHistoryActionQ;
+                        bool wasHistoryActionQ = false;
                         isHistoryActionQ = false;
-                        Dbug.Log($"Recieved command prompt :: {commandPrompt.Replace("\n", "\\n")};  //  FYI: lineCount = {lineCount}; ");
+
+                        int historyIndex = historyCommandPrompts.Count - countHistoryCmdActions;
+                        if (historyCommandPrompts.HasElements() && countHistoryCmdActions > 0)
+                        {
+                            countHistoryCmdActions--;
+                            commandPrompt = historyCommandPrompts[historyIndex];
+                            wasHistoryActionQ = true;
+                        }
+
+                        Dbug.Log($"H@ix{countHistoryCmdActions} --> Recieved command prompt :: {commandPrompt.Replace("\n", histNLRep)};  //  FYI: lineCount = {lineCount}; historyCmdActsCount = {historyCommandPrompts.Count}; histCmdIndex = {historyIndex}; ");
                         Dbug.LogPart("  >|");
 
                         /// rename command
@@ -1605,25 +1799,17 @@ namespace HCResourceLibraryApp.Layout
                                     }
                                     else Dbug.LogPart(" -- No re-edit phrase required // ");
                                 }
+                                Dbug.Log("; ");
+                                Dbug.LogPart("Add Cmd 2 --> ");
                             }
 
                             if (int.TryParse(commandPrompt.Replace(editorCmdAdd, ""), out int insLineNum))
                             {
-                                _formatterData.AddLine(isUsingFormatterNo1Q, insLineNum, reEditLine);
-                                if (insLineNum == 0)
-                                {
-                                    Dbug.LogPart($"Add new line at beginning");
-                                    histName = $"Insert Before Line 1";
-                                    histRedo = commandPrompt;
-                                    histUndo = $"{editorCmdDelete}1";
-                                }
-                                else
-                                {
-                                    Dbug.LogPart($"Insert new after line #{insLineNum}");
-                                    histName = $"Insert After Line {insLineNum}";
-                                    histRedo = commandPrompt;
-                                    histUndo = $"{editorCmdDelete}{insLineNum + 1}";
-                                }
+                                _formatterData.AddLine(insLineNum, reEditLine);
+                                Dbug.LogPart($"Insert new before line #{insLineNum}");
+                                histName = $"Insert Before Line {insLineNum}";
+                                histRedo = commandPrompt;
+                                histUndo = $"{editorCmdDelete}{insLineNum}";
                             }
                             else
                             {
@@ -1631,7 +1817,7 @@ namespace HCResourceLibraryApp.Layout
                                 histRedo = commandPrompt;
                                 histUndo = $"{editorCmdDelete}{lineCount + 1}";
 
-                                _formatterData.AddLine(isUsingFormatterNo1Q, null, reEditLine);
+                                _formatterData.AddLine(null, reEditLine);
                                 Dbug.LogPart($"Add new line at end");
                             }
                             if (wasHistoryActionQ && reEditLine.IsNotNE())
@@ -1650,10 +1836,12 @@ namespace HCResourceLibraryApp.Layout
                                     Dbug.LogPart($"line #{editLineNum} ");
                                     if (editParts[1].IsNotNEW())
                                     {
-                                        _formatterData.EditLine(isUsingFormatterNo1Q, editLineNum, editParts[1].Trim(), out string prevEdit);
+                                        _formatterData.EditLine(editLineNum, editParts[1].Trim(), out string prevEdit);
                                         Dbug.LogPart($"edit :: {editParts[1].Trim()}");
 
                                         histName = $"Edited Line {editLineNum}";
+                                        if (appenderHistNamePart.IsNotNE())
+                                            histName += $" ({appenderHistNamePart})";
                                         histRedo = commandPrompt;
                                         histUndo = $"{editorCmdEdit}{editLineNum}\n{prevEdit}";
                                     }
@@ -1679,8 +1867,8 @@ namespace HCResourceLibraryApp.Layout
                             string[] copyParts = commandPrompt.Replace(editorCmdCopy, "").Split(',');
                             if (int.TryParse(copyParts[0], out int copyFrom) && int.TryParse(copyParts[1], out int copyTo))
                             {
-                                string copyData = _formatterData.GetLine(isUsingFormatterNo1Q, copyFrom);
-                                _formatterData.EditLine(isUsingFormatterNo1Q, copyTo, copyData, out string prevEdit);
+                                string copyData = _formatterData.GetLine(copyFrom);
+                                _formatterData.EditLine(copyTo, copyData, out string prevEdit);
                                 Dbug.LogPart($"Copied from line #{copyFrom} ('{copyData}') to line #{copyTo} (replaces '{prevEdit}')");
 
                                 histName = $"Copied Line {copyFrom} to Line {copyTo}";
@@ -1695,14 +1883,68 @@ namespace HCResourceLibraryApp.Layout
                             Dbug.LogPart("Delete Cmd --> ");
                             if (int.TryParse(commandPrompt.Replace(editorCmdDelete, ""), out int delLineNum))
                             {
-                                _formatterData.DeleteLine(isUsingFormatterNo1Q, delLineNum, out string deletedLine);
+                                _formatterData.DeleteLine(delLineNum, out string deletedLine);
                                 Dbug.LogPart($"Delete at line #{delLineNum}");
 
                                 histName = $"Delete Line {delLineNum}";
                                 histRedo = commandPrompt;
-                                histUndo = $"{editorCmdAdd}{(delLineNum == lineCount ? "" : delLineNum - 1)}{(deletedLine.IsNE()? "" : $"\n{deletedLine}")}";
+                                histUndo = $"{editorCmdAdd}{(delLineNum == lineCount ? "" : delLineNum)}{(deletedLine.IsNE()? "" : $"\n{deletedLine}")}";
                             }
                             else Dbug.LogPart("line #??");
+                        }
+                        /// group command
+                        else if (commandPrompt.StartsWith(editorCmdGroup))
+                        {
+                            Dbug.LogPart("Group Cmd --> ");
+                            /// IF ..: 1st & 3rd (create/remove) functions; ELSE 2nd function (toggle expansion)
+                            if (commandPrompt.CountOccuringCharacter(',') == 2)
+                            {
+                                Dbug.LogPart("Create or Remove Group :: ");
+                                string[] groupParts = commandPrompt.Substring(editorCmdGroup.Length).Split(',');
+                                string groupName = groupParts[2];
+                                if (int.TryParse(groupParts[0], out int lineStart) && int.TryParse(groupParts[1], out int lineEnd) && groupName.IsNotNEW())
+                                {
+                                    if (lineStart == 0 && lineEnd == lineStart)
+                                    {
+                                        _formatterData.DeleteGroup(groupName, out SfdGroupInfo deletedGroup);
+                                        Dbug.LogPart($"Removed group named '{groupName}'");
+
+                                        histName = $"Removed Group '{groupName}'";
+                                        histRedo = commandPrompt;
+                                        histUndo = $"{editorCmdGroup}{deletedGroup.startLineNum},{deletedGroup.endLineNum},{groupName}";
+                                    }
+                                    else
+                                    {
+                                        _formatterData.CreateGroup(groupName, lineStart, lineEnd);
+                                        Dbug.LogPart($"Created group named '{groupName}' ranging from lines {lineStart} to {lineEnd}");
+
+                                        histName = $"Created Group '{groupName}'";
+                                        histRedo = commandPrompt;
+                                        histUndo = $"{editorCmdGroup}0,0,{groupName}";
+                                    }                                    
+                                }
+                                else Dbug.LogPart("line #?? group name??");
+                            }
+                            else
+                            {
+                                Dbug.LogPart("Toggle Expansion :: ");
+                                string groupName = commandPrompt.Substring(editorCmdGroup.Length);
+                                if (groupName.IsNotNEW())
+                                {
+                                    groupName = groupName.Trim();
+                                    bool? expansionState = _formatterData.ToggleGroupExpansion(groupName);
+
+                                    string action = "Expanded / Collapsed";
+                                    if (expansionState.HasValue)
+                                        action = expansionState.Value ? "Expanded" : "Collapsed";
+
+                                    Dbug.LogPart($"{action} group named '{groupName}'");
+                                    histName = $"{action} Group '{groupName}'";
+                                    histRedo = commandPrompt;
+                                    histUndo = commandPrompt;
+                                }
+                                else Dbug.LogPart("group name??");   
+                            }
                         }
                         /// undo \ redo commands
                         else
@@ -1738,7 +1980,7 @@ namespace HCResourceLibraryApp.Layout
                                 else Dbug.LogPart("'Redo' action failed (not in history list?!)");
                                 //isHistoryActionQ = false;
                             }
-                            Dbug.LogPart($"Loaded command prompt :: {commandPrompt.Replace("\n","\\n")}");
+                            Dbug.LogPart($"Loaded command prompt :: {commandPrompt.Replace("\n",histNLRep)}");
 
                             historyActionNumber = historyActionNumber.Clamp(historyActionInitial, historyLimit);
                             showHistoryQ = true;                            
@@ -1747,14 +1989,33 @@ namespace HCResourceLibraryApp.Layout
                         Dbug.Log("; ");
 
                         if (isHistoryActionQ)
-                            Dbug.Log($"Executing history action  //  FYI: histActNum = {historyActionNumber}; histLim = {historyLimit}; editorHistCount = {_editorHistory.Count}; ");
+                        {
+                            /// IF ...: load multiple commands; ELSE load 1 command 
+                            if (commandPrompt.Contains(multiHistKey))
+                            {
+                                string[] commands = commandPrompt.Split(multiHistKey);
+                                if (commands.HasElements())
+                                {
+                                    countHistoryCmdActions = commands.Length;
+                                    historyCommandPrompts.AddRange(commands);
+                                }
+                            }
+                            else
+                            {
+                                countHistoryCmdActions = 1;
+                                historyCommandPrompts.Add(commandPrompt);
+                            }
+
+                            Dbug.Log($"Executing '{countHistoryCmdActions}' history action(s)  //  FYI: histActNum = {historyActionNumber}; histLim = {historyLimit}; editorHistCount = {_editorHistory.Count}; ");
+                        }
 
 
                         // history accumulates here
-                        SFormatterHistory history = new SFormatterHistory(histName, histRedo, histUndo);
+                        SFormatterHistory history = new(histName, histRedo, histUndo);
                         if (history.IsSetup() && !wasHistoryActionQ)
                         {
                             Dbug.LogPart($"Recieved history instance --> {history} // ");
+                            /// add new history before lastest history instance, remove old histories where necessary
                             if (historyActionNumber == historyActionInitial)
                             {
                                 Dbug.LogPart("No history actions called; ");
@@ -1772,31 +2033,323 @@ namespace HCResourceLibraryApp.Layout
                                     else _editorHistory.Add(history);
                                 }
                             }
+                            /// remove a series of undone history and insert new history instance
                             else
                             {
                                 Dbug.LogPart($"History actions were called; ");
-                                if ((historyActionNumber - 2).IsWithin(0, _editorHistory.Count - 1))
-                                {
-                                    SFormatterHistory nextRedoHist = _editorHistory[historyActionNumber - 2];
-                                    Dbug.Log("; ");
-                                    Dbug.LogPart($"Fetched history #{historyActionNumber - 1}; replacing new history 'undo' with history #{historyActionNumber - 1}'s 'undo'; ");
-
-                                    string histNewName = nextRedoHist.actionName != histName ? $"{nextRedoHist.actionName} / {histName}" : histName;
-                                    history = new SFormatterHistory(histNewName, histRedo, nextRedoHist.undoneCommand);
-                                    Dbug.Log($"New history instance :: {history}");
-                                }
-
                                 _editorHistory.RemoveRange(0, historyActionNumber - 1);
                                 Dbug.LogPart($"Removed '{historyActionNumber - 1}' histories, index range [0 -> {historyActionNumber - 2}]; ");
-                                
-                                _editorHistory.Insert(0, history);                                
-                                Dbug.LogPart($"Inserted new history");
+
+                                _editorHistory.Insert(0, history);
                                 historyActionNumber = historyActionInitial;
-                            }                            
+                                Dbug.LogPart("Inserted new history instance @ix0");
+
+
+
+                                /// WHAT A WASTE.... ALL OF IT... WHAT A WASTE...
+                                /** The new plan - adding new history after an undo
+                                    Rule of thumb: redo, get next redo. undo, get this undo
+                                
+                                    ORIGINAL CASES |:
+                                    
+                                    Case 1
+                                    ---------------
+                                    H1| Renamed Smack 2 
+                                        undo[rename Smek 1]        redo[rename Smack 2]
+                                    H2| Renamed Smek 1
+                                        undo[rename New Format]     redo[rename Smek 1]
+                                    H3| Open
+                                        undo[--]      redo[--]
+
+                                    --> If '<' (undo) then 'rename Smacking 3'
+
+                                    Pre-Case 2
+                                    ..........
+                                    CrrHist ::  H2| undo[rename New Format] redo[rename Smek 1]
+                                    NxtHist ::  H1| undo[rename Smek 1]     redo[rename Smack 2] 
+                                    NewHist ::  H?| undo[rename Smek 1]     redo[rename Smacking 3] 
+
+
+                                    Case 2
+                                    ---------------                                    
+                                    H1| Renamed Smack 2 / Renamed Smacking 3 
+                                        undo[rename Smack 2/rename Smek 1]              ud = rd(nxt) + ud(new)
+                                        redo[rename Smack 2/rename Smacking 3]          rd = rd(nxt) + rd(new)
+                                    H2| Renamed Smek 1 
+                                        undo[rename New Format]     redo[rename Smek 1]
+                                    H3| Open 
+                                        undo[--]      redo[--]
+
+                                    --> If '<' (undo) again then 'rename Four Slap'
+
+                                    Pre-Case 3
+                                    ..........
+                                    CrrHist ::  H2| undo[rename New Format]                 redo[rename Smek 1]
+                                    NxtHist ::  H1| undo[rename Smack 2/rename Smek 1]      redo [rename Smack 2/rename Smacking 3]
+                                    NewHist ::  H?| undo[rename Smek 1]                     redo[rename Four Slap]
+
+
+                                    Case 3
+                                    ---------------
+                                    
+                                    H1| Mutli-action / Rename Four Slap
+                                        undo[rename Smacking 3 / rename Smack 2    / rename Smek 1]         ud = rd(nxt,1) + rd(nxt,0) + ud(new) 
+                                        redo[rename Smack 2    / rename Smacking 3 / rename Four Slap]      rd = rd(nxt,0) + rd(nxt,1) + rd(new)
+                                    H2| Renamed Smek 1
+                                        undo[rename New Format]     redo[rename Smek 1]
+                                    H3| Open
+                                        undo[--]      redo[--]
+
+
+                                    Construct summary after these cases
+                                    -----
+                                    UNDO construct of newHist (4 lvls)
+                                    0 = ud(new)
+                                    1 = rd(nxt) + ud(new)
+                                    2 = rd(nxt,1) + rd(nxt,0) + ud(new)
+                                    3 = rd(nxt,2) + rd(nxt,1) + rd(nxt,0) + ud(new)
+
+                                    REDO construct of newHist (4 lvls)
+                                    0 = rd(new)
+                                    1 = rd(nxt) + rd(new) 
+                                    2 = rd(nxt,0) + rd(nxt,1) + rd(new)
+                                    3 = rd(nxt,0) + rd(nxt,1) + rd(nxt,2) + rd(new)
+
+                                    :|
+
+                                    MORE CASES WITH OTHER CMDs |: 
+                                    
+                                    Case 1
+                                    ----------------
+                                    H1| Add After L5    ud[del5]    rd[add5]
+                                    H2| Edit L4         ud[edt4"]   rd[edt4"]    
+                                    H3| Open            ud[--]      rd[--]
+
+                                    -> If '<' undo and 'delete4'
+                                        Actions :: Edit L4  |<-->  Add After L5  <-->  Delete L4
+                                    
+                                    Pre-Case 2
+                                    ..........
+                                    CrrHist ::  H2| ud[edt4"]   rd[edt4"]
+                                    NxtHist ::  H1| ud[del5]    rd[add5]
+                                    NewHist ::  H?| ud[add4"]   rd[del4]
+                                
+                                    
+                                    Case 2
+                                    ----------------
+                                    H1| Add After L5 / Delete L4    ud[add4"/del5]    rd[add5/del4]            
+                                    H2| Edit L4                     ud[edt4"]         rd[edt4"]
+                                    H3| Open                        ud[--]            rd[--]
+
+                                    ** ud = ud(new) + ud(nxt)       rd = rd(nxt) + rd(new)
+
+                                    -> If '<' undo and 'copy4,3'
+                                        Actions :: Edit L4  |<-->  Add After L5  <-->  Delete L4  <--> Copy L4 to L3
+
+                                    Pre-Case 3
+                                    ..........
+                                    CrrHist ::  H2| ud[edt4"]       rd[edt4"]
+                                    NxtHist ::  H1| ud[add4"/del5]  rd[add5/del4]
+                                    NewHist ::  H?| ud[edt3"]       rd[cp4,3]            
+
+
+                                    Case 3
+                                    ----------------
+                                    H1| Multi-action (x2) / Copy L4 to L3   ud[edt3"/add4"/del5]    rd[add5/del4/cp4,3]
+                                    H2| Edit L4                             ud[edt4"]               rd[edt4"]
+                                    H3| Open                                ud[--]                  rd[--]
+
+                                    ** ud = ud(new) + ud(nxt,0) + ud(nxt,1)         rd = rd(nxt,0) + rd(nxt,1) + rd(new)
+                                
+                                
+                                    Changes to construct summary
+                                    -----
+                                    -> The prior construct only fetched events from the nextHist's redo, and did not include its undo. This one includes that factor
+                                    -> Using different cmds with opposing commands exposes the initially mistaken relation much more clearly (big_dumb)
+
+                                    Revised construct summary after these cases
+                                    -----
+                                    UNDO construct of newHist (4 lvls)
+                                    0 = ud(new)
+                                    1 = ud(new) + ud(nxt)       
+                                    2 = ud(new) + ud(nxt,0) + ud(nxt,1)
+                                    3 = ud(new) + ud(nxt,0) + ud(nxt,1) + ud(nxt,2)
+
+                                    REDO construct of newHist (4 lvls)
+                                    0 = rd(new)
+                                    1 = rd(nxt) + rd(new)
+                                    2 = rd(nxt,0) + rd(nxt,1) + rd(new)
+                                    3 = rd(nxt,0) + rd(nxt,1) + rd(nxt,2) + rd(new)
+
+                                    
+                                    .
+                                    .
+                                    .
+                                    .
+                                    
+                                    
+                                    But then... why do I need all to know all those other history actions???
+
+                                    RE:
+                                    Case 1
+                                    ----------------
+                                    H1| Add After L5    ud[del6]    rd[add5]
+                                    H2| Edit L4         ud[edt4"]   rd[edt4"]    
+                                    H3| Open            ud[--]      rd[--]
+
+                                    -> If '<' undo and 'delete4'
+                                        Actions :: Edit L4  |<-->  Add After L5  <-->  Delete L4
+                                    
+                                    Pre-Case 2
+                                    ..........
+                                    CrrHist ::  H2| ud[edt4"]   rd[edt4"]
+                                    NxtHist ::  H1| ud[del6]    rd[add5]                /// del5 is not opposite of add5; It's add4/del5 and add5/del6, but there is del6/add6" 
+                                    NewHist ::  H?| ud[add4"]   rd[del4]
+                                
+                                    
+                                    Case 2
+                                    ----------------
+                                    H1| Add After L5 / Delete L4    ud[add4"/del6]      rd[add5/del4]       
+                                    H2| Edit L4                     ud[edt4"]           rd[edt4"]
+                                    H3| Open                        ud[--]              rd[--]
+
+                                    ** ud = ud(new) + ud(nxt)       rd = rd(nxt) + rd(new)
+
+                                    -> If '<' undo and 'copy4,3'
+                                        Actions :: Edit L4  |<-->  Add After L5   (remove 'Delete L4')  <-->  Copy L4 to L3
+                                    
+                                    Pre-Case 3
+                                    ..........
+                                    CrrHist ::  H2| ud[edit4"]      rd[edt4"]
+                                    NxtHist ::  H1| ud[add4"/del6]  rd[add5/del4]
+                                    NewHist ::  H?| ud[edt3"]       rd[cp4,3]
+                                    
+                                    
+                                    Case 3
+                                    ----------------
+                                    H1| Add After L5 / Copy L4 to L3    ud[edt3"/del6]  rd[add5/cp4,3]
+                                    H2| Edit L4                         ud[edt4"]       rd[edt4"]
+                                    H3| Open                            ud[--]          rd[--]
+
+                                    ** ud = ud(new) + ud(nxt,1)         rd = rd(nxt,0) + rd(new)
+
+                                    -> If '<' and 'rename Flats'
+                                        Actions :: Edit L4  |<-->  Add After L5   (remove Copy L4 to L3)  <-->  Renamed Profile
+                                    
+                                    Pre-Case 4
+                                    ..........
+                                    CrrHist :: H1| ud[edit4"]       rd[edit4"]
+                                    NxtHist :: H2| ud[edt3"/del6]   rd[add5/cp4,3]
+                                    NewHist :: H?| ud[rn"]          rd[rn""]
+
+                                    
+                                    Case 4
+                                    --------------------
+                                    H1| Add After L5 / Renamed Profile  ud[rn"/del6]    rd[add5/rn""]
+                                    H2| Edit L4                         ud[edt4"]       rd[edt4"]
+                                    H3| Open                            ud[--]          rd[--]
+
+                                    ** ud = ud(new) + ud(nxt,1)         rd = rd(nxt,0) + rd(new)
+
+                                    
+                                    Changes to construct summary
+                                    -----
+                                    -> The previous version did not consider that only two actions in entirety needed to be executed between two histories
+                                    -> This version acknowledges that between the next history and the new history, there are ONLY two changes to consider
+
+                                    -----
+                                    UNDO construct of newHist (4 lvls)
+                                    0 = ud(new)
+                                    1 = ud(new) + ud(nxt)
+                                    2 = ud(new) + ud(nxt,1)
+                                    3 = ud(new) + ud(nxt,1)
+
+                                    REDO construct of newHist (4 lvls)
+                                    0 = rd(new)
+                                    1 = rd(nxt) + rd(new)
+                                    2 = rd(nxt,0) + rd(new)
+                                    3 = rd(nxt,0) + rd(new)
+
+                                    :|     
+
+                                 Well these have been tested multiple times, and the add and delete functions keep messing me up. 
+                                 These need to synergize properly, meaning we'll be changing their functions. 
+                                    'Add 13' will add BEFORE line 13 and not AFTER. Adding at the end will still be 'Add'. 'Add0' now obsolete
+                                    'Delete 13' will oppose 'Add 13', and 'Delete {lineCount}' will oppose 'Add'.
+                                .. These changes should resolve much, for the other functions do quite fine.
+                                  
+
+                                 ***/
+                                if ((historyActionNumber - 2).IsWithin(0, _editorHistory.Count - 1) && false)
+                                {
+                                    Dbug.LogPart($"History actions were called; ");
+
+                                    SFormatterHistory nextHistory = _editorHistory[historyActionNumber - 2];
+                                    Dbug.Log($"Fetched history #{historyActionNumber - 1} [next]");
+
+                                    string newHistName, newHistUndo, newHistRedo;
+                                    /// new history name
+                                    string nextHistName = nextHistory.actionName;
+                                    if (nextHistory.actionName.Contains("/"))
+                                    {
+                                        string[] nextNames = nextHistory.actionName.Split('/');
+                                        nextHistName = nextNames[0];
+                                    }
+                                    newHistName = nextHistName != histName ? $"{nextHistName} / {histName}" : $"{histName} / (x2)";
+                                    /// new history undone/redone commands
+                                    if (nextHistory.undoneCommand.Contains(multiHistKey) && nextHistory.redoneCommand.Contains(multiHistKey))
+                                    {
+                                        string[] nextRedos = nextHistory.redoneCommand.Split(multiHistKey);
+                                        string[] nextUndos = nextHistory.undoneCommand.Split(multiHistKey);
+
+                                        newHistUndo = $"{histUndo}{multiHistKey}{nextUndos[1]}";
+                                        newHistRedo = $"{nextRedos[0]}{multiHistKey}{histRedo}";
+                                    }
+                                    else
+                                    {
+                                        newHistUndo = $"{histUndo}{multiHistKey}{nextHistory.undoneCommand}";
+                                        newHistRedo = $"{nextHistory.redoneCommand}{multiHistKey}{histRedo}";
+                                    }
+
+                                    Dbug.Log($" + Generated new history name :: {newHistName.Replace("\n", histNLRep)}");
+                                    Dbug.Log($" + Generated new history undo :: {newHistUndo.Replace("\n", histNLRep)}");
+                                    Dbug.Log($" + Generated new history redo :: {newHistRedo.Replace("\n", histNLRep)}");
+
+                                    history = new SFormatterHistory(newHistName, newHistRedo, newHistUndo);
+                                    Dbug.LogPart("New history instance compiled with details above; ");
+
+                                    _editorHistory.RemoveRange(0, historyActionNumber - 1);
+                                    Dbug.LogPart($"Removed '{historyActionNumber - 1}' histories, index range [0 -> {historyActionNumber - 2}]; ");
+
+                                    _editorHistory.Insert(0, history);
+                                    historyActionNumber = historyActionInitial;
+                                    Dbug.LogPart("Inserted new history instance @ix0");
+                                }
+                                #region old_code
+                                //Dbug.LogPart($"History actions were called; ");
+                                //if ((historyActionNumber - 2).IsWithin(0, _editorHistory.Count - 1))
+                                //{
+                                //    SFormatterHistory nextRedoHist = _editorHistory[historyActionNumber - 2];
+                                //    Dbug.Log("; ");
+                                //    Dbug.LogPart($"Fetched history #{historyActionNumber - 1}; replacing new history 'undo' with history #{historyActionNumber - 1}'s 'undo'; ");
+
+                                //    string histNewName = nextRedoHist.actionName != histName ? $"{nextRedoHist.actionName} / {histName}" : histName;
+                                //    history = new SFormatterHistory(histNewName, histRedo, nextRedoHist.undoneCommand);
+                                //    Dbug.Log($"New history instance :: {history}");
+                                //}
+
+                                //_editorHistory.RemoveRange(0, historyActionNumber - 1);
+                                //Dbug.LogPart($"Removed '{historyActionNumber - 1}' histories, index range [0 -> {historyActionNumber - 2}]; ");
+
+                                //_editorHistory.Insert(0, history);
+                                //Dbug.LogPart($"Inserted new history");
+                                //historyActionNumber = historyActionInitial;
+                                #endregion
+                            }
                             Dbug.Log("; ");
                         }
 
-                    } while (isHistoryActionQ);
+                    } while (isHistoryActionQ || countHistoryCmdActions > 0);
                 }
 
                 countCycles++;

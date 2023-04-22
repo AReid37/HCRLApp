@@ -10,7 +10,7 @@ namespace HCResourceLibraryApp.Layout
 {
     internal static class HomePage
     {
-        public static ForECol primaryCol = ForECol.Heading1, secondaryCol = ForECol.Normal, tertiaryCol = ForECol.Accent;
+        static ForECol primaryCol = ForECol.Heading1, secondaryCol = ForECol.Normal, tertiaryCol = ForECol.Accent;
         const int rigStyleSheetIndex = -1; // set to -1 for no rigging
 
         public static void OpenPage()

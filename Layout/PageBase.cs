@@ -107,6 +107,7 @@ namespace HCResourceLibraryApp.Layout
                 //Console.SetBufferSize(tWidth, PageSizeLimit);
 
                 // minimal customization
+                ClearMinimalCustomization(MinimalMethod.All);
                 CustomizeMinimal(MinimalMethod.List, _preferencesRef.Normal, _preferencesRef.Accent);
                 CustomizeMinimal(MinimalMethod.Important, _preferencesRef.Heading2, _preferencesRef.Accent);
                 CustomizeMinimal(MinimalMethod.Table, _preferencesRef.Normal, _preferencesRef.Normal);
@@ -253,7 +254,7 @@ namespace HCResourceLibraryApp.Layout
 
 
                 // -- If requires wrapping, WRAP! --
-                if (wrapBuffer - wrapStartPos <= text.Length)
+                if (wrapBuffer - wrapStartPos <= text.Length || text.Contains(newLineReplace))
                 {
                     // -- Prep text to wrap --
                     text = text.Replace("\n", newLineReplace).Replace("\t", tabReplace);
