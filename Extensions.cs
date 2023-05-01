@@ -86,6 +86,7 @@ namespace HCResourceLibraryApp
         /// <summary>Limits the length of a string and uses <paramref name="clampingSuffix"/> to signify this restriction where applicable.</summary>
         /// <param name="maxLength">Must be greater than or equal to 5.</param>
         /// <param name="clampingSuffix">Maximum of 3 characters.</param>
+        /// <returns>A clamped string. The string remains unclamped if it is too short, null, or empty.</returns>
         public static string Clamp(this string s, int maxLength, string clampingSuffix = null)
         {
             const int clampSymMaxLen = 3, minimumClampLength = 5;
@@ -618,7 +619,7 @@ namespace HCResourceLibraryApp
         }
         /// <summary>Fetches a snippet of data within a line containing <paramref name="startingWith"/> and <paramref name="endingWith"/> and returns anything that is between them.</summary>     
         /// <param name="snipOpts">Snippet options that will affect the outcome of the returned snippet. Many options may be combined.</param>
-        /// <returns>A snippet of <paramref name="line"/> between two other strings. Is <c>null</c> if <paramref name="startingWith"/> does not exist, and <see cref="String.Empty"/> when <paramref name="endingWith"/> comes before <paramref name="startingWith"/> or does not exist after it with option <see cref="Snip.EndAft"/>.</returns>
+        /// <returns>A snippet of <paramref name="line"/> between two other strings. Is <c>null</c> if <paramref name="startingWith"/> does not exist, and <see cref="String.Empty"/> when <paramref name="endingWith"/> comes before <paramref name="startingWith"/> or does not exist after it.</returns>
         public static string SnippetText(this string line, string startingWith, string endingWith, params Snip[] snipOpts)
         {
             /// options setup here

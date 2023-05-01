@@ -467,6 +467,7 @@ namespace HCResourceLibraryApp.Layout
                 if (_formatterData != null)
                 {
                     Title("Formatter Editor Settings");
+                    isUsingFormatterNo1Q = _formatterData.EditProfileNo1Q;
                     string formatterInUse = $"Editing Formatter Profile #{(isUsingFormatterNo1Q ? 1 : 2)} - {(isUsingFormatterNo1Q ? _formatterData.Name1 : _formatterData.Name2)}";
                     string nativeColCode = $"Using Native Color Code? {(_formatterData.UseNativeColorCodeQ ? "Yes" : "No (Custom)")}";
 
@@ -1017,7 +1018,8 @@ namespace HCResourceLibraryApp.Layout
                                         { "if # = #;",  $"Keyword. Must be placed at the start of the line.{nxt}A control command that compares two values for a true or false condition. If the condition is 'true' then the line's remaining data will be parsed into the formatting string.{nxt}The operator '=' compares two values to be equal. The operator '!=' compares two values to be unequal."},
                                         { "else;",      $"Keyword. Must be placed at the start of the line. Must be placed following an 'if' keyword line.{nxt}A control command that will parse the line's remaining data when the condition of a preceding 'if' command is false."},
                                         { "repeat #;",  $"Keyword. Must be placed at the start of the line.{nxt}A control command that repeats a line's remaining data '#' number of times. An incrementing number from one to given number '#' will replace any occuring '#' in the line's remaining data."},
-                                        { "jump #;",    $"Keyword. Can only be placed following an 'if' or 'else' keyword.{nxt}A control command the allows skipping ahead to a given line. Only direct numbers are accepted as a value.{nxt}Note that no execution line is required after this keyword." },
+                                        { "jump #;",    $"Keyword. Can only be placed following an 'if' or 'else' keyword.{nxt}A control command the allows skipping ahead to a given line. Only direct numbers are accepted as a value. Providing a line number beyond final line will skip all remaining lines.{nxt}Note that values following this keyword are not parsed."},
+                                        { "next;", $"Keyword. Can only be placed following an 'if', 'else', or 'repeat' keyword.{nxt}A control command that allows the combination of its line and the next line. The next line may not contain any keywords.{nxt}Note that values following this keyword are not parsed."},
 
 
                                         // LIBRARY
@@ -1104,7 +1106,7 @@ namespace HCResourceLibraryApp.Layout
                                         /// complex
                                         { "$url= 'link':'name'",     $"Complex command. Must be placed on its own line.{nxt}Creates a website link by using URL address 'link' to create a hyperlink text described as 'name'."},
                                         { "$list[or]",              $"Complex command. Must be placed on its own line.{nxt}Starts a list block. The optional parameter within square brackets, 'or', will initiate an ordered (numbered) list. Otherwise, an unordered list is initiated."},
-                                        { "$*",                     $"Simple command. Must be placed on its own line.{nxt}Used within a list block to create a list item. Simple commands may follow to style the list item value or text."},
+                                        { "$*",                     $"Simple command. Must be placed at the start of the line.{nxt}Used within a list block to create a list item. Simple commands may follow to style the list item value or text."},
                                         { "$q= 'author':'quote'",    $"Complex command. Must be placed on its own line.{nxt}Generates a quote block that will reference an 'author' and display their original text 'quote'."},
                                         { "$table[nb,ec]",          $"Complex command. Must be placed on its own line.{nxt}Starts a table block. There are two optional parameters within square brackets: parameter 'nb' will generate a table with no borders, parameter 'ec' will generate a table with equal cells."},
                                         { "$th= 'clm1','clm2'",      $"Complex command. Must be placed on its own line.{nxt}Used within a table block to create a table header row. Separate multiple columns of data with ','. Must follow immediately after a table block has started."},

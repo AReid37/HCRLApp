@@ -73,8 +73,8 @@ namespace HCResourceLibraryApp.DataHandling
             {
                 if (fLine.IsNotNEW())
                 {
-                    const string sComment = "//", sEscape = "&00;", sKeyw_if = "if", sKeyw_repeat = "repeat", sKeyw_else = "else", sKeyw_jump = "jump";
-                    const char cPlain = '"', cEscStart = '&', cEscEnd = ';', cOpEqual = '=', cOpUnequal = '!', cRefSteam = '$', cRefLibOpen = '{', cRefLibClose = '}';
+                    const string sComment = "//", sEscape = "&00;", sKeyw_if = "if", sKeyw_repeat = "repeat", sKeyw_else = "else", sKeyw_jump = "jump", sKeyw_next = "next";
+                    const char cPlain = '"', cEscStart = '&', cEscEnd = ';', cOpEqual = '=', cOpUnequal = '!', cRefSteam = '$', cRefLibOpen = '{', cRefLibClose = '}', cRepKey = '#';
 
                     Dbug.Log($"Recieved '{fLine}'; Numbering types; ");
                     /// numbering
@@ -84,7 +84,7 @@ namespace HCResourceLibraryApp.DataHandling
                     bool hit1stNonSpaceQ = false, justHitNonSpaceQ = false;
                     const int noIx = -1;
                     int typeNum = 0, prevTypeNum = 0, ixLastBatched = 0, ixKeyWordEnd = noIx;
-                    bool isCommentQ = false, nPlainTQ = false, nEscQ = false, nKeyWordQ = false, nRefQ = false, isLibRefQ = false;
+                    bool isCommentQ = false, nPlainTQ = false, nEscQ = false, nKeyWordQ = false, nRefQ = false, isLibRefQ = false, keywRepeatExistsQ = false;
                     bool enableMethodPartLogging = true;
 
                     Dbug.Log($"LEGEND :: Hit 1st Non-space '>>' (Just  '>|'); InPlaintTextBlock 'pl'; InEscapeBlock 'esc'; InKeywordBlock 'kw'; Operator 'op'; Reference (Library 'rfl', Steam 'rfs'); ");
@@ -142,7 +142,7 @@ namespace HCResourceLibraryApp.DataHandling
                                 {   /// they used to be only identified up front, but anywhere they still are (perhaps not agreeing with syntax though)
                                     if (!justHitNonSpaceQ && enableMethodPartLogging)
                                         enableMethodPartLogging = false;
-                                    else Dbug.LogPart("Keyword (x3) --> ");
+                                    else Dbug.LogPart("Keyword (x5) --> ");
 
                                     string theKeyword = "";
                                     /// IF ...: keyword 'if'; ELSE IF ...: keyword 'else'; ELSE IF ...: keyword 'repeat'; 
@@ -151,9 +151,14 @@ namespace HCResourceLibraryApp.DataHandling
                                     else if (GetStringFromChars(fx, sKeyw_else.Length) == sKeyw_else)
                                         theKeyword = sKeyw_else;
                                     else if (GetStringFromChars(fx, sKeyw_repeat.Length) == sKeyw_repeat)
+                                    {
                                         theKeyword = sKeyw_repeat;
+                                        keywRepeatExistsQ = true;
+                                    }
                                     else if (GetStringFromChars(fx, sKeyw_jump.Length) == sKeyw_jump)
                                         theKeyword = sKeyw_jump;
+                                    else if (GetStringFromChars(fx, sKeyw_next.Length) == sKeyw_next)
+                                        theKeyword = sKeyw_next;
 
                                     if (!justHitNonSpaceQ && !enableMethodPartLogging)
                                         enableMethodPartLogging = true;
@@ -243,6 +248,13 @@ namespace HCResourceLibraryApp.DataHandling
                                     if (fChar == cEscEnd)
                                         nEscQ = false;
                                 }
+                                
+                                /// repeat key (as operator[6])
+                                if (fChar == cRepKey && keywRepeatExistsQ)
+                                {
+                                    Dbug.LogPart("op; ");
+                                    typeNum = 6;
+                                }
                             }
                         }
 
@@ -323,7 +335,7 @@ namespace HCResourceLibraryApp.DataHandling
                     . Examples where error checking occurs is for code, proper references, keywords and their placementse
                     . Any line that starts with a comments remains unparsed; no error checking, it is ignorable
                 - Error messaging occurs where expected syntax is not followed
-                    . Each error message will be identified with a unique three-digit number and a token signifitying the type of error: G - General, R - Reference (Library and Steam Format specific). Every error has a unique four-digit number regardless of type. 'G001' and 'R001' cannot simultaneously exist, they are both '001'
+                    . Each error message will be identified with a unique three-digit number and a token signifitying the type of error: G - General, R - Reference (Library and Steam Format specific). Every error has a unique three-digit number regardless of type. 'G001' and 'R001' cannot simultaneously exist, they are both '001'
                     . Each error message will be displayed below the line of code with those errors (see 'Editing Area Concept')
              */
             /** FORMATTER LANGUAGE SYNTAX (full revised help page)
@@ -371,6 +383,10 @@ namespace HCResourceLibraryApp.DataHandling
                   jump #;                       :  Keyword. Can only be placed following an 'if' or 'else' keyword.
                                                 :    A control command the allows the parser to skip ahead to a given line. Only numbers
                                                 :  are accepted as a value.
+                --------------------------------:------------------------------------------------------------------------------------------
+                  next;                         :  Keyword. Can only be placed following an 'if', 'else' or 'repeat' keyword.
+                                                :    A control command that allows the combination of its line and the next line. The next
+                                                :  line may not contain any keywords.
                 --------------------------------:------------------------------------------------------------------------------------------
 
 
@@ -499,11 +515,14 @@ namespace HCResourceLibraryApp.DataHandling
             {
                 for (int lx = 0; lx < lineData.Length; lx++)
                 {
-                    string line = lineData[lx], prevLine = null;
+                    string line = lineData[lx], prevLine = null, nextLine = null;
                     if (lx > 0)
                         prevLine = lineData[lx - 1];
+                    if (lx + 1 < lineData.Length)
+                        nextLine = lineData[lx + 1];
                     string noPlainLine = RemovePlainText(line);
                     int lineNum = lx + 1;
+                    List<string> unexpectedTokenII = new();
 
                     // ~~  GENERAL SYNTAX  ~~
                     /** GENERAL SYNTAX AND EXCEPTIONS - revised and errors debrief
@@ -549,6 +568,10 @@ namespace HCResourceLibraryApp.DataHandling
                           jump #;                       :  Keyword. Can only be placed following an 'if' or 'else' keyword.
                                                         :    A control command the allows the parser to skip ahead to a given line. Only numbers
                                                         :  are accepted as a value.
+                        --------------------------------:------------------------------------------------------------------------------------------
+                          next;                         :  Keyword. Can only be placed following an 'if', 'else' or 'repeat' keyword.
+                                                        :    A control command that allows the combination of its line and the next line. The next
+                                                        :  line may not contain any keywords.
                         --------------------------------:------------------------------------------------------------------------------------------
 
                     
@@ -621,7 +644,7 @@ namespace HCResourceLibraryApp.DataHandling
                             $op     --> Unidentified steam format reference
 
                     KEYWORDS
-                    - [G009]     Closing colon expected
+                    - [G009]     Closing semicolon expected
                         . Occurs when a keyword is missing a colon to signify the end of their command
                             if "a" = "a"    --> Closing colon expected
                             else            --> Closing colon expected
@@ -638,7 +661,8 @@ namespace HCResourceLibraryApp.DataHandling
                         . Occurs when a line starting with a complete keyword contains an 'if' or 'jump' keyword that does not follow immediately after it
                             if "a" != "a"; "stop it" if;    --> Misplaced keyword 'if'
                             else; "waterbucket" if;         --> Misplaced keyword 'if'
-                            repeat 4; "stinky" jump 3;          --> Misplaced keyword 'if' 
+                            repeat 4; "stinky" jump 3;      --> Misplaced keyword 'jump'
+                            if "u" != "a"; "cute" next;     --> Misplaced keyword 'next'
                     - [G020]    Exceeded keyword limit per line
                         . Occurs when a line contains more than two keywords
                             else; if 1 != 0; jump 3;        --> Exceeded keyword limit per line
@@ -686,10 +710,18 @@ namespace HCResourceLibraryApp.DataHandling
                             . Occurs when number that follows after 'jump' keyword is less than or equal to its current line
                                 "This line 1"
                                 jump 1;         --> Line number must follow after line '{lineNum}' 
-                        - [G023]    Missing first 'if' or 'else' keyword
+                        - [G023]    Jump keyword must precede an appropriate keyword
                             . Occurs when a line containing a 'jump' keyword does not start with an 'if' or 'else' keyword
                                 jump 1;             --> Missing first 'if' or 'else' keyword
                                 repeat 2; jump 1    --> Missing first 'if' or 'else' keyword
+
+                        NEXT KEYWORD
+                        - [G076]    Next keyword must precede an appropriate keyword
+                            . Occurs when a line containing a 'next' keyword does not start with an 'if', 'else', or 'repeat' keyword
+                        - [G077]    Next keyword requires a following line to function
+                            . Occurs when a there is not a following line after a 'next' keyword line
+                        - [G078]    Next keyword line cannot be followed by another keyword line
+                            . Occurs when a line following a 'next' keyword line contains any keyword
 
                     ****/
                     if (!line.TrimStart().StartsWith("//"))
@@ -704,7 +736,7 @@ namespace HCResourceLibraryApp.DataHandling
                                jam     --> Unexpected token 'jam'
                                $       --> Unexpected token '$'
                                if ;    --> Unexpected token ';'             ****/
-                        for (int codeix = 0; codeix < 9; codeix++)
+                        for (int codeix = 0; codeix < 10; codeix++)
                         {
                             errorCode = "G000";
                             errorMessage = $"Unexpected token '{tokenTag}'";
@@ -731,7 +763,7 @@ namespace HCResourceLibraryApp.DataHandling
                                     {
                                         if (plainOnly.CountOccuringCharacter('&') > plainOnly.CountOccuringCharacter(';'))
                                             token = "&" + ID(0); /// Ex| &;& 
-                                        else token = ";" + ID(10); /// Ex| &;;
+                                        else token = ";" + ID(20); /// Ex| &;;
                                     }
                                     /// the no plain errors take precedence over plain only errors
                                     if (noPlainLine.Contains("&"))
@@ -739,11 +771,11 @@ namespace HCResourceLibraryApp.DataHandling
                                         if (noPlainLine.SnippetText("&", ";", Snip.EndAft).IsNotNE())
                                             token = "&" + ID(1); /// Ex| &;   |  &  ;
                                         else if (noPlainLine.SnippetText(";", "&", Snip.EndAft).IsNotNE())
-                                            token = ";" + ID(11); /// Ex| ; &  |  ;&
+                                            token = ";" + ID(21); /// Ex| ; &  |  ;&
                                         else token = "&" + ID(2); /// Ex| &
                                     }
                                     else if (noPlainLine.SquishSpaces().StartsWith(";"))
-                                        token = ";" + ID(12); /// Ex| ;
+                                        token = ";" + ID(22); /// Ex| ;
                                     break;
 
                                 /// for library reference 
@@ -758,8 +790,27 @@ namespace HCResourceLibraryApp.DataHandling
                                     {
                                         if (noPlainLine.CountOccuringCharacter('{') != 0)
                                         {
-                                            if (noPlainLine.SnippetText("{", "}", Snip.EndAft).IsEW())
+                                            //if (noPlainLine.SnippetText("{", "}", Snip.EndAft).IsEW())
+                                            if (noPlainLine.SquishSpaces().Contains("{}"))
                                                 token = "}" + ID(1); /// Ex: {  }     why? The library reference expects reference name
+                                            else
+                                            {
+                                                string[] libRefs = noPlainLine.LineBreak('{');
+                                                for (int lrx = 0; lrx < libRefs.Length; lrx++)
+                                                {
+                                                    string libRef = $"{libRefs[lrx].SnippetText("{", "}", Snip.Inc)}";
+                                                    if (libRef.Contains(":") || libRef.Contains(","))
+                                                    {
+                                                        if (libRef.CountOccuringCharacter(':') > libRef.CountOccuringCharacter(','))
+                                                        {
+                                                            if (libRef.CountOccuringCharacter(':') > 1)
+                                                                token = ":" + ID(0); /// Ex|  {::,}  |  {:}
+                                                        }
+                                                        else if (libRef.CountOccuringCharacter(':') < libRef.CountOccuringCharacter(','))
+                                                            token = "," + ID(0); /// Ex| {:,,}  |  {,}
+                                                    }
+                                                }
+                                            }
                                         }
                                     }
                                     break;
@@ -777,6 +828,20 @@ namespace HCResourceLibraryApp.DataHandling
                                             string noSpaceNoPlain = noPlainLine.SquishSpaces();
                                             if (noSpaceNoPlain.Contains("$[") || noSpaceNoPlain.Contains("[$") || noSpaceNoPlain.Contains("$]") || noSpaceNoPlain.Contains("]$"))
                                                 token = (boxBracks.IsNotNE() ? "[" : "]") + ID(0); /// Ex| (well, take a look at the conditions, eh?)
+                                            else
+                                            {
+                                                string[] refParts = noPlainLine.LineBreak('$');
+                                                for (int rpx = 0; rpx < refParts.Length && token.IsNE(); rpx++)
+                                                {
+                                                    string refPart = $"{refParts[rpx]}";
+                                                    if (refPart.CountOccuringCharacter('[') + refPart.CountOccuringCharacter(']') > 2)
+                                                    {
+                                                        if (refPart.CountOccuringCharacter('[') >= refPart.CountOccuringCharacter(']'))
+                                                            token = "[" + ID(4); /// 
+                                                        else token = "]" + ID(4); /// Ex|  $list[] [  ]  |   $table[[]
+                                                    }
+                                                }
+                                            }
                                         }
                                         else if (noPlainLine.Contains("[") && noPlainLine.SnippetText("$", "[").IsEW())
                                             token = "[" + ID(1); /// Ex|  $[  |  $ [  |  [$ 
@@ -841,7 +906,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                 token = "else" + ID(0); /// Ex| else
                                             else
                                             {
-                                                string snipElse = noPlainLine.SnippetText("else", ";", Snip.Inc);
+                                                string snipElse = line.RemovePlainTextAfter(';', true, true).SnippetText("else", ";", Snip.Inc);
                                                 token = snipElse.StartsWith("else")? snipElse + ID(1) : ";" + ID(3); /// Ex| else "no"  |  else "you" ;  |  else ;  | ; else
                                             }
 
@@ -850,7 +915,7 @@ namespace HCResourceLibraryApp.DataHandling
                                         {
                                             string snipElseToLastColon = noPlainLine.SnippetText("else", ";", Snip.EndLast);
                                             if (snipElseToLastColon != null)
-                                                if (snipElseToLastColon.CountOccuringCharacter(';') > 0 && !snipElseToLastColon.Contains("if") && !snipElseToLastColon.Contains("jump"))
+                                                if (snipElseToLastColon.CountOccuringCharacter(';') > 0 && !snipElseToLastColon.Contains("if") && !snipElseToLastColon.Contains("jump") && !snipElseToLastColon.Contains("next"))
                                                     token = ";" + ID(4); /// Ex| else;; ; |  else; repeat 4; |
                                         }
                                     }
@@ -880,7 +945,15 @@ namespace HCResourceLibraryApp.DataHandling
                                         }
                                     }
                                     else if (noPlainLine.Contains("#"))
-                                        token = "#"; /// Ex| else; #
+                                    {
+                                        if (prevLine.IsNotNE())
+                                        {
+                                            if (!prevLine.RemovePlainText().Contains("next;"))
+                                                token = "#" + ID(1); /// Ex| else; #
+                                        }
+                                        else
+                                            token = "#" + ID(0); /// Ex| else; #
+                                    }
                                     break;
 
                                 /// keyword 'jump'
@@ -899,6 +972,32 @@ namespace HCResourceLibraryApp.DataHandling
                                             if (snipRepToLastColon != null)
                                                 if (snipRepToLastColon.CountOccuringCharacter(';') > 0 && noPlainLine.SnippetText(";", ";", Snip.EndAft).IsNEW())
                                                     token = ";" + ID(8); /// Ex| jump 4; ;;  |  jump 5;; # "R"
+                                        }
+                                    }
+                                    break;
+
+
+                                /// keyword 'next'
+                                case 9:
+                                    if (noPlainLine.Contains("next"))
+                                    {
+                                        if (!noPlainLine.Contains("next;"))
+                                        {
+                                            if (!noPlainLine.Contains(";"))
+                                                token = "next" + ID(0);
+                                            else
+                                            {
+                                                string snipElse = line.RemovePlainTextAfter(';', true, true).SnippetText("next", ";", Snip.Inc);
+                                                token = snipElse.StartsWith("next") ? snipElse + ID(1) : ";" + ID(9); /// Ex| next "no"  |  next "you" ;  |  next ;  | ; next
+                                            }
+
+                                        }
+                                        else
+                                        {
+                                            string snipRepToLastColon = noPlainLine.SnippetText("next", ";", Snip.EndLast);
+                                            if (snipRepToLastColon != null)
+                                                if (snipRepToLastColon.CountOccuringCharacter(';') > 0 && noPlainLine.SnippetText(";", ";", Snip.EndAft).IsNEW())
+                                                    token = ";" + ID(10); /// Ex| next 4; ;;  |  next 5;; # "R"
                                         }
                                     }
                                     break;
@@ -966,11 +1065,15 @@ namespace HCResourceLibraryApp.DataHandling
                                             if (plainLine.Contains('&') && plainLine.Contains(';'))
                                             {
                                                 errorCode = "G003";
-                                                string possibleEsc = plainLine.SnippetText("&", ";", Snip.EndAft);
-                                                if (possibleEsc.IsNE())
-                                                    token = "&;"; /// Ex| "&;"
-                                                else if (possibleEsc != "00")
-                                                    token = $"&{possibleEsc};"; /// Ex| "& ;"  |  "&01;"  |  "&34;"  |  "&ab;" 
+                                                string[] possibleEscapes = plainLine.LineBreak('&');
+                                                foreach (string possibleEsc in possibleEscapes)
+                                                {
+                                                    string partPEsc = possibleEsc.SnippetText("&", ";", Snip.EndAft);
+                                                    if (partPEsc.IsNE())
+                                                        token = "&;"; /// Ex| "&;"
+                                                    else if (partPEsc != "00")
+                                                        token = $"&{partPEsc};"; /// Ex| "& ;"  |  "&01;"  |  "&34;"  |  "&ab;" 
+                                                }
                                             }
 
                                         if (token.IsNotNE())
@@ -1250,7 +1353,7 @@ namespace HCResourceLibraryApp.DataHandling
                                 . Occurs when a line containing a 'jump' keyword does not start with an 'if' or 'else' keyword
                                     jump 1;             --> Missing first 'if' or 'else' keyword
                                     repeat 2; jump 1    --> Missing first 'if' or 'else' keyword                                    *****/
-                        for (int kx = 0; kx < 5; kx++)
+                        for (int kx = 0; kx < 6; kx++)
                         {
                             errorMessage = null;
                             errorCode = null;
@@ -1288,24 +1391,13 @@ namespace HCResourceLibraryApp.DataHandling
 
                                         switch (gkx)
                                         {
-                                            /// closing colon expected
+                                            /// closing semicolon expected
                                             case 0:
-                                                int keywordCount = 0;
-                                                for (int ckx = 0; ckx < 4; ckx++)
-                                                {
-                                                    keywordCount += ckx switch
-                                                    {
-                                                        0 => noPlainLine.Contains("if") ? 1 : 0,
-                                                        1 => noPlainLine.Contains("else") ? 1 : 0,
-                                                        2 => noPlainLine.Contains("repeat") ? 1 : 0,
-                                                        3 => noPlainLine.Contains("jump") ? 1 : 0,
-                                                        _ => 0
-                                                    };
-                                                }
+                                                int keywordCount = CountKeywordsInLine(noPlainLine);                                                
                                                 if (keywordCount > noPlainLine.CountOccuringCharacter(';'))
                                                 {
                                                     errorCode = "G009";
-                                                    errorMessage = "Closing colon expected"; /// Ex|  if 1 = 2  |  else  |  repeat 7  |  jump 2  |  if 0 = 0; jump 2
+                                                    errorMessage = "Closing semicolon expected"; /// Ex|  if 1 = 2  |  else  |  repeat 7  |  jump 2  |  if 0 = 0; jump 2
                                                 }
                                                 break;
 
@@ -1344,7 +1436,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                     if (snipControl.IsNotNEW())
                                                         if (line.Replace(snipControl, "").IsNEW())
                                                         {
-                                                            if (!snipControl.Contains("jump"))
+                                                            if (!snipControl.Contains("jump") && !snipControl.Contains("next"))
                                                             {
                                                                 errorCode = "G011";
                                                                 errorMessage = "Missing line to execute after keyword";
@@ -1382,10 +1474,13 @@ namespace HCResourceLibraryApp.DataHandling
                                                             string secondControl = remainingControl.SnippetText("if", ";", Snip.Inc, Snip.EndAft);
                                                             if (secondControl.IsNE())
                                                                 secondControl = remainingControl.SnippetText("jump", ";", Snip.Inc, Snip.EndAft);
+                                                            if (secondControl.IsNE())
+                                                                secondControl = remainingControl.SnippetText("next", ";", Snip.Inc, Snip.EndAft);
 
                                                             bool misplacedIfQ = !remainingControl.SquishSpaces().StartsWith("if") && remainingControl.Contains("if");
                                                             bool misplacedJumpQ = !remainingControl.SquishSpaces().StartsWith("jump") && remainingControl.Contains("jump");
-                                                            if ((misplacedIfQ || misplacedJumpQ) && secondControl.IsNotNEW())
+                                                            bool misplacedNextQ = !remainingControl.SquishSpaces().StartsWith("next") && remainingControl.Contains("next");
+                                                            if ((misplacedIfQ || misplacedJumpQ || misplacedNextQ) && secondControl.IsNotNEW())
                                                             {
                                                                 errorCode = "G012";
                                                                 errorMessage = $"Misplaced keyword '{secondControl}'";
@@ -1396,18 +1491,7 @@ namespace HCResourceLibraryApp.DataHandling
 
                                             /// keyword limit exceeded
                                             case 4:
-                                                int countKeywords = 0;
-                                                for (int ckx = 0; ckx < 4; ckx++)
-                                                {
-                                                    countKeywords += ckx switch
-                                                    {
-                                                        0 => noPlainLine.Contains("if") ? 1 : 0,
-                                                        1 => noPlainLine.Contains("else") ? 1 : 0,
-                                                        2 => noPlainLine.Contains("repeat") ? 1 : 0,
-                                                        3 => noPlainLine.Contains("jump") ? 1 : 0,
-                                                        _ => 0
-                                                    };
-                                                }
+                                                int countKeywords = CountKeywordsInLine(noPlainLine);
                                                 if (countKeywords > 2)
                                                 {
                                                     errorCode = "G020";
@@ -1754,7 +1838,6 @@ namespace HCResourceLibraryApp.DataHandling
                                     }
                                     break;
 
-
                                 case 4:
                                     /** JUMP keyword errors
                                     - [G021]    Line number expected
@@ -1765,7 +1848,7 @@ namespace HCResourceLibraryApp.DataHandling
                                         . Occurs when number that follows after 'jump' keyword is less than or equal to its current line
                                             "This line 1"
                                             jump 1;         --> Line number must follow after line '{lineNum}' 
-                                    - [G023]    Missing first 'if' or 'else' keyword
+                                    - [G023]    Jump keyword must precede an appropriate keyword
                                         . Occurs when a line containing a 'jump' keyword does not start with an 'if' or 'else' keyword
                                             jump 1;             --> Missing first 'if' or 'else' keyword
                                             repeat 2; jump 1    --> Missing first 'if' or 'else' keyword    ******/
@@ -1774,7 +1857,7 @@ namespace HCResourceLibraryApp.DataHandling
                                         errorMessage = null;
                                         errorCode = null;
 
-                                        string snipJump = line.SnippetText("jump", ";", Snip.Inc, Snip.EndAft);
+                                        string snipJump = noPlainLine.SnippetText("jump", ";", Snip.Inc, Snip.EndAft);
                                         switch (jx)
                                         {
                                             /// expect line num
@@ -1815,9 +1898,51 @@ namespace HCResourceLibraryApp.DataHandling
                                                 if (noPlainLine.Contains("jump") && !line.StartsWith("if") && !line.StartsWith("else"))
                                                 {
                                                     errorCode = "G023";
-                                                    errorMessage = "Missing first 'if' or 'else' keyword"; /// Ex| repeat 3; jump 2; | jump; else;  |  jump;
+                                                    errorMessage = "Jump keyword must precede an appropriate keyword"; /// Ex| repeat 3; jump 2; | jump; else;  |  jump;
+                                                    //errorMessage = "Missing first 'if' or 'else' keyword";
                                                 }
                                                 break;
+                                        }
+
+                                        if (errorMessage.IsNotNE() && errorCode.IsNotNE())
+                                            AddToErrorList(lineNum, errorCode, errorMessage);
+                                    }
+                                    break;
+
+                                case 5:
+                                    /** NEXT KEYWORD errors
+                                    - [G076]    Next keyword must precede an appropriate keyword
+                                        . Occurs when a line containing a 'next' keyword does not start with an 'if', 'else', or 'repeat' keyword
+                                    - [G077]    Next keyword requires a following line to function
+                                        . Occurs when a there is not a following line after a 'next' keyword line
+                                    - [G078]    Next keyword line cannot be followed by another keyword line
+                                        . Occurs when a line following a 'next' keyword line contains any keyword *****/
+                                    for (int nx = 0; nx < 3; nx++)
+                                    {
+                                        errorCode = null;
+                                        errorMessage = null;
+
+                                        string snipNext = noPlainLine.SnippetText("next", ";", Snip.Inc, Snip.EndAft);
+                                        if (snipNext.IsNotNE())
+                                        {
+                                            if (!line.StartsWith("if") && !line.StartsWith("else") && !line.StartsWith("repeat") && nx == 0)
+                                            {
+                                                errorCode = "G076";
+                                                errorMessage = "Next keyword must precede an appropriate keyword";
+                                            }
+                                            else
+                                            {
+                                                if (nextLine.IsNEW() && nx == 1)
+                                                {
+                                                    errorCode = "G077";
+                                                    errorMessage = "Next keyword requires a following line to function";
+                                                }
+                                                else if (CountKeywordsInLine(nextLine) > 0 && nx == 2)
+                                                {
+                                                    errorCode = "G078";
+                                                    errorMessage = "Next keyword line cannot be followed by another keyword line";
+                                                }
+                                            }
                                         }
 
                                         if (errorMessage.IsNotNE() && errorCode.IsNotNE())
@@ -1828,6 +1953,26 @@ namespace HCResourceLibraryApp.DataHandling
 
                             if (errorMessage.IsNotNE() && errorCode.IsNotNE())
                                 AddToErrorList(lineNum, errorCode, errorMessage);
+
+
+                            // METHODS
+                            static int CountKeywordsInLine(string line)
+                            {
+                                int keywordCount = 0;
+                                for (int ckx = 0; ckx < 5; ckx++)
+                                {
+                                    keywordCount += ckx switch
+                                    {
+                                        0 => line.Contains("if") ? 1 : 0,
+                                        1 => line.Contains("else") ? 1 : 0,
+                                        2 => line.Contains("repeat") ? 1 : 0,
+                                        3 => line.Contains("jump") ? 1 : 0,
+                                        4 => line.Contains("next") ? 1 : 0,
+                                        _ => 0
+                                    };
+                                }
+                                return keywordCount;
+                            }
                         }
 
                     }
@@ -1835,27 +1980,1532 @@ namespace HCResourceLibraryApp.DataHandling
 
 
                     // ~~  LIBRARY REFERENCE SYNTAX  ~~
+                    /** LIBRARY REFERENCE SYNTAX - revised and errors debrief
+                        # L I B R A R Y   R E F E R E N C E S
+                        `    Library reference values are provided by the information obtained from the version log submitted for steam log generation.
+                        ▌    Values returned from library references are as plain text.
+
+                        SYNTAX                          :  OUTCOME
+                        --------------------------------:------------------------------------------------------------------------------------------
+                            {Version}                     :  Value. Gets the log version number (ex 1.00).
+                        --------------------------------:------------------------------------------------------------------------------------------
+                            {AddedCount}                  :  Value. Gets the number of added item entries available.
+                        --------------------------------:------------------------------------------------------------------------------------------
+                            {Added:#,prop}                :  Value Array. Gets value 'prop' from one-based added entry number '#'.
+                                                        :    Values for 'prop': ids, name.
+                        --------------------------------:------------------------------------------------------------------------------------------
+                            {AdditCount}                  :  Value. Gets the number of additional item entries available.
+                        --------------------------------:------------------------------------------------------------------------------------------
+                            {Addit:#,prop}                :  Value Array. Gets value 'prop' from one-based additional entry number '#'.
+                                                        :    Values for 'prop': ids, optionalName, relatedContent (related content name),
+                                                        :  relatedID.
+                        --------------------------------:------------------------------------------------------------------------------------------
+                            {TTA}                         :  Value. Gets the number of total textures/contents added.
+                        --------------------------------:------------------------------------------------------------------------------------------
+                            {UpdatedCount}                :  Value. Gets the number of updated item entries available.
+                        --------------------------------:------------------------------------------------------------------------------------------
+                            {Updated:#,prop}              :  Value Array. Gets value 'prop' from one-based updated entry number '#'.
+                                                        :    Values for 'prop': changeDesc, id, name.
+                        --------------------------------:------------------------------------------------------------------------------------------
+                            {LegendCount}                 :  Value. Gets the number of legend entries available.
+                        --------------------------------:------------------------------------------------------------------------------------------
+                            {Legend:#,prop}               :  Value Array. Gets value 'prop' from one-based legend entry number '#'.
+                                                        :    Values for 'prop': definition, key
+                        --------------------------------:------------------------------------------------------------------------------------------
+                            {SummaryCount}                :  Value. Gets the number of summary parts available.
+                        --------------------------------:------------------------------------------------------------------------------------------
+                            {Summary:#}                   :  Value Array. Gets the value for one-based summary part number '#'.
+                        --------------------------------:------------------------------------------------------------------------------------------
+
+
+                        LIBRARY SYNTAX ERRORS
+                        """""""""""""""""""""
+                        Error code token 'R'
+
+                        VERSION
+                            - (no errors)
+
+                        ADDED COUNT
+                            - (no errors)
+
+                        ADDED ARRAY
+                            - [R024] Added entry number and property expected
+                                . Occurs when the remainder of the Added syntax is missing.
+                                    {Added}     --> Added entry number and property expected
+                                    {Added:4,}  --> Added entry number and property expected
+                            - [R025] Invalid Added entry number
+                                . Occurs when the added entry number is neither '#' or a number greater than zero (>0).
+                                    {Added:0,name}  --> Invalid Added entry number
+                            - [R026] Invalid Added property
+                                . Occurs when the value for 'prop' is not any of the following: ids, name.
+                                    {Added:2,prop}  --> Invalid Added property
+
+                        ADDIT COUNT
+                            - (no errors)
+
+                        ADDIT ARRAY
+                            - [R027] Addit entry number and property expected
+                                . Occurs when the remainder of the Addit syntax is missing.
+                            - [R028] Invalid Addit entry number
+                                . Occurs when the addit entry number is neither '#' or a number greater than zero (>0)
+                                    {Addit:,ids}    --> Invalid Addit entry number
+                            - [R029] Invalid Addit property
+                                . Occurs when the value for 'prop' is not any of the following: ids, optionalName, relatedContent, relatedID
+                                    {Addit:1,optName}   --> Invalid Addit property
+
+                        TTA
+                            - (no errors)
+                        
+                        UPDATED COUNT
+                            - (no errors)
+
+                        UPDATED ARRAY
+                            - [R030] Updated entry number and property expected
+                                . Occurs when the remainder of the Updated syntax is missing.
+                            - [R031] Invalid Updated entry number
+                                . Occurs when the entry number is neither '#' or a number greater than zero (>0)
+                                    {Updated:*,name}    --> Invalid Updated entry number
+                            - [R032] Invalid Updated property
+                                . Occurs when the value for 'prop' is not any of the following: changeDesc, id, name.
+                                    {Updated:3,ids}     --> Invalid Updated property
+
+                        LEGEND COUNT
+                            - (no errors)
+
+                        LEGEND ARRAY
+                            - [R033] Legend entry number and property expected
+                                . Occurs when the remainder of the Legend syntax is missing.
+                            - [R034] Invalid Legend entry number
+                                . Occurs when the entry number is neither '#' or a number greater than zero (>0)
+                                    {Legend:key,4}      --> Invalid Legend entry number
+                            - [R035] Invalid Legend property
+                                . Occurs when the value for 'prop' is not any of the following: definition, key
+                                    {Legend:key,4}  --> Invalid Legend property
+
+                        SUMMARY COUNT
+                            - (no errors)
+
+                        SUMMARY ARRAY
+                            - [R036] Summary entry number expected
+                                . Occurs when the remainder of the Summary syntax is missing.
+                                    {Summary}   --> Summary entry number expected
+                            - [R037] Invalid Summary entry number
+                                . Occurs when the entry number is neither '#' or a number greater than zero (>0)
+
+                     */
                     if (!line.TrimStart().StartsWith("//"))
                     { /// section wrapping
-                        //const string tokenTag = "[token]";
-                        //string errorMessage;
-                        //string token;
+                        string errorCode, errorMessage;
+
+                        /** ADDED ARRAY errors
+                            - [R024] Added entry number and property expected
+                                . Occurs when the remainder of the Added syntax is missing.
+                                    {Added}     --> Added entry number and property expected
+                                    {Added:4,}  --> Added entry number and property expected
+                            - [R025] Invalid Added entry number
+                                . Occurs when the added entry number is neither '#' or a number greater than zero (>0).
+                                    {Added:0,name}  --> Invalid Added entry number
+                            - [R026] Invalid Added property
+                                . Occurs when the value for 'prop' is not any of the following: ids, name.
+                                    {Added:2,prop}  --> Invalid Added property                    *******/
+                        for (int addx = 0; addx < 3; addx++)
+                        {
+                            errorCode = null;
+                            errorMessage = null;
+                            bool triggerR024q = false;
+
+                            string[] noPlainParts = noPlainLine.LineBreak('{');
+                            foreach (string noPP in noPlainParts)
+                            {
+                                if (noPP.SnippetText("{Added", "}", Snip.Inc, Snip.EndAft).IsNotNE())
+                                {
+                                    string addedArgs = noPP.SnippetText("{Added", "}", Snip.EndAft);
+                                    if (!addedArgs.Equals("Count"))
+                                    {
+                                        /// IF ..: R024; ELSE R025 or R026
+                                        if (addedArgs.IsNEW() && addx == 0)
+                                            triggerR024q = true; /// Ex| {Added}  |  {Added  }
+                                        else
+                                        {
+                                            addedArgs = noPP.SnippetText("{Added", "}", Snip.Inc, Snip.EndAft);
+                                            string argEntNum = addedArgs.SnippetText(":", ","), argProp = addedArgs.SnippetText(",", "}");
+                                            if (argEntNum.IsNotNEW())
+                                            {
+                                                bool validEntNum = int.TryParse(argEntNum, out int entNum);
+                                                validEntNum = validEntNum && entNum > 0;
+
+                                                if (!validEntNum && !argEntNum.SquishSpaces().Equals("#") && addx == 1)
+                                                {
+                                                    errorCode = "R025";
+                                                    errorMessage = "Invalid Added entry number";
+                                                }
+                                            }
+
+                                            if (argProp.IsNotNEW())
+                                            {
+                                                argProp = argProp.Trim();
+                                                if (!argProp.Equals("name") && !argProp.Equals("ids") && addx == 2)
+                                                {
+                                                    errorCode = "R026";
+                                                    errorMessage = "Invalid Added property";
+                                                }
+                                            }
+
+                                            if ((argProp.IsNEW() || argEntNum.IsNEW()) && addx == 0)
+                                                triggerR024q = true; /// Ex| {Added:4,} |  {Added: , }  |  {Added:,name}
+                                        }
+                                    }
+                                }
+
+                                if (triggerR024q)
+                                {
+                                    errorCode = "R024";
+                                    errorMessage = "Added entry number and property expected";
+                                }
+
+                            }
+
+                            if (errorCode.IsNotNEW())
+                                AddToErrorList(lineNum, errorCode, errorMessage);
+                        }
+
+                        /** ADDIT ARRAY errors
+                            - [R027] Addit entry number and property expected
+                                . Occurs when the remainder of the Addit syntax is missing.
+                            - [R028] Invalid Addit entry number
+                                . Occurs when the addit entry number is neither '#' or a number greater than zero (>0)
+                                    {Addit:,ids}    --> Invalid Addit entry number
+                            - [R029] Invalid Addit property
+                                . Occurs when the value for 'prop' is not any of the following: ids, optionalName, relatedContent, relatedID
+                                    {Addit:1,optName}   --> Invalid Addit property                ********/
+                        for (int adtx = 0; adtx < 3; adtx++)
+                        {
+                            errorCode = null;
+                            errorMessage = null;
+                            bool triggerR027q = false;
+
+                            string[] noPlainParts = noPlainLine.LineBreak('{');
+                            foreach (string noPP in noPlainParts)
+                            {
+                                if (noPP.SnippetText("{Addit", "}", Snip.Inc, Snip.EndAft).IsNotNE())
+                                {
+                                    string additArgs = noPP.SnippetText("{Addit", "}", Snip.EndAft);
+                                    if (!additArgs.Equals("Count"))
+                                    {
+                                        /// IF ..: R027; ELSE R028 or R029
+                                        if (additArgs.IsNEW() && adtx == 0)
+                                            triggerR027q = true; /// Ex| {Addit}  |  {Addit  }
+                                        else
+                                        {
+                                            additArgs = noPP.SnippetText("{Addit", "}", Snip.Inc, Snip.EndAft);
+                                            string argEntNum = additArgs.SnippetText(":", ","), argProp = additArgs.SnippetText(",", "}");
+                                            if (argEntNum.IsNotNEW())
+                                            {
+                                                bool validEntNum = int.TryParse(argEntNum, out int entNum);
+                                                validEntNum = validEntNum && entNum > 0;
+
+                                                if (!validEntNum && !argEntNum.SquishSpaces().Equals("#") && adtx == 1)
+                                                {
+                                                    errorCode = "R028";
+                                                    errorMessage = "Invalid Addit entry number";
+                                                }
+                                            }
+
+                                            if (argProp.IsNotNEW())
+                                            {
+                                                argProp = argProp.Trim();
+                                                if (!argProp.Equals("optionalName") && !argProp.Equals("ids") && !argProp.Equals("relatedContent") && !argProp.Equals("relatedID") && adtx == 2)
+                                                {
+                                                    errorCode = "R029";
+                                                    errorMessage = "Invalid Addit property";
+                                                }
+                                            }
+
+                                            if ((argProp.IsNEW() || argEntNum.IsNEW()) && adtx == 0)
+                                                triggerR027q = true; /// Ex| {Addit:4,} |  {Addit: , }  |  {Addit:,name}
+                                        }
+                                    }
+                                }
+
+                                if (triggerR027q)
+                                {
+                                    errorCode = "R027";
+                                    errorMessage = "Addit entry number and property expected";
+                                }
+                            }
+
+                            if (errorCode.IsNotNEW())
+                                AddToErrorList(lineNum, errorCode, errorMessage);
+                        }
+
+                        /** UPDATED ARRAY errors
+                            - [R030] Updated entry number and property expected
+                                . Occurs when the remainder of the Updated syntax is missing.
+                            - [R031] Invalid Updated entry number
+                                . Occurs when the entry number is neither '#' or a number greater than zero (>0)
+                                    {Updated:*,name}    --> Invalid Updated entry number
+                            - [R032] Invalid Updated property
+                                . Occurs when the value for 'prop' is not any of the following: changeDesc, id, name.
+                                    {Updated:3,ids}     --> Invalid Updated property                ********/
+                        for (int updx = 0; updx < 3; updx++)
+                        {
+                            errorCode = null;
+                            errorMessage = null;
+                            bool triggerR030q = false;
+
+                            string[] noPlainParts = noPlainLine.LineBreak('{');
+                            foreach (string noPP in noPlainParts)
+                            {
+                                if (noPP.SnippetText("{Updated", "}", Snip.Inc, Snip.EndAft).IsNotNE())
+                                {
+                                    string updatedArgs = noPP.SnippetText("{Updated", "}", Snip.EndAft);
+                                    if (!updatedArgs.Equals("Count"))
+                                    {
+                                        /// IF ..: R030; ELSE R031 or R032
+                                        if (updatedArgs.IsNEW() && updx == 0)
+                                            triggerR030q = true; /// Ex| {Updated}  |  {Updated  }
+                                        else
+                                        {
+                                            updatedArgs = noPP.SnippetText("{Updated", "}", Snip.Inc, Snip.EndAft);
+                                            string argEntNum = updatedArgs.SnippetText(":", ","), argProp = updatedArgs.SnippetText(",", "}");
+                                            if (argEntNum.IsNotNEW())
+                                            {
+                                                bool validEntNum = int.TryParse(argEntNum, out int entNum);
+                                                validEntNum = validEntNum && entNum > 0;
+
+                                                if (!validEntNum && !argEntNum.SquishSpaces().Equals("#") && updx == 1)
+                                                {
+                                                    errorCode = "R031";
+                                                    errorMessage = "Invalid Updated entry number";
+                                                }
+                                            }
+
+                                            if (argProp.IsNotNEW())
+                                            {
+                                                argProp = argProp.Trim();
+                                                if (!argProp.Equals("id") && !argProp.Equals("name") && !argProp.Equals("changeDesc") && updx == 2)
+                                                {
+                                                    errorCode = "R032";
+                                                    errorMessage = "Invalid Updated property";
+                                                }
+                                            }
+
+                                            if ((argProp.IsNEW() || argEntNum.IsNEW()) && updx == 0)
+                                                triggerR030q = true; /// Ex| {Updataed:4,} |  {Updated: , }  |  {Updated:,name}
+                                        }
+                                    }
+                                }
+
+                                if (triggerR030q)
+                                {
+                                    errorCode = "R030";
+                                    errorMessage = "Updated entry number and property expected";
+                                }
+                            }
+
+                            if (errorCode.IsNotNEW())
+                                AddToErrorList(lineNum, errorCode, errorMessage);
+                        }
+
+                        /** LEGEND ARRAY errors
+                            - [R033] Legend entry number and property expected
+                                . Occurs when the remainder of the Legend syntax is missing.
+                            - [R034] Invalid Legend entry number
+                                . Occurs when the entry number is neither '#' or a number greater than zero (>0)
+                                    {Legend:key,4}      --> Invalid Legend entry number
+                            - [R035] Invalid Legend property
+                                . Occurs when the value for 'prop' is not any of the following: definition, key
+                                    {Legend:key,4}  --> Invalid Legend property                ********/
+                        for (int legx = 0; legx < 3; legx++)
+                        {
+                            errorCode = null;
+                            errorMessage = null;
+                            bool triggerR033q = false;
+
+                            string[] noPlainParts = noPlainLine.LineBreak('{');
+                            foreach (string noPP in noPlainParts)
+                            {
+                                if (noPP.SnippetText("{Legend", "}", Snip.Inc, Snip.EndAft).IsNotNE())
+                                {
+                                    string legendArgs = noPP.SnippetText("{Legend", "}", Snip.EndAft);
+                                    if (!legendArgs.Equals("Count"))
+                                    {
+                                        /// IF ..: R033; ELSE R034 or R035
+                                        if (legendArgs.IsNEW() && legx == 0)
+                                            triggerR033q = true; /// Ex| {Legend}  |  {Legend  }
+                                        else
+                                        {
+                                            legendArgs = noPP.SnippetText("{Legend", "}", Snip.Inc, Snip.EndAft);
+                                            string argEntNum = legendArgs.SnippetText(":", ","), argProp = legendArgs.SnippetText(",", "}");
+                                            if (argEntNum.IsNotNEW())
+                                            {
+                                                bool validEntNum = int.TryParse(argEntNum, out int entNum);
+                                                validEntNum = validEntNum && entNum > 0;
+
+                                                if (!validEntNum && !argEntNum.SquishSpaces().Equals("#") && legx == 1)
+                                                {
+                                                    errorCode = "R034";
+                                                    errorMessage = "Invalid Legend entry number";
+                                                }
+                                            }
+
+                                            if (argProp.IsNotNEW())
+                                            {
+                                                argProp = argProp.Trim();
+                                                if (!argProp.Equals("key") && !argProp.Equals("changeDesc") && legx == 2)
+                                                {
+                                                    errorCode = "R035";
+                                                    errorMessage = "Invalid Legend property";
+                                                }
+                                            }
+
+                                            if ((argProp.IsNEW() || argEntNum.IsNEW()) && legx == 0)
+                                                triggerR033q = true; /// Ex| {Legend:4,} |  {Legend: , }  |  {Legend:,name}
+                                        }
+                                    }
+                                }
+
+                                if (triggerR033q)
+                                {
+                                    errorCode = "R033";
+                                    errorMessage = "Legend entry number and property expected";
+                                }
+                            }
+
+                            if (errorCode.IsNotNEW())
+                                AddToErrorList(lineNum, errorCode, errorMessage);
+                        }
+
+                        /** SUMMARY ARRAY errors
+                            - [R036] Summary entry number expected
+                                . Occurs when the remainder of the Summary syntax is missing.
+                                    {Summary}   --> Summary entry number expected
+                            - [R037] Invalid Summary entry number
+                                . Occurs when the entry number is neither '#' or a number greater than zero (>0)     ********/
+                        for (int sumx = 0; sumx < 2; sumx++)
+                        {
+                            errorCode = null;
+                            errorMessage = null;
+                            bool triggerR036q = false;
+
+                            string[] noPlainParts = noPlainLine.LineBreak('{');
+                            foreach (string noPP in noPlainParts)
+                            {
+                                if (noPP.SnippetText("{Summary", "}", Snip.Inc, Snip.EndAft).IsNotNE())
+                                {
+                                    string summaryArgs = noPP.SnippetText("{Summary", "}", Snip.EndAft);
+                                    if (!summaryArgs.Equals("Count"))
+                                    {
+                                        /// IF ..: R036; ELSE R037
+                                        if (summaryArgs.IsNEW() && sumx == 0)
+                                            triggerR036q = true; /// Ex| {Summary}  |  {Summary  }                            
+                                        else if (summaryArgs.Contains(":"))
+                                        {
+                                            summaryArgs = summaryArgs.Substring(1);
+                                            bool validEntNum = int.TryParse(summaryArgs, out int entNum);
+                                            validEntNum = validEntNum && entNum > 0;
+                                            if (!validEntNum && !summaryArgs.SquishSpaces().Equals("#") && sumx == 1)
+                                            {
+                                                errorCode = "R037";
+                                                errorMessage = "Invalid Summary entry number";
+                                            }
+
+                                            if (summaryArgs.IsNEW() && sumx == 0)
+                                                triggerR036q = true; /// Ex| {Summary:}
+                                        }
+                                    }
+                                }
+
+                                if (triggerR036q)
+                                {
+                                    errorCode = "R036";
+                                    errorMessage = "Summary entry number expected";
+                                }
+                            }
+
+                            if (errorCode.IsNotNEW())
+                                AddToErrorList(lineNum, errorCode, errorMessage);
+                        }
 
                     }
 
 
 
                     // ~~  STEAM FORMAT REFERENCE SYNTAX  ~~
+                    /** STEAM FORMAT REFERENC SYNTAX - revised and errors debrief
+                    # S T E A M   F O R M A T   R E F E R E N C E S
+                    `    Steam format references are styling element calls that will affect the look of any text or value placed after it on
+                    ▌    log generation.
+                    ▌    Simple command references may be combined with other simple commands unless otherwise unpermitted. Simple commands
+                    ▌    affect only one value that follows them.
+                    ▌    Complex commands require a text or value to be placed in a described parameter surrounded by single quote characters
+                    ▌    (').
+
+                    SYNTAX                          :  OUTCOME
+                    --------------------------------:------------------------------------------------------------------------------------------
+                        $h                            :  Simple command. Header text. Must be placed at the start of the line. May not be
+                                                    :  combined with other simple commands.
+                                                    :    There are three levels of header text. The header level follows the number of 'h's in
+                                                    :  reference. Example, a level three header text is '$hhh'.
+                    --------------------------------:------------------------------------------------------------------------------------------
+                        $b                            :  Simple command. Bold text.
+                    --------------------------------:------------------------------------------------------------------------------------------
+                        $u                            :  Simple command. Underlined text.
+                    --------------------------------:------------------------------------------------------------------------------------------
+                        $i                            :  Simple command. Italicized text.
+                    --------------------------------:------------------------------------------------------------------------------------------
+                        $s                            :  Simple command. Strikethrough text.
+                    --------------------------------:------------------------------------------------------------------------------------------
+                        $sp                           :  Simple command. Spoiler text.
+                    --------------------------------:------------------------------------------------------------------------------------------
+                        $np                           :  Simple command. No parse. Doesn't parse steam format tags when generating steam log.
+                    --------------------------------:------------------------------------------------------------------------------------------
+                        $c                            :  Simple command. Code text. Fixed width font, preserves space.
+                    --------------------------------:------------------------------------------------------------------------------------------
+                        $hr                           :  Simple command. Horizontal rule. Must be placed on its own line. May not be combined
+                                                    :  with other simple commands.
+                    --------------------------------:------------------------------------------------------------------------------------------
+                        $nl                           :  Simple command. New line.
+                    --------------------------------:------------------------------------------------------------------------------------------
+                        $url='link':'name'            :  Complex command. Must be placed on its own line.
+                                                    :    Creates a website link by using URL address 'link' to create a hyperlink text
+                                                    :  described as 'name'.
+                    --------------------------------:------------------------------------------------------------------------------------------
+                        $list[or]                     :  Complex command. Must be placed on its own line.
+                                                    :    Starts a list block. The optional parameter within square brackets, 'or', will
+                                                    :  initiate an ordered (numbered) list. Otherwise, an unordered list is initiated.
+                    --------------------------------:------------------------------------------------------------------------------------------
+                        $*                            :  Simple command. Must be placed on its own line.
+                                                    :    Used within a list block to create a list item. Simple commands may follow to style
+                                                    :  the list item value or text.
+                    --------------------------------:------------------------------------------------------------------------------------------
+                        $q='author':'quote'           :  Complex command. Must be placed on its own line.
+                                                    :    Generates a quote block that will reference an 'author' and display their original
+                                                    :  text 'quote'.
+                    --------------------------------:------------------------------------------------------------------------------------------
+                        $table[nb,ec]                 :  Complex command. Must be placed on its own line.
+                                                    :    Starts a table block. There are two optional parameters within square brackets:
+                                                    :  parameter 'nb' will generate a table with no borders, parameter 'ec' will generate a
+                                                    :  table with equal cells.
+                    --------------------------------:------------------------------------------------------------------------------------------
+                        $th='clm1','clm2'             :  Complex command. Must be placed on its own line.
+                                                    :    Used within a table block to create a table header row. Separate multiple columns of
+                                                    :  data with ','. Must follow immediately after a table block has started.
+                    --------------------------------:------------------------------------------------------------------------------------------
+                        $td='clm1','clm2'             :  Complex command. Must be placed on its own line.
+                                                    :    Used within a table block to create a table data row. Separate multiple columns of
+                                                    :  data with ','.
+                    --------------------------------:------------------------------------------------------------------------------------------
+                     
+
+                    STEAM FORMAT SYNTAX ERRORS
+                    """"""""""""""""""""""""""
+                    Error code token 'R'
+
+                    SIMPLE COMMANDS
+                        - [R038] Missing value to format
+                            . Occurs when a single or combination of simple command references is empty
+                                $i      --> Missing value to format
+                                $sp     --> Missing value to format
+                        - [R039] Invalid value to format: '{val}'
+                            . Occurs when a value following a single or combination of simple command references is neither plain text nor library reference
+                                $s w        --> Invalid value to format: 'w'
+                                $h {CTA}    --> Invalid value to format: '{CTA}'
+
+                        HEADING
+                            - [R040] Heading element expected at beginning
+                                . Occurs when the heading element is not placed at the beginning of the line
+                                    else; $h "Water"    --> Heading element expected at beginning
+                            - [R041] Heading element cannot be combined with other commands
+                                . Occurs when the heading element is followed by other simple commands
+                                    $h $i "Waterleaf"   --> Heading element cannot be combined with other commands 
+
+                        BOLD
+                            - (no errors)
+                    
+                        UNDERLINE
+                            - (no errors)
+                    
+                        ITALICIZE
+                            - (no errors)
+                    
+                        STRIKETHROUGH
+                            - (no errors)
+                    
+                        SPOILER
+                            - (no errors)
+                    
+                        NO PARSE
+                            - (no errors)
+                    
+                        CODE TEXT
+                            - (no errors)
+                    
+                        HORIZONTAL RULE
+                            Note :: R038 and R039 does not apply to this element
+                            - [R042] Horizontal Rule element expected to be on its own line
+                                . Occurs when the horizontal rule element is not the only item on its line
+                                    $hr "Slap"  --> Horizontal Rule element expected to be on its own line
+                                    $hr $nl     --> Horizontal Reul element expected to be on its own line
+                    
+                        NEWLINE
+                            Note :: R038 and R039 does not apply to this element
+                            - (no errors)
+
+                        LIST ITEM
+                            - [R043] List Item element expected at beginning
+                                . Occurs when the list item element is not placed at the beginning of the line
+                            - [R044] List Item element is not within a list block
+                                . Occurs when the list item element is not preceded by another list element line or a list block line
+                                    $h "Boom"
+                                    $* "Boom"    --> List Item element is not within a list block
+                    
+                    URL
+                        - [R045] URL element expected to be on its own line 
+                            . Occurs when a url element is not the only steam format reference on its line
+                                $url="www.Bt.ca":"Boot" $i "here"   -->  URL element expected to be on its own line 
+                        - [R046] URL element assignment operator expected
+                            . Occurs when a url element is not followed by the '=' operator
+                                $url    --> URL element assignment operator expected
+                        - [R047] Empty URL element
+                            . Occurs when a url element does not have any values following after the operator
+                                $url=   --> Empty URL element
+                        - [R048] URL value for link expected
+                            . Occurs when the value for 'link' is missing or invalid.
+                                $url=wtq        --> URL value for link expected
+                                $url= : "Bun"   --> URL value for link expected
+                        - [R049] URL value for name expected
+                            . Occurs when the value for 'name' is missing or invalid. 
+                                $url= "n"           --> URL value for name expected
+                                $url = "smak" : w   --> URL value for name expected
+                    
+                    LIST
+                        - [R050] List element expected to be on its own line
+                            . Occurs when a list element is not the only item on its line
+                        - [R051] List element parameter brackets expected
+                            . Occurs when the list element is missing its parameter brackets
+                                $list       --> List element parameter brackets expected
+                                $list[      --> List element parameter brackets expected
+                        - [R052] Invalid List element parameter '{param}'
+                            . Occurs when the value within the parameter brackets is not 'or'
+                                $list[o]    --> Invalid List element parameter 'o'
+                        - [R053] List element must contain at least one list item
+                            . Occurs when the list element line is not followed by a list item line
+                                $list[]     
+                                "Next"      --> List element must contain at least one list item
+                    
+                    QUOTE
+                        - [R054] Quote element expected to be on its own line
+                            . Occurs when a quote element is not the only steam format reference on its line
+                                $q= "McNugger" : "Nothing's better than a nugger burger" $hr    --> Quote element expected to be on its own line
+                        - [R055] Quote element assignment operator expected
+                            . Occurs when a quote element is not followed by the '=' operator
+                        - [R056] Empty Quote element 
+                            . Occurs when a quote element does not have any values following after the operator
+                        - [R057] Quote value for author expected
+                            . Occurs when the value for 'auther' is missing or invalid
+                        - [R058] Quote value for qoute expected
+                            . Occurs when the value for 'quote' is missing or invalid
+                    
+                    TABLE
+                        - [R059] Table element expected to be on its own line
+                            . Occurs when a table element is not the only item on its line
+                                $table[] $i "Stap it!"  --> Table element expected to be on its own line
+                        - [R060] Table element parameter brackets expected
+                            . Occurs when the table element is missing its parameter brackets
+                        - [R061] Invalid Table element parameter '{param}'
+                            . Occurs when the value within the parameter brackets does not 'nb' or 'ec'
+                        - [R062] Table element only accepts two or less parameters
+                            . Occurs when multiple values withn the parameter brackets surpass a total of two
+                        - [R063] Table element must contain at least one table row
+                            . Occurs when the table element line is not followed by a table header or table data line
+                    
+                    TABLE HEADER
+                        - [R064] Table Header element expected to be on its own line
+                            . Occurs when a table header element is not the only steam format reference on its line
+                        - [R065] Table Header element assignment operator expected
+                            . Occurs when a table header element is not followed by the '=' operator
+                        - [R066] Table Header element expected after table block line
+                            . Occurs when a table header element line is not preceded by a table block line
+                        - [R067] Table Header element is not within a table block
+                            . Occurs when a table header element line is not preceded by a table block line or table data line
+                        - [R068] Empty Table Header element
+                            . Occurs when a table header element does not have any values following after the operator
+                        - [R069] Table Header value '{val}' is an invalid value
+                            . Occurs when a table header column value is an invalid value
+                                $th= www, tyi   --> Table Header value 'www' is an invalid value
+                    
+                    TABLE DATA
+                        - [R070] Table Data element expected to be on its own line
+                            . Occurs when a table data element is not the only steam format reference on its line
+                        - [R071] Table Data element assignment operator expected
+                            . Occurs when a table data element is not followed by the '=' operator
+                        - [R072] Table Data element is not within a table block
+                            . Occurs when a table data element line is not preceded by a table block line or a table header line
+                        - [R073] Empty Table Data element
+                            . Occurs when a table data element does not have any values following after the operator
+                        - [R074] Table Data element does not match column count of preceding rows
+                            . Occurs when a table data element's column count mismatches that of a preceding table data or table header line
+                        - [R075] Table Data value '{val}' is an invalid value
+                            . Occurs when a table data column value is an invalid value
+                                $td= "Sweet", sp    --> Table Data value 'sp' is an invalid value
+
+                     **/
                     if (!line.TrimStart().StartsWith("//"))
                     { /// section wrapping
                         //const string tokenTag = "[token]";
-                        //string errorMessage;
-                        //string token;
+                        string errorCode, errorMessage;
+                        string token;
 
+                        /** SIMPLE COMMANDS errors
+                        SIMPLE COMMANDS
+                        - [R038] Missing value to format
+                            . Occurs when a single or combination of simple command references is empty
+                                $i      --> Missing value to format
+                                $sp     --> Missing value to format
+                        - [R039] Invalid value to format: '{val}'
+                            . Occurs when a value following a single or combination of simple command references is neither plain text nor library reference
+                                $s w        --> Invalid value to format: 'w'
+                                $h {CTA}    --> Invalid value to format: '{CTA}'
+
+                            HEADING
+                                - [R040] Heading element expected at beginning
+                                    . Occurs when the heading element is not placed at the beginning of the line
+                                        else; $h "Water"    --> Heading element expected at beginning
+                                - [R041] Heading element cannot be combined with other commands
+                                    . Occurs when the heading element is followed by other simple commands
+                                        $h $i "Waterleaf"   --> Heading element cannot be combined with other commands 
+
+                            BOLD
+                                - (no errors)
+                    
+                            UNDERLINE
+                                - (no errors)
+                    
+                            ITALICIZE
+                                - (no errors)
+                    
+                            STRIKETHROUGH
+                                - (no errors)
+                    
+                            SPOILER
+                                - (no errors)
+                    
+                            NO PARSE
+                                - (no errors)
+                    
+                            CODE TEXT
+                                - (no errors)
+                    
+                            HORIZONTAL RULE
+                                Note :: R038 and R039 does not apply to this element
+                                - [R042] Horizontal Rule element expected to be on its own line
+                                    . Occurs when the horizontal rule element is not the only item on its line
+                                        $hr "Slap"  --> Horizontal Rule element expected to be on its own line
+                                        $hr $nl     --> Horizontal Reul element expected to be on its own line
+                    
+                            NEWLINE
+                                Note :: R038 and R039 does not apply to this element
+                                - (no errors)
+
+                            LIST ITEM
+                                - [R043] List Item element expected at beginning
+                                    . Occurs when the list item element is not placed at the beginning of the line
+                                - [R044] List Item element is not within a list block
+                                    . Occurs when the list item element is not preceded by another list element line or a list block line
+                                        $h "Boom"
+                                        $* "Boom"    --> List Item element is not within a list block
+                         */
+                        for (int scx = 0; scx < 4; scx++)
+                        {
+                            switch (scx)
+                            {
+                                /** General Simple Command errors
+                                - [R038] Missing value to format
+                                    . Occurs when a single or combination of simple command references are
+                                        $i      --> Missing value to format
+                                        $sp     --> Missing value to format
+                                - [R039] Invalid value to format: '{val}'
+                                    . Occurs when a value following a single or combination of simple command references is neither plain text nor library reference
+                                        $s w        --> Invalid value to format: 'w'
+                                        [x] $h {CTA}    --> Invalid value to format: '{CTA}'
+
+                                    HORIZONTAL RULE -- Note :: R038 and R039 does not apply to this element
+                                    NEWLINE -- Note :: R038 and R039 does not apply to this element                         ******/
+                                case 0:
+                                    for (int gscx = 0; gscx < 2; gscx++)
+                                    {
+                                        errorCode = null;
+                                        errorMessage = null;
+
+                                        if (noPlainLine.Contains('$'))
+                                        {
+                                            string[] theRefs = line.LineBreak('$');
+                                            for (int trx = 0; trx < theRefs.Length; trx++)
+                                            {
+                                                string theRefPart = theRefs[trx];
+                                                if (!theRefPart.StartsWith("$hr") && !theRefPart.StartsWith("$nl") && !theRefPart.Contains("[") && !theRefPart.Contains("="))
+                                                {
+                                                    bool triggerR038q = false;
+                                                    string snipRef = $"{theRefPart.SnippetText("$", " ", Snip.Inc, Snip.EndLast)}";
+                                                    if (snipRef.IsNotNE())
+                                                    {
+                                                        if (snipRef.Length < theRefPart.Length)
+                                                        {
+                                                            string fValue = theRefPart.Substring(snipRef.Length);
+                                                            if (fValue.IsNotNEW())
+                                                            {
+                                                                if (!IsValidSFValue(fValue) && gscx == 1)
+                                                                {
+                                                                    errorCode = "R039";
+                                                                    errorMessage = $"Invalid value to format: '{fValue}'";
+                                                                }
+                                                            }
+                                                            /// not triggering
+                                                            //else if (gscx == 0)
+                                                            //{
+                                                            //    triggerR038q = true;
+                                                            //    snipRef += ID(2);
+                                                            //}
+                                                        }
+                                                        else if (trx + 1 == theRefs.Length && gscx == 0)
+                                                        {
+                                                            triggerR038q = true;
+                                                            snipRef += ID(0);
+                                                        }
+                                                    }
+                                                    else if (theRefPart.Contains("$") && gscx == 0)
+                                                    {
+                                                        triggerR038q = true;
+                                                        snipRef = theRefPart + ID(1);
+                                                    }
+
+                                                    if (triggerR038q)
+                                                    {
+                                                        errorCode = "R038";
+                                                        errorMessage = "Missing value to format" + (ID(0).IsNE() ? "" : $" (after '{snipRef.Trim()}')");
+                                                    }
+                                                }
+                                            }
+                                        }                                        
+
+                                        if (errorCode.IsNotNE() && errorMessage.IsNotNE())
+                                            AddToErrorList(lineNum, errorCode, errorMessage);
+                                    }
+                                    break;
+
+                                /** HEADING errors
+                                - [R040] Heading element expected at beginning
+                                    . Occurs when the heading element is not placed at the beginning of the line
+                                        else; $h "Water"    --> Heading element expected at beginning
+                                - [R041] Heading element cannot be combined with other commands
+                                    . Occurs when the heading element is followed by other simple commands
+                                        $h $i "Waterleaf"   --> Heading element cannot be combined with other commands          ******/
+                                case 1:
+                                    for (int hx = 0; hx < 2; hx++)
+                                    {
+                                        errorCode = null;
+                                        errorMessage = null;
+
+                                        if (noPlainLine.Contains('$'))
+                                        {
+                                            if (noPlainLine.Contains("$h"))
+                                            {
+                                                string theHeaderRef = noPlainLine.SnippetText("$h", " ", Snip.Inc);
+                                                if (theHeaderRef.IsNE())
+                                                    theHeaderRef = noPlainLine.Replace("$hr", "").SnippetText("$", "h", Snip.Inc, Snip.EndLast);
+
+                                                if (theHeaderRef.IsNotNE())
+                                                {
+                                                    theHeaderRef = theHeaderRef.Trim();
+                                                    if (theHeaderRef.Equals("$h") || theHeaderRef.Equals("$hh") || theHeaderRef.Equals("$hhh"))
+                                                    {
+                                                        if (!line.StartsWith(theHeaderRef) && hx == 0)
+                                                        {
+                                                            errorCode = "R040";
+                                                            errorMessage = "Heading element expected at beginning";
+                                                        }
+
+                                                        if (noPlainLine.CountOccuringCharacter('$') > 1 && hx == 1)
+                                                        {
+                                                            errorCode = "R041";
+                                                            errorMessage = "Heading element cannot be combined with other commands";
+                                                        }
+                                                    }
+                                                }            
+                                            }
+                                        }
+
+                                        if (errorCode.IsNotNE() && errorMessage.IsNotNE())
+                                            AddToErrorList(lineNum, errorCode, errorMessage);
+                                    }
+                                    break;
+
+                                /** HORIZONTAL RULE errors
+                                Note :: R038 does not apply to this element
+                                - [R042] Horizontal Rule element expected to be on its own line
+                                    . Occurs when the horizontal rule element is not the only item on its line
+                                        $hr "Slap"  --> Horizontal Rule element expected to be on its own line
+                                        $hr $nl     --> Horizontal Reul element expected to be on its own line               ******/
+                                case 2:
+                                    if (noPlainLine.Contains("$hr"))
+                                    {
+                                        if (!line.TrimStart().Equals("$hr"))
+                                        {
+                                            errorCode = "R042";
+                                            errorMessage = "Horizontal Rule element expected to be on its own line";
+
+                                            AddToErrorList(lineNum, errorCode, errorMessage);
+                                        }
+                                    }
+                                    break;
+
+                                /** LIST ITEM errors
+                                - [R043] List Item element expected at beginning
+                                    . Occurs when the list item element is not placed at the beginning of the line
+                                - [R044] List Item element is not within a list block
+                                    . Occurs when the list item element is not preceded by another list element line or a list block line
+                                        $h "Boom"
+                                        $* "Boom"    --> List Item element is not within a list block                    ******/
+                                case 3:
+                                    for (int lix = 0; lix < 2; lix++)
+                                    {
+                                        errorCode = null;
+                                        errorMessage = null;
+
+                                        if (noPlainLine.Contains("$*"))
+                                        {
+                                            if (!line.TrimStart().StartsWith("$*") && lix == 0)
+                                            {
+                                                errorCode = "R043";
+                                                errorMessage = "List Item element expected at beginning";
+                                            }
+
+                                            if (!prevLine.StartsWith("$*") && !prevLine.StartsWith("$list") && lix == 1)
+                                            {
+                                                errorCode = "R044";
+                                                errorMessage = "List Item element is not within a list block";
+                                            }
+                                        }
+
+                                        if (errorCode.IsNotNE() && errorMessage.IsNotNE())
+                                            AddToErrorList(lineNum, errorCode, errorMessage);
+                                    }
+                                    break;
+                            }
+                        }
+
+                        /** URL errors
+                        - [R045] URL element expected to be on its own line 
+                            . Occurs when a url element is not the only steam format reference on its line (or is not at beginning)
+                                $url="www.Bt.ca":"Boot" $i "here"   -->  URL element expected to be on its own line 
+                        - [R046] URL element assignment operator expected
+                            . Occurs when a url element is not followed by the '=' operator
+                                $url    --> URL element assignment operator expected
+                        - [R047] Empty URL element
+                            . Occurs when a url element does not have any values following after the operator
+                                $url=   --> Empty URL element
+                        - [R048] URL value for link expected
+                            . Occurs when the value for 'link' is missing or invalid.
+                                $url=wtq        --> URL value for link expected
+                                $url= : "Bun"   --> URL value for link expected
+                        - [R049] URL value for name expected
+                            . Occurs when the value for 'name' is missing or invalid. 
+                                $url= "n"           --> URL value for name expected
+                                $url = "smak" : w   --> URL value for name expected          ********/
+                        for (int ulx = 0; ulx < 5; ulx++)
+                        {
+                            errorCode = null;
+                            errorMessage = null;
+
+                            if (noPlainLine.Contains("$url"))
+                            {
+                                if (noPlainLine.CountOccuringCharacter('$') == 1 && line.StartsWith("$url"))
+                                {
+                                    if (noPlainLine.CountOccuringCharacter('=') == 1 && line.StartsWith("$url="))
+                                    {
+                                        string urlArgs = line.Substring("$url=".Length);
+                                        if (urlArgs.IsNotNEW())
+                                        {
+                                            bool triggerR048q = false;
+                                            if (urlArgs.Contains(":"))
+                                            {
+                                                string[] urlParts = urlArgs.Split(':');
+                                                if (urlParts.Length == 2)
+                                                {
+                                                    if (!IsValidSFValue(urlParts[0], true))
+                                                        triggerR048q = true;
+                                                    else if (!IsValidSFValue(urlParts[1], true) && ulx == 4)
+                                                    {
+                                                        errorCode = "R049";
+                                                        errorMessage = "URL value for name expected";
+                                                    }
+                                                }
+                                                else if (ulx == 3)
+                                                    unexpectedTokenII.Add(":" + ID(48));
+                                            }
+                                            else triggerR048q = true;
+
+                                            if (triggerR048q && ulx == 3)
+                                            {
+                                                errorCode = "R048";
+                                                errorMessage = "URL value for link expected";
+                                            }
+                                        }
+                                        else if (ulx == 2)
+                                        {
+                                            errorCode = "R047";
+                                            errorMessage = "Empty URL element";
+                                        }
+                                    }
+                                    else if (ulx == 1)
+                                    {
+                                        if (noPlainLine.CountOccuringCharacter('=') > 1)
+                                            unexpectedTokenII.Add("=" + ID(46));
+                                        else
+                                        {
+                                            errorCode = "R046";
+                                            errorMessage = "URL element assignment operator expected";
+                                        }
+                                    }
+                                }
+                                else if (ulx == 0)
+                                {
+                                    errorCode = "R045";
+                                    errorMessage = "URL element expected to be on its own line";
+                                }
+                            }
+
+                            if (errorCode.IsNotNE() && errorMessage.IsNotNE())
+                                AddToErrorList(lineNum, errorCode, errorMessage);
+                        }
+
+                        /** LIST errors
+                        - [R050] List element expected to be on its own line
+                            . Occurs when a list element is not the only item on its line
+                        - [R051] List element parameter brackets expected
+                            . Occurs when the list element is missing its parameter brackets
+                                $list       --> List element parameter brackets expected
+                                $list[      --> List element parameter brackets expected
+                        - [R052] Invalid List element parameter '{param}'
+                            . Occurs when the value within the parameter brackets is not 'or'
+                                $list[o]    --> Invalid List element parameter 'o'
+                        - [R053] List element must contain at least one list item
+                            . Occurs when the list element line is not followed by a list item line
+                                $list[]     
+                                "Next"      --> List element must contain at least one list item   *******/
+                        for (int ltx = 0; ltx < 4; ltx++)
+                        {
+                            errorCode = null;
+                            errorMessage = null;
+
+                            if (noPlainLine.Contains("$list"))
+                            {
+                                if (noPlainLine.CountOccuringCharacter('$') == 1 && line.StartsWith("$list"))
+                                {
+                                    string snipParams = line.SnippetText("[", "]", Snip.Inc);
+                                    if (snipParams.IsNotNEW() && line.StartsWith("$list["))
+                                    {
+                                        if (!snipParams.Equals("[]") && !snipParams.Equals("[or]") && ltx == 2)
+                                        {
+                                            errorCode = "R052";
+                                            errorMessage = $"Invalid List element parameter '{snipParams.SnippetText("[", "]")}'";
+                                        }
+                                    }
+                                    else if (ltx == 1)
+                                    {
+                                        errorCode = "R051";
+                                        errorMessage = "List element parameter brackets expected";
+                                    }
+                                }
+                                else if (ltx == 0)
+                                {
+                                    errorCode = "R050";
+                                    errorMessage = "List element expected to be on its own line";
+                                }
+
+
+                                if (line.StartsWith("$list") && ltx == 3)
+                                {
+                                    bool triggerR053q = nextLine.IsNEW();
+                                    if (nextLine.IsNotNEW())
+                                        triggerR053q = !nextLine.StartsWith("$*");
+
+                                    if (triggerR053q)
+                                    {
+                                        errorCode = "R053";
+                                        errorMessage = "List element must contain at least one list item";
+                                    }
+                                }
+                            }
+
+                            if (errorCode.IsNotNE() && errorMessage.IsNotNE())
+                                AddToErrorList(lineNum, errorCode, errorMessage);
+                        }
+
+                        /** QUOTE errors
+                        - [R054] Quote element expected to be on its own line
+                            . Occurs when a quote element is not the only steam format reference on its line (or is not at beginning)
+                                $q= "McNugger" : "Nothing's better than a nugger burger" $hr    --> Quote element expected to be on its own line
+                        - [R055] Quote element assignment operator expected
+                            . Occurs when a quote element is not followed by the '=' operator
+                        - [R056] Empty Quote element 
+                            . Occurs when a quote element does not have any values following after the operator
+                        - [R057] Quote value for author expected
+                            . Occurs when the value for 'auther' is missing or invalid
+                        - [R058] Quote value for qoute expected
+                            . Occurs when the value for 'quote' is missing or invalid           ******/
+                        for (int qtx = 0; qtx < 5; qtx++)
+                        {
+                            errorCode = null;
+                            errorMessage = null;
+
+                            if (noPlainLine.Contains("$q"))
+                            {
+                                if (noPlainLine.CountOccuringCharacter('$') == 1 && line.StartsWith("$q"))
+                                {
+                                    if (noPlainLine.CountOccuringCharacter('=') == 1 && line.StartsWith("$q="))
+                                    {
+                                        string quoteArgs = line.Substring("$q=".Length);
+                                        if (quoteArgs.IsNotNEW())
+                                        {
+                                            bool triggerR057q = false;
+                                            if (quoteArgs.Contains(":"))
+                                            {
+                                                string[] quoteParts = quoteArgs.Split(':');
+                                                if (quoteParts.Length == 2)
+                                                {
+                                                    if (!IsValidSFValue(quoteParts[0], true))
+                                                        triggerR057q = true;
+                                                    else if (!IsValidSFValue(quoteParts[1], true) && qtx == 4)
+                                                    {
+                                                        errorCode = "R058";
+                                                        errorMessage = "Quote value for quote expected";
+                                                    }
+                                                }
+                                                else if (qtx == 3)
+                                                    unexpectedTokenII.Add(":" + ID(57));
+                                            }
+                                            else triggerR057q = true;
+
+                                            if (triggerR057q && qtx == 3)
+                                            {
+                                                errorCode = "R057";
+                                                errorMessage = "Quote value for author expected";
+                                            }
+                                        }
+                                        else if (qtx == 2)
+                                        {
+                                            errorCode = "R056";
+                                            errorMessage = "Empty Quote element";
+                                        }
+                                    }
+                                    else if (qtx == 1)
+                                    {
+                                        if (noPlainLine.CountOccuringCharacter('=') > 1)
+                                            unexpectedTokenII.Add("=" + ID(55));
+                                        else
+                                        {
+                                            errorCode = "R055";
+                                            errorMessage = "Quote element assignment operator expected";
+                                        }
+                                    }
+                                }
+                                else if (qtx == 0)
+                                {
+                                    errorCode = "R054";
+                                    errorMessage = "Quote element expected to be on its own line";
+                                }
+                            }
+
+                            if (errorCode.IsNotNE() && errorMessage.IsNotNE())
+                                AddToErrorList(lineNum, errorCode, errorMessage);
+                        }
+
+                        /** TABLE errors
+                        - [R059] Table element expected to be on its own line
+                            . Occurs when a table element is not the only item on its line
+                                $table[] $i "Stap it!"  --> Table element expected to be on its own line
+                        - [R060] Table element parameter brackets expected
+                            . Occurs when the table element is missing its parameter brackets
+                        - [R061] Invalid Table element parameter '{param}'
+                            . Occurs when the value within the parameter brackets does not 'nb' or 'ec'
+                        - [R062] Table element only accepts two or less parameters
+                            . Occurs when multiple values withn the parameter brackets surpass a total of two
+                        - [R063] Table element must contain at least one table row
+                            . Occurs when the table element line is not followed by a table header or table data line            *****/
+                        for (int tbx = 0; tbx < 5; tbx++)
+                        {
+                            errorCode = null;
+                            errorMessage = null;
+                            token = null;
+
+                            if (noPlainLine.Contains("$table"))
+                            {
+                                if (noPlainLine.CountOccuringCharacter('$') == 1 && line.StartsWith("$table"))
+                                {
+                                    string snipParams = line.SnippetText("[", "]", Snip.Inc);
+                                    if (snipParams.IsNotNEW() && line.StartsWith("$table["))
+                                    {
+                                        string snipParamArgs = line.SnippetText("[", "]");
+                                        if (snipParamArgs.IsNotNEW())
+                                        {
+                                            bool triggerR061q = false;
+                                            if (snipParamArgs.Contains(","))
+                                            {
+                                                if (snipParamArgs.CountOccuringCharacter(',') == 1)
+                                                {
+                                                    string[] pArgs = snipParamArgs.Split(',');
+                                                    if (pArgs[0].IsNEW() || pArgs[1].IsNEW())
+                                                        unexpectedTokenII.Add("," + ID(62));
+                                                    if (!pArgs[0].Equals("nb") && !pArgs[0].Equals("ec"))
+                                                    {
+                                                        triggerR061q = true;
+                                                        token = pArgs[0];
+                                                    }
+                                                    else if (!pArgs[1].Equals("nb") && !pArgs[1].Equals("ec"))
+                                                    {
+                                                        triggerR061q = true;
+                                                        token = pArgs[1];
+                                                    }
+                                                }
+                                                else if (tbx == 3)
+                                                {
+                                                    errorCode = "R062";
+                                                    errorMessage = "Table element only accepts two or less parameters";
+                                                }
+                                            }
+                                            else
+                                            {
+                                                if (!snipParamArgs.Equals("nb") && !snipParamArgs.Equals("ec"))
+                                                {
+                                                    triggerR061q = true;
+                                                    token = snipParamArgs;
+                                                }    
+                                            }
+
+                                            if (triggerR061q && token.IsNotNE() && tbx == 2)
+                                            {
+                                                errorCode = "R061";
+                                                errorMessage = $"Invalid Table element parameter '{token}'";
+                                            }
+                                        }
+
+                                    }
+                                    else if (tbx == 1)
+                                    {
+                                        errorCode = "R060";
+                                        errorMessage = "Table element parameter brackets expected";
+                                    }
+                                }
+                                else if (tbx == 0)
+                                {
+                                    errorCode = "R059";
+                                    errorMessage = "Table element expected to be on its own line";
+                                }
+                            }
+
+                            if (line.StartsWith("$table") && tbx == 4)
+                            {
+                                bool triggerR063q = nextLine.IsNEW();
+                                if (nextLine.IsNotNEW())
+                                    triggerR063q = !nextLine.StartsWith("$td=") && !nextLine.StartsWith("$th=");
+
+                                if (triggerR063q)
+                                {
+                                    errorCode = "R063";
+                                    errorMessage = "Table element must contain at least one table row";
+                                }
+                            }
+
+                            if (errorCode.IsNotNE() && errorMessage.IsNotNE())
+                                AddToErrorList(lineNum, errorCode, errorMessage);
+                        }
+
+                        /** TABLE HEADER errors
+                        - [R064] Table Header element expected to be on its own line
+                            . Occurs when a table header element is not the only steam format reference on its line (or is not at beginning)
+                        - [R065] Table Header element assignment operator expected
+                            . Occurs when a table header element is not followed by the '=' operator
+                        - [R066] Table Header element expected after table block line
+                            . Occurs when a table header element line is not preceded by a table block line
+                        - [R067] Table Header element is not within a table block
+                            . Occurs when a table header element line is not preceded by a table block line or table data line
+                        - [R068] Empty Table Header element
+                            . Occurs when a table header element does not have any values following after the operator
+                        - [R069] Table Header value '{val}' is an invalid value
+                            . Occurs when a table header column value is an invalid value
+                                $th= www, tyi   --> Table Header value 'www' is an invalid value                *****/
+                        for (int thx = 0; thx < 6; thx++)
+                        {
+                            errorCode = null;
+                            errorMessage = null;
+
+                            if (noPlainLine.Contains("$th"))
+                            {
+                                if (noPlainLine.CountOccuringCharacter('$') == 1 && line.StartsWith("$th"))
+                                {
+                                    if (noPlainLine.CountOccuringCharacter('=') == 1 && line.StartsWith("$th="))
+                                    {
+                                        string thArgs = line.Substring("$th=".Length);
+                                        if (thArgs.IsNotNEW())
+                                        {
+                                            string[] thClms = thArgs.RemoveFromPlainText(',').Split(',');
+                                            string invalidValue = null;
+                                            for (int tx = 0; tx < thClms.Length && invalidValue == null; tx++)
+                                            {
+                                                if (!IsValidSFValue(thClms[tx]))
+                                                    invalidValue = thClms[tx] + (ID(0).IsNE() ? "" : $"(ix{tx})");
+                                            }
+
+                                            if (invalidValue != null && thx == 5)
+                                            {
+                                                errorCode = "R069";
+                                                errorMessage = $"Table Header value '{invalidValue}' is an invalid value";
+                                            }
+                                        }
+                                        else if (thx == 4)
+                                        {
+                                            errorCode = "R068";
+                                            errorMessage = "Empty Table Header element";
+                                        }
+                                    }
+                                    else if (thx == 1)
+                                    {
+                                        if (noPlainLine.CountOccuringCharacter('=') > 1)
+                                            unexpectedTokenII.Add("=" + ID(65));
+                                        else
+                                        {
+                                            errorCode = "R065";
+                                            errorMessage = "Table Header element assignment operator expected";
+                                        }
+                                    }
+                                }
+                                else if (thx == 0)
+                                {
+                                    errorCode = "R064";
+                                    errorMessage = "Table Header element expected to be on its own line";
+                                }
+                            }
+
+                            if (noPlainLine.StartsWith("$th"))
+                            {
+                                bool triggerR066q = prevLine.IsNEW();
+                                bool triggerR067q = prevLine.IsNEW();
+                                if (prevLine.IsNotNEW())
+                                {
+                                    triggerR066q = !prevLine.StartsWith("$table");
+                                    triggerR067q = !prevLine.StartsWith("$table") && !prevLine.StartsWith("$td") && !prevLine.StartsWith("$th");
+                                }
+
+                                if (triggerR066q && thx == 2)
+                                {
+                                    errorCode = "R066";
+                                    errorMessage = "Table Header element expected after table block line";
+                                }
+                                if (triggerR067q && thx == 3)
+                                {
+                                    errorCode = "R067";
+                                    errorMessage = "Table Header element is not within a table block";
+                                }
+                            }
+
+                            if (errorCode.IsNotNE() && errorMessage.IsNotNE())
+                                AddToErrorList(lineNum, errorCode, errorMessage);
+                        }
+
+                        /** TABLE DATA errors
+                        - [R070] Table Data element expected to be on its own line 
+                            . Occurs when a table data element is not the only steam format reference on its line (or is not at beginning)
+                        - [R071] Table Data element assignment operator expected
+                            . Occurs when a table data element is not followed by the '=' operator
+                        - [R072] Table Data element is not within a table block
+                            . Occurs when a table data element line is not preceded by a table block line or a table header line
+                        - [R073] Empty Table Data element
+                            . Occurs when a table data element does not have any values following after the operator
+                        - [R074] Table Data element does not match column count of preceding rows
+                            . Occurs when a table data element's column count mismatches that of a preceding table data or table header line
+                        - [R075] Table Data value '{val}' is an invalid value
+                            . Occurs when a table data column value is an invalid value
+                                $td= "Sweet", sp    --> Table Data value 'sp' is an invalid value                  *****/
+                        for (int tdx = 0; tdx < 6; tdx++)
+                        {
+                            errorCode = null;
+                            errorMessage = null;
+
+                            if (noPlainLine.Contains("$td"))
+                            {
+                                if (noPlainLine.CountOccuringCharacter('$') == 1 && line.StartsWith("$td"))
+                                {
+                                    if (noPlainLine.CountOccuringCharacter('=') == 1 && line.StartsWith("$td="))
+                                    {
+                                        string tdArgs = line.Substring("$td=".Length);
+                                        if (tdArgs.IsNotNEW())
+                                        {
+                                            if (prevLine.IsNotNE() && tdx == 4)
+                                            {
+                                                int countPrevArgs = 0;
+                                                if (prevLine.StartsWith("$td=") || prevLine.StartsWith("$th="))
+                                                {
+                                                    string txArgs = prevLine.Substring("$t?=".Length).RemoveFromPlainText(',');
+                                                    if (txArgs.IsNotNE())
+                                                        countPrevArgs = txArgs.CountOccuringCharacter(',') + 1;
+                                                }
+
+                                                int countThisArgs = tdArgs.CountOccuringCharacter(',') + 1;
+                                                if (countPrevArgs != 0 && countPrevArgs != countThisArgs)
+                                                {
+                                                    errorCode = "R074";
+                                                    errorMessage = "Table Data element does not match column count of preceding rows";
+                                                    if (identifyErrorStatesQ)
+                                                        errorMessage += $" ({countPrevArgs}vs{countThisArgs})";
+                                                }
+                                            }
+
+                                            string[] tdClms = tdArgs.RemoveFromPlainText(',').Split(',');
+                                            string invalidValue = null;
+                                            for (int tx = 0; tx < tdClms.Length && invalidValue == null; tx++)
+                                            {
+                                                if (!IsValidSFValue(tdClms[tx]))
+                                                    invalidValue = tdClms[tx] + (ID(0).IsNE() ? "" : $"(ix{tx})");
+                                            }
+
+                                            if (invalidValue != null && tdx == 5)
+                                            {
+                                                errorCode = "R075";
+                                                errorMessage = $"Table data value '{invalidValue}' is an invalid value";
+                                            }
+                                        }
+                                        else if (tdx == 3)
+                                        {
+                                            errorCode = "R073";
+                                            errorMessage = "Empty Table Data element";
+                                        }
+                                    }
+                                    else if (tdx == 1)
+                                    {
+                                        if (noPlainLine.CountOccuringCharacter('=') > 1)
+                                            unexpectedTokenII.Add("=" + ID(71));
+                                        else
+                                        {
+                                            errorCode = "R071";
+                                            errorMessage = "Table Data element assignment operator expected";
+                                        }
+                                    }
+                                }
+                                else if (tdx == 0)
+                                {
+                                    errorCode = "R070";
+                                    errorMessage = "Table Data element expected to be on its own line";
+                                }
+                            }
+
+                            if (noPlainLine.StartsWith("$td"))
+                            {
+                                bool triggerR072q = prevLine.IsNEW();
+                                if (prevLine.IsNotNEW())
+                                    triggerR072q = !prevLine.StartsWith("$table") && !prevLine.StartsWith("$th") && !prevLine.StartsWith("$td");
+
+                                if (triggerR072q && tdx == 2)
+                                {
+                                    errorCode = "R072";
+                                    errorMessage = "Table Data element is not within a table block";
+                                }
+                            }
+
+                            if (errorCode.IsNotNE() && errorMessage.IsNotNE())
+                                AddToErrorList(lineNum, errorCode, errorMessage);
+                        }
+
+
+
+                        string[] steamRefsStart = new string[]
+                        {
+                            /** steam format references list (only need to start a certain way. Any further creeps into non-general errors territory
+                                                
+                                    $h  $hh  $hhh
+                                    $b  $u   $i
+                                    $s  $sp  $np
+                                    $c  $hr  $nl
+                                    $url='link':'name'
+                                    $list[or]
+                                    $*
+                                    $q='author':'quote'
+                                    $table[nb,ec]
+                                    $th='clm1','clm2'
+                                    $td='clm1','clm2'
+                                */
+
+                            "$h ", "$hh ", "$hhh ", "$b ", "$u ", "$i ",
+                            "$s ", "$sp ", "$np ", "$c ", "$hr", "$nl ", "$url=",
+                            "$list[", "$* ", "$q=", "$table[", "$th=", "$td="
+                        };
+                        // METHOD FOR STEAM FORMAT
+                        static bool IsValidSFValue(string value, bool noRepKeyQ = false)
+                        {
+                            /*  Valid steam format values
+                             *      -> Plain text ("txt")
+                             *      -> Library references ({lr})
+                             *      -> Repeat replacement character (#)
+                             */
+
+                            bool isValid = false;
+                            if (value.IsNotNEW())
+                            {
+                                value = value.Trim();
+                                string getLibRef = $"{value.SnippetText("{", "}", Snip.Inc)}";
+                                string getPlain = $"{value.SnippetText("\"", "\"", Snip.Inc, Snip.EndAft)}";
+
+                                if (value.StartsWith(getPlain) && getPlain.IsNotNEW())
+                                    isValid = true;
+                                else if (value.StartsWith(getLibRef) && getLibRef.IsNotNEW())
+                                    isValid = true;
+                                else if (value.Equals("#") && !noRepKeyQ)
+                                    isValid = true;
+
+
+                                //if (value.StartsWith('"') && value.EndsWith('"'))
+                                //    isValid = true; /// "value"
+                                //else if (value.StartsWith("{") && value.EndsWith("}"))
+                                //    isValid = true; /// {libRef}
+                                //else if (value.Equals("#"))
+                                //    isValid = true;
+                                /// other syntax checkers will take care any of other errors (such as incorrect lib refs)
+                            }
+                            return isValid;
+                        }
+                    }
+
+
+
+                    // unexpected token II
+                    /** {RE.} CODE errors
+                           - [G000]     Unexpected token '{token}'
+                               . Accompanies most errors where general syntax is not followed.
+                                   jam     --> Unexpected token 'jam'
+                                   $       --> Unexpected token '$'
+                                   if ;    --> Unexpected token ';'             ****/
+                    if (unexpectedTokenII.HasElements())
+                    {         
+                        foreach (string unexToken in unexpectedTokenII)
+                            AddToErrorList(lineNum, "G000" + ID(1), $"Unexpected token '{unexToken}'");
                     }
                 }
 
             }
+
+
+            /// NOTE TO SELF
+            /// Any syntax blocks that are bookmarked have a 'first-only' checking issue that must be resolved
+            /// Some of these can't be solved with a simple loop. Somehow the 'correct' syntaxes must be removed and the line rechecked a few more times.
+            /// New tools may be of use to resolving this case...
+            ///     > GetEveryInstanceOf(str) 
+            ///     > GetNthInstancOf(str, int)
+            ///     > CountOccuringWord(str)
+            /// It may be good to have this marinate for a few days...
+            ///     Final resolution
+            ///     > str[] LineBreak(this str line, chr c, bl atBreakEndQ=fls)
+            ///     ^  DONE...
 
 
             /** ERROR CODES AND MESSAGES COLLECTION
@@ -1885,7 +3535,64 @@ namespace HCResourceLibraryApp.DataHandling
                 [G020]      Exceeded keyword limit per line
                 [G021]      Line number expected
                 [G022]      Line number must follow after line '{lineNum}'
-                [G023]      Missing first 'if' or 'else' keyword
+                [G023]      Jump keyword must precede an appropriate keyword
+                [G076]      Next keyword must precede an appropriate keyword
+                [G077]      Next keyword requires a following line to function
+                [G078]      Next keyword line cannot be followed by another keyword line
+                ---
+                [R024]      Added entry number and property expected
+                [R025]      Invalid Added entry number
+                [R026]      Invalid Added property
+                [R027]      Addit entry number and property expected
+                [R028]      Invalid Addit entry number
+                [R029]      Invalid Addit property
+                [R030]      Updated entry number and property expected
+                [R031]      Invalid Updated entry number
+                [R032]      Invalid Updated property
+                [R033]      Legend entry number and property expected
+                [R034]      Invalid Legend entry number
+                [R035]      Invalid Legend property
+                [R036]      Summary entry number expected
+                [R037]      Invalid Summary entry number
+                ---
+                [R038]      Missing value to format
+                [R039]      Invalid value to format: '{val}'
+                [R040]      Heading element expected at beginning
+                [R041]      Heading element cannot be combined with other commands
+                [R042]      Horizontal Rule element expected to be on its own line
+                [R043]      List Item element expected at beginning
+                [R044]      List Item element is not within a list block
+                [R045]      URL element expected to be on its own line 
+                [R046]      URL element assignment operator expected
+                [R047]      Empty URL element
+                [R048]      URL value for link expected
+                [R049]      URL value for name expected
+                [R050]      List element expected to be on its own line
+                [R051]      List element parameter brackets expected
+                [R052]      Invalid List element parameter '{param}'
+                [R053]      List element must contain at least one list item
+                [R054]      Quote element expected to be on its own line
+                [R055]      Quote element assignment operator expected
+                [R056]      Empty Quote element 
+                [R057]      Quote value for author expected
+                [R058]      Quote value for qoute expected
+                [R059]      Table element expected to be on its own line
+                [R060]      Table element parameter brackets expected
+                [R061]      Invalid Table element parameter '{param}'
+                [R062]      Table element only accepts two or less parameters
+                [R063]      Table element must contain at least one table row
+                [R064]      Table Header element expected to be on its own line
+                [R065]      Table Header element assignment operator expected
+                [R066]      Table Header element expected after table block line
+                [R067]      Table Header element is not within a table block
+                [R068]      Empty Table Header element
+                [R069]      Table Header value '{val}' is an invalid value
+                [R070]      Table Data element expected to be on its own line
+                [R071]      Table Data element assignment operator expected
+                [R072]      Table Data element is not within a table block
+                [R073]      Empty Table Data element
+                [R074]      Table Data element does not match column count of preceding rows
+                [R075]      Table Data value '{val}' is an invalid value
 
              */
 
@@ -2012,11 +3719,71 @@ namespace HCResourceLibraryApp.DataHandling
             }
             return newLine;
         }
+        /// <summary>Produces an array of strings deriving from <paramref name="line"/> that start with or end with <paramref name="c"/> dependent on the value of <paramref name="breakEndQ"/>. </summary>
+        /// <param name="line">The line containing <paramref name="c"/> to break apart.</param>
+        /// <param name="c">The character that determines where to split <paramref name="line"/>.</param>
+        /// <param name="breakEndQ">If <c>true</c>, will ensure that each line break ends with <paramref name="c"/>.</param>
+        /// <returns>An array of strings broken apart at and starting or ending with <paramref name="c"/> dependent on <paramref name="breakEndQ"/>. Returns <see cref="Array.Empty{T}"/> if <paramref name="line"/> or <paramref name="c"/> is null, empty, or whitespace. Returns a single-element array if <paramref name="c"/> is not contained in <paramref name="line"/>.</returns>
+        static string[] LineBreak(this string line, char c, bool breakEndQ = false)
+        {
+            List<string> lineBreaks = new();
+            if (line.IsNotNEW() && c.IsNotNull())
+            {
+                string[] partLines = line.Split(c);
+                for (int px = 0; px < partLines.Length; px++)
+                {
+                    string lineBreak = partLines[px];
+                    if (px > 0 && !breakEndQ)
+                        lineBreak = c.ToString() + lineBreak;
+                    if (px + 1 < partLines.Length && breakEndQ)
+                        lineBreak = lineBreak + c.ToString();
+                    
+                    if (lineBreak.IsNotNE())
+                        lineBreaks.Add(lineBreak);
+                }
+            }
+            return lineBreaks.ToArray();
+        }
+        /// <summary>Removes any occuring character '<paramref name="c"/>' within a plain text field.</summary>
+        /// <param name="c">The character to remove from plain text fields.</param>
+        static string RemoveFromPlainText(this string line, char c, bool caseSensitivityQ = true)
+        {
+            string newLine = line.IsNE() ? "" : line;
+            bool nPlainQ = false;
+            if (line.IsNotNE() && c.IsNotNull())
+            {
+                newLine = "";
+                for (int px = 0; px < line.Length; px++)
+                {
+                    if (line[px] == '"')
+                        nPlainQ = !nPlainQ;
+
+                    if (nPlainQ)
+                    {
+                        if (!caseSensitivityQ)
+                        {
+                            if (line[px].ToString().ToLower() == c.ToString().ToLower())
+                                newLine += "";
+                            else newLine += line[px];
+                        }
+                        else
+                        {
+                            if (line[px] == c)
+                                newLine += "";
+                            else newLine += line[px];
+                        }
+                    }
+                    else newLine += line[px];
+                }
+                newLine = newLine.Trim();
+            }
+            return newLine;
+        }
 
         public static void TestSyntaxCheckTools()
         {
             Dbug.StartLogging("Testing Check Syntax Tools");
-            for (int x = 0; x < 4; x++)
+            for (int x = 0; x < 6; x++)
             {
                 string toolName = x switch
                 {
@@ -2024,6 +3791,8 @@ namespace HCResourceLibraryApp.DataHandling
                     1 => "Snippet Text (promoted to 'Extension.cs')",
                     2 => "Squish Spaces",
                     3 => "Remove Plain Text After",
+                    4 => "Line Break",
+                    5 => "Remove From Plain Text",
                     _ => null
                 };
                 List<string> tests = x switch
@@ -2067,6 +3836,24 @@ namespace HCResourceLibraryApp.DataHandling
                         "\"Send. Help. Please.\""
                     },
 
+                    /// line break
+                    ///     parameters: c['/']   breakEndQ[true/false]
+                    4 => new List<string>()
+                    {
+                        "No break in line, should be empty just fine",
+                        "Break once / Break no more",
+                        "There / are multiple/ breaks in /here",
+                        "/start it/ and/ end it/"
+                    },
+
+                    /// remove from plain text
+                    ///     parameters: c['a']      caseSensitive[true/false] 
+                    5 => new List<string>()
+                    {
+                        "Sleek cruiser \"Sleek cruiser\"",
+                        "Amazing as asparagus \"Amazing as asparagus\"",
+                    },
+
                     _ => new List<string>()
                 };
 
@@ -2105,6 +3892,32 @@ namespace HCResourceLibraryApp.DataHandling
                             Dbug.LogPart($"[.,2nd] '{test.RemovePlainTextAfter('.', true)}'  |  ");
                             Dbug.LogPart($"[.,1st,noAft] '{test.RemovePlainTextAfter('.', false, true)}'  |  ");
                             Dbug.LogPart($"[.,2nd,noAft] '{test.RemovePlainTextAfter('.', true, true)}'");
+                            break;
+
+                        case 4:
+                            string[] lBrEndFalse = test.LineBreak('/');
+                            if (lBrEndFalse.HasElements())
+                            {
+                                Dbug.LogPart("--> [/] ");
+                                foreach (string lbref in lBrEndFalse)
+                                    Dbug.LogPart($" '{lbref}' ");
+                            }
+                            else Dbug.LogPart("--> No output");
+
+                            Dbug.LogPart("   |   ");
+                            string[] lBrEndTrue = test.LineBreak('/', true);
+                            if (lBrEndTrue.HasElements())
+                            {
+                                Dbug.LogPart("--> [/,brEnd] ");
+                                foreach (string lbret in lBrEndTrue)
+                                    Dbug.LogPart($" '{lbret}' ");
+                            }
+                            else Dbug.LogPart("--> No output");
+                            break;
+
+                        case 5:
+                            Dbug.LogPart($"[a,caseSen] '{test.RemoveFromPlainText('a')}'  |  ");
+                            Dbug.LogPart($"[a,caseIns] '{test.RemoveFromPlainText('a', false)}'");
                             break;
                     }
                     Dbug.Log("; ");

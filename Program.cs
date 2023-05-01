@@ -11,7 +11,7 @@ namespace HCResourceLibraryApp
     // THE ENTRANCE POINT, THE CONTROL ROOM
     public class Program
     {
-        static readonly string consoleTitle = "High Contrast Resource Library App [v1.2.3]";
+        static readonly string consoleTitle = "High Contrast Resource Library App [v1.2.4]";
         static readonly string verLastPublishTested = "v1.1.9d";
         /// <summary>If <c>true</c>, the application launches for debugging/development. Otherwise, the application launches for the published version.</summary>
         public static readonly bool isDebugVersionQ = true;
@@ -280,7 +280,7 @@ namespace HCResourceLibraryApp
 
 
         // TESTING STUFF
-        static readonly bool runTest = false;
+        static readonly bool runTest = true;
         static readonly Tests testToRun = Tests.SFormatter_CheckSyntax;
         enum Tests
         {
@@ -838,6 +838,8 @@ namespace HCResourceLibraryApp
                         "repeat keyword here",
                         "Still keywords when if else repeat",
                         "Not keywords when \"if else repeat\"",
+                        "repeat special when '#' or \"'#'\"",
+                        "2# New keywords: jump next",
 
                         /// operators (=)
                         "Operator equal is '='",
@@ -891,7 +893,8 @@ namespace HCResourceLibraryApp
                     TextLine("Testing syntax checking of SFormatter.CheckSyntax() method");
 
                     NewLine();
-                    const string secHeader = "|header|Key", secBreak = "|break|", lineRep = "%%%%%%%";
+                    bool displayAllMessageQ = true; /// not 'const' to avoid 'unreachable code' issue
+                    const string secHeader = "|header|", secBreak = "|break|", lineRep = "%%%%%%%", firstOnlyIssueFix = "Post '1st Only' Fix";
                     string skipToHeaderStartingAs = $"{secHeader}";
                     string[] lines = new string[]
                     { /// enter many incorrect entries, and at least one correct entry
@@ -902,12 +905,15 @@ namespace HCResourceLibraryApp
                         "/ \"comment not\"", "\"the\" /", "\"what\" // \"oh no\"", "//", /// comments
                         "\"butter", "butter\"", "\"butter\" \"", "\"lemon\"", /// plain text  
                         "&", "&;", ";", "& 00;", "; &", "\"&;&\"", "\"&;;\"", "\"&00;\"", /// escape character
-                        "{", "}", "{{}", "{}}", "{ }", "{    }", "} tta {", "}{}{", "{TTA}", /// lib ref
-                        "$", "$ h q", "q$", "$[]", "$][", "]$[", "[$]", "]$", "[ $", "[", "]", "[]", "][", "[ ]", "] [", "$h", "$list[]", "$url = 'www.L.com' : 'The L'", /// steam ref 
+                        $"{secBreak}{firstOnlyIssueFix} (next 3)", "\"&00; &;\"", "\"&00; &rs;\"", "\"&00; &00;\"",
+                        "{", "}", "{{}", "{}}", "{ }", "{    }", "} tta {", "}{}{", "{::,}", "{,:,}", "{:,}", "{:Version}", "{TTA}", "{Added:2,name}", /// lib ref
+                        "$", "$ h q", "q$", "$$i", "$[]", "$][", "]$[", "[$]", "]$", "[ $", "[", "]", "[]", "][", "[ ]", "] [", "$h", "$list[]", /// steam ref 
+                        $"{secBreak}{firstOnlyIssueFix} (next 5)", "2 [ ]", "3 ] [", "$list[]]", "$table[] [  ]", "$list[]   ] [",
                         "if ", "if   ;", "if;", ";if", "if 0 = 0; if ;", "if 3 = 4;;", "if 1 = 0; \"no\";", "if 1 = 1; \"if\"", /// if keyword
                         "else", "else ;", "else \" \"", "; else", "else; ;", "if 0 = 0; \"else\"", "else; \"if\"", /// else keyword
                         "repeat", "repeat;", "repeat  ;", "; repeat", "repeat 1;;", "#", "repeat 2; \"rep\"#", /// repeat keyword
                         "jump", "jump;", "jump ;", "; jump", "jump ;; ;", "jump r;; 0;", "if 1 = 1; jump 200; 33", /// jump keyword
+                        "next", "next;", "next ;", "; next", "next ;; ;", "next \" \" ;", "if 1 = 1; next;", "\"bravo!\"", /// next keyword
                         /// Plain Text Errors [001-002]
                         $"{secHeader}Plain Text Errors [001-002]",
                         "\"\"", "\"butter", "shea \"butter", "\"butter\"",
@@ -916,11 +922,11 @@ namespace HCResourceLibraryApp
                         "\"&;\"", "\"&  ;\"", "\"&01;\"", "\"&abxr;\"", "\"&00;\"",
                         /// Library Reference Errors [004-006]
                         $"{secHeader}Library Reference Errors [004-006]",
-                        "{melon", "{}", "{    }", "{ nuke }", "{TTA} { nuke'em }", $"{{Addit:1,ids}}",
+                        "{melon", "{}", "{    }", "{ nuke }", "{TTA} { nuke'em }", "{ Version }", $"{{Addit:1,ids}}",
                         /// Steam Format Reference Errors [007-008]
                         $"{secHeader}Steam Format Reference Errors [007-008]",
                         "$ ", "$carl", "$urll", "$hh $tible", "$hhhh", "$", "$nl", "$i $hr",
-                        /// Keyword errors [009-019]
+                        /// Keyword errors [009-023,076-078]
                         $"{secHeader}Keyword Errors [009-023]",
                         "if 1 = 1", "else", "repeat 2", "if 2 != 2; \"#ok\"", /// general keyword - no end colon  
                         "$i if", "\"plant\" else", "else else;", "\"plant\" repeat", "repeat; repeat", "if 8 = 8; if 1 = 2; \"Go!\"", /// general keyword - keyword at front
@@ -933,26 +939,66 @@ namespace HCResourceLibraryApp
                         $"{secBreak}Else","else; \"no\"", "repeat 1; if 0 = 2; \"uh\"", "else; \"nope\"", "if 0 = 0; if 1 = 1; \"yup\"", "else; if 2 = 3; \"yep\"", "else; \"mhmm\"", /// else
                         $"{secBreak}Repeat","repeat;", "repeat ;", "repeat \"w\"; \"no\"", "repeat r; 4", "repeat 0; 10", "repeat {Added:#,ids}; \"l\"", "repeat \"8\"; {TTA}", "repeat 4; \"he\"", "repeat {AddedCount}; \"8\"", "repeat 13; if # != 1; \"donzo\"", /// repeat
                         $"{secBreak}Jump","jump ;", "jump w;", "jump \"13\"", "jump {TTA};", "jump 20;", "repeat 4; jump 300;", "if 0 = 0; jump 300;", "else; jump 350;", /// jump
+                        $"{secBreak}Next", "next ;", "next w;", "repeat 2; next;", " ", "if 1 = 1; next;", "else; next;", "if 0 = 0; next;", "\"b\"", /// next
                         
 
+
                         // LIBRARY REFERENCE ERRORS
-                        $"{secHeader}Soon...",
-                        "",
-                        "",
-                        "",
-                        "",
-                        "",
-                        "",
-                        "",
-                        "",
+                        /// LR Array Errors [024-037]
+                        $"{secHeader}LR Added Arr Errors [024-026]",
+                        $"{secBreak}Singles (no errors)", "{Version}", "{AddedCount}", "{AdditCount}", "{TTA}", "{UpdatedCount}", "{LegendCount}", "{SummaryCount}",
+                        $"{secBreak}Added Arr", "{Added}", "{Added  }", "{Added:}", $"{{Added:,}}", "{Added:#,}", "{Added:,ids}", "{Added:0,name}", "{Added:w,prop}", "{Added:13,ids}", /// added array
+                        $"{secBreak}Addit Arr", "{Addit}", "{Addit  }", "{Addit:}", $"{{Addit:,}}", "{Addit:#,}", "{Addit:,ids}", "{Addit:0,name}", "{Addit:c,prop}", "{Addit:10,optionalName}", /// addit array
+                        $"{secBreak}Updated Arr", "{Updated }", "{Updated:}", $"{{Updated:,}}", "{Updated:#,}", "{Updated:,id}", "{Updated:0,id}", "{Updated:t,prop}", "{Updated:8,name}", /// updated array
+                        $"{secBreak}Legend Arr", "{Legend}", "{Legend:}", $"{{Legend:,}}", "{Legend:#,}", "{Legend:,key}", "{Legend:0,key}", "{Legend:u,prop}" , "{Legend:18,definition}", /// legend array
+                        $"{secBreak}Summary Arr", "{Summary}", "{Summary  }", "{Summary:}", "{Summary,}", $"{{Summary:0}}", "{Summary:f}", "{Summary:#}", $"{{Summary:7}}", /// summary array 
+                        $"{secBreak}{firstOnlyIssueFix}", /// first only issue fix check, for all
+                        "{Added:1,name} {Added:,}", "{Added:2,ids} {Added:prop,2}", "{Added:3,ids} {Added:3,name}", /// added arr
+                        "{Addit:1,ids} {Addit:,}", "{Addit:2,ids} {Addit:prop,2}", "{Addit:3,optionalName} {Addit:3,ids}", /// addit arr
+                        "{Updated:1,id} {Updated}", "{Updated:2,id} {Updated:prop,2}", "{Updated:3,id} {Updated:3,name}", /// updated arr
+                        "{Legend:1,key} {Legend:}", "{Legend:2,key} {Legend:prop,2}", "{Legend:3,key} {Legend:3,definition}", /// legend arr
+                        $"{{Summary:1}} {{Summary }}", $"{{Summary:2}} {{Summary:q}}", $"{{Summary:3}} {{Summary:3}}", /// summary arr
 
 
-                        "",
-                        "",
-                        "",
+
+                        // STEAM FORMAT REFERENCE ERRORS
+                        /// Simple Command Errors [038-044]
+                        $"{secHeader}Simple Command Errors [038-044]",
+                        "$i", "$np  ", "$u $i  ", "$b x", "$b $i wxy", "$b \"SOUP!\" $s", "$i \"thicc\" $i $u", "$b \"txt\"", "$i $u \"nice\"", "\"sm\" $u \"1\"", "\"cool..\" $i \"bro\"", "$nl", "$hr", "$i {TTA} \"woah\"", "$u $b \"slapper\" {TTA}", /// simple - missing \ invalid value
+                        "\"e\" $h", "\"s\" $hhh", "$hh $i \"l\"", "$hh $u $s", "$h $i", "$hhh \"llama\"", "$hh \"snek\"", /// heading element
+                        "\"el\" $hr", "$hr \"mlem\"", "$hr $nl", "$hr", /// hor'z.rule
+                        "\"napkin?\" $*", "\"bagel\"", "$*", "$list[]", "$* \"saucy!\"", /// list item                        
+                        /// URL Errors [045-049]
+                        $"{secHeader}URL Errors [045-049]",
+                        "\"goof\" $url", "$url $i \"nubb\"", $"$url= $u \"smelly\"", "$url", "$url =", "$url=  ", "$url= =", /// own line / operator? / empty / UnExTk ('=')
+                        "$url= w", "$url= :smek", "$url= # : ey", "$url= \"goob.com\" : w?", "$url= \"lmn\" : 3:", /// link? / name? / UnExTk(':')
+                        "$url= \"w3.goob.com\":\"Goobers\"",
+                        /// List Errors [050-053]
+                        $"{secHeader}List Errors [050-053]", 
+                        "$list $i", "\"th\" $list", "$list", "$list[", "$list []", "$list[ ]", "$list[o]", "$list[ol]", "$list[or]", "$list[]", "$* \"sweet\"",
+                        /// Quote Errors [054-058]
+                        $"{secHeader}Quote Errors [054-058]",
+                        "\"then\" $q", "$q $q", "$q= $u water", "$q", "$q =", "$q=", "$q= =", "", /// own line / operator? / empty / UnExTk ('=') 
+                        "$q= x", "$q= :mop", "$q= #: yup", "$q= \"me\": poop", "$q= \"b\":\"c\":\"d\"",  /// author? / quote? / UnExTk(':')
+                        "$q=\"cow\":\"moo!\"", 
+                        /// Table Errors [059-063]
+                        $"{secHeader}Table Errors [059-063]",
+                        "\"i\" $table", "$table $nl", "$table []", "$table[", "$table ]", /// own line / params expected
+                        "$table[tr]", "$table[l, ]", "$table[ec,]", "$table[ ,nb]", "$table[,,]", /// invalid params / UnExTk (',') / two or less params / table row?
+                        "$table[ec,nb]", "$td=\"one\"", 
+                        /// Table Header Errors [064-069]
+                        $"{secHeader}Table Header Errors [064-069]",
+                        "$th $i ww", "\"apl\" $th", "$th =", "$th= =", "$th=", /// own line / operator? / empty / UnExTk ('=')
+                        "$th=\"grub\"", "$table[]", "$th= , weep", "$th= \"er\", um, stop", "$th= \"no\"", /// not after\in table block / invalid value
+                        "$table[]", "$th= \"Folder\", \"Path, Type\"", 
+                        /// Table Data Errors [070-075]
+                        $"{secHeader}Table Data Errors [070-075]",
+                        "$hr $td", "\"cope\" $td", "$td =", "$td==", "$td=   ", /// own line / operator? / empty / UnExTk ('=')
+                        "\"lmn\"",  "$td=\"soup\", goop", "$td= puke, hard", "$td= #, ",/// not in table block / invalid value
+                        "$td= \"uno\"", "$td= \"1\", 2, \"three\"", "$td= \"dos\", 2", /// mismatch columns
+                        "$table[]", $"$td= \"That's all folks!\", \"kinda...\""
                     };
 
-                    bool displayAllMessageQ = false;
                     SFormatterHandler.CheckSyntax(lines);
                     Table2Division tDiv = Table2Division.KCSmall;
 
