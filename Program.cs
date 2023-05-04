@@ -11,8 +11,9 @@ namespace HCResourceLibraryApp
     // THE ENTRANCE POINT, THE CONTROL ROOM
     public class Program
     {
-        static readonly string consoleTitle = "High Contrast Resource Library App [v1.2.4]";
-        static readonly string verLastPublishTested = "v1.1.9d";
+        static readonly string consoleTitle = "High Contrast Resource Library App";
+        static readonly string developmentVersion = "[v1.2.5]";
+        static readonly string lastPublishedVersion = "[v1.1.9d]";
         /// <summary>If <c>true</c>, the application launches for debugging/development. Otherwise, the application launches for the published version.</summary>
         public static readonly bool isDebugVersionQ = true;
         static readonly bool verifyFormatUsageBase = true;
@@ -41,11 +42,11 @@ namespace HCResourceLibraryApp
             {
                 Clear();
                 AllowProgramRestart = false;
-                LogState($"Start Up - {consoleTitle + (isDebugVersionQ ? " (debug)" : "")}");
+                LogState($"Start Up - {consoleTitle + (isDebugVersionQ ? $"{developmentVersion} (debug)" : lastPublishedVersion)}");
 
                 // setup                
                 /// program function
-                Console.Title = consoleTitle + (isDebugVersionQ? " (debug)" : "");
+                Console.Title = consoleTitle + (isDebugVersionQ? $"{developmentVersion} (debug)" : lastPublishedVersion);
                 Tools.DisableWarnError = !isDebugVersionQ? DisableWE.All : DisableWE.None;
                 /// data
                 dataHandler = new DataHandlerBase();
@@ -158,7 +159,7 @@ namespace HCResourceLibraryApp
 
             Dbug.EndLogging();
             if (isDebugVersionQ)
-                TextLine($"\n\n**REMEMBER** Test the published version of the application frequently!!\n\tVersion last tested: {verLastPublishTested}".ToUpper(), Color.White);
+                TextLine($"\n\n**REMEMBER** Test the published version of the application frequently!!\n\tVersion last tested: {lastPublishedVersion}".ToUpper(), Color.White);
 
             // report all warnings and errors into dbug file??  interesting idea....
             Dbug.StartLogging("Report Caught Errors and Warnings");
@@ -170,7 +171,7 @@ namespace HCResourceLibraryApp
 
 
             /// report errors and warnings
-            Dbug.Log($"Published version last tested in '{verLastPublishTested}'; ");
+            Dbug.Log($"Published version last tested in '{lastPublishedVersion}'; ");
             Dbug.Log("Reporting any recorded errors and warnings that have occured during this session :: ");
             string errorMsg = "0", warnMsg = "0";
 
@@ -280,7 +281,7 @@ namespace HCResourceLibraryApp
 
 
         // TESTING STUFF
-        static readonly bool runTest = true;
+        static readonly bool runTest = false;
         static readonly Tests testToRun = Tests.SFormatter_CheckSyntax;
         enum Tests
         {
@@ -895,14 +896,14 @@ namespace HCResourceLibraryApp
                     NewLine();
                     bool displayAllMessageQ = true; /// not 'const' to avoid 'unreachable code' issue
                     const string secHeader = "|header|", secBreak = "|break|", lineRep = "%%%%%%%", firstOnlyIssueFix = "Post '1st Only' Fix";
-                    string skipToHeaderStartingAs = $"{secHeader}";
+                    string skipToHeaderStartingAs = $"{secHeader}URL";
                     string[] lines = new string[]
                     { /// enter many incorrect entries, and at least one correct entry
 
                         // GENERAL SYNTAX CHECKING
                         /// Code errors [000]
                         $"{secHeader}Code Errors [000]",
-                        "/ \"comment not\"", "\"the\" /", "\"what\" // \"oh no\"", "//", /// comments
+                        "/ \"comment not\"", "\"the\" /", "\"what\" // \"oh no\"", "// good... goooood!!", /// comments
                         "\"butter", "butter\"", "\"butter\" \"", "\"lemon\"", /// plain text  
                         "&", "&;", ";", "& 00;", "; &", "\"&;&\"", "\"&;;\"", "\"&00;\"", /// escape character
                         $"{secBreak}{firstOnlyIssueFix} (next 3)", "\"&00; &;\"", "\"&00; &rs;\"", "\"&00; &00;\"",
@@ -912,7 +913,7 @@ namespace HCResourceLibraryApp
                         "if ", "if   ;", "if;", ";if", "if 0 = 0; if ;", "if 3 = 4;;", "if 1 = 0; \"no\";", "if 1 = 1; \"if\"", /// if keyword
                         "else", "else ;", "else \" \"", "; else", "else; ;", "if 0 = 0; \"else\"", "else; \"if\"", /// else keyword
                         "repeat", "repeat;", "repeat  ;", "; repeat", "repeat 1;;", "#", "repeat 2; \"rep\"#", /// repeat keyword
-                        "jump", "jump;", "jump ;", "; jump", "jump ;; ;", "jump r;; 0;", "if 1 = 1; jump 200; 33", /// jump keyword
+                        "jump", "jump;", "jump ;", "; jump", "jump ;; ;", "jump r;; 0;", "if 1 = 1; jump 200; \"33\"", /// jump keyword
                         "next", "next;", "next ;", "; next", "next ;; ;", "next \" \" ;", "if 1 = 1; next;", "\"bravo!\"", /// next keyword
                         /// Plain Text Errors [001-002]
                         $"{secHeader}Plain Text Errors [001-002]",
@@ -925,21 +926,22 @@ namespace HCResourceLibraryApp
                         "{melon", "{}", "{    }", "{ nuke }", "{TTA} { nuke'em }", "{ Version }", $"{{Addit:1,ids}}",
                         /// Steam Format Reference Errors [007-008]
                         $"{secHeader}Steam Format Reference Errors [007-008]",
-                        "$ ", "$carl", "$urll", "$hh $tible", "$hhhh", "$", "$nl", "$i $hr",
+                        "$ ", "$carl", "$urll", "$hh $tible", "$hhhh", "$", "$nl", "$i $u \" \"",
                         /// Keyword errors [009-023,076-078]
-                        $"{secHeader}Keyword Errors [009-023]",
+                        $"{secHeader}Keyword Errors [009-023,076-078]",
                         "if 1 = 1", "else", "repeat 2", "if 2 != 2; \"#ok\"", /// general keyword - no end colon  
                         "$i if", "\"plant\" else", "else else;", "\"plant\" repeat", "repeat; repeat", "if 8 = 8; if 1 = 2; \"Go!\"", /// general keyword - keyword at front
                         "if 0 = 0;", "else;  ", "repeat 2; ", /// general keyword - missing execution line
-                        "if 1 != 0; \"plant\" if 0 = 0;", "else; \"plant\" jump 256;", "repeat 3; \"u\" if 2 = 4;", /// general keyword - misplaced if / jump 
+                        "if 1 != 0; \"plant\" if 0 = 0;", "else; \"plant\" jump 256;", "repeat 3; \"u\" next;", /// general keyword - misplaced if / jump / next
                         "else; if 1 = 2; jump 4;", "repeat 1; if 2 = 3; jump 9;", "if 2 != \"2\"; jump 300; \"good\"", /// general keyword - exceed keyword limit
                         $"{secBreak}If", "if", "if ; 2", "if $i; 0", "if", "if {CTA};", "if 4 = 1; if \"no\" = 2; 0", "if {Added:2,name}; 0", /// if - first value expected
                         "if 4 =! 4; 0", "if 0 = 2; if 4 == 10;", "if !! ;", "if 0 = 1; 0", "if # != 1; 1", /// if - op expected / op invalid
                         "if 9 = q; 2", "if 7 != $t; ", "if {tta} == 232; ", "if 3 = 2; if q != r; 1", "if {SummaryCount}=5; if2=2; \"#yes\"", /// if - second value expected
+                        "if \";\" = \";\"; q", "if \"&00;\" = \"d\"; w", "if 0 = 0; if \";\" = 1; t", "if1=1; if 2 = \";\";", "if \"2\" = 2; \"#goodStuff\"", /// no ';' in plain
                         $"{secBreak}Else","else; \"no\"", "repeat 1; if 0 = 2; \"uh\"", "else; \"nope\"", "if 0 = 0; if 1 = 1; \"yup\"", "else; if 2 = 3; \"yep\"", "else; \"mhmm\"", /// else
                         $"{secBreak}Repeat","repeat;", "repeat ;", "repeat \"w\"; \"no\"", "repeat r; 4", "repeat 0; 10", "repeat {Added:#,ids}; \"l\"", "repeat \"8\"; {TTA}", "repeat 4; \"he\"", "repeat {AddedCount}; \"8\"", "repeat 13; if # != 1; \"donzo\"", /// repeat
                         $"{secBreak}Jump","jump ;", "jump w;", "jump \"13\"", "jump {TTA};", "jump 20;", "repeat 4; jump 300;", "if 0 = 0; jump 300;", "else; jump 350;", /// jump
-                        $"{secBreak}Next", "next ;", "next w;", "repeat 2; next;", " ", "if 1 = 1; next;", "else; next;", "if 0 = 0; next;", "\"b\"", /// next
+                        $"{secBreak}Next", "next ;", "next w;", "// e?", "repeat 2; next;", " ", "if 1 = 1; next;", "else; next;", "if 0 = 0; next;", "\"b\"", /// next
                         
 
 
@@ -972,7 +974,7 @@ namespace HCResourceLibraryApp
                         $"{secHeader}URL Errors [045-049]",
                         "\"goof\" $url", "$url $i \"nubb\"", $"$url= $u \"smelly\"", "$url", "$url =", "$url=  ", "$url= =", /// own line / operator? / empty / UnExTk ('=')
                         "$url= w", "$url= :smek", "$url= # : ey", "$url= \"goob.com\" : w?", "$url= \"lmn\" : 3:", /// link? / name? / UnExTk(':')
-                        "$url= \"w3.goob.com\":\"Goobers\"",
+                        "$url= \"w3.goob.com\":\"Goobers\"", "$url= \"https:// grubSnax/quirkyChips.com\":\"GrubSnax!\"",
                         /// List Errors [050-053]
                         $"{secHeader}List Errors [050-053]", 
                         "$list $i", "\"th\" $list", "$list", "$list[", "$list []", "$list[ ]", "$list[o]", "$list[ol]", "$list[or]", "$list[]", "$* \"sweet\"",
@@ -980,7 +982,7 @@ namespace HCResourceLibraryApp
                         $"{secHeader}Quote Errors [054-058]",
                         "\"then\" $q", "$q $q", "$q= $u water", "$q", "$q =", "$q=", "$q= =", "", /// own line / operator? / empty / UnExTk ('=') 
                         "$q= x", "$q= :mop", "$q= #: yup", "$q= \"me\": poop", "$q= \"b\":\"c\":\"d\"",  /// author? / quote? / UnExTk(':')
-                        "$q=\"cow\":\"moo!\"", 
+                        "$q=\"Cow1: Cowsong\":\"moo! moo! moooo...\"", 
                         /// Table Errors [059-063]
                         $"{secHeader}Table Errors [059-063]",
                         "\"i\" $table", "$table $nl", "$table []", "$table[", "$table ]", /// own line / params expected
@@ -996,7 +998,11 @@ namespace HCResourceLibraryApp
                         "$hr $td", "\"cope\" $td", "$td =", "$td==", "$td=   ", /// own line / operator? / empty / UnExTk ('=')
                         "\"lmn\"",  "$td=\"soup\", goop", "$td= puke, hard", "$td= #, ",/// not in table block / invalid value
                         "$td= \"uno\"", "$td= \"1\", 2, \"three\"", "$td= \"dos\", 2", /// mismatch columns
-                        "$table[]", $"$td= \"That's all folks!\", \"kinda...\""
+                        "$table[]", "$td= \"That's all folks!\"", "$td= \"kinda...\"",
+
+                        // Code Errors - Unexpected Token 'anything else?'
+                        $"{secHeader}UnExAny Code Errors [000]", 
+                        "abc", "123", "kay that's all", "\"kek..\"",
                     };
 
                     SFormatterHandler.CheckSyntax(lines);

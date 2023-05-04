@@ -396,7 +396,7 @@ namespace HCResourceLibraryApp.DataHandling
             }
             return isLineInGroupQ;
         }
-        /// <summary>/// <summary>Checks if a formatting line in the line data list is within a line group. If the line is in a line group, details about the group are returned.</summary></summary>
+        /// <summary>Checks if a formatting line in the line data list is within a line group. If the line is in a line group, details about the group are returned.</summary>
         /// <param name="lineNum">The formatting line to check as being within a group.</param>
         /// <param name="lineGroup">The group the formatting line exists within.</param>
         /// <returns>A boolean determining the existence of this line within a named group. Also determines if group info will be returned.</returns>
@@ -428,7 +428,174 @@ namespace HCResourceLibraryApp.DataHandling
         /// </summary>
         void EditGroupInfos(int lineNum, bool lineAddedQ)
         {
-            /// when to edit line group?
+            /** Revised group management plan
+                Where '->' represent 'if' and '=>' represent 'else'
+
+                -> ADD LINE
+                    -> Line is before or at group start
+                        -> line is at group start
+                            -> group start is top-most line or previous line is in different group
+                                shift group down 
+                            => extend group end
+                        => line is before start 
+                                shift group down
+                    
+                    -> Line is within group and not at start
+                        extend group end
+
+                    => (Line is after group, do nothing)
+
+
+                -> DELETE LINE
+                    -> Line is before or at group start
+                        -> line is at group start
+                            -> group start is top-most line or previous line is in different group
+                                -> group has only two lines
+                                    destroy group
+                                => retract group end
+                            => retract group end
+                        => line is before start
+                                shift group up
+                        
+                    -> Line is within group and not at start
+                        -> group has only two lines
+                            destroy group 
+                        => retract group end
+
+                    => (Line is after group, do nothing)
+             ********/
+            int countDestroyedGroups = 0;
+            bool previousLineDNE;
+            if (EditProfileNo1Q && _groupInfo1.HasElements())
+            {
+                for (int g1x = 0; g1x - countDestroyedGroups < _groupInfo1.Count; g1x++)
+                {
+                    SfdGroupInfo group1s = _groupInfo1[g1x - countDestroyedGroups];
+                    if (lineNum <= group1s.startLineNum)
+                    {
+                        if (lineNum == group1s.startLineNum)
+                        {
+                            previousLineDNE = group1s.startLineNum == 1 || IsLineInGroup(lineNum - 1, out _);
+                            if (previousLineDNE)
+                            {
+                                if (lineAddedQ)
+                                {
+                                    group1s.startLineNum += 1;
+                                    group1s.endLineNum += 1;
+                                }
+                                else
+                                {
+                                    if (group1s.startLineNum + 1 == group1s.endLineNum)
+                                    {
+                                        _groupInfo1.RemoveAt(g1x);
+                                        countDestroyedGroups++;
+                                    }
+                                    else group1s.endLineNum -= 1;
+                                }
+                            }
+                            else
+                            {
+                                if (lineAddedQ)
+                                    group1s.endLineNum += 1;
+                                else group1s.endLineNum -= 1;
+                            }
+                        }
+                        else
+                        {
+                            if (lineAddedQ)
+                            {
+                                group1s.startLineNum += 1;
+                                group1s.endLineNum += 1;
+                            }
+                            else
+                            {
+                                group1s.startLineNum -= 1;
+                                group1s.endLineNum -= 1;
+                            }
+                        }
+                    }
+                    else if (lineNum.IsWithin(group1s.startLineNum, group1s.endLineNum))
+                    {
+                        if (lineAddedQ)
+                            group1s.endLineNum += 1;
+                        else
+                        {
+                            if (group1s.startLineNum + 1 == group1s.endLineNum)
+                            {
+                                _groupInfo1.RemoveAt(g1x);
+                                countDestroyedGroups++;
+                            }
+                            else group1s.endLineNum -= 1;
+                        }
+                    }
+                }   
+            }
+            if (!EditProfileNo1Q && _groupInfo2.HasElements())
+            {
+                for (int g2x = 0; g2x - countDestroyedGroups < _groupInfo2.Count; g2x++)
+                {
+                    SfdGroupInfo group2s = _groupInfo2[g2x - countDestroyedGroups];
+                    if (lineNum <= group2s.startLineNum)
+                    {
+                        if (lineNum == group2s.startLineNum)
+                        {
+                            previousLineDNE = group2s.startLineNum == 1 || IsLineInGroup(lineNum - 1, out _);
+                            if (previousLineDNE)
+                            {
+                                if (lineAddedQ)
+                                {
+                                    group2s.startLineNum += 1;
+                                    group2s.endLineNum += 1;
+                                }
+                                else
+                                {
+                                    if (group2s.startLineNum + 1 == group2s.endLineNum)
+                                    {
+                                        _groupInfo2.RemoveAt(g2x);
+                                        countDestroyedGroups++;
+                                    }
+                                    else group2s.endLineNum -= 1;
+                                }
+                            }
+                            else
+                            {
+                                if (lineAddedQ)
+                                    group2s.endLineNum += 1;
+                                else group2s.endLineNum -= 1;
+                            }
+                        }
+                        else
+                        {
+                            if (lineAddedQ)
+                            {
+                                group2s.startLineNum += 1;
+                                group2s.endLineNum += 1;
+                            }
+                            else
+                            {
+                                group2s.startLineNum -= 1;
+                                group2s.endLineNum -= 1;
+                            }
+                        }
+                    }
+                    else if (lineNum.IsWithin(group2s.startLineNum, group2s.endLineNum))
+                    {
+                        if (lineAddedQ)
+                            group2s.endLineNum += 1;
+                        else
+                        {
+                            if (group2s.startLineNum + 1 == group2s.endLineNum)
+                            {
+                                _groupInfo2.RemoveAt(g2x);
+                                countDestroyedGroups++;
+                            }
+                            else group2s.endLineNum -= 1;
+                        }
+                    }
+                }
+            }
+
+            /// [OLD] when to edit line group?
             ///     -> if a line group exists
             ///     ----
             ///     -> if line number is within group: ON 'Add' (start inclusive, end inclusive: grow end range by 1 [within(start,end)])
@@ -436,61 +603,54 @@ namespace HCResourceLibraryApp.DataHandling
             ///     -----
             ///     -> if line number is within group: ON 'Del' (start inclusive, end inclusive, end-1 > start: shrink end range by 1 [within(start,end)])
             ///     -> if line number is out of group: ON 'Del' (line before start, shift range up 1)
-
-            if (EditProfileNo1Q && _groupInfo1.HasElements())
-            {
-                for (int g1x = 0; g1x < _groupInfo1.Count; g1x++)
-                {
-                    SfdGroupInfo group1s = _groupInfo1[g1x];
-                    if (lineNum.IsWithin(group1s.startLineNum, group1s.endLineNum))
-                    {
-                        if (lineAddedQ)
-                            group1s.endLineNum += 1;
-                        else if (group1s.endLineNum - 1 > group1s.startLineNum)
-                            group1s.endLineNum -= 1;
-                    }
-                    else if (lineNum < group1s.startLineNum)
-                    {
-                        if (lineAddedQ)
-                        {
-                            group1s.startLineNum += 1;
-                            group1s.endLineNum += 1;
-                        }
-                        else
-                        {
-                            group1s.startLineNum -= 1;
-                            group1s.endLineNum -= 1;
-                        }
-                    }
-                }   
-            }
-            if (!EditProfileNo1Q && _groupInfo2.HasElements())
-            {
-                for (int g2x = 0; g2x < _groupInfo2.Count; g2x++)
-                {
-                    SfdGroupInfo group2s = _groupInfo2[g2x];
-                    if (lineNum.IsWithin(group2s.startLineNum, group2s.endLineNum))
-                    {
-                        if (lineAddedQ)
-                            group2s.endLineNum += 1;
-                        else if (group2s.endLineNum - 1 > group2s.startLineNum)
-                            group2s.endLineNum -= 1;
-                    }
-                    else if (lineNum < group2s.startLineNum)
-                    {
-                        if (lineAddedQ)
-                        {
-                            group2s.startLineNum += 1;
-                            group2s.endLineNum += 1;
-                        }
-                        else
-                        {
-                            group2s.startLineNum -= 1;
-                            group2s.endLineNum -= 1;
-                        }
-                    }
-                }
-            }
+            #region old group management code
+            ///// IF line is within group: 
+            /////     IF add line: (IF line is at group start: shift group down; ELSE IF group end exists: extend group end;);
+            /////     ELSE (IF more than two lines in group: retract group end; ELSE destroy group) 
+            //if (lineNum.IsWithin(group2s.startLineNum, group2s.endLineNum))
+            //{
+            //    if (lineAddedQ)
+            //    {
+            //        if (lineNum == group2s.startLineNum)
+            //        {
+            //            group2s.startLineNum += 1;
+            //            group2s.endLineNum += 1;
+            //        }
+            //        else if (lineCount > group2s.endLineNum)
+            //            group2s.endLineNum += 1;
+            //    }
+            //    else
+            //    {
+            //        if (group2s.endLineNum - 1 > group2s.startLineNum)
+            //            group2s.endLineNum -= 1;
+            //        else
+            //        {
+            //            _groupInfo2.RemoveAt(g2x);
+            //            countDestroyedGroups++;
+            //        }
+            //    }
+            //}
+            ///// ELSE IF line is before group start and group end exists (IF add line: shift group down; ELSE shift group up;)
+            //else if (lineNum < group2s.startLineNum && lineCount >= group2s.endLineNum)
+            //{
+            //    if (lineAddedQ)
+            //    {
+            //        group2s.startLineNum += 1;
+            //        group2s.endLineNum += 1;
+            //    }
+            //    else
+            //    {
+            //        group2s.startLineNum -= 1;
+            //        group2s.endLineNum -= 1;
+            //    }
+            //}
+            ///// ELSE IF group start is at last line and delete line: destroy group;
+            //else if (lineCount <= group2s.startLineNum && !lineAddedQ)
+            //{
+            //    _groupInfo2.RemoveAt(g2x);
+            //    countDestroyedGroups++;
+            //}
+            #endregion
         }
 
 

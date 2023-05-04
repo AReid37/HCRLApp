@@ -62,7 +62,7 @@ namespace HCResourceLibraryApp.Layout
 
 
         // PUBLIC
-        public const int PageSizeLimit = 500;
+        public const int PageSizeLimit = 625; /// OG"500" 
         /// <summary>Light Shade (░).</summary>
         public const char cLS = '\x2591';
         /// <summary>Medium Shade (▒).</summary>
@@ -242,7 +242,7 @@ namespace HCResourceLibraryApp.Layout
                     string trimmedCopyText = (copyText.TrimStart().IsNE() ? "" : copyText.TrimStart());
                     int spaceIndent = copyText.Length - trimmedCopyText.Length;
 
-                    _wrapIndentHold = (spaceIndent == 0 && wrapStartPos.IsWithin(0, WordWrapIndentLim) ? wrapStartPos : spaceIndent).Clamp(0, WordWrapIndentLim);
+                    _wrapIndentHold = (spaceIndent == 0 /*&& wrapStartPos.IsWithin(0, WordWrapIndentLim)*/ ? wrapStartPos : spaceIndent).Clamp(0, WordWrapIndentLim);
                     //_wrapIndentHold = Extensions.CountOccuringCharacter(copyText, ' ').Clamp(0, WordWrapIndentLim);
                     Dbug.Log($"Set and held a wrapping indent position :: {_wrapIndentHold}; ");
                 }

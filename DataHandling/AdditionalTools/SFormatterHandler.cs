@@ -22,6 +22,16 @@ namespace HCResourceLibraryApp.DataHandling
          */
 
         static List<SFormatterInfo> errors;
+        public static int ErrorCount
+        {
+            get
+            {
+                int errCount = 0;
+                if (errors.HasElements())
+                    errCount = errors.Count;
+                return errCount;
+            }
+        }
 
         // METHODS
         public static void ColorCode(string fLine, bool useNativeQ = false, bool newLineQ = false, bool isErrorMsg = false)
@@ -73,7 +83,7 @@ namespace HCResourceLibraryApp.DataHandling
             {
                 if (fLine.IsNotNEW())
                 {
-                    const string sComment = "//", sEscape = "&00;", sKeyw_if = "if", sKeyw_repeat = "repeat", sKeyw_else = "else", sKeyw_jump = "jump", sKeyw_next = "next";
+                    const string sComment = "//", sEsc1 = "&00;", sKeyw_if = "if", sKeyw_repeat = "repeat", sKeyw_else = "else", sKeyw_jump = "jump", sKeyw_next = "next";
                     const char cPlain = '"', cEscStart = '&', cEscEnd = ';', cOpEqual = '=', cOpUnequal = '!', cRefSteam = '$', cRefLibOpen = '{', cRefLibClose = '}', cRepKey = '#';
 
                     Dbug.Log($"Recieved '{fLine}'; Numbering types; ");
@@ -236,7 +246,7 @@ namespace HCResourceLibraryApp.DataHandling
                                 /// escape[3]
                                 if (nPlainTQ)
                                 {
-                                    if (fChar == cEscStart && GetStringFromChars(fx, sEscape.Length) == sEscape)
+                                    if (fChar == cEscStart && GetStringFromChars(fx, sEsc1.Length) == sEsc1)
                                         nEscQ = true;
 
                                     if (nEscQ)
@@ -414,7 +424,7 @@ namespace HCResourceLibraryApp.DataHandling
                   {UpdatedCount}                :  Value. Gets the number of updated item entries available.
                 --------------------------------:------------------------------------------------------------------------------------------
                   {Updated:#,prop}              :  Value Array. Gets value 'prop' from one-based updated entry number '#'.
-                                                :    Values for 'prop': changeDesc, id, name.
+                                                :    Values for 'prop': changeDesc, id, relatedContent.
                 --------------------------------:------------------------------------------------------------------------------------------
                   {LegendCount}                 :  Value. Gets the number of legend entries available.
                 --------------------------------:------------------------------------------------------------------------------------------
@@ -461,6 +471,14 @@ namespace HCResourceLibraryApp.DataHandling
                 --------------------------------:------------------------------------------------------------------------------------------
                   $nl                           :  Simple command. New line.
                 --------------------------------:------------------------------------------------------------------------------------------
+                  $d                            :  Simple command. Indent.
+                                                :    There are four indentation levels which relates to the number of 'd's in reference.
+                                                :  Example, a level 2 indent is '$dd'.
+                                                :    An indentation is the equivalent of two spaces (' 'x2).
+                --------------------------------:------------------------------------------------------------------------------------------
+                  $r                            :  Simple command. Regular. Used to forcefully demark the end of preceding simple commands.
+                --------------------------------:------------------------------------------------------------------------------------------
+
                   $url='link':'name'            :  Complex command. Must be placed on its own line.
                                                 :    Creates a website link by using URL address 'link' to create a hyperlink text
                                                 :  described as 'name'.
@@ -510,7 +528,7 @@ namespace HCResourceLibraryApp.DataHandling
             errors ??= new List<SFormatterInfo>();
             errors.Clear();
 
-            bool identifyErrorStatesQ = true;
+            bool identifyErrorStatesQ = true && Program.isDebugVersionQ;
             if (lineData.HasElements())
             {
                 for (int lx = 0; lx < lineData.Length; lx++)
@@ -666,7 +684,7 @@ namespace HCResourceLibraryApp.DataHandling
                     - [G020]    Exceeded keyword limit per line
                         . Occurs when a line contains more than two keywords
                             else; if 1 != 0; jump 3;        --> Exceeded keyword limit per line
-                            
+                    
 
                         IF KEYWORD
                         - [G013]     First comparable value expected
@@ -718,7 +736,7 @@ namespace HCResourceLibraryApp.DataHandling
                         NEXT KEYWORD
                         - [G076]    Next keyword must precede an appropriate keyword
                             . Occurs when a line containing a 'next' keyword does not start with an 'if', 'else', or 'repeat' keyword
-                        - [G077]    Next keyword requires a following line to function
+                        - [G077]    Next keyword requires a following code line to function
                             . Occurs when a there is not a following line after a 'next' keyword line
                         - [G078]    Next keyword line cannot be followed by another keyword line
                             . Occurs when a line following a 'next' keyword line contains any keyword
@@ -849,6 +867,8 @@ namespace HCResourceLibraryApp.DataHandling
                                             token = "]" + ID(1); /// Ex|  ]$  |  $]   |  $ ]
                                         else if (noPlainLine.EndsWith("$"))
                                             token = "$" + ID(1); /// Ex:  q $ 
+                                        else if (noPlainLine.SquishSpaces().Contains("$$"))
+                                            token = "$" + ID(2);
                                     }
                                     else if (noPlainLine.CountOccuringCharacter('[') != 0 || noPlainLine.CountOccuringCharacter(']') != 0)
                                     {
@@ -976,7 +996,6 @@ namespace HCResourceLibraryApp.DataHandling
                                     }
                                     break;
 
-
                                 /// keyword 'next'
                                 case 9:
                                     if (noPlainLine.Contains("next"))
@@ -1045,12 +1064,14 @@ namespace HCResourceLibraryApp.DataHandling
                                 case 1:
                                     if (line.CountOccuringCharacter('"') % 2 == 1)
                                     {
-                                        string plainPart = line.SnippetText("\"", line[^1].ToString(), Snip.Inc, Snip.EndAft);
-                                        if (line.EndsWith(plainPart) && plainPart.IsNotNE())
-                                        {
-                                            errorMessage = "Closing double quotation expected";
-                                            errorCode = "G002"; /// Ex|  "butter  |  shea "butter
-                                        }
+                                        //string plainPart = line.SnippetText("\"", line[^1].ToString(), Snip.Inc, Snip.EndAft);
+                                        //if (line.EndsWith(plainPart) && plainPart != null)
+                                        //{
+
+                                        //}
+
+                                        errorMessage = "Closing double quotation expected";
+                                        errorCode = "G002"; /// Ex|  "butter  |  shea "butter  |  "shea "butter"
                                     }
                                     break;
 
@@ -1068,11 +1089,14 @@ namespace HCResourceLibraryApp.DataHandling
                                                 string[] possibleEscapes = plainLine.LineBreak('&');
                                                 foreach (string possibleEsc in possibleEscapes)
                                                 {
-                                                    string partPEsc = possibleEsc.SnippetText("&", ";", Snip.EndAft);
-                                                    if (partPEsc.IsNE())
-                                                        token = "&;"; /// Ex| "&;"
-                                                    else if (partPEsc != "00")
-                                                        token = $"&{partPEsc};"; /// Ex| "& ;"  |  "&01;"  |  "&34;"  |  "&ab;" 
+                                                    if (possibleEsc.Contains('&') && possibleEsc.Contains(";"))
+                                                    {
+                                                        string partPEsc = possibleEsc.SnippetText("&", ";", Snip.EndAft);
+                                                        if (partPEsc.IsNE())
+                                                            token = "&;"; /// Ex| "&;"
+                                                        else if (partPEsc != "00")
+                                                            token = $"&{partPEsc};"; /// Ex| "& ;"  |  "&01;"  |  "&34;"  |  "&ab;" 
+                                                    }
                                                 }
                                             }
 
@@ -1203,10 +1227,10 @@ namespace HCResourceLibraryApp.DataHandling
                             switch (sfx)
                             {
                                 case 0:
-                                    if (noPlainLine.Contains("$ ") || noPlainLine.EndsWith("$"))
+                                    if (noPlainLine.Contains("$ ") || noPlainLine.EndsWith("$") || noPlainLine.SquishSpaces().Contains("$$"))
                                     {
                                         errorCode = "G007";
-                                        errorMessage = "Empty steam format reference"; /// Ex| $  |  $ t
+                                        errorMessage = "Empty steam format reference"; /// Ex| $  |  $ t   |  $ $u
                                     }
                                     break;
 
@@ -1222,6 +1246,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                   $b  $u   $i
                                                   $s  $sp  $np
                                                   $c  $hr  $nl
+                                                  $d  $dd  $ddd  $dddd
                                                   $url='link':'name'
                                                   $list[or]
                                                   $*
@@ -1232,8 +1257,9 @@ namespace HCResourceLibraryApp.DataHandling
                                              */
 
                                             "$h ", "$hh ", "$hhh ", "$b ", "$u ", "$i ",
-                                            "$s ", "$sp ", "$np ", "$c ", "$hr", "$nl ", "$url=",
-                                            "$list[", "$* ", "$q=", "$table[", "$th=", "$td="
+                                            "$s ", "$sp ", "$np ", "$c ", "$hr", "$nl ", 
+                                            "$d ", "$dd ", "$ddd ", "$dddd ", "$r ",
+                                            "$url=", "$list[", "$* ", "$q=", "$table[", "$th=", "$td="
                                         };
                                         bool foundNonStartMatchingQ = false;
 
@@ -1352,7 +1378,15 @@ namespace HCResourceLibraryApp.DataHandling
                             - [G023]    Missing first 'if' or 'else' keyword
                                 . Occurs when a line containing a 'jump' keyword does not start with an 'if' or 'else' keyword
                                     jump 1;             --> Missing first 'if' or 'else' keyword
-                                    repeat 2; jump 1    --> Missing first 'if' or 'else' keyword                                    *****/
+                                    repeat 2; jump 1    --> Missing first 'if' or 'else' keyword                        
+                         
+                            NEXT KEYWORD
+                            - [G076]    Next keyword must precede an appropriate keyword
+                                . Occurs when a line containing a 'next' keyword does not start with an 'if', 'else', or 'repeat' keyword
+                            - [G077]    Next keyword requires a following code line to function
+                                . Occurs when a there is not a following line after a 'next' keyword line
+                            - [G078]    Next keyword line cannot be followed by another keyword line
+                                . Occurs when a line following a 'next' keyword line contains any keyword     *****/
                         for (int kx = 0; kx < 6; kx++)
                         {
                             errorMessage = null;
@@ -1384,7 +1418,7 @@ namespace HCResourceLibraryApp.DataHandling
                                         . Occurs when a line contains more than two keywords
                                             else; if 1 != 0; jump 3;        --> Exceeded keyword limit per line
                                      ****/
-                                    for (int gkx = 0; gkx < 5; gkx++)
+                                    for (int gkx = 0; gkx < 6; gkx++)
                                     {
                                         errorMessage = null;
                                         errorCode = null;
@@ -1393,7 +1427,7 @@ namespace HCResourceLibraryApp.DataHandling
                                         {
                                             /// closing semicolon expected
                                             case 0:
-                                                int keywordCount = CountKeywordsInLine(noPlainLine);                                                
+                                                int keywordCount = CountKeywordsInLine(noPlainLine);                                             
                                                 if (keywordCount > noPlainLine.CountOccuringCharacter(';'))
                                                 {
                                                     errorCode = "G009";
@@ -1527,29 +1561,56 @@ namespace HCResourceLibraryApp.DataHandling
                                     if (noPlainLine.Contains(";"))
                                     {
                                         string snip1stIf = null, snip2ndIf = "";
-                                        string plainAfterColon = line.RemovePlainTextAfter(';', true, true);
+                                        string[] keywordParts = line.RemoveFromPlainText(';', true, '\n').LineBreak(';', true);
 
-                                        if (line.StartsWith("if"))
+                                        if (keywordParts.HasElements(2))
                                         {
-                                            string snipFullControl = plainAfterColon.SnippetText("if", ";", Snip.Inc, Snip.End2nd);
-                                            snip1stIf = snipFullControl.SnippetText("if", ";", Snip.Inc);
-                                            if (snip1stIf.IsNotNE())
-                                                snip2ndIf = snipFullControl.Substring(snip1stIf.Length).SnippetText("if", ";", Snip.Inc);
+                                            if (keywordParts[0].RemovePlainText().Contains("if"))
+                                                snip1stIf = keywordParts[0];
+
+                                            if (keywordParts[1].RemovePlainText().Contains("if"))
+                                                snip2ndIf = keywordParts[1];
                                         }
-                                        else if (line.StartsWith("else"))
-                                        {
-                                            string snipFullControl = line.SnippetText("else", ";", Snip.Inc, Snip.End2nd);
-                                            string snip1stControl = line.SnippetText("else", ";", Snip.Inc);
-                                            if (snip1stControl.IsNotNE())
-                                                snip2ndIf = snipFullControl.Substring(snip1stControl.Length).SnippetText("if", ";", Snip.Inc);
-                                        }
-                                        else if (line.StartsWith("repeat"))
-                                        {
-                                            string snipFullControl = line.SnippetText("repeat", ";", Snip.Inc, Snip.End2nd);
-                                            string snip1stControl = line.SnippetText("repeat", ";", Snip.Inc);
-                                            if (snip1stControl.IsNotNE())
-                                                snip2ndIf = snipFullControl.Substring(snip1stControl.Length).SnippetText("if", ";", Snip.Inc);
-                                        }
+
+                                        //string plainAfterColon = line.RemovePlainTextAfter(';', true, true);
+                                        //if (line.StartsWith("if"))
+                                        //{
+                                        //    string snipFullControl = plainAfterColon.SnippetText("if", ";", Snip.Inc, Snip.End2nd);
+                                        //    snip1stIf = snipFullControl.SnippetText("if", ";", Snip.Inc);
+                                        //    if (snip1stIf.IsNotNE())
+                                        //        snip2ndIf = snipFullControl.Substring(snip1stIf.Length).SnippetText("if", ";", Snip.Inc);
+                                        //}
+                                        //else if (line.StartsWith("else"))
+                                        //{
+                                        //    string snipFullControl = line.SnippetText("else", ";", Snip.Inc, Snip.End2nd);
+                                        //    string snip1stControl = line.SnippetText("else", ";", Snip.Inc);
+                                        //    if (snip1stControl.IsNotNE())
+                                        //        snip2ndIf = snipFullControl.Substring(snip1stControl.Length).SnippetText("if", ";", Snip.Inc);
+                                        //}
+                                        //else if (line.StartsWith("repeat"))
+                                        //{
+                                        //    string snipFullControl = line.SnippetText("repeat", ";", Snip.Inc, Snip.End2nd);
+                                        //    string snip1stControl = line.SnippetText("repeat", ";", Snip.Inc);
+                                        //    if (snip1stControl.IsNotNE())
+                                        //        snip2ndIf = snipFullControl.Substring(snip1stControl.Length).SnippetText("if", ";", Snip.Inc);
+                                        //}
+
+                                        //bool triggerG079q = false;
+                                        //if (snip1stIf.IsNotNEW())
+                                        //{
+                                        //    snipIfs.Add(snip1stIf);
+                                        //    if (!line.Contains(snip1stIf))
+                                        //        triggerG079q = true;
+                                        //}
+                                        //if (snip2ndIf.IsNotNEW())
+                                        //{
+                                        //    snipIfs.Add(snip2ndIf);
+                                        //    if (!line.Contains(snip2ndIf))
+                                        //        triggerG079q = true;
+                                        //}
+
+                                        //if (triggerG079q)
+                                        //    AddToErrorList(lineNum, "G079", "Plain text value in keyword control cannot contain ';'");
 
                                         if (snip1stIf.IsNotNEW())
                                             snipIfs.Add(snip1stIf);
@@ -1562,6 +1623,7 @@ namespace HCResourceLibraryApp.DataHandling
                                         {
                                             errorMessage = null;
                                             errorCode = null;
+                                            
 
                                             switch (fx)
                                             {
@@ -1606,7 +1668,9 @@ namespace HCResourceLibraryApp.DataHandling
                                                             if (value1Snip.Trim().StartsWith(validValues[vvx]))
                                                                 countValid++;
                                                         }
-                                                        else if (value1Snip.Contains('\"') || value1Snip.Contains("#"))
+                                                        else if (value1Snip.Contains('\"'))
+                                                            countValid++;
+                                                        else if (value1Snip.Contains("#"))
                                                             countValid++;
                                                         else
                                                         {
@@ -1688,7 +1752,9 @@ namespace HCResourceLibraryApp.DataHandling
                                                                 if (value2Snip.Trim().StartsWith(validValues[vvx]))
                                                                     countValid++;
                                                             }
-                                                            else if (value2Snip.Contains('\"') || value2Snip.Contains("#"))
+                                                            else if (value2Snip.Contains('\"'))
+                                                                countValid++;
+                                                            else if (value2Snip.Equals("#"))
                                                                 countValid++;
                                                             else
                                                             {
@@ -1781,7 +1847,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                         string[] validValue = new string[]
                                                         {
                                                             /** VALID REPEAT VALUES
-                                                                Pure numerics (0~9)
+                                                                Pure numerics (0~9)             ---  [x] not any more...
                                                                 Plain text numerics "0"~"9"    
                                                                 Library References ending in 'Count' and 'TTA'
                                                                     {AddedCount}
@@ -1794,16 +1860,9 @@ namespace HCResourceLibraryApp.DataHandling
                                                             "{AddedCount}", "{AdditCount}", "{TTA}", "{UpdatedCount}", "{LegendCount}", "{SummaryCount}",
                                                         };
 
-                                                        bool invalidValue = false;
-                                                        /// plain text nums
-                                                        if (snipRepeat.Contains('"'))
-                                                        {
-                                                            if (int.TryParse(snipRepeat.RemovePlainText(true), out int num))
-                                                                invalidValue = num < 1;
-                                                            else invalidValue = true;
-                                                        }
+                                                        bool invalidValue;
                                                         /// valid lib references
-                                                        else if (snipRepeat.Contains("{"))
+                                                        if (snipRepeat.Contains("{"))
                                                         {
                                                             int countNonMatch = 0;
                                                             for (int vvx = 0; vvx < validValue.Length; vvx++)
@@ -1913,7 +1972,7 @@ namespace HCResourceLibraryApp.DataHandling
                                     /** NEXT KEYWORD errors
                                     - [G076]    Next keyword must precede an appropriate keyword
                                         . Occurs when a line containing a 'next' keyword does not start with an 'if', 'else', or 'repeat' keyword
-                                    - [G077]    Next keyword requires a following line to function
+                                    - [G077]    Next keyword requires a following code line to function
                                         . Occurs when a there is not a following line after a 'next' keyword line
                                     - [G078]    Next keyword line cannot be followed by another keyword line
                                         . Occurs when a line following a 'next' keyword line contains any keyword *****/
@@ -1932,10 +1991,17 @@ namespace HCResourceLibraryApp.DataHandling
                                             }
                                             else
                                             {
-                                                if (nextLine.IsNEW() && nx == 1)
+                                                if (nx == 1)
                                                 {
-                                                    errorCode = "G077";
-                                                    errorMessage = "Next keyword requires a following line to function";
+                                                    bool triggerG077q = nextLine.IsNEW();
+                                                    if (nextLine.IsNotNEW())
+                                                        triggerG077q = nextLine.TrimStart().StartsWith("//");
+
+                                                    if (triggerG077q)
+                                                    {
+                                                        errorCode = "G077";
+                                                        errorMessage = "Next keyword requires a following code line to function";
+                                                    }
                                                 }
                                                 else if (CountKeywordsInLine(nextLine) > 0 && nx == 2)
                                                 {
@@ -1954,20 +2020,19 @@ namespace HCResourceLibraryApp.DataHandling
                             if (errorMessage.IsNotNE() && errorCode.IsNotNE())
                                 AddToErrorList(lineNum, errorCode, errorMessage);
 
-
-                            // METHODS
-                            static int CountKeywordsInLine(string line)
+                            // METHOD FOR KEYWORDS
+                            static int CountKeywordsInLine(string theLine)
                             {
                                 int keywordCount = 0;
                                 for (int ckx = 0; ckx < 5; ckx++)
                                 {
                                     keywordCount += ckx switch
                                     {
-                                        0 => line.Contains("if") ? 1 : 0,
-                                        1 => line.Contains("else") ? 1 : 0,
-                                        2 => line.Contains("repeat") ? 1 : 0,
-                                        3 => line.Contains("jump") ? 1 : 0,
-                                        4 => line.Contains("next") ? 1 : 0,
+                                        0 => theLine.Contains("if") ? theLine.Replace("if","\n").CountOccuringCharacter('\n') : 0,
+                                        1 => theLine.Contains("else") ? 1 : 0,
+                                        2 => theLine.Contains("repeat") ? 1 : 0,
+                                        3 => theLine.Contains("jump") ? 1 : 0,
+                                        4 => theLine.Contains("next") ? 1 : 0,
                                         _ => 0
                                     };
                                 }
@@ -1979,7 +2044,7 @@ namespace HCResourceLibraryApp.DataHandling
 
 
 
-                    // ~~  LIBRARY REFERENCE SYNTAX  ~~
+                    // ~~  LIBRARY REFERENCE SYNTAX  ~~                    
                     /** LIBRARY REFERENCE SYNTAX - revised and errors debrief
                         # L I B R A R Y   R E F E R E N C E S
                         `    Library reference values are provided by the information obtained from the version log submitted for steam log generation.
@@ -2005,7 +2070,7 @@ namespace HCResourceLibraryApp.DataHandling
                             {UpdatedCount}                :  Value. Gets the number of updated item entries available.
                         --------------------------------:------------------------------------------------------------------------------------------
                             {Updated:#,prop}              :  Value Array. Gets value 'prop' from one-based updated entry number '#'.
-                                                        :    Values for 'prop': changeDesc, id, name.
+                                                        :    Values for 'prop': changeDesc, id, relatedContent.
                         --------------------------------:------------------------------------------------------------------------------------------
                             {LegendCount}                 :  Value. Gets the number of legend entries available.
                         --------------------------------:------------------------------------------------------------------------------------------
@@ -2066,7 +2131,7 @@ namespace HCResourceLibraryApp.DataHandling
                                 . Occurs when the entry number is neither '#' or a number greater than zero (>0)
                                     {Updated:*,name}    --> Invalid Updated entry number
                             - [R032] Invalid Updated property
-                                . Occurs when the value for 'prop' is not any of the following: changeDesc, id, name.
+                                . Occurs when the value for 'prop' is not any of the following: changeDesc, id, relatedContent.
                                     {Updated:3,ids}     --> Invalid Updated property
 
                         LEGEND COUNT
@@ -2245,7 +2310,7 @@ namespace HCResourceLibraryApp.DataHandling
                                 . Occurs when the entry number is neither '#' or a number greater than zero (>0)
                                     {Updated:*,name}    --> Invalid Updated entry number
                             - [R032] Invalid Updated property
-                                . Occurs when the value for 'prop' is not any of the following: changeDesc, id, name.
+                                . Occurs when the value for 'prop' is not any of the following: changeDesc, id, relatedContent.
                                     {Updated:3,ids}     --> Invalid Updated property                ********/
                         for (int updx = 0; updx < 3; updx++)
                         {
@@ -2283,7 +2348,7 @@ namespace HCResourceLibraryApp.DataHandling
                                             if (argProp.IsNotNEW())
                                             {
                                                 argProp = argProp.Trim();
-                                                if (!argProp.Equals("id") && !argProp.Equals("name") && !argProp.Equals("changeDesc") && updx == 2)
+                                                if (!argProp.Equals("id") && !argProp.Equals("relatedContent") && !argProp.Equals("changeDesc") && updx == 2)
                                                 {
                                                     errorCode = "R032";
                                                     errorMessage = "Invalid Updated property";
@@ -2352,7 +2417,7 @@ namespace HCResourceLibraryApp.DataHandling
                                             if (argProp.IsNotNEW())
                                             {
                                                 argProp = argProp.Trim();
-                                                if (!argProp.Equals("key") && !argProp.Equals("changeDesc") && legx == 2)
+                                                if (!argProp.Equals("key") && !argProp.Equals("definition") && legx == 2)
                                                 {
                                                     errorCode = "R035";
                                                     errorMessage = "Invalid Legend property";
@@ -2432,7 +2497,7 @@ namespace HCResourceLibraryApp.DataHandling
 
 
                     // ~~  STEAM FORMAT REFERENCE SYNTAX  ~~
-                    /** STEAM FORMAT REFERENC SYNTAX - revised and errors debrief
+                    /** STEAM FORMAT REFERENCE SYNTAX - revised and errors debrief
                     # S T E A M   F O R M A T   R E F E R E N C E S
                     `    Steam format references are styling element calls that will affect the look of any text or value placed after it on
                     ▌    log generation.
@@ -2466,6 +2531,13 @@ namespace HCResourceLibraryApp.DataHandling
                                                     :  with other simple commands.
                     --------------------------------:------------------------------------------------------------------------------------------
                         $nl                           :  Simple command. New line.
+                    --------------------------------:------------------------------------------------------------------------------------------
+                        $d                            :  Simple command. Indent.
+                                                    :    There are four indentation levels which relates to the number of 'd's in reference.
+                                                    :  Example, a level 2 indent is '$dd'.
+                                                    :    An indentation is the equivalent of two spaces (' 'x2).
+                    --------------------------------:------------------------------------------------------------------------------------------
+                        $r                            :  Simple command. Regular. Used to forcefully demark the end of preceding simple commands.
                     --------------------------------:------------------------------------------------------------------------------------------
                         $url='link':'name'            :  Complex command. Must be placed on its own line.
                                                     :    Creates a website link by using URL address 'link' to create a hyperlink text
@@ -2550,6 +2622,13 @@ namespace HCResourceLibraryApp.DataHandling
                     
                         NEWLINE
                             Note :: R038 and R039 does not apply to this element
+                            - (no errors)
+
+                        INDENT
+                            Note :: R038 and R039 does not apply to this element
+                            - (no errors)
+
+                        REGULAR
                             - (no errors)
 
                         LIST ITEM
@@ -2740,14 +2819,14 @@ namespace HCResourceLibraryApp.DataHandling
 
                                         if (noPlainLine.Contains('$'))
                                         {
-                                            string[] theRefs = line.LineBreak('$');
+                                            string[] theRefs = line.RemoveFromPlainText('$').LineBreak('$');
                                             for (int trx = 0; trx < theRefs.Length; trx++)
                                             {
                                                 string theRefPart = theRefs[trx];
-                                                if (!theRefPart.StartsWith("$hr") && !theRefPart.StartsWith("$nl") && !theRefPart.Contains("[") && !theRefPart.Contains("="))
+                                                if (!theRefPart.StartsWith("$hr") && !theRefPart.StartsWith("$nl") && !theRefPart.StartsWith("$d") && !theRefPart.Contains("[") && !theRefPart.Contains("="))
                                                 {
                                                     bool triggerR038q = false;
-                                                    string snipRef = $"{theRefPart.SnippetText("$", " ", Snip.Inc, Snip.EndLast)}";
+                                                    string snipRef = $"{theRefPart.RemoveFromPlainText(' ').SnippetText("$", " ", Snip.Inc, Snip.EndAft)}";
                                                     if (snipRef.IsNotNE())
                                                     {
                                                         if (snipRef.Length < theRefPart.Length)
@@ -2930,7 +3009,7 @@ namespace HCResourceLibraryApp.DataHandling
                                             bool triggerR048q = false;
                                             if (urlArgs.Contains(":"))
                                             {
-                                                string[] urlParts = urlArgs.Split(':');
+                                                string[] urlParts = urlArgs.RemoveFromPlainText(':').Split(':');
                                                 if (urlParts.Length == 2)
                                                 {
                                                     if (!IsValidSFValue(urlParts[0], true))
@@ -3072,7 +3151,7 @@ namespace HCResourceLibraryApp.DataHandling
                                             bool triggerR057q = false;
                                             if (quoteArgs.Contains(":"))
                                             {
-                                                string[] quoteParts = quoteArgs.Split(':');
+                                                string[] quoteParts = quoteArgs.RemoveFromPlainText(':').Split(':');
                                                 if (quoteParts.Length == 2)
                                                 {
                                                     if (!IsValidSFValue(quoteParts[0], true))
@@ -3418,28 +3497,6 @@ namespace HCResourceLibraryApp.DataHandling
                         }
 
 
-
-                        string[] steamRefsStart = new string[]
-                        {
-                            /** steam format references list (only need to start a certain way. Any further creeps into non-general errors territory
-                                                
-                                    $h  $hh  $hhh
-                                    $b  $u   $i
-                                    $s  $sp  $np
-                                    $c  $hr  $nl
-                                    $url='link':'name'
-                                    $list[or]
-                                    $*
-                                    $q='author':'quote'
-                                    $table[nb,ec]
-                                    $th='clm1','clm2'
-                                    $td='clm1','clm2'
-                                */
-
-                            "$h ", "$hh ", "$hhh ", "$b ", "$u ", "$i ",
-                            "$s ", "$sp ", "$np ", "$c ", "$hr", "$nl ", "$url=",
-                            "$list[", "$* ", "$q=", "$table[", "$th=", "$td="
-                        };
                         // METHOD FOR STEAM FORMAT
                         static bool IsValidSFValue(string value, bool noRepKeyQ = false)
                         {
@@ -3484,28 +3541,74 @@ namespace HCResourceLibraryApp.DataHandling
                                . Accompanies most errors where general syntax is not followed.
                                    jam     --> Unexpected token 'jam'
                                    $       --> Unexpected token '$'
-                                   if ;    --> Unexpected token ';'             ****/
+                                   if ;    --> Unexpected token ';'             ****/                    
                     if (unexpectedTokenII.HasElements())
-                    {         
+                    {
                         foreach (string unexToken in unexpectedTokenII)
                             AddToErrorList(lineNum, "G000" + ID(1), $"Unexpected token '{unexToken}'");
+                    }                    
+                    if (noPlainLine.IsNotNE() && !line.TrimStart().StartsWith("//"))
+                    { /// wrapping
+                        string[] validPPs = new string[]
+                        {
+                            /// general code
+                            "#", "if", "else", "repeat", "jump", "next", "=", "!=",
+                            /// library refs
+                            "{",
+                            /// steam format refs
+                            "$"
+                        };
+
+                        int countKeywordSemiColons = noPlainLine.CountOccuringCharacter(';');
+                        string[] noPlainParts = noPlainLine.Split(' ');
+                        bool firstPartQ = true;
+                        foreach (string noPP in noPlainParts)
+                        {
+                            if (noPP.IsNotNE())
+                            {
+                                bool isValidPP = false;
+                                for (int vx = 0; vx < validPPs.Length && !isValidPP; vx++)
+                                {
+                                    isValidPP = noPP.StartsWith(validPPs[vx]);
+                                    if (!isValidPP && countKeywordSemiColons > 0)
+                                        isValidPP = int.TryParse(noPP.Replace(';', ' '), out _);
+
+                                    /// comment specific
+                                    if (!isValidPP && firstPartQ)
+                                        isValidPP = noPP.StartsWith("//");
+                                    /// keyword specific
+                                    if (!isValidPP && countKeywordSemiColons > 0)
+                                    {
+                                        if (noPlainLine.StartsWith("if") || noPlainLine.StartsWith("else") || noPlainLine.StartsWith("repeat"))
+                                            isValidPP = noPP.Equals("=") || noPP.Equals("!=");
+                                    }
+                                    /// complex steam format specific
+                                    if (!isValidPP && noPlainLine.StartsWith("$"))
+                                        isValidPP = noPP.Contains(":") || noPP.Contains(",");
+                                }
+
+                                if (noPP.Contains(';'))
+                                {
+                                    /// keyword specific II
+                                    if (!isValidPP)
+                                        isValidPP = noPP.Equals(";");
+                                    countKeywordSemiColons--;
+                                }
+
+                                if (!isValidPP)
+                                    AddToErrorList(lineNum, "G000" + ID(2), $"Unexpected token '{noPP}'");
+                                firstPartQ = false;
+                            }
+                        }
                     }
+                    
                 }
 
             }
 
-
-            /// NOTE TO SELF
-            /// Any syntax blocks that are bookmarked have a 'first-only' checking issue that must be resolved
-            /// Some of these can't be solved with a simple loop. Somehow the 'correct' syntaxes must be removed and the line rechecked a few more times.
-            /// New tools may be of use to resolving this case...
-            ///     > GetEveryInstanceOf(str) 
-            ///     > GetNthInstancOf(str, int)
-            ///     > CountOccuringWord(str)
-            /// It may be good to have this marinate for a few days...
-            ///     Final resolution
-            ///     > str[] LineBreak(this str line, chr c, bl atBreakEndQ=fls)
-            ///     ^  DONE...
+            /// OTHER ERRORS TO IMPLEMENT (PERHAPS)
+            ///     Next And Jump Keywords  ->  An execution line is not required after keyword '{keyword}'
+            ///     
 
 
             /** ERROR CODES AND MESSAGES COLLECTION
@@ -3537,7 +3640,7 @@ namespace HCResourceLibraryApp.DataHandling
                 [G022]      Line number must follow after line '{lineNum}'
                 [G023]      Jump keyword must precede an appropriate keyword
                 [G076]      Next keyword must precede an appropriate keyword
-                [G077]      Next keyword requires a following line to function
+                [G077]      Next keyword requires a following code line to function
                 [G078]      Next keyword line cannot be followed by another keyword line
                 ---
                 [R024]      Added entry number and property expected
@@ -3621,7 +3724,7 @@ namespace HCResourceLibraryApp.DataHandling
             {
                 string id = "";
                 if (num >= 0 && identifyErrorStatesQ)
-                    id = $" {num}";
+                    id = $" {cRHB}{num}";
                 return id;
             }
         }
@@ -3642,7 +3745,7 @@ namespace HCResourceLibraryApp.DataHandling
         /// <summary>
         ///     Removes all space characters from a given string.
         /// </summary>
-        static string SquishSpaces(this string line)
+        public static string SquishSpaces(this string line)
         {
             string squishedLine = "";
             if (line.IsNotNEW())
@@ -3655,7 +3758,7 @@ namespace HCResourceLibraryApp.DataHandling
         }
         /// <summary>Removes any plain text fields from a line.</summary>
         /// <param name="invertQ">If <c>true</c>, will only fetch plain text fields without inclusion of double quotations.</param>
-        static string RemovePlainText(this string line, bool invertQ = false)
+        public static string RemovePlainText(this string line, bool invertQ = false)
         {
             string newLine = line.IsNE() ? "" : line;
             bool nPlainQ = false;
@@ -3671,7 +3774,8 @@ namespace HCResourceLibraryApp.DataHandling
                         if ((!nPlainQ && !invertQ) || (nPlainQ && invertQ))
                             newLine += line[px];
                 }
-                newLine = newLine.Trim();
+                if (!invertQ)
+                    newLine = newLine.Trim(' ');
             }
             return newLine;
         }
@@ -3679,7 +3783,7 @@ namespace HCResourceLibraryApp.DataHandling
         /// <param name="after">The character to hit within line before removing plain text fields. Cannnot be '"'.</param>
         /// <param name="secondAfterQ">If <c>true</c>, will remove plain text fields after the second <paramref name="after"/> character is hit.</param>
         /// <param name="noAfterInPlainQ">If <c>true</c>, will remove any occurences of <paramref name="after"/> within any unfiltered plain text fields.</param>
-        static string RemovePlainTextAfter(this string line, char after, bool secondAfterQ = false, bool noAfterInPlainQ = false)
+        public static string RemovePlainTextAfter(this string line, char after, bool secondAfterQ = false, bool noAfterInPlainQ = false)
         {
             string newLine = line.IsNE() ? "" : line;
             if (after == '"')
@@ -3723,19 +3827,52 @@ namespace HCResourceLibraryApp.DataHandling
         /// <param name="line">The line containing <paramref name="c"/> to break apart.</param>
         /// <param name="c">The character that determines where to split <paramref name="line"/>.</param>
         /// <param name="breakEndQ">If <c>true</c>, will ensure that each line break ends with <paramref name="c"/>.</param>
+        /// <param name="ignoreCinPlainQ">If <c>true</c> will only split at any <paramref name="c"/> that is not within a plain text field. <paramref name="c"/> cannot be (") when this argument is <c>true</c>.</param>
         /// <returns>An array of strings broken apart at and starting or ending with <paramref name="c"/> dependent on <paramref name="breakEndQ"/>. Returns <see cref="Array.Empty{T}"/> if <paramref name="line"/> or <paramref name="c"/> is null, empty, or whitespace. Returns a single-element array if <paramref name="c"/> is not contained in <paramref name="line"/>.</returns>
-        static string[] LineBreak(this string line, char c, bool breakEndQ = false)
+        public static string[] LineBreak(this string line, char c, bool breakEndQ = false, bool ignoreCinPlainQ = true)
         {
             List<string> lineBreaks = new();
             if (line.IsNotNEW() && c.IsNotNull())
             {
-                string[] partLines = line.Split(c);
-                for (int px = 0; px < partLines.Length; px++)
+                /// manual split
+                List<string> partLines = new();
+                bool nPlainQ = false;
+                string linePart = "";
+                for (int spx = 0; spx < line.Length; spx++)
+                {
+                    char lc = line[spx];
+
+                    if (lc == '"')
+                        nPlainQ = !nPlainQ;
+
+                    if (lc == c)
+                    {
+                        if (ignoreCinPlainQ && nPlainQ)
+                            linePart += lc;
+                        else
+                        {
+                            if (c == '"' && ignoreCinPlainQ)
+                                linePart += lc;
+                            else
+                            {
+                                partLines.Add(linePart);
+                                linePart = "";
+                            }
+                        }
+                    }
+                    else linePart += lc;
+
+                    if (spx + 1 == line.Length)
+                        partLines.Add(linePart);
+                }
+
+                /// line breaking
+                for (int px = 0; px < partLines.Count; px++)
                 {
                     string lineBreak = partLines[px];
                     if (px > 0 && !breakEndQ)
                         lineBreak = c.ToString() + lineBreak;
-                    if (px + 1 < partLines.Length && breakEndQ)
+                    if (px + 1 < partLines.Count && breakEndQ)
                         lineBreak = lineBreak + c.ToString();
                     
                     if (lineBreak.IsNotNE())
@@ -3745,10 +3882,11 @@ namespace HCResourceLibraryApp.DataHandling
             return lineBreaks.ToArray();
         }
         /// <summary>Removes any occuring character '<paramref name="c"/>' within a plain text field.</summary>
-        /// <param name="c">The character to remove from plain text fields.</param>
-        static string RemoveFromPlainText(this string line, char c, bool caseSensitivityQ = true)
+        /// <param name="c">The character to remove from or to replace with <paramref name="replacement"/> in plain text fields.</param>
+        public static string RemoveFromPlainText(this string line, char c, bool caseSensitivityQ = true, char replacement = '\0')
         {
             string newLine = line.IsNE() ? "" : line;
+            string rep = replacement.IsNotNull() ? replacement.ToString() : "";
             bool nPlainQ = false;
             if (line.IsNotNE() && c.IsNotNull())
             {
@@ -3763,19 +3901,19 @@ namespace HCResourceLibraryApp.DataHandling
                         if (!caseSensitivityQ)
                         {
                             if (line[px].ToString().ToLower() == c.ToString().ToLower())
-                                newLine += "";
+                                newLine += rep;
                             else newLine += line[px];
                         }
                         else
                         {
                             if (line[px] == c)
-                                newLine += "";
+                                newLine += rep;
                             else newLine += line[px];
                         }
                     }
                     else newLine += line[px];
                 }
-                newLine = newLine.Trim();
+                //newLine = newLine.Trim();
             }
             return newLine;
         }
@@ -3837,17 +3975,18 @@ namespace HCResourceLibraryApp.DataHandling
                     },
 
                     /// line break
-                    ///     parameters: c['/']   breakEndQ[true/false]
+                    ///     parameters: c['/']   breakEndQ[true/false]      ignoreCInPlain[true/false]
                     4 => new List<string>()
                     {
                         "No break in line, should be empty just fine",
                         "Break once / Break no more",
                         "There / are multiple/ breaks in /here",
-                        "/start it/ and/ end it/"
+                        "/start it/ and/ end it/",
+                        "To/ Break/ in \"plain/ depends/ on \"/ a certain/ thing"
                     },
 
                     /// remove from plain text
-                    ///     parameters: c['a']      caseSensitive[true/false] 
+                    ///     parameters: c['a']      caseSensitive[true/false]     replacement['\0','*']
                     5 => new List<string>()
                     {
                         "Sleek cruiser \"Sleek cruiser\"",
@@ -3898,7 +4037,7 @@ namespace HCResourceLibraryApp.DataHandling
                             string[] lBrEndFalse = test.LineBreak('/');
                             if (lBrEndFalse.HasElements())
                             {
-                                Dbug.LogPart("--> [/] ");
+                                Dbug.LogPart("--> [/,brStrt,ignC] ");
                                 foreach (string lbref in lBrEndFalse)
                                     Dbug.LogPart($" '{lbref}' ");
                             }
@@ -3908,8 +4047,18 @@ namespace HCResourceLibraryApp.DataHandling
                             string[] lBrEndTrue = test.LineBreak('/', true);
                             if (lBrEndTrue.HasElements())
                             {
-                                Dbug.LogPart("--> [/,brEnd] ");
+                                Dbug.LogPart("--> [/,brEnd,ignoreC] ");
                                 foreach (string lbret in lBrEndTrue)
+                                    Dbug.LogPart($" '{lbret}' ");
+                            }
+                            else Dbug.LogPart("--> No output");
+
+                            Dbug.LogPart("   |   ");
+                            string[] lBrInPlain = test.LineBreak('/', true, false);
+                            if (lBrInPlain.HasElements())
+                            {
+                                Dbug.LogPart("--> [/,brEnd,inC] ");
+                                foreach (string lbret in lBrInPlain)
                                     Dbug.LogPart($" '{lbret}' ");
                             }
                             else Dbug.LogPart("--> No output");
@@ -3917,7 +4066,8 @@ namespace HCResourceLibraryApp.DataHandling
 
                         case 5:
                             Dbug.LogPart($"[a,caseSen] '{test.RemoveFromPlainText('a')}'  |  ");
-                            Dbug.LogPart($"[a,caseIns] '{test.RemoveFromPlainText('a', false)}'");
+                            Dbug.LogPart($"[a,caseIns] '{test.RemoveFromPlainText('a', false)}'  |  ");
+                            Dbug.LogPart($"[a,caseIns,*] '{test.RemoveFromPlainText('a', false, '*')}'");
                             break;
                     }
                     Dbug.Log("; ");

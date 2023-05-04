@@ -5,6 +5,8 @@ using ConsoleFormat;
 using static ConsoleFormat.Base;
 using static ConsoleFormat.Minimal;
 using HCResourceLibraryApp.DataHandling;
+using static HCResourceLibraryApp.DataHandling.SFormatterHandler;
+
 
 namespace HCResourceLibraryApp.Layout
 {
@@ -68,9 +70,42 @@ namespace HCResourceLibraryApp.Layout
                 FormatLine($"{Ind24}Facilitates generation of a version log using Steam's formatting rules.", ForECol.Accent);
                 NewLine();
 
-                // preview parameters here
-                TextLine("--- PARAMETERS REVIEW ---\n Version Log x.xx\n Using formatting 'format1'\n---\n");
+                #region preview parameters
+                Title("--- Parameters Review ---");
+                /// ver log here
+                Format($"{Ind14}");
+                if (_sfLibraryRef.IsSetup())
+                {
+                    Format($"Version Log {_sfLibraryRef.Version}", ForECol.Highlight);
+                    Format($" | ", ForECol.Accent);
+                    Format($"'{_sfLibraryRef.TTA}' content{(_sfLibraryRef.TTA == "1" ? "" : "s")}", _sfLibraryRef.TTA != "0" ? ForECol.Normal : ForECol.Accent);
+                    Format($" | ", ForECol.Accent);
+                    Format($"'{_sfLibraryRef.UpdatedCount}' update{(_sfLibraryRef.UpdatedCount == "1" ? "" : "s")}", _sfLibraryRef.UpdatedCount != "0"? ForECol.Normal : ForECol.Accent);
+                    NewLine();
+                }
+                else FormatLine("No version log selected", ForECol.Accent);
+                /// formatter here
+                Format($"{Ind14}");
+                if (_formatterData != null)
+                {
+                    isUsingFormatterNo1Q = _formatterData.EditProfileNo1Q;
+                    Format("Using formatter profile ");
+                    Format($"'{(isUsingFormatterNo1Q ? _formatterData.Name1 : _formatterData.Name2)}'", ForECol.Highlight);
 
+                    if (_formatterData.IsSetup(isUsingFormatterNo1Q))
+                    {
+                        CheckSyntax(isUsingFormatterNo1Q ? _formatterData.LineData1.ToArray() : _formatterData.LineData2.ToArray());
+                        if (ErrorCount != 0)
+                            Format($" ('{ErrorCount}' errors)", ForECol.Incorrection);
+                    }
+                    else
+                        Format(" (empty)");
+                    NewLine();
+                }
+                else FormatLine("No formatter data", ForECol.Accent);
+                FormatLine("---");
+                NewLine();
+                #endregion
 
                 bool validMenuKey = TableFormMenu(out short genMenuKey, "Generation Menu", subMenuUnderline, true, $"{Ind24}Choose parameter to edit >> ", "1~4", 2, $"Log Version,Steam Log Formatter,Generate Steam Log,{exitPagePhrase}".Split(','));
                 MenuMessageQueue(!validMenuKey, false, null);
@@ -451,13 +486,13 @@ namespace HCResourceLibraryApp.Layout
                 exitLogVerSubPageQ = noLibraryData || allowExitQ;
             } while (!exitLogVerSubPageQ);            
         }
-        // TO BE DONE
+        // done
         static void SubPage_SteamFormatter()
         {
-            bool exitFormatterSubPageQ;
+            bool exitFormatterSubPageQ = false;
             do
             {
-                Program.LogState("Generate Steam Log|Steam Formatter (WIP)");
+                Program.LogState("Generate Steam Log|Steam Formatter");
                 Clear();
                 Title("Steam Formatter", subMenuUnderline, 1);
                 FormatLine("Allows editting and selecting a format to use when generating a steam log.", ForECol.Accent);
@@ -468,7 +503,8 @@ namespace HCResourceLibraryApp.Layout
                 {
                     Title("Formatter Editor Settings");
                     isUsingFormatterNo1Q = _formatterData.EditProfileNo1Q;
-                    string formatterInUse = $"Editing Formatter Profile #{(isUsingFormatterNo1Q ? 1 : 2)} - {(isUsingFormatterNo1Q ? _formatterData.Name1 : _formatterData.Name2)}";
+                    CheckSyntax(isUsingFormatterNo1Q ? _formatterData.LineData1.ToArray() : _formatterData.LineData2.ToArray());
+                    string formatterInUse = $"Editing Formatter Profile #{(isUsingFormatterNo1Q ? 1 : 2)} - {(isUsingFormatterNo1Q ? _formatterData.Name1 : _formatterData.Name2)} ('{ErrorCount}' error{(ErrorCount == 1 ? "" : "s")})";
                     string nativeColCode = $"Using Native Color Code? {(_formatterData.UseNativeColorCodeQ ? "Yes" : "No (Custom)")}";
 
                     HoldNextListOrTable();
@@ -477,65 +513,133 @@ namespace HCResourceLibraryApp.Layout
                         FormatLine(LatestListPrintText.Replace("\t", Ind14));
                     NewLine();
                 }
+               
+                bool validMenuKey = ListFormMenu(out string fMenuKey, "Formatter Menu", null, null, null, true, $"Toggle Native Color Coding,Toggle Formatter Profile,Open Formatting Editor, {exitSubPagePhrase} [Enter]".Split(','));
+                MenuMessageQueue(!validMenuKey && LastInput.IsNotNE(), false, null);
 
-
-                // ver log info exits for formatter   ... tbh, only the log generator page needs to worry about this...
-                if (_sfLibraryRef.IsSetup() || true) /// just to bypass for easy testing
+                if (validMenuKey)
                 {
-                    exitFormatterSubPageQ = false;
-                    bool validMenuKey = ListFormMenu(out string fMenuKey, "Formatter Menu", null, null, null, true, $"Toggle Native Color Coding,Toggle Formatter Profile,Open Formatting Editor, {exitSubPagePhrase} [Enter]".Split(','));
-                    MenuMessageQueue(!validMenuKey && LastInput.IsNotNE(), false, null);
-
-                    if (validMenuKey)
+                    // toggle native color coding
+                    if (fMenuKey.Equals("a") && _formatterData != null)
                     {
-                        // toggle native color coding
-                        if (fMenuKey.Equals("a") && _formatterData != null)
-                        {
-                            _formatterData.UseNativeColorCodeQ = !_formatterData.UseNativeColorCodeQ;
-                            Format($"{Ind34}{(_formatterData.UseNativeColorCodeQ ? "Enabled" : "Disabled")} native color coding.", ForECol.Correction);
-                            Pause();
-                        }
-
-                        // toggle formatter to edit
-                        else if (fMenuKey.Equals("b") && _formatterData != null)
-                        {
-                            _formatterData.EditProfileNo1Q = !_formatterData.EditProfileNo1Q;
-                            isUsingFormatterNo1Q = _formatterData.EditProfileNo1Q;
-                            Format($"{Ind34}Now editing Formatter Profile #{(isUsingFormatterNo1Q ? 1 : 2)} :: '{(isUsingFormatterNo1Q ? _formatterData.Name1 : _formatterData.Name2)}'.", ForECol.Correction);
-                            Pause();
-                        }
-
-                        // open formatting editor
-                        else if (fMenuKey.Equals("c") && _formatterData != null)
-                            FormattingEditor();
-
-                        //// exit
-                        else //if (fMenuKey.Equals("d"))
-                            exitFormatterSubPageQ = true;
+                        _formatterData.UseNativeColorCodeQ = !_formatterData.UseNativeColorCodeQ;
+                        Format($"{Ind34}{(_formatterData.UseNativeColorCodeQ ? "Enabled" : "Disabled")} native color coding.", ForECol.Correction);
+                        Pause();
                     }
 
-                    if (!validMenuKey && LastInput.IsNE())
-                        exitFormatterSubPageQ = true;
+                    // toggle formatter to edit
+                    else if (fMenuKey.Equals("b") && _formatterData != null)
+                    {
+                        _formatterData.EditProfileNo1Q = !_formatterData.EditProfileNo1Q;
+                        isUsingFormatterNo1Q = _formatterData.EditProfileNo1Q;
+                        Format($"{Ind34}Now editing Formatter Profile #{(isUsingFormatterNo1Q ? 1 : 2)} :: '{(isUsingFormatterNo1Q ? _formatterData.Name1 : _formatterData.Name2)}'.", ForECol.Correction);
+                        Pause();
+                    }
+
+                    // open formatting editor
+                    else if (fMenuKey.Equals("c") && _formatterData != null)
+                        FormattingEditor();
+
+                    //// exit
+                    else exitFormatterSubPageQ = true;
                 }
-                // no ver log info
+
+                if (!validMenuKey && LastInput.IsNE())
+                    exitFormatterSubPageQ = true;
+                
+                
+            } while (!exitFormatterSubPageQ);
+        }
+        // done
+        static void SubPage_GenerateSteamLog()
+        {
+            bool exitGenSteamLogSubPageQ;
+            do
+            {
+                /// pre checks
+                bool hasFormatterQ = false, hasLibDataQ = _sfLibraryRef.IsSetup(), isFormatterErrorlessQ = false;
+                if (_formatterData != null)
+                {
+                    hasFormatterQ = _formatterData.IsSetup(isUsingFormatterNo1Q);
+                    if (hasFormatterQ)
+                    {
+                        if (isUsingFormatterNo1Q)
+                            CheckSyntax(_formatterData.LineData1.ToArray());
+                        else CheckSyntax(_formatterData.LineData2.ToArray());
+                        isFormatterErrorlessQ = ErrorCount == 0;
+                    }
+                }
+
+                if (hasFormatterQ && hasLibDataQ && isFormatterErrorlessQ)
+                {
+                    Program.LogState("Generate Steam Log|Log Generation");
+
+                    Format($"{Ind24}Generating Steam Log... ", ForECol.Correction);
+                    Wait(0.75f);
+                    Format($"Please wait...");
+
+                    if (_formatterData.ChangesMade())
+                    {
+                        NewLine(2);
+                        Format("Changes were made to the formatter profile used...", ForECol.Accent);
+                        Wait(1f);
+                        Program.SaveData(true);
+                    }
+
+                    // parse formatting then preview
+                    string[] display = FormattingParser(isUsingFormatterNo1Q? _formatterData.LineData1.ToArray() : _formatterData.LineData2.ToArray(), _sfLibraryRef);
+
+                    /// display
+                    Program.ToggleFormatUsageVerification();
+                    NewLine(3);
+                    int[] cursorPos = new int[2] { Console.CursorTop - 1, Console.CursorLeft };
+
+                    Important($"GENERATED LOG - V{_sfLibraryRef.Version}", subMenuUnderline);
+                    HorizontalRule(subMenuUnderline);
+                    foreach (string dLine in display)
+                    {
+                        ForECol touchUpCol = ForECol.Normal;
+                        /// styling for headings and horizontal rule
+                        if (dLine.Trim().StartsWith("[h") && dLine.Trim().Contains("[/h"))
+                            touchUpCol = ForECol.Heading1;
+                            /// styling for tables and lists
+                            if (dLine.Contains("[/td") || dLine.Contains("[/th") || dLine.Trim().StartsWith("[table") || dLine.Trim().StartsWith("[/table") || dLine.Trim().StartsWith("[*]") || dLine.Trim().EndsWith("list]"))
+                                touchUpCol = ForECol.Highlight;
+
+                        Format(dLine, touchUpCol);
+                    }
+                    NewLine();
+                    HorizontalRule(subMenuUnderline);
+                    NewLine();
+
+                    Console.CursorTop = cursorPos[0];
+                    Console.CursorLeft = cursorPos[1];
+                    Pause();
+                    Program.ToggleFormatUsageVerification();
+
+                    exitGenSteamLogSubPageQ = true;
+                }
                 else
                 {
                     NewLine();
-                    Format($"{Ind14}This page will not function unless a version log to generate has been provided.");
+                    if (hasLibDataQ)
+                    {
+                        if (isFormatterErrorlessQ)
+                            Format($"{Ind14}This page will not function with an empty formatter profile.", ForECol.Incorrection);
+                        else Format($"{Ind14}This page will not function until all errors in selected formatter profile are resolved.", ForECol.Incorrection);
+                    }
+                    else
+                        Format($"{Ind14}This page will not function without selecting a version log to generate.", ForECol.Incorrection);
                     Pause();
+
+                    exitGenSteamLogSubPageQ = true;
                 }
-            } while (!exitFormatterSubPageQ);
-        }
-        // TO BE DONE
-        static void SubPage_GenerateSteamLog()
-        {
-            Program.LogState("Generate Steam Log|Log Generation (WIP)");
-            TextLine("\n\n-- Openned 'Generate Steam Log' subpage --");
-            Pause();
+
+            } while (!exitGenSteamLogSubPageQ);
         }
 
 
-        // public, so we can test it easily... wait, maybe not, too many dependencies
+        // public, so we can test them easily... wait, maybe not, too many dependencies... okay..
         /// <summary>The house of steam format editing; all formatting tools meet here. This is the page where display meets function.</summary>
         static void FormattingEditor()
         {
@@ -737,7 +841,7 @@ namespace HCResourceLibraryApp.Layout
             const int historyLimit = 25, historyActionInitial = 1;
             int lineToEdit = noLineToEdit, lineToEditSpan = HSNL(3, 7).Clamp(0, 5), countCycles = 0, historySpan = HSNL(1, 5).Clamp(1, 3);
 
-            Program.LogState("Generate Steam Log|Steam Formatter (WIP)|Formatting Editor (WIP)");
+            Program.LogState("Generate Steam Log|Steam Formatter|Formatting Editor");
             Dbug.StartLogging();
             Dbug.Log($"RECORDING :: Formatting Editor Actions and processes -- FProfile#1? {isUsingFormatterNo1Q}");
             Dbug.NudgeIndent(true);
@@ -1012,10 +1116,10 @@ namespace HCResourceLibraryApp.Layout
                                         { "// text",    "Line comment. Must be placed at the start of the line. Commenting renders a line imparsable."},
                                         { "text",       "Code. Anything that is not commented is code and is parsable on steam log generation."},
                                         { "\"text\"",   "Plain text. Represents any text that will be parsed into the generated steam log."},
-                                        { "&00;",       "Escape character. Used within plain text to print double quote character (\")."},
+                                        { "&00;",       $"Escape character. Used within plain text to print double quote character (\")."},
                                         { "{text}",     $"Library reference. References a value based on the information received from a submitted version log.{nxt}Refer to 'Library Reference' below for more information."},
                                         { "$text",      $"Steam format reference. References a styling element to use against plain text or another value when generating steam log.{nxt}Refer to 'Steam Format References' below for more information."},
-                                        { "if # = #;",  $"Keyword. Must be placed at the start of the line.{nxt}A control command that compares two values for a true or false condition. If the condition is 'true' then the line's remaining data will be parsed into the formatting string.{nxt}The operator '=' compares two values to be equal. The operator '!=' compares two values to be unequal."},
+                                        { "if # = #;",  $"Keyword. Must be placed at the start of the line.{nxt}A control command that compares two values for a true or false condition. If the condition is 'true' then the line's remaining data will be parsed into the formatting string.{nxt}The operator '=' compares two values to be equal. The operator '!=' compares two values to be unequal.{nxt}Plain text values may not contain semi-colon ';' characters."},
                                         { "else;",      $"Keyword. Must be placed at the start of the line. Must be placed following an 'if' keyword line.{nxt}A control command that will parse the line's remaining data when the condition of a preceding 'if' command is false."},
                                         { "repeat #;",  $"Keyword. Must be placed at the start of the line.{nxt}A control command that repeats a line's remaining data '#' number of times. An incrementing number from one to given number '#' will replace any occuring '#' in the line's remaining data."},
                                         { "jump #;",    $"Keyword. Can only be placed following an 'if' or 'else' keyword.{nxt}A control command the allows skipping ahead to a given line. Only direct numbers are accepted as a value. Providing a line number beyond final line will skip all remaining lines.{nxt}Note that values following this keyword are not parsed."},
@@ -1054,7 +1158,7 @@ namespace HCResourceLibraryApp.Layout
                                         { "{Addit:#,prop}",     $"Value Array. Gets value 'prop' from one-based additional entry number '#'.{nxt}Values for 'prop': ids, optionalName, relatedContent (related content name), relatedID."},
                                         { "{TTA}",              "Value. Gets the number of total textures/contents added."},
                                         { "{UpdatedCount}",     "Value. Gets the number of updated item entries available."},
-                                        { "{Updated:#,prop}",   $"Value Array. Gets value 'prop' from one-based updated entry number '#'.{nxt}Values for 'prop': changeDesc, id, name."},
+                                        { "{Updated:#,prop}",   $"Value Array. Gets value 'prop' from one-based updated entry number '#'.{nxt}Values for 'prop': changeDesc, id, relatedContent (related content name)."},
                                         { "{LegendCount}",      "Value. Gets the number of legend entries available."},
                                         { "{Legend:#,prop}",    $"Value Array. Gets value 'prop' from one-based legend entry number '#'.{nxt}Values for 'prop': definition, key"},
                                         { "{SummaryCount}",     "Value. Gets the number of summary parts available."},
@@ -1091,7 +1195,7 @@ namespace HCResourceLibraryApp.Layout
 
                                         */
                                         { "STEAM FORMAT REFERENCES", null},
-                                        { null, $"Steam format references are styling element calls that will affect the look of any text or value placed after it on log generation.\nSimple command references may be combined with other simple commands unless otherwise unpermitted. Simple commands affect only one value that follows them.\nComplex commands require a text or value to be placed in a described parameter surrounded by single quote characters (')."},
+                                        { null, $"Steam format references are styling element calls that will affect the look of any text or value placed after it on log generation.\nSimple command references may be combined with other simple commands unless otherwise unpermitted.\nComplex commands require a text or value to be placed in a described parameter surrounded by single quote characters (')."},
                                         /// simple
                                         { "$h",     $"Simple command. Header text. Must be placed at the start of the line. May not be combined with other simple commands.{nxt}There are three levels of header text. The header level follows the number of 'h's in reference. Example, a level three header text is '$hhh'."},
                                         { "$b",     "Simple command. Bold text."},
@@ -1103,6 +1207,8 @@ namespace HCResourceLibraryApp.Layout
                                         { "$c",     "Simple command. Code text. Fixed width font, preserves space."},
                                         { "$hr",    "Simple command. Horizontal rule. Must be placed on its own line. May not be combined with other simple commands."},
                                         { "$nl",    "Simple command. New line."},
+                                        { "$d",     $"Simple command. Indent.{nxt}There are four indentation levels which relates to the number of 'd's in reference. Example, a level 2 indent is '$dd'.{nxt}An indentation is the equivalent of two spaces (' 'x2)."},
+                                        { "$r",    "Simple command. Regular. Used to negate the effects of preceding simple commands."},
                                         /// complex
                                         { "$url= 'link':'name'",     $"Complex command. Must be placed on its own line.{nxt}Creates a website link by using URL address 'link' to create a hyperlink text described as 'name'."},
                                         { "$list[or]",              $"Complex command. Must be placed on its own line.{nxt}Starts a list block. The optional parameter within square brackets, 'or', will initiate an ordered (numbered) list. Otherwise, an unordered list is initiated."},
@@ -1472,7 +1578,8 @@ namespace HCResourceLibraryApp.Layout
                             { $"{editorCmdDelete}#", "Deletes line number '#'."},
                             { $"{editorCmdUndo}", $"Undoes an available editor action in history (limit of {historyLimit - 1})."},
                             { $"{editorCmdRedo}", $"Redoes an available editor action in history (limit of {historyLimit - 1})."},
-                            { $"{editorCmdGroup}#,#,{{name}}", $"Allows labelling a sequence of lines with given value 'name'. Calling an existing group by 'name' will toggle its expansion. Name cannot contain '{DataHandlerBase.Sep}' character. To remove a group, precede the group name with '0,0'. Minimum size of '2' lines."}
+                            { $"{editorCmdGroup}#,#,{{name}}", $"Allows labelling a sequence of lines with given value 'name'. Calling an existing group by 'name' will toggle its expansion. Name cannot contain '{DataHandlerBase.Sep}' character. To remove a group, precede the group name with '0,0'. Minimum size of '2' lines."},
+                            { $"", "  BEWARE: Having groups too close to boundaries, too close to each other, or too small may unexpectedly and unrecoverably break them. In worst of cases, a file reversion is your best recovery."}
                         };
                         for (int i = 0; i < editorCmds.GetLength(0); i++)
                             Table(divStyle, $"{Ind24}{editorCmds[i, 0]}", divHelpChar, editorCmds[i, 1]);
@@ -2359,7 +2466,10 @@ namespace HCResourceLibraryApp.Layout
             }
             while (!exitFormatEditorQ);
 
-            
+
+            /// JUST A THOUGHT : Perhaps I should warn the user before they do an action that 'combusts' a group. A confirmation dialogue, like "are you sure about that?"
+
+
             Dbug.NudgeIndent(false);
             if (isUsingFormatterNo1Q)
                 historyActionNumber1 = historyActionNumber;
@@ -2368,6 +2478,770 @@ namespace HCResourceLibraryApp.Layout
             
             Dbug.Log($"RECORDING END");
             Dbug.EndLogging();
+        }
+        /// <summary>The formatter parser; where the satisfaction of creating a steam log is realized.</summary>
+        static string[] FormattingParser(string[] formatterLines, SFormatterLibRef libRef)
+        {
+            List<string> finalLines = new();
+            if (formatterLines.HasElements() && libRef.IsSetup())
+            {
+                Dbug.StartLogging("GenSteamLogPage.FormattingParser()");
+                Dbug.Log($"Received '{formatterLines.Length}' formatting lines; library reference is setup; Proceeding to parsing; ");
+
+                int skipLinesNum = 0;
+                bool? prevIfCondition = null;
+                const string nlRep = "\x2590nl ";
+                string heldListOrTable = null;
+                // parsing loop
+                for (int lx = 0; lx < formatterLines.Length; lx++)
+                {
+                    int lineNum = lx + 1;
+                    string line = formatterLines[lx], nextLine = null;
+                    if (lx + 1 < formatterLines.Length)
+                        nextLine = formatterLines[lx + 1];
+                    bool lineIsSkipped = skipLinesNum > 0, lineIsComment = line.TrimStart().StartsWith("//");
+
+                    /// line info
+                    Dbug.LogPart($"LINE {lineNum}  ::  {line}; ");
+                    Dbug.Log($" [{(lineIsSkipped ? $"skip'{skipLinesNum}" : "")}.{(lineIsComment ? "comment" : "")}]; ");
+
+                    if (skipLinesNum > 0)
+                        skipLinesNum--;
+
+                    Dbug.NudgeIndent(true);
+                    if (!lineIsComment && !lineIsSkipped)
+                    {
+                        List<string> lineOutcomes = new();
+
+                        // KEYWORD CONTROLS EXECUTIONS
+                        Dbug.NudgeIndent(true);
+                        if (line.StartsWith("if") || line.StartsWith("else") || line.StartsWith("repeat"))
+                        {
+                            /// identify and get keyword block(s), separate from rest of line
+                            Dbug.LogPart("Keyword Controls identified; Keyword Blocks --> ");
+                            string snipFullControl = line.RemoveFromPlainText(';').SnippetText(line[0].ToString(), ";", Snip.Inc, Snip.EndLast);
+                            string remainingLine = line.Substring(snipFullControl.Length);
+                            string[] keyControls = new string[2];
+
+                            if (snipFullControl.CountOccuringCharacter(';') == 2)
+                                keyControls = snipFullControl.LineBreak(';', true);
+                            else keyControls[0] = snipFullControl;
+
+                            foreach (string keyCon in keyControls)
+                                if (keyCon.IsNotNE())
+                                    Dbug.LogPart($"[{keyCon}]");
+                            Dbug.LogPart($"; Remaining Line [{remainingLine}]");
+                            Dbug.Log("; ");
+
+
+                            /// execute control keywords
+                            Dbug.NudgeIndent(true);
+                            bool? currentBoolCondition = null, repeatIfUseOpEqualQ = null;
+                            bool isJumpedQ = false, isNextedQ = false;
+                            int repeatCount = 0;
+                            string repeatIfVal1 = "", repeatIfVal2 = "";
+                            for (int kbx = 0; kbx < keyControls.Length; kbx++)
+                            {
+                                bool isFirstControlBlockQ = kbx == 0;
+                                string keyConBlock = keyControls[kbx];
+
+                                if (keyConBlock.IsNotNEW())
+                                {
+                                    keyConBlock = ReplaceLibRefs(keyConBlock.Trim());
+                                    Dbug.LogPart($"Executing Block {kbx + 1} [{keyConBlock}] -->  ");
+
+                                    /// if {value1} =/!= {value2}
+                                    ///     preceded by: if, else, repeat
+                                    if (keyConBlock.StartsWith("if"))
+                                    {
+                                        string argsIf = keyConBlock.SnippetText("if", ";");
+                                        string val1, val2;
+                                        bool useOpEqualQ = true;
+
+                                        string[] argParts = argsIf.Split('=');
+                                        if (argParts[0].EndsWith('!'))
+                                        {
+                                            useOpEqualQ = false;
+                                            argParts[0] = argParts[0][..^1];
+                                        }
+                                        val1 = argParts[0].Trim();
+                                        val2 = argParts[1].Trim();
+
+                                        bool conditionIf = useOpEqualQ ? val1 == val2 : val1 != val2;
+                                        Dbug.LogPart($"Comparison [{val1} / {(useOpEqualQ ? "=" : "!=")} / {val2}]; Result [");
+
+                                        if (isFirstControlBlockQ)
+                                        {
+                                            currentBoolCondition = conditionIf;
+                                            Dbug.LogPart(conditionIf.ToString());
+                                        }
+                                        else
+                                        {                                            
+                                            if (currentBoolCondition.HasValue)
+                                            {
+                                                Dbug.LogPart($"{conditionIf} && {currentBoolCondition.Value} -> {currentBoolCondition.Value && conditionIf}");
+                                                currentBoolCondition = conditionIf && currentBoolCondition.Value;
+                                            }
+                                            else
+                                            {
+                                                if (repeatCount > 0)
+                                                {
+                                                    Dbug.LogPart("DELAYED! to Repeat");
+                                                    repeatIfVal1 = val1;
+                                                    repeatIfVal2 = val2;
+                                                    repeatIfUseOpEqualQ = useOpEqualQ;
+                                                    //Dbug.LogPart($" --> {repeatIfVal1} / {(repeatIfUseOpEqualQ.Value ? "=" : "!=")} / {repeatIfVal2}");
+                                                }
+                                                else
+                                                {
+                                                    Dbug.LogPart(" ???? ");
+                                                    //currentBoolCondition = conditionIf;
+                                                    //Dbug.LogPart(conditionIf.ToString());
+                                                }
+                                            }
+                                        }
+                                        Dbug.LogPart("] ");
+                                    }
+
+                                    /// else;
+                                    if (keyConBlock.StartsWith("else") && isFirstControlBlockQ)
+                                    {
+                                        if (prevIfCondition.HasValue)
+                                        {
+                                            currentBoolCondition = !prevIfCondition.Value;
+                                            Dbug.LogPart($"Prev Condition [{prevIfCondition.Value}]; Result [{currentBoolCondition.Value}]");
+                                        }
+                                    }
+
+                                    /// repeat #;
+                                    if (keyConBlock.StartsWith("repeat") && isFirstControlBlockQ)
+                                    {
+                                        string argsRepeat = keyConBlock.SnippetText("repeat", ";");
+                                        if (argsRepeat.Contains('"'))
+                                        {
+                                            Dbug.LogPart("From Lib Ref");
+                                            argsRepeat = argsRepeat.Replace('\"', ' ');
+                                        }
+                                        else Dbug.LogPart("From Pure Number");
+                                        Dbug.LogPart("; Result ");
+
+                                        if (int.TryParse(argsRepeat, out int repeatNum))
+                                        {
+                                            repeatCount = repeatNum;
+                                            Dbug.LogPart($"[{repeatNum}]");
+                                        }
+                                        else Dbug.LogPart("[??]");
+                                    }
+
+                                    /// jump #;
+                                    ///     preceded by: if, else
+                                    if (keyConBlock.StartsWith("jump") && !isFirstControlBlockQ)
+                                    {
+                                        string argsJump = keyConBlock.SnippetText("jump", ";");
+                                        Dbug.LogPart("From Pure Number; Result ");
+                                        if (int.TryParse(argsJump, out int jumpLine))
+                                        {
+                                            skipLinesNum = jumpLine - lineNum - 1;
+                                            Dbug.LogPart($"[{jumpLine}] --> 1st Condition ");
+                                            if (currentBoolCondition.HasValue)
+                                            {
+                                                Dbug.LogPart($"[{currentBoolCondition.Value}] Result: ");
+                                                if (currentBoolCondition.Value)
+                                                {
+                                                    Dbug.LogPart($" Skip '{skipLinesNum}' line(s)");
+                                                    isJumpedQ = true;
+                                                }
+                                                else Dbug.LogPart(" No lines will be skipped");
+                                            }
+                                            else Dbug.LogPart("[??]");
+                                        }
+                                        else Dbug.LogPart("[??]");
+                                    }
+
+                                    /// next;
+                                    ///     preceded by: if, else, repeat
+                                    if (keyConBlock.StartsWith("next") && !isFirstControlBlockQ)
+                                    {
+                                        remainingLine = "";
+                                        if (currentBoolCondition.HasValue)
+                                        {
+                                            Dbug.LogPart($"1st Condition [{currentBoolCondition.Value}]; Result: ");
+                                            if (currentBoolCondition.Value)
+                                            {
+                                                Dbug.LogPart("Utilize next line, then --> ");
+                                                isNextedQ = true;
+                                            }
+                                            Dbug.LogPart("Skip next line");
+                                        }
+                                        else
+                                        {
+                                            Dbug.LogPart("Result: Utilize next line and then skip it");
+                                            isNextedQ = true;
+                                        }
+                                        skipLinesNum = 1;
+                                    }
+
+                                    Dbug.Log("; ");
+                                }
+
+                                /// final edit choices here
+                                if (!isFirstControlBlockQ)
+                                {
+                                    /// conditions and remaining line
+                                    Dbug.LogPart($"Conditional Outcome [");
+                                    if (currentBoolCondition.HasValue)
+                                    {
+                                        Dbug.LogPart(currentBoolCondition.Value ? "Use Remaining" : "Exempt Remaining");
+                                        if (!currentBoolCondition.Value)
+                                            remainingLine = "";
+                                    }
+                                    else Dbug.LogPart("N/a");
+                                    if (isJumpedQ)
+                                        remainingLine = "";
+                                    if (isNextedQ)
+                                        remainingLine = nextLine;
+                                    Dbug.Log($"]; Jump'ed? [{isJumpedQ}]; Next'ed? [{isNextedQ}]; Final Remaining Line [{remainingLine}]");
+
+                                    /// repeat execute
+                                    if (remainingLine.IsNotNEW())
+                                    {
+                                        if (repeatCount > 0)
+                                        {
+                                            Dbug.LogPart($"Execution Delayed --> Repeat remaining line '{repeatCount}' times");
+
+                                            int countRepeatsUnPrinted = 0;
+                                            for (int rx = 1; rx <= repeatCount; rx++)
+                                            {
+                                                string condRemainingLine = remainingLine;
+                                                if (repeatIfUseOpEqualQ.HasValue)
+                                                {
+                                                    string repVal1 = ReplaceLibRefs(repeatIfVal1.Replace("#", $"{rx}"));
+                                                    string repVal2 = ReplaceLibRefs(repeatIfVal2.Replace("#", $"{rx}"));
+
+                                                    if (repeatIfUseOpEqualQ.Value)
+                                                        condRemainingLine = repVal1 == repVal2 ? remainingLine : "";
+                                                    else condRemainingLine = repVal1 != repVal2 ? remainingLine : "";
+                                                }
+
+                                                if (condRemainingLine.IsNotNE())
+                                                    lineOutcomes.Add(ReplaceLibRefs(condRemainingLine.Replace("#", $"{rx}")));
+                                                else countRepeatsUnPrinted++;
+                                            }
+
+                                            if (repeatIfUseOpEqualQ.HasValue)
+                                                Dbug.LogPart($"; With Condition [IF {repeatIfVal1} {(repeatIfUseOpEqualQ.Value ? "=" : "!=")} {repeatIfVal2}] --> Exempted '{countRepeatsUnPrinted}' lines");
+                                            Dbug.Log("; ");
+
+                                            repeatIfUseOpEqualQ = null;
+                                            repeatIfVal1 = "";
+                                            repeatIfVal2 = "";
+                                        }
+                                        else lineOutcomes.Add(ReplaceLibRefs(remainingLine));
+                                    }
+                                }
+                            }
+                            Dbug.NudgeIndent(false);
+
+                            prevIfCondition = currentBoolCondition;
+                        }
+                        else
+                        {
+                            prevIfCondition = null;
+                            lineOutcomes.Add(line);
+                        }
+                        Dbug.NudgeIndent(false);
+
+
+                        // STEAM FORMAT REFERENCES  &&  FINAL LINE MODIFICATIONS
+                        if (lineOutcomes.HasElements())
+                        {
+                            // Steam Format References
+                            Dbug.NudgeIndent(true);
+                            bool searchForSteamRefs = line.RemovePlainText().Contains("$");
+                            if (!searchForSteamRefs && nextLine.IsNotNE())
+                                searchForSteamRefs = nextLine.RemovePlainText().Contains("$");
+                            
+                            if (searchForSteamRefs)
+                            {
+                                List<string> newLineOutcomes = new();
+                                Dbug.Log("Searching for Steam Format References in lines; ");
+
+                                if (lineOutcomes.HasElements())
+                                {
+                                    for (int sfx = 0; sfx < lineOutcomes.Count; sfx++)
+                                    {
+                                        string keyLine = ReplaceLibRefs(lineOutcomes[sfx]);
+                                        string keyLineNum = $"{lineNum}.{sfx + 1}";
+                                        Dbug.LogPart($"N-LINE {keyLineNum}  ::  {keyLine}; ");
+                                        Dbug.Log($"[{(heldListOrTable.IsNE() ? "" : $"held.{(heldListOrTable.Contains("list") ? "L" : "T")}")}]; ");
+
+                                        Dbug.NudgeIndent(true);
+                                        string[] steamFormatLines = ReplaceSteamRefs(keyLine, out heldListOrTable, heldListOrTable);
+                                        if (steamFormatLines.HasElements())
+                                        {
+                                            int countLine = 0;
+                                            foreach (string sfLine in steamFormatLines)
+                                            {
+                                                countLine++;
+                                                Dbug.Log($"PART {countLine, -2}  ::  {sfLine.Replace("\n", nlRep)}; ");
+                                                newLineOutcomes.Add(sfLine);
+                                            }
+                                        }
+                                        else Dbug.Log(" ??? ");
+                                        Dbug.NudgeIndent(false);
+                                    }
+                                }
+                                else Dbug.Log("No lines received post-keywords lines; ");
+
+                                if (newLineOutcomes.HasElements())
+                                {
+                                    lineOutcomes = newLineOutcomes;
+                                    Dbug.Log("Updated Line Outcomes to Steam Format edits; ");
+                                }
+                            }
+                            Dbug.NudgeIndent(false);
+
+
+                            
+                            // Final modifications
+                            for (int flx = 0; flx < lineOutcomes.Count; flx++)
+                            {
+                                string subLine = ReplaceLibRefs(lineOutcomes[flx]).RemovePlainText(true);
+                                subLine = subLine.Replace("&00;", "\"");
+
+                                string subLineNum = $"{lineNum} {IntToAlphabet(flx % 26)}{(flx / 26 == 0 ? "" : (flx / 26) + 1)}";
+                                Dbug.Log($"FINAL LINE {subLineNum}  ::  {subLine.Replace("\n", nlRep)}; ");
+
+                                finalLines.Add(subLine);
+                            }
+                        }
+                        Dbug.Log("- - -");
+                    }
+                    Dbug.NudgeIndent(false);
+                }
+                Dbug.EndLogging();
+
+
+
+                // METHODS FOR PARSER
+                string ReplaceLibRefs(string line)
+                {
+                    string editedLine = line;
+                    if (line.IsNotNE() && (libRef.IsSetup() || Program.isDebugVersionQ))
+                    {
+                        editedLine = "";
+                        string lValue = "";
+                        string[] lineParts = line.LineBreak(' ');
+                        foreach (string linePart in lineParts)
+                        {
+                            if (linePart.IsNotNE())
+                            {
+                                string reference = linePart.RemovePlainText().Trim();
+                                if (reference.Contains("{") && reference.Contains("}"))
+                                {
+                                    if (reference.Contains(":"))
+                                    {
+                                        DecodedSection? secType = null;
+                                        int entNum = 0;
+                                        LibRefProp? prop = null;
+
+                                        string[] refParts = reference.SnippetText("{", "}").Split(':');
+                                        if (refParts[1].Contains(','))
+                                        {
+                                            string[] refParams = refParts[1].Split(',');
+                                            if (int.TryParse(refParams[0], out int theEntNum))
+                                                entNum = theEntNum;
+                                            prop = refParams[1] switch
+                                            {
+                                                "ids" => LibRefProp.Ids,
+                                                "name" or "optionalName" => LibRefProp.Name,
+                                                "relatedID" or "id" => LibRefProp.RelatedID,
+                                                "relatedContent" => LibRefProp.RelatedName,
+                                                "changeDesc" => LibRefProp.ChangeDesc,
+                                                "key" => LibRefProp.Key,
+                                                "definition" => LibRefProp.Definition,
+                                                _ => null
+                                            };
+
+                                            /// Lib Ref props
+                                            /// Added --> ids, name
+                                            /// Addit --> ids, optionalName, relatedContent, relatedID
+                                            /// Updated --> changeDesc, id, relatedContent
+                                            /// Legend --> definition, key
+                                            /// Summary --> 
+                                            ///
+                                        }
+                                        else if (int.TryParse(refParts[1], out int theEntNum))
+                                        {
+                                            entNum = theEntNum;
+                                            prop = LibRefProp.SummaryPart;
+                                        }
+                                        secType = refParts[0] switch
+                                        {
+                                            "Added" => DecodedSection.Added,
+                                            "Addit" => DecodedSection.Additional,
+                                            "Updated" => DecodedSection.Updated,
+                                            "Legend" => DecodedSection.Legend,
+                                            "Summary" => DecodedSection.Summary,
+                                            _ => null
+                                        };
+
+
+                                        if (secType.HasValue && entNum > 0)
+                                        {
+                                            if (prop.HasValue)
+                                                lValue = libRef.GetPropertyValue(secType.Value, entNum, prop.Value);
+                                            else lValue = libRef.GetPropertyValue(secType.Value, entNum, LibRefProp.SummaryPart);
+                                        }
+                                    }
+                                    else
+                                    {
+                                        reference = reference.RemoveFromPlainText('{').SnippetText("{", "}", Snip.Inc);
+                                        string refValue = reference switch
+                                        {
+                                            "{Version}" => libRef.Version,
+                                            "{AddedCount}" => libRef.AddedCount,
+                                            "{AdditCount}" => libRef.AdditCount,
+                                            "{TTA}" => libRef.TTA,
+                                            "{UpdatedCount}" => libRef.UpdatedCount,
+                                            "{LegendCount}" => libRef.LegendCount,
+                                            "{SummaryCount}" => libRef.SummaryCount,
+                                            _ => "",
+                                        };
+
+                                        if (refValue.IsNotNE())
+                                            lValue = refValue;
+                                    }
+
+                                    /// generally for debug
+                                    if (Program.isDebugVersionQ && !libRef.IsSetup())
+                                        lValue = "{libVal}";
+                                }
+
+                                if (lValue.IsNotNEW())
+                                    lValue = $"\"{lValue}\"";
+
+                                if (lValue.IsNotNEW())
+                                {
+                                    editedLine += linePart.Replace(reference, lValue);
+                                    lValue = "";
+                                }
+                                else editedLine += linePart;
+                            }
+                        }     
+                    }
+                    return editedLine;
+                }
+                string[] ReplaceSteamRefs(string line, out string heldListOrTable, string listOrTableTag = "")
+                {
+                    heldListOrTable = listOrTableTag;
+
+                    List<string> editedLines = new();
+                    string tagsBackPile = "", tagsFrontPile = "";
+                    if (line.IsNotNEW())
+                    {
+                        string[] lineParts = line.LineBreak('$');
+                        List<string> finalLineParts = new();
+                        for (int sx = 0; sx < lineParts.Length; sx++)
+                        {
+                            /** STEAM FORMAT REFERENCE SYNTAX - revised
+                            # S T E A M   F O R M A T   R E F E R E N C E S
+                            `    Steam format references are styling element calls that will affect the look of any text or value placed after it on
+                            ▌    log generation.
+                            ▌    Simple command references may be combined with other simple commands unless otherwise unpermitted. Simple commands
+                            ▌    affect only one value that follows them.
+                            ▌    Complex commands require a text or value to be placed in a described parameter surrounded by single quote characters
+                            ▌    (').
+
+                            SYNTAX                          :  OUTCOME
+                            --------------------------------:------------------------------------------------------------------------------------------
+                                $h                            :  Simple command. Header text. Must be placed at the start of the line. May not be
+                                                            :  combined with other simple commands.
+                                                            :    There are three levels of header text. The header level follows the number of 'h's in
+                                                            :  reference. Example, a level three header text is '$hhh'.
+                            --------------------------------:------------------------------------------------------------------------------------------
+                                $b                            :  Simple command. Bold text.
+                            --------------------------------:------------------------------------------------------------------------------------------
+                                $u                            :  Simple command. Underlined text.
+                            --------------------------------:------------------------------------------------------------------------------------------
+                                $i                            :  Simple command. Italicized text.
+                            --------------------------------:------------------------------------------------------------------------------------------
+                                $s                            :  Simple command. Strikethrough text.
+                            --------------------------------:------------------------------------------------------------------------------------------
+                                $sp                           :  Simple command. Spoiler text.
+                            --------------------------------:------------------------------------------------------------------------------------------
+                                $np                           :  Simple command. No parse. Doesn't parse steam format tags when generating steam log.
+                            --------------------------------:------------------------------------------------------------------------------------------
+                                $c                            :  Simple command. Code text. Fixed width font, preserves space.
+                            --------------------------------:------------------------------------------------------------------------------------------
+                                $hr                           :  Simple command. Horizontal rule. Must be placed on its own line. May not be combined
+                                                            :  with other simple commands.
+                            --------------------------------:------------------------------------------------------------------------------------------
+                                $nl                           :  Simple command. New line.
+                            --------------------------------:------------------------------------------------------------------------------------------
+                                $d                            :  Simple command. Indent.
+                                                            :    There are four indentation levels which relates to the number of 'd's in reference.
+                                                            :  Example, a level 2 indent is '$dd'.
+                                                            :    An indentation is the equivalent of two spaces (' 'x2).
+                            --------------------------------:------------------------------------------------------------------------------------------
+                                $r                            :  Simple command. Regular. Used to forcefully demark the end of preceding simple commands.
+                            --------------------------------:------------------------------------------------------------------------------------------
+                                $url='link':'name'            :  Complex command. Must be placed on its own line.
+                                                            :    Creates a website link by using URL address 'link' to create a hyperlink text
+                                                            :  described as 'name'.
+                            --------------------------------:------------------------------------------------------------------------------------------
+                                $list[or]                     :  Complex command. Must be placed on its own line.
+                                                            :    Starts a list block. The optional parameter within square brackets, 'or', will
+                                                            :  initiate an ordered (numbered) list. Otherwise, an unordered list is initiated.
+                            --------------------------------:------------------------------------------------------------------------------------------
+                                $*                            :  Simple command. Must be placed on its own line.
+                                                            :    Used within a list block to create a list item. Simple commands may follow to style
+                                                            :  the list item value or text.
+                            --------------------------------:------------------------------------------------------------------------------------------
+                                $q='author':'quote'           :  Complex command. Must be placed on its own line.
+                                                            :    Generates a quote block that will reference an 'author' and display their original
+                                                            :  text 'quote'.
+                            --------------------------------:------------------------------------------------------------------------------------------
+                                $table[nb,ec]                 :  Complex command. Must be placed on its own line.
+                                                            :    Starts a table block. There are two optional parameters within square brackets:
+                                                            :  parameter 'nb' will generate a table with no borders, parameter 'ec' will generate a
+                                                            :  table with equal cells.
+                            --------------------------------:------------------------------------------------------------------------------------------
+                                $th='clm1','clm2'             :  Complex command. Must be placed on its own line.
+                                                            :    Used within a table block to create a table header row. Separate multiple columns of
+                                                            :  data with ','. Must follow immediately after a table block has started.
+                            --------------------------------:------------------------------------------------------------------------------------------
+                                $td='clm1','clm2'             :  Complex command. Must be placed on its own line.
+                                                            :    Used within a table block to create a table data row. Separate multiple columns of
+                                                            :  data with ','.
+                            --------------------------------:------------------------------------------------------------------------------------------
+
+
+                            STEAM FORMAT TAGS
+                            ==================
+                            $h, $hh, $hhh       --> [h1][/h1]   [h2][/h2]   [h3][/h3]
+                            $b, $u, $i, $s      --> [b][/b]     [u][/u]     [i][/i]     [strike][/strike]
+                            $sp, $np, $c        --> [spoiler][/spoiler]     [noparse][/noparse]     [code][/code]
+                            $hr, $nl            --> [hr][/hr]       \n
+                            $d (any), $r        --> {Ind{1-4}4}     {null}
+                            $*                  --> [*]
+                            $url                --> [url={link}]{name}[/url]
+                            $list[or]           --> [list][/list]   [olist][/olist]
+                            $q                  --> [quote={author}]{quote}[/quote]
+                            $table[ec,nb]       --> [table equalcells=1 noborder=1][/table]     
+                            $th                 --> [tr] [th]{clm1}[/th] [th]{clm2}[/th] [/tr]
+                            $td                 --> [tr] [td]{clm1}[/td] [td]{clm2}[/td] [/tr]
+
+                             **/
+
+                            string lPart = lineParts[sx];
+                            bool keepResultsSeparatedQ = false, isEndQ = sx + 1 >= lineParts.Length;
+                            bool releaseHeldListOrTableQ = true;
+                            string newHeldListOrTable = "";
+
+                            /// no steam references in 'this' part
+                            if (!lPart.RemovePlainText().Contains('$'))
+                                finalLineParts.Add(lPart.RemovePlainText(true));
+
+                            /// complex 
+                            ///     list[]  table[]
+                            else if (lPart.RemovePlainText().Contains("["))
+                            {
+                                string[] complexParts = lPart.LineBreak('[');
+                                if (complexParts[0].Contains("table"))
+                                {
+                                    newHeldListOrTable = "table";
+                                    string tableParams = "";
+                                    if (complexParts[1].Contains("ec"))
+                                        tableParams += " equalcells=1";
+                                    if (complexParts[1].Contains("nb"))
+                                        tableParams += " noborder=1";
+
+                                    finalLineParts.Add($"\n[{newHeldListOrTable}{tableParams}]");
+                                }
+                                else
+                                {
+                                    if (complexParts[1].Contains("or"))
+                                        newHeldListOrTable = "olist";
+                                    else newHeldListOrTable = "list";
+
+                                    finalLineParts.Add($"\n[{newHeldListOrTable}]");
+                                }
+
+                                /// for now
+                                //finalLineParts.Add(lPart);
+                            }
+
+                            /// complex others
+                            ///     url=  q=  th=  td=
+                            else if (lPart.RemovePlainText().Contains("="))
+                            {
+                                string[] complexParts = lPart.LineBreak('=', true);
+                                string refTag = complexParts[0].Substring(1, complexParts[0].Length - 2);
+                                string partArgs = complexParts[1];
+
+                                /// url= :  q= : 
+                                if (partArgs.RemovePlainText().Contains(":"))
+                                {
+                                    string[] arguments = partArgs.LineBreak(':');
+                                    arguments[0] = arguments[0].RemovePlainText(true);
+                                    arguments[1] = arguments[1].RemovePlainText(true);
+
+                                    if (refTag == "q")
+                                        finalLineParts.Add($"[quote={arguments[0]}]{arguments[1]}[/quote]");
+                                    else finalLineParts.Add($"[url={arguments[0]}]{arguments[1]}[/url]");
+                                }
+                                /// th= ,  td= , 
+                                else
+                                {
+                                    string[] clms = new string[1];
+                                    if (partArgs.RemovePlainText().Contains(','))
+                                        clms = partArgs.LineBreak(',', false, true);
+                                    else clms[0] = partArgs;
+
+                                    keepResultsSeparatedQ = clms.Length > 1;
+                                    for (int cx = 0; cx < clms.Length; cx++)
+                                    {
+                                        bool isFirstClmQ = cx == 0, isLastClmQ = cx == clms.Length - 1;
+
+                                        string rowText = "";
+                                        if (isFirstClmQ)
+                                            rowText += "[tr]";
+
+                                        rowText += $"{Ind14}[{refTag}]{clms[cx].RemovePlainText(true)}[/{refTag}]{Ind14}";
+
+                                        if (isLastClmQ)
+                                            rowText += "[/tr]";
+
+                                        if (rowText.IsNotNE())
+                                            finalLineParts.Add($"\n{Ind24}{rowText}");
+                                    }
+                                    releaseHeldListOrTableQ = false;
+                                }
+                            }
+
+                            /// simple commands
+                            else
+                            {
+                                /// own liners
+                                ///     $h  $hr
+                                if (lPart.StartsWith("$h"))
+                                {
+                                    if (lPart.StartsWith("$hr"))
+                                        finalLineParts.Add("\n[hr][/hr]\n");
+                                    else
+                                    {
+                                        string headerRef = lPart.RemovePlainText();
+                                        int headerLevel = headerRef.CountOccuringCharacter('h');
+
+                                        finalLineParts.Add($"\n[h{headerLevel}]{lPart.RemovePlainText(true)}[/h{headerLevel}]\n");
+                                    }
+                                }
+                                /// all others
+                                else
+                                {
+                                    string simRef = lPart.RemovePlainText();
+                                    string tag = simRef.Trim() switch 
+                                    {
+                                        "$s" => "strike",
+                                        "$sp" => "spoiler",
+                                        "$np" => "noparse",
+                                        "$c" => "code",
+                                        _ => simRef.Replace("$", "")
+                                    };
+                                    bool isNewlineQ = tag == "nl", isListItemQ = tag == "*", isIndentQ = tag.StartsWith("d"), isRegularQ = tag.Equals("r");
+
+                                    /// IF value and simple steam format: ...; ELSE (simple steam format only) 
+                                    if (lPart.Contains('"'))
+                                    {
+                                        if (isListItemQ || isNewlineQ || isIndentQ)
+                                        {
+                                            if (isListItemQ)
+                                                finalLineParts.Add($"\n{Ind24}[{tag}]{lPart.RemovePlainText(true)}");
+                                            else if (isNewlineQ)
+                                                finalLineParts.Add($"\n{lPart.RemovePlainText(true)}");
+                                            else finalLineParts.Add($"{tag.Replace("d", "  ")}{lPart.RemovePlainText(true)}");
+                                        }
+                                        else
+                                        {
+                                            if (isRegularQ)
+                                                finalLineParts.Add($"{lPart.RemovePlainText(true)}");
+                                            else finalLineParts.Add($"{tagsFrontPile}[{tag}]{lPart.RemovePlainText(true)}[/{tag}]{tagsBackPile}");
+
+                                            tagsBackPile = "";
+                                            tagsFrontPile = "";
+                                        }
+                                    }
+                                    else
+                                    {
+                                        if (isListItemQ || isNewlineQ || isIndentQ)
+                                        {
+                                            if (isListItemQ)
+                                                finalLineParts.Add($"\n{Ind24}[{tag}]");
+                                            else if (isNewlineQ)
+                                                finalLineParts.Add("\n");
+                                            else finalLineParts.Add($"{tag.Replace("d", "  ")}");
+                                        }
+                                        else
+                                        {
+                                            //if (!isRegularQ)
+                                            //    finalLineParts.Add($"[{tag}]");
+                                            //tagsBackPile = $"[/{tag}]" + tagsBackPile;
+
+                                            if (!isRegularQ)
+                                            {
+                                                tagsFrontPile += $"[{tag}]";
+                                                tagsBackPile = $"[/{tag}]" + tagsBackPile;
+                                            }
+                                            else
+                                            {
+                                                tagsFrontPile = "";
+                                                tagsBackPile = "";                                                
+                                            }
+                                        }
+                                    }
+
+                                    if (isListItemQ)
+                                        releaseHeldListOrTableQ = false;
+                                }
+                            }
+
+                            // string compile per parts
+                            if (finalLineParts.HasElements() && isEndQ)
+                            {
+                                string newLine = "";
+                                foreach (string finLinP in finalLineParts)
+                                {
+                                    if (finLinP.IsNotNE())
+                                    {
+                                        if (!keepResultsSeparatedQ)
+                                            newLine += $"\"{finLinP}\"";
+                                        else editedLines.Add($"\"{finLinP}\"");
+                                    }
+                                }
+                                if (!keepResultsSeparatedQ && newLine.IsNotNE())
+                                    editedLines.Add(newLine);
+                            }
+                            /// releasing held lists or tables  //  assigning new held lists or tables
+                            if (isEndQ)
+                            {
+                                if (releaseHeldListOrTableQ && heldListOrTable.IsNotNE())
+                                {
+                                    editedLines.Insert(0, $"\"\n[/{heldListOrTable}]\n\"");
+                                    heldListOrTable = "";
+                                }
+                                if (newHeldListOrTable.IsNotNEW())
+                                    heldListOrTable = newHeldListOrTable;
+                            }
+                        }
+                    }
+                    else editedLines.Add(line);
+
+                    return editedLines.ToArray();
+                }
+            }
+
+            return finalLines.ToArray();
         }
     }
 }

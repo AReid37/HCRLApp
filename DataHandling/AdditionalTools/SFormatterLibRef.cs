@@ -134,13 +134,9 @@ namespace HCResourceLibraryApp.DataHandling
                         Dbug.NudgeIndent(true);
                         foreach (LegendData legData in verLogDetails.Legends)
                         {
-                            string keyNum = "";
-                            foreach (char keyChar in legData.Key) /// i = 19    |  ^ = -26   |  tb = 3012
-                                keyNum += Extensions.CharScore(keyChar).ToString();
-
-                            string legValue = $"{legData.Key}{PropSep}{legData[0]}{PropSep}{keyNum}";
+                            string legValue = $"{legData.Key}{PropSep}{legData[0]}";
                             _legend.Add(legValue);
-                            Dbug.Log($"New entry :: {legValue}   [key/definition/keyNum]");
+                            Dbug.Log($"New entry :: {legValue}   [key/definition]");
                         }
                         Dbug.NudgeIndent(false);
 
@@ -296,7 +292,7 @@ namespace HCResourceLibraryApp.DataHandling
             dbgStr += $";  --> Returned value :: ";
             dbgStr += (propValue.IsNE() ? (propValue == null ? "<null>" : "<empty>") : propValue) + "; ";
 
-            Dbug.SingleLog("SFormatterLibRef.GetPropertyValue()", dbgStr);
+            //Dbug.SingleLog("SFormatterLibRef.GetPropertyValue()", dbgStr);
             return propValue;
         }
         /// <returns>A boolean value determining whether this instance has been provided with version log information.</returns>
