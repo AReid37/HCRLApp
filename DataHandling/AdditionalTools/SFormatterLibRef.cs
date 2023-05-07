@@ -29,6 +29,8 @@ namespace HCResourceLibraryApp.DataHandling
 
         #region fields/props
         // FIELDS
+        /// <summary>A value that substitutes any ver log data that is null or empty.</summary>
+        public const string ValIsNE = "/?";
         const string PropSep = DataHandlerBase.Sep;
         readonly string _version, _tta;
         readonly int _countAdded, _countAddit, _countUpdated, _countLegend, _countSummary;
@@ -291,8 +293,10 @@ namespace HCResourceLibraryApp.DataHandling
 
             dbgStr += $";  --> Returned value :: ";
             dbgStr += (propValue.IsNE() ? (propValue == null ? "<null>" : "<empty>") : propValue) + "; ";
-
             //Dbug.SingleLog("SFormatterLibRef.GetPropertyValue()", dbgStr);
+
+            if (propValue.IsNE())
+                propValue = ValIsNE;
             return propValue;
         }
         /// <returns>A boolean value determining whether this instance has been provided with version log information.</returns>

@@ -83,8 +83,8 @@ namespace HCResourceLibraryApp.DataHandling
             {
                 if (fLine.IsNotNEW())
                 {
-                    const string sComment = "//", sEsc1 = "&00;", sKeyw_if = "if", sKeyw_repeat = "repeat", sKeyw_else = "else", sKeyw_jump = "jump", sKeyw_next = "next";
-                    const char cPlain = '"', cEscStart = '&', cEscEnd = ';', cOpEqual = '=', cOpUnequal = '!', cRefSteam = '$', cRefLibOpen = '{', cRefLibClose = '}', cRepKey = '#';
+                    const string sComment = "//", sEsc1 = "&00;", sEsc2 = "&01;", sKeyw_if = "if", sKeyw_repeat = "repeat", sKeyw_else = "else", sKeyw_jump = "jump", sKeyw_next = "next";
+                    const char cPlain = '"', cEscStart = '&', cEscEnd = ';', cOpEqual = '=', cOpUnequal = '!', cOpGreat = '>', cOpLess = '<', cRefSteam = '$', cRefLibOpen = '{', cRefLibClose = '}', cRepKey = '#';
 
                     Dbug.Log($"Recieved '{fLine}'; Numbering types; ");
                     /// numbering
@@ -136,12 +136,12 @@ namespace HCResourceLibraryApp.DataHandling
                                 typeNum = 0;
 
                                 /// operator[6]
-                                if (fChar == cOpEqual)
+                                if (fChar == cOpEqual || fChar == cOpGreat || fChar == cOpLess)
                                 {
                                     typeNum = 6;
                                     Dbug.LogPart($"op; ");
                                 }
-                                if (fChar == cOpUnequal && GetStringFromChars(fx, 2) == cOpUnequal.ToString() + cOpEqual.ToString())
+                                if (fChar == cOpUnequal && GetStringFromChars(fx, 2) == $"{cOpUnequal}{cOpEqual}")
                                 {
                                     typeNum = 6;
                                     Dbug.LogPart($"op; ");
@@ -246,8 +246,11 @@ namespace HCResourceLibraryApp.DataHandling
                                 /// escape[3]
                                 if (nPlainTQ)
                                 {
-                                    if (fChar == cEscStart && GetStringFromChars(fx, sEsc1.Length) == sEsc1)
-                                        nEscQ = true;
+                                    if (fChar == cEscStart)
+                                    {
+                                        if (GetStringFromChars(fx, sEsc1.Length) == sEsc1 || GetStringFromChars(fx, sEsc2.Length) == sEsc2)
+                                            nEscQ = true;
+                                    }
 
                                     if (nEscQ)
                                     {
@@ -259,11 +262,14 @@ namespace HCResourceLibraryApp.DataHandling
                                         nEscQ = false;
                                 }
                                 
-                                /// repeat key (as operator[6])
-                                if (fChar == cRepKey && keywRepeatExistsQ)
+                                /// repeat key (as operator[6]) [over all others types]
+                                if (fChar == cRepKey)
                                 {
-                                    Dbug.LogPart("op; ");
-                                    typeNum = 6;
+                                    if (keywRepeatExistsQ || !nPlainTQ)
+                                    {
+                                        Dbug.LogPart("op (repKey); ");
+                                        typeNum = 6;
+                                    }
                                 }
                             }
                         }
@@ -527,20 +533,71 @@ namespace HCResourceLibraryApp.DataHandling
 
             errors ??= new List<SFormatterInfo>();
             errors.Clear();
-
             bool identifyErrorStatesQ = true && Program.isDebugVersionQ;
-            if (lineData.HasElements())
+            if (lineData.HasElements()) 
             {
                 for (int lx = 0; lx < lineData.Length; lx++)
                 {
-                    string line = lineData[lx], prevLine = null, nextLine = null;
+                    string line = lineData[lx], prevLine = "", nextLine = "", prev2ndLine = "", next2ndLine = "";
+                    /// next lines and previous lines ignore comments (source lines only)
                     if (lx > 0)
-                        prevLine = lineData[lx - 1];
+                    {
+                        /// searches until 1st previous source line
+                        int backPedalCount = 1;
+                        while (lx - backPedalCount >= 0 && prevLine.IsNEW())
+                        {
+                            string aPreviousLine = lineData[lx - backPedalCount];
+                            if (!aPreviousLine.TrimStart().StartsWith("//"))
+                                prevLine = aPreviousLine;
+                            backPedalCount++;
+                        }
+                        /// searches until 2nd previous source line
+                        if (prevLine.IsNotNEW())
+                        {
+                            while (lx - backPedalCount >= 0 && prev2ndLine.IsNEW())
+                            {
+                                string aPreviousLine = lineData[lx - backPedalCount];
+                                if (!aPreviousLine.TrimStart().StartsWith("//"))
+                                    prev2ndLine = aPreviousLine;
+                                backPedalCount++;
+                            }
+                        }
+
+                        //prevLine = lineData[lx - 1];
+                        //if (lx > 1)
+                        //    prev2ndLine = lineData[lx - 2];
+                    }
                     if (lx + 1 < lineData.Length)
-                        nextLine = lineData[lx + 1];
+                    {
+                        /// searches until 1st next source line
+                        int frontPedalCount = 1;
+                        while (lx + frontPedalCount < lineData.Length && nextLine.IsNEW())
+                        {
+                            string aNextLine = lineData[lx + frontPedalCount];
+                            if (!aNextLine.TrimStart().StartsWith("//"))
+                                nextLine = aNextLine;
+                            frontPedalCount++;
+                        }
+                        /// searches until 2nd next source line
+                        if (nextLine.IsNotNEW())
+                        {
+                            while (lx + frontPedalCount < lineData.Length && next2ndLine.IsNEW())
+                            {
+                                string aNextLine = lineData[lx + frontPedalCount];
+                                if (!aNextLine.TrimStart().StartsWith("//"))
+                                    next2ndLine = aNextLine;
+                                frontPedalCount++;
+                            }
+                        }
+
+                        //nextLine = lineData[lx + 1];
+                        //if (lx + 2 < lineData.Length)
+                        //    next2ndLine = lineData[lx + 2];
+                    }                    
                     string noPlainLine = RemovePlainText(line);
                     int lineNum = lx + 1;
                     List<string> unexpectedTokenII = new();
+
 
                     // ~~  GENERAL SYNTAX  ~~
                     /** GENERAL SYNTAX AND EXCEPTIONS - revised and errors debrief
@@ -696,11 +753,13 @@ namespace HCResourceLibraryApp.DataHandling
                             . Occurs when the operator following the first value of the condition is missing
                                 if "a"      --> Operator expected 
                         - [G015]     Unidentified operator
-                            . Occurs when an operator (either '=' or '!=') does not follow after the first value
+                            . Occurs when a valid operator does not follow after the first value
                                 if "a" ;    --> Unidentified operator
                         - [G016]     Second comparable value expected
                             . Occurs when the second value of the condition is missing or is not a value
                                 if "a" =    --> Second comparable value expected
+                        - [G081]    Operator '{operator}' only compares numeric values
+                            . Occurs when any operator including '<' or '>' is used with a non-numerical value (pure number or valid library reference)
 
                         ELSE KEYWORD
                         - [G017]     Missing preceding 'if' control line
@@ -1038,9 +1097,9 @@ namespace HCResourceLibraryApp.DataHandling
                         
                          == esc ==
                         - [G003]     Unidentified escape character '{text}'
-                            . Occurs when the plain text escape character does not follow the right format (&00;)
+                            . Occurs when the plain text escape character does not follow the right format
                                 "&0;"   --> Unidentified escape character '&0;'
-                                "&01;"  --> Unidentified escape character '&01;'       ****/
+                                "&02;"  --> Unidentified escape character '&02;'       ****/
                         for (int plainx = 0; plainx < 3; plainx++)
                         {
                             errorMessage = null;
@@ -1064,12 +1123,6 @@ namespace HCResourceLibraryApp.DataHandling
                                 case 1:
                                     if (line.CountOccuringCharacter('"') % 2 == 1)
                                     {
-                                        //string plainPart = line.SnippetText("\"", line[^1].ToString(), Snip.Inc, Snip.EndAft);
-                                        //if (line.EndsWith(plainPart) && plainPart != null)
-                                        //{
-
-                                        //}
-
                                         errorMessage = "Closing double quotation expected";
                                         errorCode = "G002"; /// Ex|  "butter  |  shea "butter  |  "shea "butter"
                                     }
@@ -1094,8 +1147,8 @@ namespace HCResourceLibraryApp.DataHandling
                                                         string partPEsc = possibleEsc.SnippetText("&", ";", Snip.EndAft);
                                                         if (partPEsc.IsNE())
                                                             token = "&;"; /// Ex| "&;"
-                                                        else if (partPEsc != "00")
-                                                            token = $"&{partPEsc};"; /// Ex| "& ;"  |  "&01;"  |  "&34;"  |  "&ab;" 
+                                                        else if (partPEsc != "00" && partPEsc != "01")
+                                                            token = $"&{partPEsc};"; /// Ex| "& ;"  |  "&02;"  |  "&34;"  |  "&ab;" 
                                                     }
                                                 }
                                             }
@@ -1348,6 +1401,8 @@ namespace HCResourceLibraryApp.DataHandling
                             - [G016]     Second comparable value expected
                                 . Occurs when the second value of the condition is missing or is not a value
                                     if "a" =    --> Second comparable value expected
+                            - [G081]    Operator '{operator}' only compares numeric values
+                                . Occurs when any operator including '<' or '>' is used with a non-numerical value (pure number or valid library reference)
 
                             ELSE KEYWORD
                             - [G017]     Missing preceding 'if' control line
@@ -1378,7 +1433,9 @@ namespace HCResourceLibraryApp.DataHandling
                             - [G023]    Missing first 'if' or 'else' keyword
                                 . Occurs when a line containing a 'jump' keyword does not start with an 'if' or 'else' keyword
                                     jump 1;             --> Missing first 'if' or 'else' keyword
-                                    repeat 2; jump 1    --> Missing first 'if' or 'else' keyword                        
+                                    repeat 2; jump 1    --> Missing first 'if' or 'else' keyword          
+                            - [G079]    Jump keyword expected at ending
+                                . Occurs when a jump keyword is not at the end of the line
                          
                             NEXT KEYWORD
                             - [G076]    Next keyword must precede an appropriate keyword
@@ -1386,7 +1443,10 @@ namespace HCResourceLibraryApp.DataHandling
                             - [G077]    Next keyword requires a following code line to function
                                 . Occurs when a there is not a following line after a 'next' keyword line
                             - [G078]    Next keyword line cannot be followed by another keyword line
-                                . Occurs when a line following a 'next' keyword line contains any keyword     *****/
+                                . Occurs when a line following a 'next' keyword line contains any keyword    
+                            - [G080]    Next keyword expected at ending
+                                . Occurs when a jump keyword is not at the end of the line
+                         *****/
                         for (int kx = 0; kx < 6; kx++)
                         {
                             errorMessage = null;
@@ -1528,8 +1588,25 @@ namespace HCResourceLibraryApp.DataHandling
                                                 int countKeywords = CountKeywordsInLine(noPlainLine);
                                                 if (countKeywords > 2)
                                                 {
-                                                    errorCode = "G020";
-                                                    errorMessage = "Exceeded keyword limit per line";
+                                                    bool triggerG020q = true;
+                                                    string snipJump = noPlainLine.SnippetText("jump", ";", Snip.Inc, Snip.EndAft);
+                                                    string snipNext = noPlainLine.SnippetText("next", ";", Snip.Inc, Snip.EndAft);
+
+                                                    if (countKeywords == 3)
+                                                    {
+                                                        if (snipJump.IsNotNEW())
+                                                            if (line.TrimEnd().EndsWith(snipJump))
+                                                                triggerG020q = false;
+                                                        if (snipNext.IsNotNEW() && triggerG020q)
+                                                            if (line.TrimEnd().EndsWith(snipNext))
+                                                                triggerG020q = false;
+                                                    }
+
+                                                    if (triggerG020q)
+                                                    {
+                                                        errorCode = "G020";
+                                                        errorMessage = "Exceeded keyword limit per line";
+                                                    }
                                                 }
                                                 break;
                                         }
@@ -1550,11 +1627,13 @@ namespace HCResourceLibraryApp.DataHandling
                                         . Occurs when the operator following the first value of the condition is missing
                                             if "a"      --> Operator expected 
                                     - [G015]     Unidentified operator
-                                        . Occurs when an operator (either '=' or '!=') does not follow after the first value
+                                        . Occurs when a valid operator does not follow after the first value
                                             if "a" ;    --> Unidentified operator
                                     - [G016]     Second comparable value expected
                                         . Occurs when the second value of the condition is missing or is not a value
                                             if "a" =    --> Second comparable value expected
+                                    - [G081]    Operator '{operator}' only compares numeric values
+                                        . Occurs when any operator including '<' or '>' is used with a non-numerical value (pure number or valid library reference)
                                      ****/
                                     /// some required setup
                                     List<string> snipIfs = new List<string>();
@@ -1563,122 +1642,34 @@ namespace HCResourceLibraryApp.DataHandling
                                         string snip1stIf = null, snip2ndIf = "";
                                         string[] keywordParts = line.RemoveFromPlainText(';', true, '\n').LineBreak(';', true);
 
-                                        if (keywordParts.HasElements(2))
+                                        if (keywordParts.HasElements())
                                         {
                                             if (keywordParts[0].RemovePlainText().Contains("if"))
                                                 snip1stIf = keywordParts[0];
 
-                                            if (keywordParts[1].RemovePlainText().Contains("if"))
-                                                snip2ndIf = keywordParts[1];
+                                            if (keywordParts.HasElements(2))
+                                                if (keywordParts[1].RemovePlainText().Contains("if"))
+                                                    snip2ndIf = keywordParts[1];
                                         }
-
-                                        //string plainAfterColon = line.RemovePlainTextAfter(';', true, true);
-                                        //if (line.StartsWith("if"))
-                                        //{
-                                        //    string snipFullControl = plainAfterColon.SnippetText("if", ";", Snip.Inc, Snip.End2nd);
-                                        //    snip1stIf = snipFullControl.SnippetText("if", ";", Snip.Inc);
-                                        //    if (snip1stIf.IsNotNE())
-                                        //        snip2ndIf = snipFullControl.Substring(snip1stIf.Length).SnippetText("if", ";", Snip.Inc);
-                                        //}
-                                        //else if (line.StartsWith("else"))
-                                        //{
-                                        //    string snipFullControl = line.SnippetText("else", ";", Snip.Inc, Snip.End2nd);
-                                        //    string snip1stControl = line.SnippetText("else", ";", Snip.Inc);
-                                        //    if (snip1stControl.IsNotNE())
-                                        //        snip2ndIf = snipFullControl.Substring(snip1stControl.Length).SnippetText("if", ";", Snip.Inc);
-                                        //}
-                                        //else if (line.StartsWith("repeat"))
-                                        //{
-                                        //    string snipFullControl = line.SnippetText("repeat", ";", Snip.Inc, Snip.End2nd);
-                                        //    string snip1stControl = line.SnippetText("repeat", ";", Snip.Inc);
-                                        //    if (snip1stControl.IsNotNE())
-                                        //        snip2ndIf = snipFullControl.Substring(snip1stControl.Length).SnippetText("if", ";", Snip.Inc);
-                                        //}
-
-                                        //bool triggerG079q = false;
-                                        //if (snip1stIf.IsNotNEW())
-                                        //{
-                                        //    snipIfs.Add(snip1stIf);
-                                        //    if (!line.Contains(snip1stIf))
-                                        //        triggerG079q = true;
-                                        //}
-                                        //if (snip2ndIf.IsNotNEW())
-                                        //{
-                                        //    snipIfs.Add(snip2ndIf);
-                                        //    if (!line.Contains(snip2ndIf))
-                                        //        triggerG079q = true;
-                                        //}
-
-                                        //if (triggerG079q)
-                                        //    AddToErrorList(lineNum, "G079", "Plain text value in keyword control cannot contain ';'");
 
                                         if (snip1stIf.IsNotNEW())
                                             snipIfs.Add(snip1stIf);
                                         if (snip2ndIf.IsNotNEW())
                                             snipIfs.Add(snip2ndIf);
                                     }
-                                    for (int fx = 0; fx < 4 && snipIfs.HasElements(); fx++)
+                                    for (int fx = 0; fx < 5 && snipIfs.HasElements(); fx++)
                                     {
                                         foreach (string snipIf in snipIfs)
                                         {
                                             errorMessage = null;
                                             errorCode = null;
-                                            
 
+                                            string noPlainSnipIf = snipIf.RemovePlainText();
                                             switch (fx)
                                             {
                                                 /// first value missing
-                                                case 0:
-                                                    int countValid = 0;
-                                                    string[] validValues = new string[]
-                                                    {
-                                                        /** Valid values
-                                                            Numerics (0-9)
-                                                            Plain text "anything"
-                                                            Library References (match with start)
-                                                                {Version}
-                                                                {AddedCount}
-                                                                {Added:#,prop}
-                                                                {AdditCount}
-                                                                {Addit:#,prop}
-                                                                {TTA}
-                                                                {UpdatedCount}
-                                                                {Updated:#,prop}
-                                                                {LegendCount}
-                                                                {Legend:#,prop}
-                                                                {SummaryCount}
-                                                                {Summary:#}
-                                                            Repeat Replacement (#)
-                                                         */
-
-                                                        "{Version", "{AddedCount", "{Added", "{AdditCount", "{Addit", "{TTA",
-                                                        "{UpdatedCount", "{Updated", "{LegendCount", "{Legend", "{SummaryCount", "{Summary"
-                                                    };
-                                                    // above used between this case (0) and case 3
-                                                    string value1Snip = snipIf.SnippetText("if", "=");
-                                                    if (value1Snip.IsNE())
-                                                        value1Snip = snipIf.SnippetText("if", ";");
-                                                    else if (value1Snip.EndsWith("!"))
-                                                        value1Snip = value1Snip[..^1];
-
-                                                    for (int vvx = 0; vvx < validValues.Length; vvx++)
-                                                    {
-                                                        if (value1Snip.Trim().StartsWith("{"))
-                                                        {
-                                                            if (value1Snip.Trim().StartsWith(validValues[vvx]))
-                                                                countValid++;
-                                                        }
-                                                        else if (value1Snip.Contains('\"'))
-                                                            countValid++;
-                                                        else if (value1Snip.Contains("#"))
-                                                            countValid++;
-                                                        else
-                                                        {
-                                                            if (int.TryParse(value1Snip, out _))
-                                                                countValid++;
-                                                        }
-                                                    }
-                                                    if (countValid == 0)
+                                                case 0:                                                    
+                                                    if (!IsValidValue(snipIf, true))
                                                     {
                                                         errorCode = "G013";
                                                         errorMessage = "First comparable value expected";
@@ -1687,7 +1678,7 @@ namespace HCResourceLibraryApp.DataHandling
 
                                                 /// operator expected
                                                 case 1:           
-                                                    if (!snipIf.RemovePlainText().Contains("=") && !snipIf.RemovePlainText().Contains("!"))
+                                                    if (!noPlainLine.Contains("=") && !noPlainSnipIf.Contains("!") && !noPlainSnipIf.Contains(">") && !noPlainSnipIf.Contains("<"))
                                                     {
                                                         errorCode = "G014";
                                                         errorMessage = "Operator expected";
@@ -1696,83 +1687,178 @@ namespace HCResourceLibraryApp.DataHandling
 
                                                 /// invalid operator
                                                 case 2:
-                                                    string snipOperator = snipIf.RemovePlainText().SnippetText("=", ";", Snip.Inc);
-                                                    string snipOp2 = snipIf.RemovePlainText().SnippetText("!", ";", Snip.Inc);
-                                                    if (snipOp2.IsNotNEW())
+                                                    // string[] validOpts = new string[] { "=", "!=", "<=", "<", ">=", ">="};
+                                                    bool triggerG015q = true;
+                                                    if (noPlainSnipIf.Contains("="))
                                                     {
-                                                        if (snipOperator.IsNEW())
-                                                            snipOperator = snipOp2;
-                                                        else if (snipOperator.Length < snipOp2.Length)
-                                                            snipOperator = snipOp2;
+                                                        bool oneEqualSign = noPlainSnipIf.CountOccuringCharacter('=') == 1;
+                                                        if (noPlainSnipIf.Contains("!=") && noPlainSnipIf.CountOccuringCharacter('!') == 1 && oneEqualSign)
+                                                            triggerG015q = false;
+                                                        else if (noPlainSnipIf.Contains("<=") && noPlainSnipIf.CountOccuringCharacter('<') == 1 && oneEqualSign)
+                                                            triggerG015q = false;
+                                                        else if (noPlainSnipIf.Contains(">=") && noPlainSnipIf.CountOccuringCharacter('>') == 1 && oneEqualSign)
+                                                            triggerG015q = false;
+                                                        else if (oneEqualSign)
+                                                            triggerG015q = false;
                                                     }
-                                                    if (snipOperator != null)
+                                                    else if (!noPlainSnipIf.Contains("!"))
                                                     {
-                                                        if (snipOperator.CountOccuringCharacter('=') > 1 || snipOperator.CountOccuringCharacter('!') > 1 || snipOperator.Contains("=!"))
-                                                        {
-                                                            errorCode = "G015";
-                                                            errorMessage = "Unidentified operator";
-                                                        }
+                                                        if (noPlainSnipIf.Contains("<") && !noPlainSnipIf.Contains(">") && noPlainSnipIf.CountOccuringCharacter('<') == 1)
+                                                            triggerG015q = false;
+                                                        if (noPlainSnipIf.Contains(">") && !noPlainSnipIf.Contains("<") && noPlainSnipIf.CountOccuringCharacter('>') == 1)
+                                                            triggerG015q = false;
+                                                    }
+
+                                                    if (triggerG015q)
+                                                    {
+                                                        errorCode = "G015";
+                                                        errorMessage = "Unidentified operator";
                                                     }
                                                     break;
 
                                                 /// second value missing
                                                 case 3:
-                                                    countValid = 0;
-                                                    validValues = new string[]
-                                                    {
-                                                        /** Valid values
-                                                            Numerics (0-9)
-                                                            Plain text "anything"
-                                                            Library References (match with start)
-                                                                {Version}
-                                                                {AddedCount}
-                                                                {Added:#,prop}
-                                                                {AdditCount}
-                                                                {Addit:#,prop}
-                                                                {TTA}
-                                                                {UpdatedCount}
-                                                                {Updated:#,prop}
-                                                                {LegendCount}
-                                                                {Legend:#,prop}
-                                                                {SummaryCount}
-                                                                {Summary:#}
-                                                            Repeat Replacement (#)
-                                                         */
-
-                                                        "{Version", "{AddedCount", "{Added", "{AdditCount", "{Addit", "{TTA",
-                                                        "{UpdatedCount", "{Updated", "{LegendCount", "{Legend", "{SummaryCount", "{Summary"
-                                                    };
-                                                    string value2Snip = snipIf.SnippetText("=", ";");
-                                                    if (value2Snip.IsNotNE())
-                                                    {
-                                                        for (int vvx = 0; vvx < validValues.Length; vvx++)
-                                                        {
-                                                            if (value2Snip.Trim().StartsWith("{"))
-                                                            {
-                                                                if (value2Snip.Trim().StartsWith(validValues[vvx]))
-                                                                    countValid++;
-                                                            }
-                                                            else if (value2Snip.Contains('\"'))
-                                                                countValid++;
-                                                            else if (value2Snip.Equals("#"))
-                                                                countValid++;
-                                                            else
-                                                            {
-                                                                if (int.TryParse(value2Snip, out _))
-                                                                    countValid++;
-                                                            }
-                                                        }
-                                                    }
-                                                    if (countValid == 0)
+                                                    if (!IsValidValue(snipIf, false))
                                                     {
                                                         errorCode = "G016";
                                                         errorMessage = "Second comparable value expected";
+                                                    }
+                                                    break;
+
+                                                /// operator only compares numeric values
+                                                case 4:
+                                                    bool numValuesOnlyQ = noPlainSnipIf.Contains(">") || noPlainSnipIf.Contains("<");
+                                                    string supposedOp = "";
+                                                    if (noPlainSnipIf.Contains(">="))
+                                                        supposedOp = ">=";
+                                                    else if (noPlainSnipIf.Contains("<="))
+                                                        supposedOp = "<=";
+                                                    else if (noPlainSnipIf.Contains(">"))
+                                                        supposedOp = ">";
+                                                    else if (noPlainSnipIf.Contains("<"))
+                                                        supposedOp = "<";
+                                                    
+                                                    if (numValuesOnlyQ && supposedOp.IsNotNE())
+                                                    {
+                                                        if (!IsValidValue(snipIf, true) || !IsValidValue(snipIf, false))
+                                                        {
+                                                            errorCode = "G081";
+                                                            errorMessage = $"Operator '{supposedOp}' only compares numeric values";
+                                                        }
                                                     }
                                                     break;
                                             }
 
                                             if (errorMessage.IsNotNE() && errorCode.IsNotNE())
                                                 AddToErrorList(lineNum, errorCode, errorMessage);
+                                        }
+
+
+                                        bool IsValidValue(string snipIf, bool val1Q)
+                                        {
+                                            string[] validValues = new string[]
+                                            {
+                                                /** Valid values
+                                                    Numerics (0-9)
+                                                    Plain text "anything"
+                                                    Library References (match with start)
+                                                        {Version}
+                                                        {AddedCount}
+                                                        {Added:#,prop}
+                                                        {AdditCount}
+                                                        {Addit:#,prop}
+                                                        {TTA}
+                                                        {UpdatedCount}
+                                                        {Updated:#,prop}
+                                                        {LegendCount}
+                                                        {Legend:#,prop}
+                                                        {SummaryCount}
+                                                        {Summary:#}
+                                                    Repeat Replacement (#)
+                                                    */
+
+                                                "{Version", "{AddedCount", "{Added", "{AdditCount", "{Addit", "{TTA",
+                                                "{UpdatedCount", "{Updated", "{LegendCount", "{Legend", "{SummaryCount", "{Summary"
+                                            };
+                                            int countValid = 0;
+                                            if (snipIf.IsNotNE())
+                                            {
+                                                string valueSnip;
+                                                bool numValuesOnlyQ = snipIf.RemovePlainText().Contains(">") || snipIf.RemovePlainText().Contains("<");
+
+                                                /// get values
+                                                if (val1Q)
+                                                {
+                                                    valueSnip = snipIf.SnippetText("if", "=");
+                                                    if (valueSnip.IsNE())
+                                                    {
+                                                        valueSnip = snipIf.SnippetText("if", ">");
+                                                        if (valueSnip.IsNE())
+                                                            valueSnip = snipIf.SnippetText("if", "<");
+                                                        if (valueSnip.IsNE())
+                                                            valueSnip = snipIf.SnippetText("if", ";");
+                                                    }                                                    
+                                                }
+                                                else
+                                                {
+                                                    valueSnip = snipIf.SnippetText("=", ";");
+                                                    if (valueSnip.IsNE())
+                                                    {
+                                                        valueSnip = snipIf.SnippetText(">", ";");
+                                                        if (valueSnip.IsNE())
+                                                            valueSnip = snipIf.SnippetText("<", ";");
+                                                    }                                                        
+                                                }
+
+                                                /// filter op chars
+                                                if (!valueSnip.IsNE())
+                                                {
+                                                    if (valueSnip.EndsWith("!") || valueSnip.EndsWith("<") || valueSnip.EndsWith(">") || valueSnip.EndsWith("="))
+                                                        valueSnip = valueSnip[..^1];
+                                                    if (valueSnip.StartsWith("!") || valueSnip.StartsWith("<") || valueSnip.StartsWith(">") || valueSnip.StartsWith("="))
+                                                        valueSnip = valueSnip[..1];
+                                                }
+
+                                                /// validate values
+                                                if (valueSnip.IsNotNEW())
+                                                {
+                                                    for (int vvx = 0; vvx < validValues.Length; vvx++)
+                                                    {
+                                                        if (valueSnip.Trim().StartsWith("{"))
+                                                        {
+                                                            if (!numValuesOnlyQ)
+                                                            {
+                                                                if (valueSnip.Trim().StartsWith(validValues[vvx]))
+                                                                    countValid++;
+                                                            }
+                                                            else
+                                                            {
+                                                                if (validValues[vvx].EndsWith("Count"))
+                                                                {
+                                                                    if (valueSnip.Trim().StartsWith(validValues[vvx]))
+                                                                        countValid++;
+                                                                }
+                                                            }
+                                                        }
+                                                        else if (valueSnip.Contains('\"'))
+                                                        {
+                                                            if (!numValuesOnlyQ)
+                                                                countValid++;
+                                                            else if (int.TryParse(valueSnip.RemovePlainText(true), out _))
+                                                                countValid++;
+                                                        }
+                                                        else if (valueSnip.Contains("#"))
+                                                            countValid++;
+                                                        else
+                                                        {
+                                                            if (int.TryParse(valueSnip, out _))
+                                                                countValid++;
+                                                        }
+                                                    }
+                                                }
+                                            }
+
+                                            return countValid != 0;
                                         }
                                     }
                                     break;
@@ -1910,8 +1996,10 @@ namespace HCResourceLibraryApp.DataHandling
                                     - [G023]    Jump keyword must precede an appropriate keyword
                                         . Occurs when a line containing a 'jump' keyword does not start with an 'if' or 'else' keyword
                                             jump 1;             --> Missing first 'if' or 'else' keyword
-                                            repeat 2; jump 1    --> Missing first 'if' or 'else' keyword    ******/
-                                    for (int jx = 0; jx < 3; jx++)
+                                            repeat 2; jump 1    --> Missing first 'if' or 'else' keyword    
+                                    - [G079]    Jump keyword expected at ending
+                                        . Occurs when a jump keyword is not at the end of the line          ******/
+                                    for (int jx = 0; jx < 4; jx++)
                                     {
                                         errorMessage = null;
                                         errorCode = null;
@@ -1961,6 +2049,19 @@ namespace HCResourceLibraryApp.DataHandling
                                                     //errorMessage = "Missing first 'if' or 'else' keyword";
                                                 }
                                                 break;
+
+                                            /// end of line
+                                            case 3:
+                                                if (noPlainLine.Contains("jump") && snipJump.IsNotNEW())
+                                                {
+                                                    if (!line.TrimEnd().EndsWith(snipJump))
+                                                    {
+                                                        errorCode = "G079";
+                                                        errorMessage = "Jump keyword expected at ending";
+                                                    }
+                                                }
+                                                break;
+
                                         }
 
                                         if (errorMessage.IsNotNE() && errorCode.IsNotNE())
@@ -1975,8 +2076,10 @@ namespace HCResourceLibraryApp.DataHandling
                                     - [G077]    Next keyword requires a following code line to function
                                         . Occurs when a there is not a following line after a 'next' keyword line
                                     - [G078]    Next keyword line cannot be followed by another keyword line
-                                        . Occurs when a line following a 'next' keyword line contains any keyword *****/
-                                    for (int nx = 0; nx < 3; nx++)
+                                        . Occurs when a line following a 'next' keyword line contains any keyword 
+                                    - [G080]    Next keyword expected at ending
+                                        . Occurs when a jump keyword is not at the end of the line      *****/
+                                    for (int nx = 0; nx < 4; nx++)
                                     {
                                         errorCode = null;
                                         errorMessage = null;
@@ -2007,6 +2110,11 @@ namespace HCResourceLibraryApp.DataHandling
                                                 {
                                                     errorCode = "G078";
                                                     errorMessage = "Next keyword line cannot be followed by another keyword line";
+                                                }
+                                                else if (nx == 3 && !line.TrimEnd().EndsWith(snipNext))
+                                                {
+                                                    errorCode = "G080";
+                                                    errorMessage = "Next keyword expected at ending";
                                                 }
                                             }
                                         }
@@ -2790,8 +2898,8 @@ namespace HCResourceLibraryApp.DataHandling
                             LIST ITEM
                                 - [R043] List Item element expected at beginning
                                     . Occurs when the list item element is not placed at the beginning of the line
-                                - [R044] List Item element is not within a list block
-                                    . Occurs when the list item element is not preceded by another list element line or a list block line
+                                - [R044] List Item element is not within a list block 
+                                    . Occurs when the list item element is not preceded by another list element line or a list block line 
                                         $h "Boom"
                                         $* "Boom"    --> List Item element is not within a list block
                          */
@@ -2960,11 +3068,25 @@ namespace HCResourceLibraryApp.DataHandling
                                                 errorMessage = "List Item element expected at beginning";
                                             }
 
-                                            if (!prevLine.StartsWith("$*") && !prevLine.StartsWith("$list") && lix == 1)
+                                            if (lix == 1)
                                             {
-                                                errorCode = "R044";
-                                                errorMessage = "List Item element is not within a list block";
-                                            }
+                                                bool triggerR044q = false;
+                                                if (!prevLine.StartsWith("$*") && !prevLine.StartsWith("$list"))
+                                                {
+                                                    triggerR044q = true;
+                                                    if (prevLine.RemovePlainText().Contains("next"))
+                                                    {
+                                                        if (prevLine.TrimEnd().EndsWith(prevLine.RemovePlainText().SnippetText("next", ";", Snip.Inc)))
+                                                            triggerR044q = !prev2ndLine.StartsWith("$*") && !prev2ndLine.StartsWith("$list");
+                                                    }
+                                                }
+
+                                                if (triggerR044q)
+                                                {
+                                                    errorCode = "R044";
+                                                    errorMessage = "List Item element is not within a list block";
+                                                }
+                                            }                                            
                                         }
 
                                         if (errorCode.IsNotNE() && errorMessage.IsNotNE())
@@ -3107,8 +3229,13 @@ namespace HCResourceLibraryApp.DataHandling
                                 if (line.StartsWith("$list") && ltx == 3)
                                 {
                                     bool triggerR053q = nextLine.IsNEW();
-                                    if (nextLine.IsNotNEW())
-                                        triggerR053q = !nextLine.StartsWith("$*");
+                                    if (!nextLine.StartsWith("$*"))
+                                    {
+                                        triggerR053q = true;
+                                        if (nextLine.RemovePlainText().Contains("next"))
+                                            if (nextLine.TrimEnd().EndsWith(nextLine.RemovePlainText().SnippetText("next", ";", Snip.Inc)))
+                                                triggerR053q = !next2ndLine.StartsWith("$*");
+                                    }
 
                                     if (triggerR053q)
                                     {
@@ -3212,7 +3339,7 @@ namespace HCResourceLibraryApp.DataHandling
                         - [R062] Table element only accepts two or less parameters
                             . Occurs when multiple values withn the parameter brackets surpass a total of two
                         - [R063] Table element must contain at least one table row
-                            . Occurs when the table element line is not followed by a table header or table data line            *****/
+                            . Occurs when the table element line is not followed by a table header or table data line        *****/
                         for (int tbx = 0; tbx < 5; tbx++)
                         {
                             errorCode = null;
@@ -3287,8 +3414,13 @@ namespace HCResourceLibraryApp.DataHandling
                             if (line.StartsWith("$table") && tbx == 4)
                             {
                                 bool triggerR063q = nextLine.IsNEW();
-                                if (nextLine.IsNotNEW())
-                                    triggerR063q = !nextLine.StartsWith("$td=") && !nextLine.StartsWith("$th=");
+                                if (!nextLine.StartsWith("$td") && !nextLine.StartsWith("$th"))
+                                {
+                                    triggerR063q = true;
+                                    if (nextLine.RemovePlainText().Contains("next"))
+                                        if (nextLine.TrimEnd().EndsWith(nextLine.RemovePlainText().SnippetText("next", ";", Snip.Inc)))
+                                            triggerR063q = !next2ndLine.StartsWith("$td") && !next2ndLine.StartsWith("$th");
+                                }
 
                                 if (triggerR063q)
                                 {
@@ -3307,7 +3439,7 @@ namespace HCResourceLibraryApp.DataHandling
                         - [R065] Table Header element assignment operator expected
                             . Occurs when a table header element is not followed by the '=' operator
                         - [R066] Table Header element expected after table block line
-                            . Occurs when a table header element line is not preceded by a table block line
+                            . Occurs when a table header element line is not preceded by a table block line 
                         - [R067] Table Header element is not within a table block
                             . Occurs when a table header element line is not preceded by a table block line or table data line
                         - [R068] Empty Table Header element
@@ -3375,6 +3507,16 @@ namespace HCResourceLibraryApp.DataHandling
                                 {
                                     triggerR066q = !prevLine.StartsWith("$table");
                                     triggerR067q = !prevLine.StartsWith("$table") && !prevLine.StartsWith("$td") && !prevLine.StartsWith("$th");
+
+                                    if (triggerR067q && triggerR066q)
+                                    {
+                                        if (prevLine.RemovePlainText().Contains("next"))
+                                            if (prevLine.TrimEnd().EndsWith(prevLine.RemovePlainText().SnippetText("next", ";", Snip.Inc)))
+                                            {
+                                                triggerR066q = !prev2ndLine.StartsWith("$table");
+                                                triggerR067q = !prev2ndLine.StartsWith("$table") && !prev2ndLine.StartsWith("$td") && !prev2ndLine.StartsWith("$th");
+                                            }
+                                    }
                                 }
 
                                 if (triggerR066q && thx == 2)
@@ -3398,8 +3540,8 @@ namespace HCResourceLibraryApp.DataHandling
                             . Occurs when a table data element is not the only steam format reference on its line (or is not at beginning)
                         - [R071] Table Data element assignment operator expected
                             . Occurs when a table data element is not followed by the '=' operator
-                        - [R072] Table Data element is not within a table block
-                            . Occurs when a table data element line is not preceded by a table block line or a table header line
+                        - [R072] Table Data element is not within a table block  
+                            . Occurs when a table data element line is not preceded by a table block line or a table header line 
                         - [R073] Empty Table Data element
                             . Occurs when a table data element does not have any values following after the operator
                         - [R074] Table Data element does not match column count of preceding rows
@@ -3418,20 +3560,28 @@ namespace HCResourceLibraryApp.DataHandling
                                 {
                                     if (noPlainLine.CountOccuringCharacter('=') == 1 && line.StartsWith("$td="))
                                     {
-                                        string tdArgs = line.Substring("$td=".Length);
+                                        string tdArgs = $" {line.Substring("$td=".Length)} ";
                                         if (tdArgs.IsNotNEW())
                                         {
                                             if (prevLine.IsNotNE() && tdx == 4)
                                             {
                                                 int countPrevArgs = 0;
-                                                if (prevLine.StartsWith("$td=") || prevLine.StartsWith("$th="))
+                                                string checkArgsLine = prevLine;
+                                                if (!prevLine.StartsWith("$td=") && !prevLine.StartsWith("$th=") && prevLine.RemovePlainText().Contains("next"))
+                                                    checkArgsLine = prev2ndLine;
+
+                                                if (checkArgsLine.StartsWith("$td=") || checkArgsLine.StartsWith("$th="))
                                                 {
-                                                    string txArgs = prevLine.Substring("$t?=".Length).RemoveFromPlainText(',');
+                                                    string txArgs = $" {checkArgsLine.Substring("$t?=".Length).RemovePlainText()} ";
                                                     if (txArgs.IsNotNE())
-                                                        countPrevArgs = txArgs.CountOccuringCharacter(',') + 1;
+                                                    {
+                                                        int countPrevLibRefCommas = txArgs.CountOccuringCharacter(':');
+                                                        countPrevArgs = txArgs.CountOccuringCharacter(',') + 1 - countPrevLibRefCommas;
+                                                    }
                                                 }
 
-                                                int countThisArgs = tdArgs.CountOccuringCharacter(',') + 1;
+                                                int countLibRefCommas = tdArgs.RemovePlainText().CountOccuringCharacter(':');
+                                                int countThisArgs = tdArgs.RemovePlainText().CountOccuringCharacter(',') + 1 - countLibRefCommas;
                                                 if (countPrevArgs != 0 && countPrevArgs != countThisArgs)
                                                 {
                                                     errorCode = "R074";
@@ -3441,7 +3591,28 @@ namespace HCResourceLibraryApp.DataHandling
                                                 }
                                             }
 
-                                            string[] tdClms = tdArgs.RemoveFromPlainText(',').Split(',');
+                                            /// discern from library ref arrays and plain text
+                                            string tdArgsFlt = "";
+                                            bool nPlainQ = false, nLibRef = false;
+                                            for (int tx = 0; tx < tdArgs.Length; tx++)
+                                            {
+                                                char tc = tdArgs[tx];
+                                                if (tc == '"')
+                                                    nPlainQ = !nPlainQ;
+                                                if (!nPlainQ)
+                                                {
+                                                    if (tc == '{')
+                                                        nLibRef = true;
+                                                    if (tc == '}')
+                                                        nLibRef = false;
+                                                }
+
+                                                if (!nPlainQ && !nLibRef && tc == ',')
+                                                    tdArgsFlt += "\n";
+                                                else tdArgsFlt += tc;
+                                            }
+
+                                            string[] tdClms = tdArgsFlt.Split('\n');
                                             string invalidValue = null;
                                             for (int tx = 0; tx < tdClms.Length && invalidValue == null; tx++)
                                             {
@@ -3482,8 +3653,13 @@ namespace HCResourceLibraryApp.DataHandling
                             if (noPlainLine.StartsWith("$td"))
                             {
                                 bool triggerR072q = prevLine.IsNEW();
-                                if (prevLine.IsNotNEW())
-                                    triggerR072q = !prevLine.StartsWith("$table") && !prevLine.StartsWith("$th") && !prevLine.StartsWith("$td");
+                                if (!prevLine.StartsWith("$table") && !prevLine.StartsWith("$th") && !prevLine.StartsWith("$td"))
+                                {
+                                    triggerR072q = true;
+                                    if (prevLine.RemovePlainText().Contains("next"))
+                                        if (prevLine.TrimEnd().EndsWith(prevLine.RemovePlainText().SnippetText("next", ";", Snip.Inc)))
+                                            triggerR072q = !prev2ndLine.StartsWith("$table") && !prev2ndLine.StartsWith("$th") && !prev2ndLine.StartsWith("$td");
+                                }
 
                                 if (triggerR072q && tdx == 2)
                                 {
@@ -3580,7 +3756,11 @@ namespace HCResourceLibraryApp.DataHandling
                                     if (!isValidPP && countKeywordSemiColons > 0)
                                     {
                                         if (noPlainLine.StartsWith("if") || noPlainLine.StartsWith("else") || noPlainLine.StartsWith("repeat"))
-                                            isValidPP = noPP.Equals("=") || noPP.Equals("!=");
+                                            if (noPlainLine.Contains("if"))
+                                            {
+                                                string validOps = "= != > >= < <= ";
+                                                isValidPP = validOps.Contains($"{noPP} ");
+                                            }
                                     }
                                     /// complex steam format specific
                                     if (!isValidPP && noPlainLine.StartsWith("$"))
@@ -3605,10 +3785,6 @@ namespace HCResourceLibraryApp.DataHandling
                 }
 
             }
-
-            /// OTHER ERRORS TO IMPLEMENT (PERHAPS)
-            ///     Next And Jump Keywords  ->  An execution line is not required after keyword '{keyword}'
-            ///     
 
 
             /** ERROR CODES AND MESSAGES COLLECTION
@@ -3642,6 +3818,8 @@ namespace HCResourceLibraryApp.DataHandling
                 [G076]      Next keyword must precede an appropriate keyword
                 [G077]      Next keyword requires a following code line to function
                 [G078]      Next keyword line cannot be followed by another keyword line
+                [G079]      Jump keyword expected at ending
+                [G080]      Next keyword expected at ending
                 ---
                 [R024]      Added entry number and property expected
                 [R025]      Invalid Added entry number

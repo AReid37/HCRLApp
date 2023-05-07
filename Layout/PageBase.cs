@@ -54,7 +54,7 @@ namespace HCResourceLibraryApp.Layout
         const string FormatUsageKey = "`", WordWrapUsageKey = "▌";
         const string WordWrapNewLineKey = "▌\\W/▐"; // ▌\W/▐
         const int WordWrapIndentLim = 8, wrapUnholdNum = -1; // equivalent of one '\t'
-        static int _wrapIndentHold = wrapUnholdNum, _wrapSource = 0;
+        static int _wrapIndentHold = wrapUnholdNum, _wrapSource = 0, _cursorLeft, _cursorTop;
         const char DefaultTitleUnderline = cTHB;
         static string _menuMessage, _incorrectionMessage;
         static bool _isMenuMessageInQueue, _isWarningMenuMessageQ, _enableWordWrapQ = true;
@@ -1136,6 +1136,18 @@ namespace HCResourceLibraryApp.Layout
                 /* Do nothing but loop, kek */;
             Dbug.Log($"-- End time: {watch.Elapsed.TotalMilliseconds}ms // Waiting complete.");
             Dbug.EndLogging();
+        }
+        /// <summary>Gets and saves cursor position: top and left positions which can be adjusted using <paramref name="alterTop"/> and <paramref name="alterLeft"/>.</summary>
+        public static void GetCursorPosition(int alterTop = 0, int alterLeft = 0)
+        {
+            _cursorTop = (Console.CursorTop + alterTop).Clamp(0, Console.BufferHeight);
+            _cursorLeft = (Console.CursorLeft + alterLeft).Clamp(0, Console.BufferWidth);
+        }
+        /// <summary>Sets cursor position: top and left positions. If <paramref name="top"/> or <paramref name="left"/> is given a value greater than or equal to <c>0</c>, their value will be used instead of the values saved from <see cref="GetCursorPosition"/></summary>
+        public static void SetCursorPosition(int top = -1, int left = -1)
+        {
+            Console.CursorTop = top >= 0 ? top : _cursorTop;
+            Console.CursorLeft = left >= 0 ? left : _cursorLeft;
         }
     }
 }

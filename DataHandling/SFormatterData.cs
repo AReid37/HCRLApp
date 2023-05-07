@@ -438,7 +438,7 @@ namespace HCResourceLibraryApp.DataHandling
                                 shift group down 
                             => extend group end
                         => line is before start 
-                                shift group down
+                            shift group down
                     
                     -> Line is within group and not at start
                         extend group end
@@ -453,9 +453,11 @@ namespace HCResourceLibraryApp.DataHandling
                                 -> group has only two lines
                                     destroy group
                                 => retract group end
-                            => retract group end
+                            => -> group has only two lines
+                                    destroy group
+                               => retract group end
                         => line is before start
-                                shift group up
+                            shift group up
                         
                     -> Line is within group and not at start
                         -> group has only two lines
@@ -497,7 +499,15 @@ namespace HCResourceLibraryApp.DataHandling
                             {
                                 if (lineAddedQ)
                                     group1s.endLineNum += 1;
-                                else group1s.endLineNum -= 1;
+                                else
+                                {
+                                    if (group1s.startLineNum + 1 == group1s.endLineNum)
+                                    {
+                                        _groupInfo1.RemoveAt(g1x);
+                                        countDestroyedGroups++;
+                                    }
+                                    else group1s.endLineNum -= 1;
+                                }
                             }
                         }
                         else
@@ -561,7 +571,15 @@ namespace HCResourceLibraryApp.DataHandling
                             {
                                 if (lineAddedQ)
                                     group2s.endLineNum += 1;
-                                else group2s.endLineNum -= 1;
+                                else
+                                {
+                                    if (group2s.startLineNum + 1 == group2s.endLineNum)
+                                    {
+                                        _groupInfo2.RemoveAt(g2x);
+                                        countDestroyedGroups++;
+                                    }
+                                    else group2s.endLineNum -= 1;
+                                }
                             }
                         }
                         else

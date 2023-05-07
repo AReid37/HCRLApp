@@ -12,7 +12,7 @@ namespace HCResourceLibraryApp
     public class Program
     {
         static readonly string consoleTitle = "High Contrast Resource Library App";
-        static readonly string developmentVersion = "[v1.2.5]";
+        static readonly string developmentVersion = "[v1.2.6]";
         static readonly string lastPublishedVersion = "[v1.1.9d]";
         /// <summary>If <c>true</c>, the application launches for debugging/development. Otherwise, the application launches for the published version.</summary>
         public static readonly bool isDebugVersionQ = true;
@@ -42,11 +42,11 @@ namespace HCResourceLibraryApp
             {
                 Clear();
                 AllowProgramRestart = false;
-                LogState($"Start Up - {consoleTitle + (isDebugVersionQ ? $"{developmentVersion} (debug)" : lastPublishedVersion)}");
+                LogState($"Start Up - {consoleTitle + (isDebugVersionQ ? $" {developmentVersion} (debug)" : $" {lastPublishedVersion}")}");
 
                 // setup                
                 /// program function
-                Console.Title = consoleTitle + (isDebugVersionQ? $"{developmentVersion} (debug)" : lastPublishedVersion);
+                Console.Title = consoleTitle + (isDebugVersionQ? $" {developmentVersion} (debug)" : $" {lastPublishedVersion}");
                 Tools.DisableWarnError = !isDebugVersionQ? DisableWE.All : DisableWE.None;
                 /// data
                 dataHandler = new DataHandlerBase();
@@ -896,7 +896,7 @@ namespace HCResourceLibraryApp
                     NewLine();
                     bool displayAllMessageQ = true; /// not 'const' to avoid 'unreachable code' issue
                     const string secHeader = "|header|", secBreak = "|break|", lineRep = "%%%%%%%", firstOnlyIssueFix = "Post '1st Only' Fix";
-                    string skipToHeaderStartingAs = $"{secHeader}URL";
+                    string skipToHeaderStartingAs = $"{secHeader}Key";
                     string[] lines = new string[]
                     { /// enter many incorrect entries, and at least one correct entry
 
@@ -927,17 +927,17 @@ namespace HCResourceLibraryApp
                         /// Steam Format Reference Errors [007-008]
                         $"{secHeader}Steam Format Reference Errors [007-008]",
                         "$ ", "$carl", "$urll", "$hh $tible", "$hhhh", "$", "$nl", "$i $u \" \"",
-                        /// Keyword errors [009-023,076-078]
-                        $"{secHeader}Keyword Errors [009-023,076-078]",
+                        /// Keyword errors [009-023,076-081]
+                        $"{secHeader}Keyword Errors [009-023,076-081]",
                         "if 1 = 1", "else", "repeat 2", "if 2 != 2; \"#ok\"", /// general keyword - no end colon  
                         "$i if", "\"plant\" else", "else else;", "\"plant\" repeat", "repeat; repeat", "if 8 = 8; if 1 = 2; \"Go!\"", /// general keyword - keyword at front
                         "if 0 = 0;", "else;  ", "repeat 2; ", /// general keyword - missing execution line
                         "if 1 != 0; \"plant\" if 0 = 0;", "else; \"plant\" jump 256;", "repeat 3; \"u\" next;", /// general keyword - misplaced if / jump / next
-                        "else; if 1 = 2; jump 4;", "repeat 1; if 2 = 3; jump 9;", "if 2 != \"2\"; jump 300; \"good\"", /// general keyword - exceed keyword limit
+                        "else; if1=2; jump4; else;", "repeat1; if2=3;next;jump9;", "if 0 = 1; if 2 != 3; if 0 = 0;", /// general keyword - exceed keyword limit
                         $"{secBreak}If", "if", "if ; 2", "if $i; 0", "if", "if {CTA};", "if 4 = 1; if \"no\" = 2; 0", "if {Added:2,name}; 0", /// if - first value expected
                         "if 4 =! 4; 0", "if 0 = 2; if 4 == 10;", "if !! ;", "if 0 = 1; 0", "if # != 1; 1", /// if - op expected / op invalid
                         "if 9 = q; 2", "if 7 != $t; ", "if {tta} == 232; ", "if 3 = 2; if q != r; 1", "if {SummaryCount}=5; if2=2; \"#yes\"", /// if - second value expected
-                        "if \";\" = \";\"; q", "if \"&00;\" = \"d\"; w", "if 0 = 0; if \";\" = 1; t", "if1=1; if 2 = \";\";", "if \"2\" = 2; \"#goodStuff\"", /// no ';' in plain
+                        $"{secBreak}If (New Ops)", "if 2 >> 1;", "if 3 <== 1;", "if 4 <>!;", "if 0 !< 4; ?", "if {Added} > 3;", "if 0 < 1; if \"three\" <= 4;", "if 1 = 1; if \"4\" >= 2;", "if {AddedCount} < {AdditCount}; \"b\"", "if 0 < 1; $d", "if 1 > 0; $d", "if 2 >= 1; $nl", "if 3 <= 5; $nl", /// new operators (> >= < <=): non-numeric value / op invalid\expected
                         $"{secBreak}Else","else; \"no\"", "repeat 1; if 0 = 2; \"uh\"", "else; \"nope\"", "if 0 = 0; if 1 = 1; \"yup\"", "else; if 2 = 3; \"yep\"", "else; \"mhmm\"", /// else
                         $"{secBreak}Repeat","repeat;", "repeat ;", "repeat \"w\"; \"no\"", "repeat r; 4", "repeat 0; 10", "repeat {Added:#,ids}; \"l\"", "repeat \"8\"; {TTA}", "repeat 4; \"he\"", "repeat {AddedCount}; \"8\"", "repeat 13; if # != 1; \"donzo\"", /// repeat
                         $"{secBreak}Jump","jump ;", "jump w;", "jump \"13\"", "jump {TTA};", "jump 20;", "repeat 4; jump 300;", "if 0 = 0; jump 300;", "else; jump 350;", /// jump
@@ -1003,6 +1003,18 @@ namespace HCResourceLibraryApp
                         // Code Errors - Unexpected Token 'anything else?'
                         $"{secHeader}UnExAny Code Errors [000]", 
                         "abc", "123", "kay that's all", "\"kek..\"",
+
+
+                        /// MIXED TESTS
+                        $"{secHeader}Mixed Tests",
+                        $"{secBreak}3rd Next / Jump", 
+                        "if0=0; if1=1; next;", "else; if0!=1; next;", "repeat4; if1=1; next;", "if0!=1; if2=2; jump410;", "else; if0=0; jump420;",
+                        $"{secBreak}Next within Lists/Tables", 
+                        "$list[]", "\"nope\"", "\"also nope\"", "$list[]", "if 0 = 0; next;", "$* \"First items\"", "repeat 3; next;", "$* \"Next item #\"", "if 0 = 0; \"break list\"", "$* \"Lost item\"", /// list
+                        "$table[]", "\"nope\"", "\"also nope\"", "$table[]", "if0=0; next;", "$th= \"1st\"", "if 1 = 1; next;", "$td= \"slap\",\"slap\"", "repeat 1; \"break it\"", "$td= \"sad\"", "if 0 = 0; next;", "$th= \"numb\"", "\"break again\"", "$th= \"sad^2\"",  /// table
+                        
+                        
+
                     };
 
                     SFormatterHandler.CheckSyntax(lines);

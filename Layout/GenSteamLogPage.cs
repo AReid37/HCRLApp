@@ -6,7 +6,7 @@ using static ConsoleFormat.Base;
 using static ConsoleFormat.Minimal;
 using HCResourceLibraryApp.DataHandling;
 using static HCResourceLibraryApp.DataHandling.SFormatterHandler;
-
+using System.Linq;
 
 namespace HCResourceLibraryApp.Layout
 {
@@ -203,6 +203,7 @@ namespace HCResourceLibraryApp.Layout
                             // gather version information
                             Dbug.StartLogging("GenSteamLogPage:SubPage_LogVersion()");
                             ResLibrary verLogDetails = new();
+                            List<string> allDataIDs = new();
                             for (int rdx = 0; rdx < 3; rdx++)
                             {
                                 switch (rdx)
@@ -229,13 +230,17 @@ namespace HCResourceLibraryApp.Layout
                                                     {
                                                         fetchedConBaseQ = true;
                                                         clone = new ResContents(resCon.ShelfID, resCon.ConBase);
+                                                        allDataIDs.AddRange(resCon.ConBase.DataIDString.Split(' '));
                                                         
                                                         /// ConAddits (same ver)
                                                         if (resCon.ConAddits.HasElements())
                                                         {
                                                             foreach (ContentAdditionals rca in resCon.ConAddits)
                                                                 if (rca.VersionAdded.Equals(selectedVerNum))
+                                                                {
                                                                     clone.StoreConAdditional(rca);
+                                                                    allDataIDs.AddRange(rca.DataIDString.Split(' '));
+                                                                }
                                                         }
 
                                                         /// ConChanges (same ver)
@@ -243,7 +248,10 @@ namespace HCResourceLibraryApp.Layout
                                                         {
                                                             foreach (ContentChanges rcc in resCon.ConChanges)
                                                                 if (rcc.VersionChanged.Equals(selectedVerNum))
+                                                                {
                                                                     clone.StoreConChanges(rcc);
+                                                                    allDataIDs.Add(rcc.RelatedDataID);
+                                                                }
                                                         }
 
                                                         resContents.Add(clone);
@@ -258,6 +266,9 @@ namespace HCResourceLibraryApp.Layout
                                                                 {
                                                                     looseDataIDs.Add(ca.RelatedDataID);
                                                                     looseConAddits.Add(ca);
+
+                                                                    allDataIDs.Add(ca.RelatedDataID);
+                                                                    allDataIDs.AddRange(ca.DataIDString.Split(' '));
                                                                 }
                                                     }
 
@@ -270,6 +281,8 @@ namespace HCResourceLibraryApp.Layout
                                                                 {
                                                                     looseDataIDs.Add(cc.RelatedDataID);
                                                                     looseConChanges.Add(cc);
+
+                                                                    allDataIDs.Add(cc.RelatedDataID);
                                                                 }
                                                     }
                                                 }
@@ -287,13 +300,42 @@ namespace HCResourceLibraryApp.Layout
                                         break;
 
 
-                                    // legends - get all of them
+                                    // legends - get all of them // actually no.. just get what's there
                                     case 1:
-                                        verLogDetails.AddLegend(_resLibrary.Legends.ToArray());
+                                        /// gather all unique legend keys used
+                                        string legendKeysInUse = " ";
+                                        foreach (string dId in allDataIDs)
+                                        {
+                                            LogDecoder.DisassembleDataID(dId, out string dk, out _, out string sfx);
+                                            if (!legendKeysInUse.Contains($"{dk} "))
+                                                legendKeysInUse += $"{dk} ";
+
+                                            if (sfx.IsNotNE())
+                                            {
+                                                if (!legendKeysInUse.Contains($"{sfx} "))
+                                                    legendKeysInUse += $"{sfx} ";
+
+                                                foreach (char sfxC in sfx)
+                                                    if (!legendKeysInUse.Contains($"{sfxC} "))
+                                                        legendKeysInUse += $"{sfxC} ";
+                                            }
+                                        }
+                                        /// filter legend datas by legend keys in use
+                                        List<LegendData> legendsUsed = new();
+                                        if (legendKeysInUse.IsNotNEW())
+                                            foreach (LegendData legData in _resLibrary.Legends.ToArray())
+                                            {
+                                                if (legendKeysInUse.Contains($"{legData.Key} "))
+                                                    legendsUsed.Add(legData);
+                                            }
+                                       /// load into instance
+                                        if (legendsUsed.HasElements())
+                                            verLogDetails.AddLegend(legendsUsed.ToArray());
+                                        //verLogDetails.AddLegend(_resLibrary.Legends.ToArray());
                                         break;
 
 
-                                    // summaries - get matching ver log number
+                                    // summaries - get of matching ver log number
                                     case 2:
                                         bool fetchedSummaryQ = false;
                                         for (int sumx = 0; !fetchedSummaryQ && sumx < _resLibrary.Summaries.Count; sumx++)
@@ -485,6 +527,10 @@ namespace HCResourceLibraryApp.Layout
 
                 exitLogVerSubPageQ = noLibraryData || allowExitQ;
             } while (!exitLogVerSubPageQ);            
+
+
+            /// need to manually gather the legend keys used, goofus..
+            /// stop being so lazy!!
         }
         // done
         static void SubPage_SteamFormatter()
@@ -592,7 +638,7 @@ namespace HCResourceLibraryApp.Layout
                     /// display
                     Program.ToggleFormatUsageVerification();
                     NewLine(3);
-                    int[] cursorPos = new int[2] { Console.CursorTop - 1, Console.CursorLeft };
+                    GetCursorPosition(-1);
 
                     Important($"GENERATED LOG - V{_sfLibraryRef.Version}", subMenuUnderline);
                     HorizontalRule(subMenuUnderline);
@@ -612,8 +658,7 @@ namespace HCResourceLibraryApp.Layout
                     HorizontalRule(subMenuUnderline);
                     NewLine();
 
-                    Console.CursorTop = cursorPos[0];
-                    Console.CursorLeft = cursorPos[1];
+                    SetCursorPosition();
                     Pause();
                     Program.ToggleFormatUsageVerification();
 
@@ -837,7 +882,8 @@ namespace HCResourceLibraryApp.Layout
             const string multiHistKey = "\n\n\n", histNLRep = SFormatterHistory.histNLRep;
             bool exitFormatEditorQ = false, formatterIsSetupQ = false, showHistoryQ = false;
 
-            const int noLineToEdit = -1, lineMaximum = (int)(PageSizeLimit * 0.4f); // DBG"10"   OG"(int)(PageSizeLimit * 0.4f)"
+            // <lineMaximum> DBG"10"   OG"(int)(PageSizeLimit * 0.4f)"  //      <lineMaxWarn...> DBG"lineMaximum"    OG"10"
+            const int noLineToEdit = -1, lineMaximum = (int)(PageSizeLimit * 0.4f), lineMaxWarnThreshold = 10; 
             const int historyLimit = 25, historyActionInitial = 1;
             int lineToEdit = noLineToEdit, lineToEditSpan = HSNL(3, 7).Clamp(0, 5), countCycles = 0, historySpan = HSNL(1, 5).Clamp(1, 3);
 
@@ -989,8 +1035,8 @@ namespace HCResourceLibraryApp.Layout
 
                         // Editing Area (part 1)
                         bool makingEdit = lineToEdit != noLineToEdit;
-                        int editCursorTop = 0, editCursorLeft = 0;
-                        SFormatterHandler.CheckSyntax(formatToDisplay.ToArray());
+                        int groupStartLine = 0;
+                        CheckSyntax(formatToDisplay.ToArray());
                         for (int lx = 0; lx < formatToDisplay.Count; lx++)
                         {
                             int lineNumber = lx + 1;
@@ -1001,15 +1047,17 @@ namespace HCResourceLibraryApp.Layout
                             bool isInGroupQ = _formatterData.IsLineInGroup(lineNumber, out string groupName, out int pos, out bool expandedQ);
                             bool collapseGroupQ = isInGroupQ && !expandedQ && !makingEdit;
 
-                            /// group expanded top region tag \ group collapsed tag
+                            //  /// group expanded top region tag \ group collapsed tag
+                            /// group expanded top region tag
                             if (isInGroupQ && pos == 1)
                             {
+                                groupStartLine = lineNumber;
                                 if (!collapseGroupQ)
                                 {
-                                    if ((displayLines || spanEdge))
+                                    if (displayLines || spanEdge)
                                         FormatLine($"{Ind24}--  Group '{groupName}'  -- ", ForECol.Accent);
                                 }
-                                else FormatLine($"{Ind24}====  Group '{groupName}'  ====", ForECol.Accent);
+                                //else FormatLine($"{Ind24}====  Group '{groupName}'  ====", ForECol.Accent);
                             }
 
                             /// group inner-lines tag
@@ -1023,7 +1071,7 @@ namespace HCResourceLibraryApp.Layout
                                 if (displayLines)
                                 {
                                     Format($"L{lx + 1,-3} {innerGroupKey}", ForECol.Accent);
-                                    SFormatterHandler.ColorCode(formatToDisplay[lx], _formatterData.UseNativeColorCodeQ, true);
+                                    ColorCode(formatToDisplay[lx], _formatterData.UseNativeColorCodeQ, true);
                                 }
                                 else if (spanEdge)
                                     FormatLine($"L{lx + 1,-3} {innerGroupKey}...", ForECol.Accent);
@@ -1036,8 +1084,7 @@ namespace HCResourceLibraryApp.Layout
                                 HorizontalRule(divEditingArea);
                                 FormatLine($"Editing Line {lineNumber} -- [Enter] to end edits. '!help' for formatter language help.", ForECol.Accent);
                                 Format(">> ");
-                                editCursorTop = Console.CursorTop;
-                                editCursorLeft = Console.CursorLeft;
+                                GetCursorPosition();
                                 NewLine(3);
                                 HorizontalRule(divEditingArea);
                             }
@@ -1063,17 +1110,39 @@ namespace HCResourceLibraryApp.Layout
                                 }
 
 
-                            /// group expanded bottom region tag
-                            if (isInGroupQ && pos == -1 && !collapseGroupQ && (displayLines || spanEdge))
-                                FormatLine($"{Ind24}--  END Group '{groupName}'  --", ForECol.Accent);
+                            // /// group expanded bottom region tag
+                            //if (isInGroupQ && pos == -1 && !collapseGroupQ && (displayLines || spanEdge))
+                            //    FormatLine($"{Ind24}--  END Group '{groupName}'  --", ForECol.Accent);
+                            /// group expanded bottom region tag \ group collapsed tag
+                            if (isInGroupQ && pos == -1)
+                            {
+                                if (!collapseGroupQ)
+                                {
+                                    if (displayLines || spanEdge)
+                                        FormatLine($"{Ind24}--  END Group '{groupName}'  --", ForECol.Accent);
+                                }
+                                else
+                                {
+                                    int countErrors = 0;
+                                    for (int glx = groupStartLine; glx <= lineNumber; glx++)
+                                    {
+                                        SFormatterInfo[] getLineErrors = GetErrors(glx);
+                                        if (getLineErrors.HasElements())
+                                            countErrors += getLineErrors.Length;
+                                    }
+                                    string groupErrors = "";
+                                    if (countErrors != 0)
+                                        groupErrors = $"({countErrors} error{ConditionalText(countErrors == 1, "", "s")})";
+                                    FormatLine($"{Ind24}====  Group '{groupName}' {groupErrors} ====", ForECol.Accent);
+                                }
+                            }
                         }
 
 
                         // Editing Area (part 2)
                         if (makingEdit)
                         {
-                            Console.CursorTop = editCursorTop;
-                            Console.CursorLeft = editCursorLeft;
+                            SetCursorPosition();
 
                             string editInput = StyledInput("___");
                             /// IF value: open format syntax help -OR- make edit; ELSE leave edit as is
@@ -1116,14 +1185,14 @@ namespace HCResourceLibraryApp.Layout
                                         { "// text",    "Line comment. Must be placed at the start of the line. Commenting renders a line imparsable."},
                                         { "text",       "Code. Anything that is not commented is code and is parsable on steam log generation."},
                                         { "\"text\"",   "Plain text. Represents any text that will be parsed into the generated steam log."},
-                                        { "&00;",       $"Escape character. Used within plain text to print double quote character (\")."},
+                                        { "&##;",       $"Escape character. Used within plain text to print a syntax-regulated character.{nxt}Use '&00;' for double quote character (\"). Use '&01;' for hashtag / pound symbol (#)."},
                                         { "{text}",     $"Library reference. References a value based on the information received from a submitted version log.{nxt}Refer to 'Library Reference' below for more information."},
                                         { "$text",      $"Steam format reference. References a styling element to use against plain text or another value when generating steam log.{nxt}Refer to 'Steam Format References' below for more information."},
-                                        { "if # = #;",  $"Keyword. Must be placed at the start of the line.{nxt}A control command that compares two values for a true or false condition. If the condition is 'true' then the line's remaining data will be parsed into the formatting string.{nxt}The operator '=' compares two values to be equal. The operator '!=' compares two values to be unequal.{nxt}Plain text values may not contain semi-colon ';' characters."},
+                                        { "if # = #;",  $"Keyword. Must be placed at the start of the line.{nxt}A control command that compares two values for a true or false condition. If the condition is 'true' then the line's remaining data will be parsed into the formatting string.{nxt}Operators and their comparisons:|Equal to '=', Unequal to '!='|Greater than '>', Lesser than '<'|Greater than or equal to '>='|Lesser than or equal to '<='.".Replace("|", $"{nxt}{Ind14}")},
                                         { "else;",      $"Keyword. Must be placed at the start of the line. Must be placed following an 'if' keyword line.{nxt}A control command that will parse the line's remaining data when the condition of a preceding 'if' command is false."},
                                         { "repeat #;",  $"Keyword. Must be placed at the start of the line.{nxt}A control command that repeats a line's remaining data '#' number of times. An incrementing number from one to given number '#' will replace any occuring '#' in the line's remaining data."},
-                                        { "jump #;",    $"Keyword. Can only be placed following an 'if' or 'else' keyword.{nxt}A control command the allows skipping ahead to a given line. Only direct numbers are accepted as a value. Providing a line number beyond final line will skip all remaining lines.{nxt}Note that values following this keyword are not parsed."},
-                                        { "next;", $"Keyword. Can only be placed following an 'if', 'else', or 'repeat' keyword.{nxt}A control command that allows the combination of its line and the next line. The next line may not contain any keywords.{nxt}Note that values following this keyword are not parsed."},
+                                        { "jump #;",    $"Keyword. Can only be placed following an 'if' or 'else' keyword.{nxt}A control command the allows skipping ahead to a given line. Only direct numbers are accepted as a value. Providing a line number beyond final line will skip all remaining lines."},
+                                        { "next;", $"Keyword. Can only be placed following an 'if', 'else', or 'repeat' keyword.{nxt}A control command that subtitutes the next line as the current line. The next line may not contain any keywords.{nxt}Keyword lines ending with this keyword may be placed within table blocks and list blocks (see 'Steam Format References')."},
 
 
                                         // LIBRARY
@@ -1150,7 +1219,7 @@ namespace HCResourceLibraryApp.Layout
 
                                      */
                                         { "LIBRARY REFERENCES", null},
-                                        { null, "Library reference values are provided by the information obtained from the version log submitted for steam log generation.\nValues returned from library references are as plain text."},
+                                        { null, $"Library reference values are provided by the information obtained from the version log submitted for steam log generation.\nValues returned from library references are as plain text. The value '{SFormatterLibRef.ValIsNE}' is returned when a given reference has no value."},
                                         { "{Version}",          "Value. Gets the log version number (ex 1.00)."},
                                         { "{AddedCount}",       "Value. Gets the number of added item entries available."},
                                         { "{Added:#,prop}",     $"Value Array. Gets value 'prop' from one-based added entry number '#'.{nxt}Values for 'prop': ids, name."},
@@ -1206,8 +1275,8 @@ namespace HCResourceLibraryApp.Layout
                                         { "$np",    "Simple command. No parse. Doesn't parse steam format tags when generating steam log."},
                                         { "$c",     "Simple command. Code text. Fixed width font, preserves space."},
                                         { "$hr",    "Simple command. Horizontal rule. Must be placed on its own line. May not be combined with other simple commands."},
-                                        { "$nl",    "Simple command. New line."},
-                                        { "$d",     $"Simple command. Indent.{nxt}There are four indentation levels which relates to the number of 'd's in reference. Example, a level 2 indent is '$dd'.{nxt}An indentation is the equivalent of two spaces (' 'x2)."},
+                                        { "$nl",    "Simple command. New line. Does not require a value."},
+                                        { "$d",     $"Simple command. Indent. Does not require a value.{nxt}There are four indentation levels which relates to the number of 'd's in reference. Example, a level 2 indent is '$dd'.{nxt}An indentation is the equivalent of two spaces (' 'x2)."},
                                         { "$r",    "Simple command. Regular. Used to negate the effects of preceding simple commands."},
                                         /// complex
                                         { "$url= 'link':'name'",     $"Complex command. Must be placed on its own line.{nxt}Creates a website link by using URL address 'link' to create a hyperlink text described as 'name'."},
@@ -1221,9 +1290,10 @@ namespace HCResourceLibraryApp.Layout
 
                                         // SYNTAX EXCEPTIONS
                                         { "SYNTAX EXCEPTIONS", null},
-                                        { "if # = #; if # = #;", "The keyword 'if' may precede the keyword 'if' once more. The second 'if' may trigger a following 'else' keyword line." },
+                                        { "if # = #; if # = #;", "The keyword 'if' may follow after another 'if' keyword once more. The second 'if' may trigger a following 'else' keyword line." },
                                         { "else; if # = #;", "The keyword 'else' may precede the keyword 'if'. This 'if' keyword may trigger a following 'else' keyword line."},
                                         { "repeat#; if # = #;", "The keyword 'repeat' may precede the keyword 'if'. This 'if' keyword cannot trigger an 'else' keyword line."},
+                                        { "else; if # = #; next;", "The keywords 'next' and 'jump' may follow after a second 'if' keyword."},
 
 
                                         // EDITING SUPPLEMENT
@@ -1290,7 +1360,7 @@ namespace HCResourceLibraryApp.Layout
                                     TableRowDivider(false);
 
                                     Format("End of Formatting Language Syntax", ForECol.Accent);
-                                    Console.CursorTop = 1; /// just below title
+                                    SetCursorPosition(1); /// just below title
                                     Pause();
 
                                     /// to bypass prompts and return to editing
@@ -1579,7 +1649,7 @@ namespace HCResourceLibraryApp.Layout
                             { $"{editorCmdUndo}", $"Undoes an available editor action in history (limit of {historyLimit - 1})."},
                             { $"{editorCmdRedo}", $"Redoes an available editor action in history (limit of {historyLimit - 1})."},
                             { $"{editorCmdGroup}#,#,{{name}}", $"Allows labelling a sequence of lines with given value 'name'. Calling an existing group by 'name' will toggle its expansion. Name cannot contain '{DataHandlerBase.Sep}' character. To remove a group, precede the group name with '0,0'. Minimum size of '2' lines."},
-                            { $"", "  BEWARE: Having groups too close to boundaries, too close to each other, or too small may unexpectedly and unrecoverably break them. In worst of cases, a file reversion is your best recovery."}
+                            { $"", "  BEWARE: Having groups too close to boundaries, too close to each other, or too small may unexpectedly and unrecoverably break or alter them. In worst of cases, a file reversion is your best recovery."}
                         };
                         for (int i = 0; i < editorCmds.GetLength(0); i++)
                             Table(divStyle, $"{Ind24}{editorCmds[i, 0]}", divHelpChar, editorCmds[i, 1]);
@@ -1619,6 +1689,12 @@ namespace HCResourceLibraryApp.Layout
                                     if (addLineNum == lineCount)
                                         commandPrompt = editorCmdAdd;
                                     else commandPrompt = $"{editorCmdAdd}{addLineNum}";
+
+                                    if ((lineCount + 1).IsWithin(lineMaximum - lineMaxWarnThreshold, lineMaximum))
+                                    {
+                                        Format($"{Ind24}Nearing line limit ({lineMaximum - lineCount - 1} lines before limit)", ForECol.Warning);
+                                        Wait(2.5f);
+                                    }
                                 }
                                 else IncorrectionMessageQueue($"Line #{addLineNum} does not exist.");
                             }
@@ -1680,7 +1756,28 @@ namespace HCResourceLibraryApp.Layout
                             if (int.TryParse(editorInput.Replace(editorCmdDelete, ""), out int deleteLineNum))
                             {
                                 if (deleteLineNum.IsWithin(lineMinimum, lineCount) && hasLinesQ)
-                                    commandPrompt = $"{editorCmdDelete}{deleteLineNum}";
+                                {
+                                    /// check if about to destroy group; warn
+                                    bool deleteAnyWayQ = true;
+                                    if (_formatterData.IsLineInGroup(deleteLineNum, out string groupName, out int pos, out _))
+                                    {
+                                        bool onlyOtherLineInGroupQ = false;
+                                        if (pos == 1 && _formatterData.IsLineInGroup(deleteLineNum + 1, out string groupName2, out int pos2, out _))
+                                            onlyOtherLineInGroupQ = groupName == groupName2 && pos2 == -1;
+                                        else if (pos == -1 && _formatterData.IsLineInGroup(deleteLineNum - 1, out string groupName3, out int pos3, out _))
+                                            onlyOtherLineInGroupQ = groupName == groupName3 && pos3 == 1;
+
+                                        if (onlyOtherLineInGroupQ)
+                                        {
+                                            NewLine();
+                                            FormatLine($"{Ind34}Deleting Line {deleteLineNum} may unrecoverably destroy group '{groupName}'.", ForECol.Warning);
+                                            Confirmation($"{Ind34}Continue to deleting Line {deleteLineNum}? ", false, out deleteAnyWayQ);
+                                        }
+                                    }     
+
+                                    if (deleteAnyWayQ)
+                                        commandPrompt = $"{editorCmdDelete}{deleteLineNum}";
+                                }
                                 else IncorrectionMessageQueue($"Line #{deleteLineNum} does not exist.");
                             }
                             else IncorrectionMessageQueue("Line number was not a number.");
@@ -2016,11 +2113,15 @@ namespace HCResourceLibraryApp.Layout
                                     if (lineStart == 0 && lineEnd == lineStart)
                                     {
                                         _formatterData.DeleteGroup(groupName, out SfdGroupInfo deletedGroup);
-                                        Dbug.LogPart($"Removed group named '{groupName}'");
+                                        if (deletedGroup != null)
+                                        {
+                                            Dbug.LogPart($"Removed group named '{groupName}'");
 
-                                        histName = $"Removed Group '{groupName}'";
-                                        histRedo = commandPrompt;
-                                        histUndo = $"{editorCmdGroup}{deletedGroup.startLineNum},{deletedGroup.endLineNum},{groupName}";
+                                            histName = $"Removed Group '{groupName}'";
+                                            histRedo = commandPrompt;
+                                            histUndo = $"{editorCmdGroup}{deletedGroup.startLineNum},{deletedGroup.endLineNum},{groupName}";
+                                        }
+                                        else Dbug.LogPart($"No group to remove (DNE)");
                                     }
                                     else
                                     {
@@ -2466,10 +2567,6 @@ namespace HCResourceLibraryApp.Layout
             }
             while (!exitFormatEditorQ);
 
-
-            /// JUST A THOUGHT : Perhaps I should warn the user before they do an action that 'combusts' a group. A confirmation dialogue, like "are you sure about that?"
-
-
             Dbug.NudgeIndent(false);
             if (isUsingFormatterNo1Q)
                 historyActionNumber1 = historyActionNumber;
@@ -2486,24 +2583,45 @@ namespace HCResourceLibraryApp.Layout
             if (formatterLines.HasElements() && libRef.IsSetup())
             {
                 Dbug.StartLogging("GenSteamLogPage.FormattingParser()");
-                Dbug.Log($"Received '{formatterLines.Length}' formatting lines; library reference is setup; Proceeding to parsing; ");
+                Dbug.LogPart($"Received '{formatterLines.Length}' formatting lines; library reference is setup; ");
+
+                // get last parsable line
+                int lastParsableLineNum = 0;
+                for (int lx0 = 0; lx0 < formatterLines.Length; lx0++)
+                {
+                    if (!formatterLines[lx0].TrimStart().StartsWith("//"))
+                        lastParsableLineNum = lx0 + 1;
+                }
+                Dbug.Log($"Fetched last parsable line (line {lastParsableLineNum}); Proceeding to parsing; ");
 
                 int skipLinesNum = 0;
                 bool? prevIfCondition = null;
-                const string nlRep = "\x2590nl ";
+                const string nlRep = "\x2590\x2584";
                 string heldListOrTable = null;
                 // parsing loop
                 for (int lx = 0; lx < formatterLines.Length; lx++)
                 {
                     int lineNum = lx + 1;
                     string line = formatterLines[lx], nextLine = null;
+                    int frontPedalCount = 1;
                     if (lx + 1 < formatterLines.Length)
-                        nextLine = formatterLines[lx + 1];
+                    {
+                        while (lx + frontPedalCount < formatterLines.Length && nextLine.IsNE())
+                        {
+                            string aNextLine = formatterLines[lx + frontPedalCount];
+                            if (!aNextLine.TrimStart().StartsWith("//"))
+                                nextLine = aNextLine;
+
+                            if (nextLine.IsNE())
+                                frontPedalCount++;
+                        }
+                        //nextLine = formatterLines[lx + 1];
+                    }
                     bool lineIsSkipped = skipLinesNum > 0, lineIsComment = line.TrimStart().StartsWith("//");
 
                     /// line info
                     Dbug.LogPart($"LINE {lineNum}  ::  {line}; ");
-                    Dbug.Log($" [{(lineIsSkipped ? $"skip'{skipLinesNum}" : "")}.{(lineIsComment ? "comment" : "")}]; ");
+                    Dbug.Log($" [{(lineIsSkipped ? $"skip'{skipLinesNum}" : "")}.{(lineIsComment ? "comment" : "")}.{(heldListOrTable.IsNE() ? "" : $"held'{(heldListOrTable.Contains("list") ? "L" : "T")}")}]; ");
 
                     if (skipLinesNum > 0)
                         skipLinesNum--;
@@ -2521,10 +2639,14 @@ namespace HCResourceLibraryApp.Layout
                             Dbug.LogPart("Keyword Controls identified; Keyword Blocks --> ");
                             string snipFullControl = line.RemoveFromPlainText(';').SnippetText(line[0].ToString(), ";", Snip.Inc, Snip.EndLast);
                             string remainingLine = line.Substring(snipFullControl.Length);
-                            string[] keyControls = new string[2];
-
-                            if (snipFullControl.CountOccuringCharacter(';') == 2)
-                                keyControls = snipFullControl.LineBreak(';', true);
+                            string[] keyControls = new string[3];
+                            if (snipFullControl.CountOccuringCharacter(';') > 1)
+                            {
+                                string[] controls = snipFullControl.LineBreak(';', true);
+                                for (int c = 0; c < controls.Length && c < 3; c++)
+                                    if (controls[c].Contains(';'))
+                                        keyControls[c] = controls[c];
+                            }
                             else keyControls[0] = snipFullControl;
 
                             foreach (string keyCon in keyControls)
@@ -2536,13 +2658,14 @@ namespace HCResourceLibraryApp.Layout
 
                             /// execute control keywords
                             Dbug.NudgeIndent(true);
-                            bool? currentBoolCondition = null, repeatIfUseOpEqualQ = null;
+                            bool? currentBoolCondition = null;
                             bool isJumpedQ = false, isNextedQ = false;
                             int repeatCount = 0;
-                            string repeatIfVal1 = "", repeatIfVal2 = "";
+                            string repeatIfVal1 = "", repeatIfVal2 = "", repeatIfOp = "";
                             for (int kbx = 0; kbx < keyControls.Length; kbx++)
                             {
                                 bool isFirstControlBlockQ = kbx == 0;
+                                bool isLastControlBlockQ = kbx == keyControls.Length - 1;
                                 string keyConBlock = keyControls[kbx];
 
                                 if (keyConBlock.IsNotNEW())
@@ -2551,24 +2674,51 @@ namespace HCResourceLibraryApp.Layout
                                     Dbug.LogPart($"Executing Block {kbx + 1} [{keyConBlock}] -->  ");
 
                                     /// if {value1} =/!= {value2}
+                                    ///     pos: 1st 2nd
                                     ///     preceded by: if, else, repeat
                                     if (keyConBlock.StartsWith("if"))
                                     {
                                         string argsIf = keyConBlock.SnippetText("if", ";");
-                                        string val1, val2;
-                                        bool useOpEqualQ = true;
+                                        string val1, val2, op = "";
 
-                                        string[] argParts = argsIf.Split('=');
-                                        if (argParts[0].EndsWith('!'))
+                                        string noPlainArgs = argsIf.RemovePlainText();
+                                        if (noPlainArgs.RemovePlainText().Contains('='))
                                         {
-                                            useOpEqualQ = false;
-                                            argParts[0] = argParts[0][..^1];
+                                            if (noPlainArgs.Contains("!="))
+                                                op = "!=";
+                                            else if (noPlainArgs.Contains("<="))
+                                                op = "<=";
+                                            else if (noPlainArgs.Contains(">="))
+                                                op = ">=";
+                                            else op = "=";
                                         }
-                                        val1 = argParts[0].Trim();
-                                        val2 = argParts[1].Trim();
+                                        else
+                                        {
+                                            if (noPlainArgs.Contains(">"))
+                                                op = ">";
+                                            else if (noPlainArgs.Contains("<"))
+                                                op = "<";
+                                        }
 
-                                        bool conditionIf = useOpEqualQ ? val1 == val2 : val1 != val2;
-                                        Dbug.LogPart($"Comparison [{val1} / {(useOpEqualQ ? "=" : "!=")} / {val2}]; Result [");
+                                        string[] argParts = argsIf.LineBreak('=', true, true);
+                                        if (!argParts.HasElements(2))
+                                        {
+                                            if (argsIf.Contains(">"))
+                                                argParts = argsIf.LineBreak('>', true, true);
+                                            else argParts = argsIf.LineBreak('<', true, true);
+                                        }
+                                        argParts[0] = argParts[0][..^op.Length];
+                                        
+
+                                        if (int.TryParse(argParts[0], out int val1Num))
+                                            val1 = $"\"{val1Num}\"";
+                                        else val1 = argParts[0].Trim();
+                                        if (int.TryParse(argParts[1], out int val2Num))
+                                            val2 = $"\"{val2Num}\"";
+                                        else val2 = argParts[1].Trim();
+
+                                        bool conditionIf = ResultIfComparison(val1, op, val2);
+                                        Dbug.LogPart($"Comparison [{val1} / {op} / {val2}]; Result [");
 
                                         if (isFirstControlBlockQ)
                                         {
@@ -2589,8 +2739,7 @@ namespace HCResourceLibraryApp.Layout
                                                     Dbug.LogPart("DELAYED! to Repeat");
                                                     repeatIfVal1 = val1;
                                                     repeatIfVal2 = val2;
-                                                    repeatIfUseOpEqualQ = useOpEqualQ;
-                                                    //Dbug.LogPart($" --> {repeatIfVal1} / {(repeatIfUseOpEqualQ.Value ? "=" : "!=")} / {repeatIfVal2}");
+                                                    repeatIfOp = op;
                                                 }
                                                 else
                                                 {
@@ -2604,6 +2753,7 @@ namespace HCResourceLibraryApp.Layout
                                     }
 
                                     /// else;
+                                    ///     pos: 1st
                                     if (keyConBlock.StartsWith("else") && isFirstControlBlockQ)
                                     {
                                         if (prevIfCondition.HasValue)
@@ -2614,6 +2764,7 @@ namespace HCResourceLibraryApp.Layout
                                     }
 
                                     /// repeat #;
+                                    ///     pos: 1st
                                     if (keyConBlock.StartsWith("repeat") && isFirstControlBlockQ)
                                     {
                                         string argsRepeat = keyConBlock.SnippetText("repeat", ";");
@@ -2634,6 +2785,7 @@ namespace HCResourceLibraryApp.Layout
                                     }
 
                                     /// jump #;
+                                    ///     pos: 2nd 3rd
                                     ///     preceded by: if, else
                                     if (keyConBlock.StartsWith("jump") && !isFirstControlBlockQ)
                                     {
@@ -2641,13 +2793,14 @@ namespace HCResourceLibraryApp.Layout
                                         Dbug.LogPart("From Pure Number; Result ");
                                         if (int.TryParse(argsJump, out int jumpLine))
                                         {
-                                            skipLinesNum = jumpLine - lineNum - 1;
-                                            Dbug.LogPart($"[{jumpLine}] --> 1st Condition ");
+                                            int lineJumpCount = jumpLine - lineNum - 1;
+                                            Dbug.LogPart($"[{jumpLine}] --> 1st{(!isFirstControlBlockQ ? " & 2nd" : "")} Condition ");
                                             if (currentBoolCondition.HasValue)
                                             {
                                                 Dbug.LogPart($"[{currentBoolCondition.Value}] Result: ");
                                                 if (currentBoolCondition.Value)
                                                 {
+                                                    skipLinesNum = lineJumpCount;
                                                     Dbug.LogPart($" Skip '{skipLinesNum}' line(s)");
                                                     isJumpedQ = true;
                                                 }
@@ -2659,6 +2812,7 @@ namespace HCResourceLibraryApp.Layout
                                     }
 
                                     /// next;
+                                    ///     pos: 2nd 3rd
                                     ///     preceded by: if, else, repeat
                                     if (keyConBlock.StartsWith("next") && !isFirstControlBlockQ)
                                     {
@@ -2678,14 +2832,15 @@ namespace HCResourceLibraryApp.Layout
                                             Dbug.LogPart("Result: Utilize next line and then skip it");
                                             isNextedQ = true;
                                         }
-                                        skipLinesNum = 1;
+                                        skipLinesNum = frontPedalCount;
+                                        Dbug.LogPart($" (Skip '{skipLinesNum}' lines)");
                                     }
 
                                     Dbug.Log("; ");
                                 }
 
                                 /// final edit choices here
-                                if (!isFirstControlBlockQ)
+                                if (isLastControlBlockQ)
                                 {
                                     /// conditions and remaining line
                                     Dbug.LogPart($"Conditional Outcome [");
@@ -2713,14 +2868,12 @@ namespace HCResourceLibraryApp.Layout
                                             for (int rx = 1; rx <= repeatCount; rx++)
                                             {
                                                 string condRemainingLine = remainingLine;
-                                                if (repeatIfUseOpEqualQ.HasValue)
+                                                if (repeatIfOp.IsNotNEW())
                                                 {
                                                     string repVal1 = ReplaceLibRefs(repeatIfVal1.Replace("#", $"{rx}"));
                                                     string repVal2 = ReplaceLibRefs(repeatIfVal2.Replace("#", $"{rx}"));
 
-                                                    if (repeatIfUseOpEqualQ.Value)
-                                                        condRemainingLine = repVal1 == repVal2 ? remainingLine : "";
-                                                    else condRemainingLine = repVal1 != repVal2 ? remainingLine : "";
+                                                    condRemainingLine = ResultIfComparison(repVal1, repeatIfOp, repVal2) ? remainingLine : "";
                                                 }
 
                                                 if (condRemainingLine.IsNotNE())
@@ -2728,11 +2881,11 @@ namespace HCResourceLibraryApp.Layout
                                                 else countRepeatsUnPrinted++;
                                             }
 
-                                            if (repeatIfUseOpEqualQ.HasValue)
-                                                Dbug.LogPart($"; With Condition [IF {repeatIfVal1} {(repeatIfUseOpEqualQ.Value ? "=" : "!=")} {repeatIfVal2}] --> Exempted '{countRepeatsUnPrinted}' lines");
+                                            if (repeatIfOp.IsNotNEW())
+                                                Dbug.LogPart($"; With Condition [IF {repeatIfVal1} {repeatIfOp} {repeatIfVal2}] --> Exempted '{countRepeatsUnPrinted}' lines");
                                             Dbug.Log("; ");
 
-                                            repeatIfUseOpEqualQ = null;
+                                            repeatIfOp = "";
                                             repeatIfVal1 = "";
                                             repeatIfVal2 = "";
                                         }
@@ -2743,6 +2896,42 @@ namespace HCResourceLibraryApp.Layout
                             Dbug.NudgeIndent(false);
 
                             prevIfCondition = currentBoolCondition;
+
+
+                            /// METHOD
+                            bool ResultIfComparison(string val1, string op, string val2)
+                            {
+                                bool compIfResult = false;
+                                if (val1.IsNotNE() && op.IsNotNEW() && val2.IsNotNE())
+                                {
+                                    if (op == "=")
+                                        compIfResult = val1 == val2;
+                                    else if (op == "!=")
+                                        compIfResult = val1 != val2;
+                                    else
+                                    {
+                                        bool parsedVal1 = int.TryParse(val1.RemovePlainText(true), out int val1Num);
+                                        bool parsedVal2 = int.TryParse(val2.RemovePlainText(true), out int val2Num);
+                                        if (!parsedVal1)
+                                            parsedVal1 = int.TryParse(val1, out val1Num);
+                                        if (!parsedVal2)
+                                            parsedVal2 = int.TryParse(val2, out val2Num);
+
+                                        if (parsedVal1 && parsedVal2)
+                                        {
+                                            if (op == ">")
+                                                compIfResult = val1Num > val2Num;
+                                            else if (op == "<")
+                                                compIfResult = val1Num < val2Num;
+                                            else if (op == ">=")
+                                                compIfResult = val1Num >= val2Num;
+                                            else if (op == "<=")
+                                                compIfResult = val1Num <= val2Num;
+                                        }
+                                    }
+                                }
+                                return compIfResult;
+                            }
                         }
                         else
                         {
@@ -2751,6 +2940,8 @@ namespace HCResourceLibraryApp.Layout
                         }
                         Dbug.NudgeIndent(false);
 
+                        if (lastParsableLineNum <= lineNum + skipLinesNum && !lineOutcomes.HasElements())
+                            lineOutcomes.Add("\" \"");
 
                         // STEAM FORMAT REFERENCES  &&  FINAL LINE MODIFICATIONS
                         if (lineOutcomes.HasElements())
@@ -2758,9 +2949,13 @@ namespace HCResourceLibraryApp.Layout
                             // Steam Format References
                             Dbug.NudgeIndent(true);
                             bool searchForSteamRefs = line.RemovePlainText().Contains("$");
-                            if (!searchForSteamRefs && nextLine.IsNotNE())
-                                searchForSteamRefs = nextLine.RemovePlainText().Contains("$");
-                            
+                            if (!searchForSteamRefs)
+                            {
+                                if (nextLine.IsNotNE())
+                                    searchForSteamRefs = nextLine.RemovePlainText().Contains("$");
+                                else searchForSteamRefs = lastParsableLineNum <= lineNum + skipLinesNum;
+                            }                                
+
                             if (searchForSteamRefs)
                             {
                                 List<string> newLineOutcomes = new();
@@ -2772,11 +2967,12 @@ namespace HCResourceLibraryApp.Layout
                                     {
                                         string keyLine = ReplaceLibRefs(lineOutcomes[sfx]);
                                         string keyLineNum = $"{lineNum}.{sfx + 1}";
-                                        Dbug.LogPart($"N-LINE {keyLineNum}  ::  {keyLine}; ");
-                                        Dbug.Log($"[{(heldListOrTable.IsNE() ? "" : $"held.{(heldListOrTable.Contains("list") ? "L" : "T")}")}]; ");
+                                        Dbug.LogPart($"N-LINE {keyLineNum}  ::  {keyLine}{(keyLine.RemovePlainText(true).IsEW() && keyLine.RemovePlainText().IsEW() ? " <lastExecutableLine_substitute>" : "")}; ");
+                                        Dbug.Log($"[{(heldListOrTable.IsNE() ? "" : $"held'{(heldListOrTable.Contains("list") ? "L" : "T")}")}]; ");
 
                                         Dbug.NudgeIndent(true);
-                                        string[] steamFormatLines = ReplaceSteamRefs(keyLine, out heldListOrTable, heldListOrTable);
+                                        bool isLastLineQ = lastParsableLineNum <= lineNum + skipLinesNum && sfx == lineOutcomes.Count - 1;
+                                        string[] steamFormatLines = ReplaceSteamRefs(keyLine, out heldListOrTable, isLastLineQ, heldListOrTable);
                                         if (steamFormatLines.HasElements())
                                         {
                                             int countLine = 0;
@@ -2807,12 +3003,15 @@ namespace HCResourceLibraryApp.Layout
                             for (int flx = 0; flx < lineOutcomes.Count; flx++)
                             {
                                 string subLine = ReplaceLibRefs(lineOutcomes[flx]).RemovePlainText(true);
-                                subLine = subLine.Replace("&00;", "\"");
+                                subLine = subLine.Replace("&00;", "\"").Replace("&01;", "#");
 
-                                string subLineNum = $"{lineNum} {IntToAlphabet(flx % 26)}{(flx / 26 == 0 ? "" : (flx / 26) + 1)}";
-                                Dbug.Log($"FINAL LINE {subLineNum}  ::  {subLine.Replace("\n", nlRep)}; ");
+                                if (subLine.IsNotNEW())
+                                {
+                                    string subLineNum = $"{lineNum} {IntToAlphabet(flx % 26)}{(flx / 26 == 0 ? "" : (flx / 26) + 1)}";
+                                    Dbug.Log($"FINAL LINE {subLineNum}  ::  {subLine.Replace("\n", nlRep)}; ");
 
-                                finalLines.Add(subLine);
+                                    finalLines.Add(subLine);
+                                }
                             }
                         }
                         Dbug.Log("- - -");
@@ -2827,7 +3026,7 @@ namespace HCResourceLibraryApp.Layout
                 string ReplaceLibRefs(string line)
                 {
                     string editedLine = line;
-                    if (line.IsNotNE() && (libRef.IsSetup() || Program.isDebugVersionQ))
+                    if (line.IsNotNE() && libRef.IsSetup())
                     {
                         editedLine = "";
                         string lValue = "";
@@ -2839,6 +3038,7 @@ namespace HCResourceLibraryApp.Layout
                                 string reference = linePart.RemovePlainText().Trim();
                                 if (reference.Contains("{") && reference.Contains("}"))
                                 {
+                                    reference = reference.SnippetText("{", "}", Snip.Inc, Snip.EndAft);
                                     if (reference.Contains(":"))
                                     {
                                         DecodedSection? secType = null;
@@ -2912,10 +3112,6 @@ namespace HCResourceLibraryApp.Layout
                                         if (refValue.IsNotNE())
                                             lValue = refValue;
                                     }
-
-                                    /// generally for debug
-                                    if (Program.isDebugVersionQ && !libRef.IsSetup())
-                                        lValue = "{libVal}";
                                 }
 
                                 if (lValue.IsNotNEW())
@@ -2932,10 +3128,9 @@ namespace HCResourceLibraryApp.Layout
                     }
                     return editedLine;
                 }
-                string[] ReplaceSteamRefs(string line, out string heldListOrTable, string listOrTableTag = "")
+                string[] ReplaceSteamRefs(string line, out string heldListOrTable, bool lastLineQ,  string listOrTableTag = "")
                 {
                     heldListOrTable = listOrTableTag;
-
                     List<string> editedLines = new();
                     string tagsBackPile = "", tagsFrontPile = "";
                     if (line.IsNotNEW())
@@ -3076,14 +3271,14 @@ namespace HCResourceLibraryApp.Layout
                             ///     url=  q=  th=  td=
                             else if (lPart.RemovePlainText().Contains("="))
                             {
-                                string[] complexParts = lPart.LineBreak('=', true);
+                                string[] complexParts = lPart.LineBreak('=', true, true);
                                 string refTag = complexParts[0].Substring(1, complexParts[0].Length - 2);
                                 string partArgs = complexParts[1];
 
                                 /// url= :  q= : 
                                 if (partArgs.RemovePlainText().Contains(":"))
                                 {
-                                    string[] arguments = partArgs.LineBreak(':');
+                                    string[] arguments = partArgs.LineBreak(':', false, true);
                                     arguments[0] = arguments[0].RemovePlainText(true);
                                     arguments[1] = arguments[1].RemovePlainText(true);
 
@@ -3096,7 +3291,7 @@ namespace HCResourceLibraryApp.Layout
                                 {
                                     string[] clms = new string[1];
                                     if (partArgs.RemovePlainText().Contains(','))
-                                        clms = partArgs.LineBreak(',', false, true);
+                                        clms = partArgs.LineBreak(',', true, true);
                                     else clms[0] = partArgs;
 
                                     keepResultsSeparatedQ = clms.Length > 1;
@@ -3107,6 +3302,7 @@ namespace HCResourceLibraryApp.Layout
                                         string rowText = "";
                                         if (isFirstClmQ)
                                             rowText += "[tr]";
+                                        else rowText += $"{Ind34}";
 
                                         rowText += $"{Ind14}[{refTag}]{clms[cx].RemovePlainText(true)}[/{refTag}]{Ind14}";
 
@@ -3128,13 +3324,13 @@ namespace HCResourceLibraryApp.Layout
                                 if (lPart.StartsWith("$h"))
                                 {
                                     if (lPart.StartsWith("$hr"))
-                                        finalLineParts.Add("\n[hr][/hr]\n");
+                                        finalLineParts.Add("\n[hr][/hr]");
                                     else
                                     {
                                         string headerRef = lPart.RemovePlainText();
                                         int headerLevel = headerRef.CountOccuringCharacter('h');
 
-                                        finalLineParts.Add($"\n[h{headerLevel}]{lPart.RemovePlainText(true)}[/h{headerLevel}]\n");
+                                        finalLineParts.Add($"\n[h{headerLevel}]{lPart.RemovePlainText(true)}[/h{headerLevel}]");
                                     }
                                 }
                                 /// all others
@@ -3184,9 +3380,6 @@ namespace HCResourceLibraryApp.Layout
                                         }
                                         else
                                         {
-                                            //if (!isRegularQ)
-                                            //    finalLineParts.Add($"[{tag}]");
-                                            //tagsBackPile = $"[/{tag}]" + tagsBackPile;
 
                                             if (!isRegularQ)
                                             {
@@ -3225,10 +3418,15 @@ namespace HCResourceLibraryApp.Layout
                             /// releasing held lists or tables  //  assigning new held lists or tables
                             if (isEndQ)
                             {
-                                if (releaseHeldListOrTableQ && heldListOrTable.IsNotNE())
+                                if (heldListOrTable.IsNotNE())
                                 {
-                                    editedLines.Insert(0, $"\"\n[/{heldListOrTable}]\n\"");
-                                    heldListOrTable = "";
+                                    if (releaseHeldListOrTableQ)
+                                        editedLines.Insert(0, $"\"\n[/{heldListOrTable}]\"");
+                                    else if (lastLineQ)
+                                        editedLines.Add($"\"\n[/{heldListOrTable}]\"");
+
+                                    if (releaseHeldListOrTableQ || lastLineQ)
+                                        heldListOrTable = "";
                                 }
                                 if (newHeldListOrTable.IsNotNEW())
                                     heldListOrTable = newHeldListOrTable;

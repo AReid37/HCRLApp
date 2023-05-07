@@ -145,12 +145,19 @@ namespace HCResourceLibraryApp.Layout
                 //  <|                                  |         |                                  |>
                 // bounds
                 },
+                
+                
 
                 /// INKING IDS CONDENSED
                 ///     0~3 (Primary Color) {title} [0 Full, 1 Dark, 2 Medium, 3 Light]
                 ///     4~7 (Secondary Col) {sbttl} [4 Full, 5 Dark, 6 Medium, 7 Light]
                 ///     8~11 (Tertiary Col) {touch} [8 Full, 9 Dark, - Medium, . Light]
 
+                /// 4: pending... (Required checkpoint: GenSteamLog complete)
+                /// 5: pending... (Required checkpoint: Library complete)
+                /// 6: pending... (Required checkpoint: Application complete and publish tested)
+                /// 7: pending... (Required checkpoint: All other checkpoints hit) 
+                /// NOTE :: up to 7 designs maximum
 
                 /// n: test style clipping
                 #region
@@ -168,6 +175,7 @@ namespace HCResourceLibraryApp.Layout
                 },
                 #endregion
             };
+
             /// selecting style by index here
             int styleIx = Extensions.Random(0, styleSheet.Count - 2);
             if (styleIx == 0 && !riggedStyleIndexQ) // avoid basic
@@ -175,6 +183,7 @@ namespace HCResourceLibraryApp.Layout
             if (riggedStyleIndexQ)
                 styleIx = rigStyleSheetIndex.Clamp(0, styleSheet.Count);
 
+            
             // ALL PRINTING HERE
             if (styleSheet.HasElements() && inkList.HasElements(inkCount))
             {
