@@ -102,8 +102,14 @@ namespace HCResourceLibraryApp.DataHandling
                 _fName2 = value;
             }
         }
-        public List<string> LineData1 { get => _lineData1; }
-        public List<string> LineData2 { get => _lineData2; }
+        public List<string> LineData1 
+        {
+            get => _lineData1.HasElements() ? _lineData1 : new List<string>(); 
+        }
+        public List<string> LineData2
+        {
+            get => _lineData2.HasElements() ? _lineData2 : new List<string>();
+        }
         #endregion
 
 

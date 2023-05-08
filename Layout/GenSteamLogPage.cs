@@ -1047,7 +1047,6 @@ namespace HCResourceLibraryApp.Layout
                             bool isInGroupQ = _formatterData.IsLineInGroup(lineNumber, out string groupName, out int pos, out bool expandedQ);
                             bool collapseGroupQ = isInGroupQ && !expandedQ && !makingEdit;
 
-                            //  /// group expanded top region tag \ group collapsed tag
                             /// group expanded top region tag
                             if (isInGroupQ && pos == 1)
                             {
@@ -1057,7 +1056,6 @@ namespace HCResourceLibraryApp.Layout
                                     if (displayLines || spanEdge)
                                         FormatLine($"{Ind24}--  Group '{groupName}'  -- ", ForECol.Accent);
                                 }
-                                //else FormatLine($"{Ind24}====  Group '{groupName}'  ====", ForECol.Accent);
                             }
 
                             /// group inner-lines tag
@@ -1090,7 +1088,7 @@ namespace HCResourceLibraryApp.Layout
                             }
 
                             /// error displays
-                            SFormatterInfo[] linErrors = SFormatterHandler.GetErrors(lineNumber);
+                            SFormatterInfo[] linErrors = GetErrors(lineNumber);
                             if (linErrors.HasElements() && displayLines && !collapseGroupQ)
                                 for (int ex = 0; ex < linErrors.Length; ex++)
                                 {
@@ -1109,10 +1107,6 @@ namespace HCResourceLibraryApp.Layout
                                     }
                                 }
 
-
-                            // /// group expanded bottom region tag
-                            //if (isInGroupQ && pos == -1 && !collapseGroupQ && (displayLines || spanEdge))
-                            //    FormatLine($"{Ind24}--  END Group '{groupName}'  --", ForECol.Accent);
                             /// group expanded bottom region tag \ group collapsed tag
                             if (isInGroupQ && pos == -1)
                             {
@@ -1219,7 +1213,7 @@ namespace HCResourceLibraryApp.Layout
 
                                      */
                                         { "LIBRARY REFERENCES", null},
-                                        { null, $"Library reference values are provided by the information obtained from the version log submitted for steam log generation.\nValues returned from library references are as plain text. The value '{SFormatterLibRef.ValIsNE}' is returned when a given reference has no value."},
+                                        { null, $"Library reference values are provided by information obtained from the version log submitted for steam log generation.\nValues returned from library references are as plain text. The value '{SFormatterLibRef.ValIsNE}' is returned when a given reference has no value."},
                                         { "{Version}",          "Value. Gets the log version number (ex 1.00)."},
                                         { "{AddedCount}",       "Value. Gets the number of added item entries available."},
                                         { "{Added:#,prop}",     $"Value Array. Gets value 'prop' from one-based added entry number '#'.{nxt}Values for 'prop': ids, name."},
@@ -1537,15 +1531,15 @@ namespace HCResourceLibraryApp.Layout
                     else
                     {
                         Format("L-   ", ForECol.Accent);
-                        SFormatterHandler.ColorCode("// Add a new line to get started.", _formatterData.UseNativeColorCodeQ, true);
+                        ColorCode("// Add a new line to get started.", _formatterData.UseNativeColorCodeQ, true);
                     }
                 }
                 else
                 {
                     Format("L-   ", ForECol.Accent);
-                    SFormatterHandler.ColorCode("\"hello world!\"", _formatterData.UseNativeColorCodeQ, true);
+                    ColorCode("\"hello world!\"", _formatterData.UseNativeColorCodeQ, true);
                     Format("L-   ", ForECol.Accent);
-                    SFormatterHandler.ColorCode("// Add a new line to get started.", _formatterData.UseNativeColorCodeQ, true);
+                    ColorCode("// Add a new line to get started.", _formatterData.UseNativeColorCodeQ, true);
                 }
                 HorizontalRule(divCodeView);
 
@@ -1637,7 +1631,6 @@ namespace HCResourceLibraryApp.Layout
                         TableRowDivider(true);
                         TableRowDivider(divCodeView, true, GetPrefsForeColor(ForECol.Accent));
                         Table(divStyle, "COMMAND", divHelpChar, "USAGE");
-                        TableRowDivider(false);
 
                         string[,] editorCmds = new string[,]
                         {
@@ -1649,10 +1642,11 @@ namespace HCResourceLibraryApp.Layout
                             { $"{editorCmdUndo}", $"Undoes an available editor action in history (limit of {historyLimit - 1})."},
                             { $"{editorCmdRedo}", $"Redoes an available editor action in history (limit of {historyLimit - 1})."},
                             { $"{editorCmdGroup}#,#,{{name}}", $"Allows labelling a sequence of lines with given value 'name'. Calling an existing group by 'name' will toggle its expansion. Name cannot contain '{DataHandlerBase.Sep}' character. To remove a group, precede the group name with '0,0'. Minimum size of '2' lines."},
-                            { $"", "  BEWARE: Having groups too close to boundaries, too close to each other, or too small may unexpectedly and unrecoverably break or alter them. In worst of cases, a file reversion is your best recovery."}
+                            { $"NOTE", "  BEWARE: Having groups too close to boundaries, too close to each other, or too small may unexpectedly and unrecoverably break or alter them. In worst of cases, a file reversion is your best recovery."}
                         };
                         for (int i = 0; i < editorCmds.GetLength(0); i++)
                             Table(divStyle, $"{Ind24}{editorCmds[i, 0]}", divHelpChar, editorCmds[i, 1]);
+                        TableRowDivider(false);
 
                         Format("End of Editor Commands", ForECol.Accent);
                         Pause();

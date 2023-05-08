@@ -12,8 +12,8 @@ namespace HCResourceLibraryApp
     public class Program
     {
         static readonly string consoleTitle = "High Contrast Resource Library App";
-        static readonly string developmentVersion = "[v1.2.6]";
-        static readonly string lastPublishedVersion = "[v1.1.9d]";
+        static readonly string developmentVersion = "[v1.2.7]";
+        static readonly string lastPublishedVersion = "[v1.2.7]";
         /// <summary>If <c>true</c>, the application launches for debugging/development. Otherwise, the application launches for the published version.</summary>
         public static readonly bool isDebugVersionQ = true;
         static readonly bool verifyFormatUsageBase = true;
@@ -282,7 +282,7 @@ namespace HCResourceLibraryApp
 
         // TESTING STUFF
         static readonly bool runTest = false;
-        static readonly Tests testToRun = Tests.SFormatter_CheckSyntax;
+        static readonly Tests testToRun = Tests.MiscRoom;
         enum Tests
         {
             /// <summary>For random tests that need their own space, but no specific test name (variable tests)</summary>
@@ -1384,7 +1384,7 @@ namespace HCResourceLibraryApp
                                     else
                                     {
                                         wrapLevelText += " III";
-                                        exampleText = "  In some rarer instances, an 'in-text' newline is placed at the end of a string \n where it is not required. Those newlines are removed and the nature of wrapping will take care of the rest.";
+                                        exampleText = "  In some rarer instances, an 'in-text' newline is placed at the end of a string\n where it is not required. Those newlines are removed and the nature of wrapping will take care of the rest.";
                                     //                |-                   -                         -                        -          -|
                                     }
                                     break;

@@ -17,6 +17,7 @@ namespace HCResourceLibraryApp.Layout
         {
             Program.LogState("Title Page");
             bool riggedStyleIndexQ = rigStyleSheetIndex != -1;
+            bool colorsAsRGBq = riggedStyleIndexQ && true;
             const int inkCount = 12;
             const string _10thInkKey = "-", _11thInkKey = ".";
             /// INKING IDS
@@ -41,26 +42,49 @@ namespace HCResourceLibraryApp.Layout
             ///     4~7 (Secondary Col) {sbttl} [4 Full, 5 Dark, 6 Medium, 7 Light]
             ///     8~11 (Tertiary Col) {touch} [8 Full, 9 Dark, - Medium, . Light]
             ///     
-            HPInk[] inkList = new HPInk[inkCount]
-            {
-                // primary
-                new HPInk(0, GetPrefsForeColor(primaryCol)), 
-                new HPInk(1, GetPrefsForeColor(primaryCol), Dither.Dark), 
-                new HPInk(2, GetPrefsForeColor(primaryCol), Dither.Medium), 
-                new HPInk(3, GetPrefsForeColor(primaryCol), Dither.Light), 
+            HPInk[] inkList;
+            if (!colorsAsRGBq)
+                inkList = new HPInk[inkCount]
+                {
+                    // primary
+                    new HPInk(0, GetPrefsForeColor(primaryCol)),
+                    new HPInk(1, GetPrefsForeColor(primaryCol), Dither.Dark),
+                    new HPInk(2, GetPrefsForeColor(primaryCol), Dither.Medium),
+                    new HPInk(3, GetPrefsForeColor(primaryCol), Dither.Light), 
 
-                // secondary
-                new HPInk(4, GetPrefsForeColor(secondaryCol)), 
-                new HPInk(5, GetPrefsForeColor(secondaryCol), Dither.Dark), 
-                new HPInk(6, GetPrefsForeColor(secondaryCol), Dither.Medium),
-                new HPInk(7, GetPrefsForeColor(secondaryCol), Dither.Light),
+                    // secondary
+                    new HPInk(4, GetPrefsForeColor(secondaryCol)),
+                    new HPInk(5, GetPrefsForeColor(secondaryCol), Dither.Dark),
+                    new HPInk(6, GetPrefsForeColor(secondaryCol), Dither.Medium),
+                    new HPInk(7, GetPrefsForeColor(secondaryCol), Dither.Light),
 
-                // tertiary
-                new HPInk(8, GetPrefsForeColor(tertiaryCol)),
-                new HPInk(9, GetPrefsForeColor(tertiaryCol), Dither.Dark),
-                new HPInk(10, GetPrefsForeColor(tertiaryCol), Dither.Medium),
-                new HPInk(11, GetPrefsForeColor(tertiaryCol), Dither.Light)
-            };
+                    // tertiary
+                    new HPInk(8, GetPrefsForeColor(tertiaryCol)),
+                    new HPInk(9, GetPrefsForeColor(tertiaryCol), Dither.Dark),
+                    new HPInk(10, GetPrefsForeColor(tertiaryCol), Dither.Medium),
+                    new HPInk(11, GetPrefsForeColor(tertiaryCol), Dither.Light)
+                };
+            else 
+                inkList = new HPInk[inkCount]
+                {
+                    // primary
+                    new HPInk(0, Color.Red),
+                    new HPInk(1, Color.Red, Dither.Dark),
+                    new HPInk(2, Color.Red, Dither.Medium),
+                    new HPInk(3, Color.Red, Dither.Light), 
+
+                    // secondary
+                    new HPInk(4, Color.Green),
+                    new HPInk(5, Color.Green, Dither.Dark),
+                    new HPInk(6, Color.Green, Dither.Medium),
+                    new HPInk(7, Color.Green, Dither.Light),
+
+                    // tertiary
+                    new HPInk(8, Color.Blue),
+                    new HPInk(9, Color.Blue, Dither.Dark),
+                    new HPInk(10, Color.Blue, Dither.Medium),
+                    new HPInk(11, Color.Blue, Dither.Light)
+                };
 
             // styles within this list
             List<string[]> styleSheet = new List<string[]>
@@ -144,22 +168,162 @@ namespace HCResourceLibraryApp.Layout
                     "                                        7                                        ",
                 //  <|                                  |         |                                  |>
                 // bounds
+                },                
+                
+                /// 4: 'HCRLA' projecting from an opened book
+                new string[]
+                {
+                    "        .                          .               ",
+                    "                3     .      3              .      ",
+                    "   .        .   .      888  .      7  .            ",
+                    "      .   7    8888.  .8--8    8        .    3     ",
+                    "              .8---73  888- . -8  .             .  ",
+                    "     .  8. 8   8-.  7. 8--8.  -8.     -88  .       ",
+                    "  3     8- 8-. 8-..    8..8. .-8.. . -8.-8         ",
+                    "    .  .8888- .8888.  .-..-. .-8888. -8888  .      ",
+                    "     . .8--8-. .----. .. ..  .----.  -8--8.        ",
+                    "       .8-.8-.. ....   .. . .. .. 3 .-8.-8.        ",
+                    "        .-..- ..  . . 3 ..   ..     .-..-.         ",
+                    "      3    . .. .   ..   .  .      ... ..    377   ",
+                    "       |        . .   . .  .  666..666     |  37   ",
+                    "   7 7 |       6666.6666 .6666 .   73 666  | 37    ",
+                    "    773|   6666 7    .  66  .     73    6  |       ",
+                    "     33|  6      3      .6               6 |       ",
+                    "       |  6                       6666   6 |   7   ",
+                    "       | 6       6666     6   666666666666 |  3    ",
+                    "       | 6   666666666666 6666666665555555 |       ",
+                    "       | 6666655555556666666665555577777   |       ",
+                    "       | 555557777775555566655577777       |       ",
+                    "       |             7775555577            |       ",
+                    "                                                   ",
+                },
+
+                /** ***** STYLE NO.4 - INKING HISTORY *****
+                ------------
+                Ch4: Open book with shadow and projected 'HCRLA' with surrounding particles
+                new string[]
+                {
+                    "        .                          .               ",
+                    "                3     .      3              .      ",
+                    "   .        .   .      888  .      7  .            ",
+                    "      .   7    8888.  .8--8    8        .    3     ",
+                    "              .8---73  888- . -8  .             .  ",
+                    "     .  8. 8   8-.  7. 8--8.  -8.     -88  .       ",
+                    "  3     8- 8-. 8-..    8..8. .-8.. . -8.-8         ",
+                    "    .  .8888- .8888.  .-..-. .-8888. -8888  .      ",
+                    "     . .8--8-. .----. .. ..  .----.  -8--8.        ",
+                    "       .8-.8-.. ....   .. . .. .. 3 .-8.-8.        ",
+                    "        .-..- ..  . . 3 ..   ..     .-..-.         ",
+                    "      3    . .. .   ..   .  .      ... ..    377   ",
+                    "       |        . .   . .  .  666..666     |  37   ",
+                    "   7 7 |       6666.6666 .6666 .   73 666  | 37    ",
+                    "    773|   6666 7    .  66  .     73    6  |       ",
+                    "     33|  6      3      .6               6 |       ",
+                    "       |  6                       6666   6 |   7   ",
+                    "       | 6       6666     6   666666666666 |  3    ",
+                    "       | 6   666666666666 6666666665555555 |       ",
+                    "       | 6666655555556666666665555577777   |       ",
+                    "       | 555557777775555566655577777       |       ",
+                    "       |             7775555577            |       ",
+                    "                                                   ",
                 },
                 
                 
+                
+                -----------
+                Ch3: Open book and 'HCRLA' over top in an arc
+                new string[]
+                {
+                    "                       888                         ",
+                    "               8888    8  8    8                   ",
+                    "               8       888     8                   ",
+                    "        8  8   8       8  8    8       88          ",
+                    "        8  8   8       8  8    8      8  8         ",
+                    "        8888   8888            8888   8888         ",
+                    "        8  8                          8  8         ",
+                    "        8  8                          8  8         ",
+                    "                                                   ",
+                    "                                                   ",
+                    "        |                     66666666    |        ",
+                    "        |      666666666  6666        666 |        ",
+                    "        |  6666         66              6 |        ",
+                    "        | 6              6               6|        ",
+                    "        | 6                       6666   6|        ",
+                    "        |6       6666     6   666666666666|        ",
+                    "        |6   666666666666 6666666665555555|        ",
+                    "        |66666555555566666666655555       |        ",
+                    "        |55555      55555666555           |        ",
+                    "        |               55555             |        ",
+                },
+                
+                
+                
+                -----------
+                Ch2: Open book version 2
+                new string[]
+                {
+                    "                                  ",
+                    "|                     66666666    |",
+                    "|      666666666  6666        666 |",
+                    "|  6666         66              6 |",
+                    "| 6              6               6|",
+                    "| 6                       6666   6|",
+                    "|6       6666     6   666666666666|",
+                    "|6   666666666666 6666666665555555|",
+                    "|66666555555566666666655555       |",
+                    "|55555      55555666555           |",
+                    "|               55555             |",
+                //   |               ||               | 
+                },
+
+
+
+                ----------
+                Ch1: Open book initial
+                new string[]
+                {
+                    "                                 ",
+                    "                     66666666    ",
+                    "      666666666  6666        66  ",
+                    "   666         66              6 ",
+                    "  6             6               6",
+                    " 6                       66666666",
+                    "6    6666666     6   666665555555",
+                    "6666655555556666 666655555       ",
+                    "55555       555566555            ",
+                    "                555              ",
+                //   |               ||               | 
+                },
+
+
+
+                ----------
+                Ch0: book cover arch line part - initial
+                Version 2:
+                    "                         655555556",
+                    "    655555556       655555        ",
+                    "65555       5555  555             ",
+                    "                                  ",
+
+                Version 1:
+                    "                        5555555",
+                    "   65555556       555555       ",
+                    "5555      5555  55             ",
+                    "                               ",                     
+                
+                 *********************/
 
                 /// INKING IDS CONDENSED
                 ///     0~3 (Primary Color) {title} [0 Full, 1 Dark, 2 Medium, 3 Light]
                 ///     4~7 (Secondary Col) {sbttl} [4 Full, 5 Dark, 6 Medium, 7 Light]
                 ///     8~11 (Tertiary Col) {touch} [8 Full, 9 Dark, - Medium, . Light]
 
-                /// 4: pending... (Required checkpoint: GenSteamLog complete)
                 /// 5: pending... (Required checkpoint: Library complete)
                 /// 6: pending... (Required checkpoint: Application complete and publish tested)
                 /// 7: pending... (Required checkpoint: All other checkpoints hit) 
                 /// NOTE :: up to 7 designs maximum
 
-                /// n: test style clipping
+                /// n: test style clipping and centering
                 #region
                 new string[]
                 {
@@ -210,6 +374,10 @@ namespace HCResourceLibraryApp.Layout
 
                     case 3:
                         HorizontalRule(cBHB, HSNL(0, 4));
+                        break;
+
+                    case 4:
+                        NewLine(HSNL(1, 5));
                         break;
 
                     default: break;
@@ -318,6 +486,11 @@ namespace HCResourceLibraryApp.Layout
                     case 3:
                         HSNLPrint(0, 4);
                         HorizontalRule(cTHB, HSNL(0, 4).Clamp(0, 1));
+                        break;
+
+                    case 4:
+                        HSNLPrint(0, 3);
+                        HorizontalRule(cTHB, HSNL(0, 2));
                         break;
 
                     default: break;

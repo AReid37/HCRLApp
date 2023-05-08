@@ -13,6 +13,8 @@ namespace HCResourceLibraryApp.Layout
         static ResLibrary _resLibrary;
         static readonly char subMenuUnderline = ':';
         static bool rud_searchAlpha = false;
+        const string findKey = "find:";
+        static string findPhrase = "";
 
         public static void GetResourceLibraryReference(ResLibrary resourceLibrary)
         {
@@ -46,19 +48,43 @@ namespace HCResourceLibraryApp.Layout
 
             if (libraryIsSetup)
             {
-                NewLine(3);
+                NewLine(4);
+
+                // find phrase search
+                List<ResContents> filteredContents = new();
+                if (findPhrase.IsNotNEW())
+                {
+                    foreach (ResContents resCon in _resLibrary.Contents)
+                    {
+                        string megaRCString = "";
+                        if (resCon.ConBase.IsSetup())
+                            megaRCString += resCon.ConBase.EncodeFirstGroup().Replace(DataHandlerBase.Sep, "\n") + "\n";
+
+                        if (resCon.ConAddits.HasElements())
+                            foreach (ContentAdditionals rca in resCon.ConAddits)
+                                megaRCString += rca.EncodeSecondGroup().Replace(DataHandlerBase.Sep, "\n") + "\n";
+
+                        if (resCon.ConChanges.HasElements())
+                            foreach (ContentChanges rcc in resCon.ConChanges)
+                                megaRCString += rcc.EncodeThirdGroup().Replace(DataHandlerBase.Sep, "\n") + "\n";
+
+                        if (megaRCString.ToLower().Contains(findPhrase.ToLower()))
+                            filteredContents.Add(resCon);
+                    }
+                }
+                else filteredContents.AddRange(_resLibrary.Contents);
 
                 // alphabetically sort res contents
                 List<ResContents> resContents = new();
                 if (rud_searchAlpha)
                 {
                     List<string> resStrs = new();
-                    foreach (ResContents rc in _resLibrary.Contents)
+                    foreach (ResContents rc in filteredContents)
                         resStrs.Add($"{rc.ContentName}{DataHandlerBase.Sep}{rc.ShelfID}");
                     resStrs = resStrs.ToArray().SortWords();
 
                     ResContents[] resArr = new ResContents[resStrs.Count];
-                    foreach (ResContents src in _resLibrary.Contents)
+                    foreach (ResContents src in filteredContents)
                     {
                         bool foundSpotQ = false;
                         int ixPos = 0;
@@ -77,32 +103,36 @@ namespace HCResourceLibraryApp.Layout
                     }
                     resContents.AddRange(resArr);
                 }
-                else resContents.AddRange(_resLibrary.Contents.ToArray());
+                else resContents.AddRange(filteredContents.ToArray());
 
                 // print all ResContents available
                 HorizontalRule(subMenuUnderline);
-                for (int rx = 0; rx < resContents.Count; rx++)
+                if (resContents.HasElements())
                 {
-                    ResContents rc = resContents[rx];
-                    string caNccText = "";
-                    if (rc.ConAddits.HasElements())
-                        caNccText += $"[{rc.ConAddits.Count}] adts; ";
-                    if (rc.ConChanges.HasElements())
-                        caNccText += $"[{rc.ConChanges.Count}] updts;";
+                    for (int rx = 0; rx < resContents.Count; rx++)
+                    {
+                        ResContents rc = resContents[rx];
+                        string caNccText = "";
+                        if (rc.ConAddits.HasElements())
+                            caNccText += $"[{rc.ConAddits.Count}] adts; ";
+                        if (rc.ConChanges.HasElements())
+                            caNccText += $"[{rc.ConChanges.Count}] updts;";
 
-                    HoldNextListOrTable();
-                    Table(Table4Division.KCSmall_TDMediumSmall, $"[#{rc.ShelfID}]", '|', rc.ContentName, $"{rc.ConBase.VersionNum}", caNccText);
-                    Text(LatestTablePrintText, rx % 2 == 1 ? Color.DarkGray : Color.Gray);
+                        HoldNextListOrTable();
+                        Table(Table4Division.KCSmall_TDMediumSmall, $"[#{rc.ShelfID}]", '|', rc.ContentName, $"{rc.ConBase.VersionNum}", caNccText);
+                        Text(LatestTablePrintText, rx % 2 == 1 ? Color.DarkGray : Color.Gray);
+                    }
                 }
+                else FormatLine($"{Ind14}No results matched '{findPhrase}' ... ");
                 HorizontalRule(subMenuUnderline);
 
                 Wait(0.05f);
-                Console.CursorLeft = 0;
-                Console.CursorTop = 0;
+                SetCursorPosition(0, 0);
                 Wait(0.05f);
 
                 NewLine(4);
                 FormatLine("Press [Enter] to exit search page. Enter any key to toggle sorting style. ", ForECol.Accent);
+                FormatLine($"Precede text with '{findKey}' to act as a search filter (case-insensitive).", ForECol.Accent);
                 Format($"Enter a number to select a content from below: ");
 
                 // input validation
@@ -172,13 +202,28 @@ namespace HCResourceLibraryApp.Layout
                     }
                     else
                     {
-                        rud_searchAlpha = !rud_searchAlpha;
-                        if (rud_searchAlpha)
-                            Format($"{Ind24}Contents will be sorted and listed in alphabetical order...  ", ForECol.Correction);
-                        else Format($"{Ind24}Contents will be sorted by shelf ID...  ", ForECol.Correction);
+                        if (LastInput.StartsWith(findKey))
+                        {
+                            if (LastInput.Substring(findKey.Length).IsNotNEW())
+                            {
+                                findPhrase = LastInput.Substring(findKey.Length);
+                                Format($"{Ind24}Searching for any contents containing '{findPhrase}'...", ForECol.Correction);
+                            }
+                            else
+                            {
+                                Format($"{Ind24}Search filter '{findPhrase}' cleared...", ForECol.Correction);
+                                findPhrase = "";
+                            }
+                        }
+                        else
+                        {
+                            rud_searchAlpha = !rud_searchAlpha;
+                            if (rud_searchAlpha)
+                                Format($"{Ind24}Contents will be sorted and listed in alphabetical order...  ", ForECol.Correction);
+                            else Format($"{Ind24}Contents will be sorted by shelf ID...  ", ForECol.Correction);
+
+                        }
                         Pause();
-                        //Format($"{Ind24}Invalid input received.", ForECol.Incorrection);
-                        //Pause();
                     }
                 }
                 else exitPagesQ = true;

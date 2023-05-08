@@ -254,7 +254,7 @@ namespace HCResourceLibraryApp.Layout
 
 
                 // -- If requires wrapping, WRAP! --
-                if (wrapBuffer - wrapStartPos <= text.Length || text.Contains(newLineReplace))
+                if (wrapBuffer - wrapStartPos <= text.Length || text.Contains("\n"))
                 {
                     // -- Prep text to wrap --
                     text = text.Replace("\n", newLineReplace).Replace("\t", tabReplace);
@@ -454,11 +454,12 @@ namespace HCResourceLibraryApp.Layout
                                     else //if (wText.EndsWith(newLineReplace))
                                     {
                                         currWrapPos = 0;
-
                                         string fltWText = wText.Replace(newLineReplace, "");
                                         Dbug.Log($"{fltWText}|<> ");
-
+                                        
                                         wText = wrapIndText;
+                                        if (fltWText.IsEW() && fltWText.CountOccuringCharacter(' ') > 0)
+                                            wText += fltWText;
                                         Dbug.LogPart($" <>|{wText}");
 
                                         if (VerifyFormatUsage)
