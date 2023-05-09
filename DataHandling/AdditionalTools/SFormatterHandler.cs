@@ -3134,9 +3134,9 @@ namespace HCResourceLibraryApp.DataHandling
                                                 string[] urlParts = urlArgs.RemoveFromPlainText(':').Split(':');
                                                 if (urlParts.Length == 2)
                                                 {
-                                                    if (!IsValidSFValue(urlParts[0], true))
+                                                    if (!IsValidSFValue(urlParts[0]))
                                                         triggerR048q = true;
-                                                    else if (!IsValidSFValue(urlParts[1], true) && ulx == 4)
+                                                    else if (!IsValidSFValue(urlParts[1]) && ulx == 4)
                                                     {
                                                         errorCode = "R049";
                                                         errorMessage = "URL value for name expected";
@@ -3281,9 +3281,9 @@ namespace HCResourceLibraryApp.DataHandling
                                                 string[] quoteParts = quoteArgs.RemoveFromPlainText(':').Split(':');
                                                 if (quoteParts.Length == 2)
                                                 {
-                                                    if (!IsValidSFValue(quoteParts[0], true))
+                                                    if (!IsValidSFValue(quoteParts[0]))
                                                         triggerR057q = true;
-                                                    else if (!IsValidSFValue(quoteParts[1], true) && qtx == 4)
+                                                    else if (!IsValidSFValue(quoteParts[1]) && qtx == 4)
                                                     {
                                                         errorCode = "R058";
                                                         errorMessage = "Quote value for quote expected";
@@ -3674,12 +3674,12 @@ namespace HCResourceLibraryApp.DataHandling
 
 
                         // METHOD FOR STEAM FORMAT
-                        static bool IsValidSFValue(string value, bool noRepKeyQ = false)
+                        static bool IsValidSFValue(string value)
                         {
                             /*  Valid steam format values
                              *      -> Plain text ("txt")
                              *      -> Library references ({lr})
-                             *      -> Repeat replacement character (#)
+                             *      -> Repeat replacement character (#)   [X] not anymore...
                              */
 
                             bool isValid = false;
@@ -3693,15 +3693,7 @@ namespace HCResourceLibraryApp.DataHandling
                                     isValid = true;
                                 else if (value.StartsWith(getLibRef) && getLibRef.IsNotNEW())
                                     isValid = true;
-                                else if (value.Equals("#") && !noRepKeyQ)
-                                    isValid = true;
-
-
-                                //if (value.StartsWith('"') && value.EndsWith('"'))
-                                //    isValid = true; /// "value"
-                                //else if (value.StartsWith("{") && value.EndsWith("}"))
-                                //    isValid = true; /// {libRef}
-                                //else if (value.Equals("#"))
+                                //else if (value.Equals("#") && !noRepKeyQ)
                                 //    isValid = true;
                                 /// other syntax checkers will take care any of other errors (such as incorrect lib refs)
                             }

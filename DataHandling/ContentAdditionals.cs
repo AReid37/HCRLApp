@@ -63,6 +63,7 @@ namespace HCResourceLibraryApp.DataHandling
 		VerNum _versionAdded, _prevVersionAdded;
 		string _optionalName, _relatedDataID, _prevOptionalName, _prevRelatedDataID;
 		List<string> _dataIDs, _prevDataIDs;
+		string _fetchedContentName;
 
 		// public
 		/// <summary>Version number this additional content was added (to base content).</summary>
@@ -111,6 +112,17 @@ namespace HCResourceLibraryApp.DataHandling
 				return dataID;
             }
         }
+		/// <summary>FOR STEAM LOG GENERATION ONLY. Stores the content name from associated <see cref="ResContents"/> instance.</summary>
+		public string ContentName
+		{
+			get => _fetchedContentName;
+			set
+			{
+				if (value.IsNotNEW())
+					_fetchedContentName = value;
+				else _fetchedContentName = null;
+			}
+		}
 		public int CountIDs
 		{
 			get

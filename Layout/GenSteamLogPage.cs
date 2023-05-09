@@ -201,6 +201,7 @@ namespace HCResourceLibraryApp.Layout
                         if (selectedVerNum.HasValue())
                         {
                             // gather version information
+                            Dbug.DeactivateNextLogSession();
                             Dbug.StartLogging("GenSteamLogPage:SubPage_LogVersion()");
                             ResLibrary verLogDetails = new();
                             List<string> allDataIDs = new();
@@ -238,7 +239,11 @@ namespace HCResourceLibraryApp.Layout
                                                             foreach (ContentAdditionals rca in resCon.ConAddits)
                                                                 if (rca.VersionAdded.Equals(selectedVerNum))
                                                                 {
-                                                                    clone.StoreConAdditional(rca);
+                                                                    ContentAdditionals rcaClone = 
+                                                                        new(rca.VersionAdded, rca.RelatedDataID, rca.OptionalName, rca.DataIDString.Split(' '));
+                                                                    rcaClone.ContentName = clone.ContentName;
+
+                                                                    clone.StoreConAdditional(rcaClone);
                                                                     allDataIDs.AddRange(rca.DataIDString.Split(' '));
                                                                 }
                                                         }
@@ -265,7 +270,10 @@ namespace HCResourceLibraryApp.Layout
                                                                 if (ca.VersionAdded.Equals(selectedVerNum))
                                                                 {
                                                                     looseDataIDs.Add(ca.RelatedDataID);
-                                                                    looseConAddits.Add(ca);
+                                                                    ContentAdditionals caClone =
+                                                                        new(ca.VersionAdded, ca.RelatedDataID, ca.OptionalName, ca.DataIDString.Split(' '));
+                                                                    caClone.ContentName = resCon.ContentName;
+                                                                    looseConAddits.Add(caClone);
 
                                                                     allDataIDs.Add(ca.RelatedDataID);
                                                                     allDataIDs.AddRange(ca.DataIDString.Split(' '));
@@ -382,7 +390,7 @@ namespace HCResourceLibraryApp.Layout
                                                 ResContents resCbg = verLogDetails.Contents[rx];
                                                 if (resCbg.ContentName != ResLibrary.LooseResConName)
                                                 {
-                                                    FormatLine($"#{rx,-2} {resCbg.ContentName}    {resCbg.ConBase.DataIDString}", displayCol);
+                                                    FormatLine($"#{rx + 1,-2} {resCbg.ContentName}    {resCbg.ConBase.DataIDString}", displayCol);
                                                     dataIDList += resCbg.ConBase.DataIDString + " ";
 
                                                     if (resCbg.ConAddits.HasElements() && !thereAreAdditionalsQ)
@@ -1182,7 +1190,7 @@ namespace HCResourceLibraryApp.Layout
                                         { "&##;",       $"Escape character. Used within plain text to print a syntax-regulated character.{nxt}Use '&00;' for double quote character (\"). Use '&01;' for hashtag / pound symbol (#)."},
                                         { "{text}",     $"Library reference. References a value based on the information received from a submitted version log.{nxt}Refer to 'Library Reference' below for more information."},
                                         { "$text",      $"Steam format reference. References a styling element to use against plain text or another value when generating steam log.{nxt}Refer to 'Steam Format References' below for more information."},
-                                        { "if # = #;",  $"Keyword. Must be placed at the start of the line.{nxt}A control command that compares two values for a true or false condition. If the condition is 'true' then the line's remaining data will be parsed into the formatting string.{nxt}Operators and their comparisons:|Equal to '=', Unequal to '!='|Greater than '>', Lesser than '<'|Greater than or equal to '>='|Lesser than or equal to '<='.".Replace("|", $"{nxt}{Ind14}")},
+                                        { "if # = #;",  $"Keyword. Must be placed at the start of the line.{nxt}A control command that compares two values for a true or false condition. If the condition is 'true' then the line's remaining data will be parsed into the formatting string.{nxt}Operators and their comparisons:|Equal to '=', Unequal to '!='|Greater than '>', Lesser than '<'|Greater than or equal to '>='|Lesser than or equal to '<='".Replace("|", $"{nxt}{Ind14}")},
                                         { "else;",      $"Keyword. Must be placed at the start of the line. Must be placed following an 'if' keyword line.{nxt}A control command that will parse the line's remaining data when the condition of a preceding 'if' command is false."},
                                         { "repeat #;",  $"Keyword. Must be placed at the start of the line.{nxt}A control command that repeats a line's remaining data '#' number of times. An incrementing number from one to given number '#' will replace any occuring '#' in the line's remaining data."},
                                         { "jump #;",    $"Keyword. Can only be placed following an 'if' or 'else' keyword.{nxt}A control command the allows skipping ahead to a given line. Only direct numbers are accepted as a value. Providing a line number beyond final line will skip all remaining lines."},
@@ -1218,10 +1226,10 @@ namespace HCResourceLibraryApp.Layout
                                         { "{AddedCount}",       "Value. Gets the number of added item entries available."},
                                         { "{Added:#,prop}",     $"Value Array. Gets value 'prop' from one-based added entry number '#'.{nxt}Values for 'prop': ids, name."},
                                         { "{AdditCount}",       "Value. Gets the number of additional item entries available."},
-                                        { "{Addit:#,prop}",     $"Value Array. Gets value 'prop' from one-based additional entry number '#'.{nxt}Values for 'prop': ids, optionalName, relatedContent (related content name), relatedID."},
+                                        { "{Addit:#,prop}",     $"Value Array. Gets value 'prop' from one-based additional entry number '#'.{nxt}Values for 'prop': ids, optionalName, relatedContent, relatedID.{nxt}Property 'optionalName' may not have a value."},
                                         { "{TTA}",              "Value. Gets the number of total textures/contents added."},
                                         { "{UpdatedCount}",     "Value. Gets the number of updated item entries available."},
-                                        { "{Updated:#,prop}",   $"Value Array. Gets value 'prop' from one-based updated entry number '#'.{nxt}Values for 'prop': changeDesc, id, relatedContent (related content name)."},
+                                        { "{Updated:#,prop}",   $"Value Array. Gets value 'prop' from one-based updated entry number '#'.{nxt}Values for 'prop': changeDesc, id, relatedContent."},
                                         { "{LegendCount}",      "Value. Gets the number of legend entries available."},
                                         { "{Legend:#,prop}",    $"Value Array. Gets value 'prop' from one-based legend entry number '#'.{nxt}Values for 'prop': definition, key"},
                                         { "{SummaryCount}",     "Value. Gets the number of summary parts available."},

@@ -53,6 +53,7 @@ namespace HCResourceLibraryApp.DataHandling
         // CONSTRUCTORS
         public SFormatterLibRef(ResLibrary verLogDetails)
         {
+            
             Dbug.StartLogging("SFormatterLibRef()");
             // initialize
             _isSetupQ = false;
@@ -107,7 +108,7 @@ namespace HCResourceLibraryApp.DataHandling
                                 foreach (ContentAdditionals rca in resCon.ConAddits)
                                 {
                                     string additValue = $"{rca.DataIDString}{PropSep}{rca.OptionalName}{PropSep}{rca.RelatedDataID}{PropSep}";
-                                    additValue += isLooseQ ? "" : resCon.ContentName;
+                                    additValue += isLooseQ ? rca.ContentName : resCon.ContentName;
                                     _addit.Add(additValue);
                                     Dbug.Log($"New entry to 'Additional' :: {additValue}   [ids/optName/relid/relName]");
                                 }

@@ -24,7 +24,11 @@
     >> Real Testing Examples (NPC_12, NPC_12_Alt_1, Player_0_0, Player_0_1, Tiles_2_Beach, Tiles_59_2, Tiles_199-gross, Tree_Branches_13, Wires2, Wraith_Eyes) 
     >> Possible Resolve: when given a legend key and its definition, only replace the key at the front of the ID with its definition, and leave the rest of the ID as is (example, Item_23 is 'i23', Tiles_42-small is 't42-small')
 
-[ ] 8# ...
+[X] 8# Gen Steam Log Page -> Submit version log ContentAdditionals should also deliver their related content name from parent ConBase. The only nullable value going into the library reference instance should be the 'optionalName' property of 'Addit' array.
+
+[X] 9# The value '#' as a argument to a table data element is ignored and does not print. It should be invalidated as a value for table header/data elements as the proper usage of '#' is only as plain text.
+
+[ ] 10# ...
 
 
 
@@ -50,7 +54,7 @@
 
 [.] 9# Reversion; Version Reversion, specific version removal is possible, however only if the version's contents is not referenced in future version (Either allowed or denied reversion thereafter; Generally useful only the case of overwriting a log version's info)
     
-    [ ] alt.9# Log Submission; If a Version Log is submitted containing version information that already exists within the library, the option to overwrite the pre-existing information may be available (must include a report on the results of overwriting previous information) 
+    [.] alt.9# Log Submission; If a Version Log is submitted containing version information that already exists within the library, the option to overwrite the pre-existing information may be available (must include a report on the results of overwriting previous information) 
 
 [X] 10# Using a certain syntax to substitute a keycode with symbols that are used for log decoding (example: using "&00" to sub for "-", or using "&04" to sub for "("). File encoding/decoding won't be affected and the data remains true to it's name as it bypasses the possible errors from log decoding.
 
