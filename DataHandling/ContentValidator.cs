@@ -543,12 +543,21 @@ namespace HCResourceLibraryApp.DataHandling
                                         string fileExt = "";
                                         if (fex >= 0)
                                             fileExt = fileTypeExts[fex];
-
+                                        
                                         foundThisContentQ = fileToCheck.Name == $"{conToVal.DataID}{fileExt}";
                                         if (foundThisContentQ)
                                         {
                                             string relativePath = fileToCheck.FullName.Clamp(relativePathDist, relativePathClampSuffix, fileToCheck.Name, false);
                                             Dbug.LogPart($"VALIDATED!  Found file '{conToVal.DataID}{fileExt}' at following relative path :: {relativePath}");
+                                        }
+                                        else
+                                        {
+                                            foundThisContentQ = fileToCheck.Name == $"{conToVal.DataID.Replace("_", " ")}{fileExt}";
+                                            if (foundThisContentQ)
+                                            {
+                                                string relativePath = fileToCheck.FullName.Clamp(relativePathDist, relativePathClampSuffix, fileToCheck.Name, false);
+                                                Dbug.LogPart($"VALIDATED*  Found file '{conToVal.DataID.Replace("_", " ")}{fileExt}' at following relative path :: {relativePath}");
+                                            }
                                         }
                                     }
                                 }

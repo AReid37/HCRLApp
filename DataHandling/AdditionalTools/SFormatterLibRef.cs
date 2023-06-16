@@ -88,7 +88,7 @@ namespace HCResourceLibraryApp.DataHandling
                     /// added, additional, updated
                     if (verLogDetails.Contents.HasElements())
                     { // wrapping
-                        Dbug.Log($"Setting values for 'Added', 'Additional' and 'Updated' collections; ");
+                        Dbug.Log($"Setting values for 'Added', 'Additional' and 'Updated' collections [ids uncondensed]; ");
                         Dbug.NudgeIndent(true);
                         foreach (ResContents resCon in verLogDetails.Contents)
                         {
@@ -100,6 +100,8 @@ namespace HCResourceLibraryApp.DataHandling
                             if (!isLooseQ)
                             {
                                 string addedValue = $"{resCon.ConBase.DataIDString}{PropSep}{resCon.ContentName}";
+                                //string addedValue = $"{Extensions.CreateNumericDataIDRanges(resCon.ConBase.DataIDString.Split(' '))}";
+                                //addedValue += $"{PropSep}{resCon.ContentName}";
                                 _added.Add(addedValue);
                                 Dbug.Log($"New entry to 'Added' :: {addedValue}   [ids/name]");
                             }
@@ -108,6 +110,8 @@ namespace HCResourceLibraryApp.DataHandling
                                 foreach (ContentAdditionals rca in resCon.ConAddits)
                                 {
                                     string additValue = $"{rca.DataIDString}{PropSep}{rca.OptionalName}{PropSep}{rca.RelatedDataID}{PropSep}";
+                                    //string additValue = $"{Extensions.CreateNumericDataIDRanges(rca.DataIDString.Split(' '))}";
+                                    //additValue += $"{PropSep}{rca.OptionalName}{PropSep}{rca.RelatedDataID}{PropSep}";
                                     additValue += isLooseQ ? rca.ContentName : resCon.ContentName;
                                     _addit.Add(additValue);
                                     Dbug.Log($"New entry to 'Additional' :: {additValue}   [ids/optName/relid/relName]");

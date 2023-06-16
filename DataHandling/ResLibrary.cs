@@ -76,7 +76,7 @@ namespace HCResourceLibraryApp.DataHandling
             bool addedContentsQ = false;
             if (newContents.HasElements())
             {
-                if (disableAddDbug)
+                if (disableAddDbug || Program.isDebugVersionQ)
                     Dbug.DeactivateNextLogSession();
                 Dbug.StartLogging("ResLibrary.AddContent(prms RC[])");
                 Dbug.LogPart($"Recieved [{newContents.Length}] new ResCons for library; Refresh integration info dock? {keepLooseRCQ}");
@@ -369,7 +369,7 @@ namespace HCResourceLibraryApp.DataHandling
             bool addedLegendQ = false;
             if (newLegends.HasElements())
             {
-                if (disableAddDbug)
+                if (disableAddDbug || Program.isDebugVersionQ)
                     Dbug.DeactivateNextLogSession();
                 Dbug.StartLogging("ResLibrary.AddLegend(prms LegData[])");
                 foreach (LegendData leg in newLegends)
@@ -419,7 +419,7 @@ namespace HCResourceLibraryApp.DataHandling
             bool addedSummaryQ = false;
             if (newSummaries.HasElements())
             {
-                if (disableAddDbug)
+                if (disableAddDbug || Program.isDebugVersionQ)
                     Dbug.DeactivateNextLogSession();
                 Dbug.StartLogging("ResLibrary.AddSummary(SumData[])");
                 foreach (SummaryData sum in newSummaries)

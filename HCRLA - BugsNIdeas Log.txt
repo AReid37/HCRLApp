@@ -28,7 +28,9 @@
 
 [X] 9# The value '#' as a argument to a table data element is ignored and does not print. It should be invalidated as a value for table header/data elements as the proper usage of '#' is only as plain text.
 
-[ ] 10# ...
+[X] 10# Gen Steam Log Page -> Formatter Parser: Comparisons against escape characters may not work. If any value returned contains an escape character, that character must be appropriately replaced with the escape characte code (&00; for '"', &01; for '#')
+
+[ ] 11# ...
 
 
 
@@ -66,4 +68,6 @@
 
 [X] 14# An extra syntax change for 'Updated' section that allows self-updating for entries that need to be updated to content that has been added in the same version.
 
-[ ] 15# ...
+[ ] 15# SFormatterLibRef: initialization could condense data ID strings using Extensions.CreateNumericDataIDRanges() method. Alternatively, a new property for library references ('condensedIds' or 'rangeIds') could be introduced for specifically condensed data ID strings
+
+[ ] 16# ...

@@ -315,17 +315,17 @@ namespace HCResourceLibraryApp.Layout
                                         foreach (string dId in allDataIDs)
                                         {
                                             LogDecoder.DisassembleDataID(dId, out string dk, out _, out string sfx);
-                                            if (!legendKeysInUse.Contains($"{dk} "))
-                                                legendKeysInUse += $"{dk} ";
+                                            if (!legendKeysInUse.Contains($" {dk} "))
+                                                legendKeysInUse += $" {dk} ";
 
                                             if (sfx.IsNotNE())
                                             {
-                                                if (!legendKeysInUse.Contains($"{sfx} "))
-                                                    legendKeysInUse += $"{sfx} ";
+                                                if (!legendKeysInUse.Contains($" {sfx} "))
+                                                    legendKeysInUse += $" {sfx} ";
 
                                                 foreach (char sfxC in sfx)
-                                                    if (!legendKeysInUse.Contains($"{sfxC} "))
-                                                        legendKeysInUse += $"{sfxC} ";
+                                                    if (!legendKeysInUse.Contains($" {sfxC} "))
+                                                        legendKeysInUse += $" {sfxC} ";
                                             }
                                         }
                                         /// filter legend datas by legend keys in use
@@ -333,7 +333,7 @@ namespace HCResourceLibraryApp.Layout
                                         if (legendKeysInUse.IsNotNEW())
                                             foreach (LegendData legData in _resLibrary.Legends.ToArray())
                                             {
-                                                if (legendKeysInUse.Contains($"{legData.Key} "))
+                                                if (legendKeysInUse.Contains($" {legData.Key} "))
                                                     legendsUsed.Add(legData);
                                             }
                                        /// load into instance
@@ -385,12 +385,13 @@ namespace HCResourceLibraryApp.Layout
                                         // added 
                                         case 1:                                            
                                             FormatLine($"Added".ToUpper(), displayCol);
+                                            int minusLooseResCon = 0;
                                             for (int rx = 0; rx < verLogDetails.Contents.Count; rx++)
                                             {
                                                 ResContents resCbg = verLogDetails.Contents[rx];
                                                 if (resCbg.ContentName != ResLibrary.LooseResConName)
                                                 {
-                                                    FormatLine($"#{rx + 1,-2} {resCbg.ContentName}    {resCbg.ConBase.DataIDString}", displayCol);
+                                                    FormatLine($"#{rx + 1 - minusLooseResCon,-2} {resCbg.ContentName}    {resCbg.ConBase.DataIDString}", displayCol);
                                                     dataIDList += resCbg.ConBase.DataIDString + " ";
 
                                                     if (resCbg.ConAddits.HasElements() && !thereAreAdditionalsQ)
@@ -398,6 +399,7 @@ namespace HCResourceLibraryApp.Layout
                                                     if (resCbg.ConChanges.HasElements() && !thereAreUpdatesQ)
                                                         thereAreUpdatesQ = true;
                                                 }
+                                                else minusLooseResCon = 1;
                                             }
                                             NewLine();
                                             break;
@@ -535,10 +537,6 @@ namespace HCResourceLibraryApp.Layout
 
                 exitLogVerSubPageQ = noLibraryData || allowExitQ;
             } while (!exitLogVerSubPageQ);            
-
-
-            /// need to manually gather the legend keys used, goofus..
-            /// stop being so lazy!!
         }
         // done
         static void SubPage_SteamFormatter()
@@ -645,6 +643,7 @@ namespace HCResourceLibraryApp.Layout
 
                     /// display
                     Program.ToggleFormatUsageVerification();
+                    ToggleWordWrappingFeature(false);
                     NewLine(3);
                     GetCursorPosition(-1);
 
@@ -668,6 +667,7 @@ namespace HCResourceLibraryApp.Layout
 
                     SetCursorPosition();
                     Pause();
+                    ToggleWordWrappingFeature(true);
                     Program.ToggleFormatUsageVerification();
 
                     exitGenSteamLogSubPageQ = true;
@@ -692,6 +692,7 @@ namespace HCResourceLibraryApp.Layout
         }
 
 
+        static string formatterLanguageVersion = "fl.v1";
         // public, so we can test them easily... wait, maybe not, too many dependencies... okay..
         /// <summary>The house of steam format editing; all formatting tools meet here. This is the page where display meets function.</summary>
         static void FormattingEditor()
@@ -895,7 +896,7 @@ namespace HCResourceLibraryApp.Layout
             const int historyLimit = 25, historyActionInitial = 1;
             int lineToEdit = noLineToEdit, lineToEditSpan = HSNL(3, 7).Clamp(0, 5), countCycles = 0, historySpan = HSNL(1, 5).Clamp(1, 3);
 
-            Program.LogState("Generate Steam Log|Steam Formatter|Formatting Editor");
+            Program.LogState($"Generate Steam Log|Steam Formatter|Formatting Editor {formatterLanguageVersion}");
             Dbug.StartLogging();
             Dbug.Log($"RECORDING :: Formatting Editor Actions and processes -- FProfile#1? {isUsingFormatterNo1Q}");
             Dbug.NudgeIndent(true);
@@ -3112,7 +3113,7 @@ namespace HCResourceLibraryApp.Layout
                                         };
 
                                         if (refValue.IsNotNE())
-                                            lValue = refValue;
+                                            lValue = refValue.Replace("\"", "&00;").Replace("#", "&01;");
                                     }
                                 }
 

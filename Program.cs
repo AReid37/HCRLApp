@@ -12,10 +12,10 @@ namespace HCResourceLibraryApp
     public class Program
     {
         static readonly string consoleTitle = "High Contrast Resource Library App";
-        static readonly string developmentVersion = "[v1.2.7b]";
+        static readonly string developmentVersion = "[v1.2.7c]";
         static readonly string lastPublishedVersion = "[v1.2.7b]";
         /// <summary>If <c>true</c>, the application launches for debugging/development. Otherwise, the application launches for the published version.</summary>
-        public static readonly bool isDebugVersionQ = false;
+        public static readonly bool isDebugVersionQ = true;
         static readonly bool verifyFormatUsageBase = true;
 
         #region fields / props

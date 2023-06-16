@@ -48,7 +48,7 @@ CIVTestingField [fd]
 			Dust_23 [hd]
 			Glowing_Eyes.
 			Item_1845.
-			Item_1998.
+			Item 1998.
 			Item_2123.
 			Item_3210.
 			Item_3923.

@@ -2106,7 +2106,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                         errorMessage = "Next keyword requires a following code line to function";
                                                     }
                                                 }
-                                                else if (CountKeywordsInLine(nextLine) > 0 && nx == 2)
+                                                else if (CountKeywordsInLine(nextLine.RemovePlainText()) > 0 && nx == 2)
                                                 {
                                                     errorCode = "G078";
                                                     errorMessage = "Next keyword line cannot be followed by another keyword line";
