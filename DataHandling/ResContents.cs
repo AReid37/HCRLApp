@@ -197,6 +197,9 @@ namespace HCResourceLibraryApp.DataHandling
 
                         if (!isDupe && isOkay)
                         {
+                            if (newCC.InternalName.IsNEW())
+                                newCC = new ContentChanges(newCC.VersionChanged, ContentName, newCC.RelatedDataID, newCC.ChangeDesc);
+
                             ConChanges.Add(newCC);
                             storedCCq = true;
                         }

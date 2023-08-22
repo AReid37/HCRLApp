@@ -12,11 +12,11 @@ namespace HCResourceLibraryApp
     public class Program
     {
         static readonly string consoleTitle = "High Contrast Resource Library App";
-        static readonly string developmentVersion = "[v1.2.7c]";
-        static readonly string lastPublishedVersion = "[v1.2.7b]";
+        static readonly string developmentVersion = "[v1.2.8]";
+        static readonly string lastPublishedVersion = "[v1.2.7c]";
         /// <summary>If <c>true</c>, the application launches for debugging/development. Otherwise, the application launches for the published version.</summary>
         public static readonly bool isDebugVersionQ = true;
-        static readonly bool verifyFormatUsageBase = true;
+        static readonly bool verifyFormatUsageBase = false;
 
         #region fields / props
         // PRIVATE \ PROTECTED
@@ -98,7 +98,7 @@ namespace HCResourceLibraryApp
                         LogState("Main Menu");
                         Clear();
                         bool isValidMMOpt = ListFormMenu(out string mainMenuOptKey, "Main Menu", null, $"{Ind24}Option >> ", "a~f", true,
-                            "Logs Submission, Library Search (Rudimentary), Log Legend and Summaries, Generate Steam Log, Settings, Quit".Split(", "));
+                            "Logs Submission, Library Search, Log Legend and Summaries, Generate Steam Log, Settings, Quit".Split(", "));
                         MenuMessageQueue(mainMenuOptKey == null, false, null);
 
                         if (isValidMMOpt)
@@ -109,7 +109,7 @@ namespace HCResourceLibraryApp
                                 // logs submission page
                                 if (mainMenuOptKey.Equals("a"))
                                     LogSubmissionPage.OpenPage(resourceLibrary);
-                                /// rudimentary library search page
+                                // library search page
                                 else if (mainMenuOptKey.Equals("b"))
                                     LibrarySearch.OpenPage();
                                 // log legend and summaries view page
@@ -282,7 +282,7 @@ namespace HCResourceLibraryApp
 
         // TESTING STUFF
         static readonly bool runTest = false;
-        static readonly Tests testToRun = Tests.MiscRoom;
+        static readonly Tests testToRun = Tests.PageBase_HighlightMethod;
         enum Tests
         {
             /// <summary>For random tests that need their own space, but no specific test name (variable tests)</summary>
@@ -340,8 +340,8 @@ namespace HCResourceLibraryApp
                 {
                     Highlight(false, "Highlight me you fool!");
                     Highlight(true, "Highlight me you oblivious fool!", "", "me", "fool", "ighli", "ou");
-                    Highlight(false, "Break the system, destroy what will remain", "s", "what will remain");
-
+                    Highlight(true, "Break the system, destroy what will remain", "s", "what will remain");
+                    Highlight(false, "Guess your penalty twerp", "s", "r");
                 }
                 else if (testToRun == Tests.PageBase_ListFormMenu)
                 {

@@ -1,8 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Net;
-using System.Runtime.InteropServices;
-using System.Runtime.Serialization;
 using ConsoleFormat;
 
 namespace HCResourceLibraryApp.DataHandling
@@ -11,6 +8,7 @@ namespace HCResourceLibraryApp.DataHandling
     public sealed class ResLibrary : DataHandlerBase
     {
         /*** RESOURCE LIBRARY
+         * Initial plan
         Data form containing all information regarding resource contents, legends, and summaries from version logs
         
         Fields / Props
@@ -743,6 +741,351 @@ namespace HCResourceLibraryApp.DataHandling
             Dbug.EndLogging();
             return revertedQ;
         }
+        public SearchResult[] SearchLibrary(string searchArg, SearchOptions searchOpts, int maxResults = 99)
+        {
+            List<SearchResult> results = new();
+            if (IsSetup() && maxResults > 0)
+            {
+                Dbug.StartLogging("ResLibrary.SearchLibrary()");
+                Dbug.Log($"Received search query; search Arg [{searchArg}]  --  search Opts [{searchOpts}]  --  max Results [{maxResults}]; ");
+
+                /// IF recieved search arguement and search options: do a proper search query; ELSE select items at random
+                if (searchArg.IsNotNEW() && searchOpts.IsSetup())
+                {
+                    /** Search query display changes to note
+                        - Two types of searches alphanumeric, and numeric
+                        - Alpha-numeric search display examples
+                            ......................................
+					        Search :: tomato 	(showing 6 results)
+					
+					        1 [Bse]	Tomato
+					        2 [Adt]	"Tomato Stem Dust" (from 'Tomato')
+					        3 [Upd]	"~tomato more delici~" (from 'Tomato')
+					        4 [Bse]	Canned Tomato
+					        5 [Bse]	Steamed Tomato				
+					        6 [Upd]	"~tomato soggier loo~" (from 'Steamed Tomato')				
+					        ......................................		
+                            ......................................
+					        Search :: t4		(showing 3 results)
+					
+					        1 [Bse]	t46 (from 'Garlic Clove')
+					        2 [Bse]	t47 (from 'Garlic Clove')
+					        3 [Adt]	t49 "Garlic Stem" (from 'Garlic Clove')
+					        ......................................
+
+                        - Numeric search display example
+                            ......................................
+					        Search :: 14		(showing 5 results)
+					
+					        1 [Bse]	1.14 (from 'Lettuce')
+					        2 [Bse]	i214 (from 'Lettuce')
+					        3 [Bse]	t114 (from 'Peanut')					
+					        4 [Bse]	t14 (from 'Rice')
+					        5 [Bse]	i14 (from 'Turnip')
+					        ......................................	
+
+
+                         - Result sorting and shaping explained
+                            1st Alphabetic order, exact matching (in search 'cut', 'Cut' is exact, 'Cutter' or 'Hot Cut' is not exact)
+                                . Category: Base, Additional, Update [matching word output determined by 'ContentName' match]
+                                    1st Within Base sort (Content Name > Data IDs > Version Number) 
+                                    2nd Within Additional sort (Opt Name > Data IDs > RelData ID* > Version Number) 
+                                    3rd Within Updated sort (Change Description > RelData ID* > Version Number)
+                            2nd Alphabetic order, partial matching 
+                                . Category: Base, Additional, Update [matching word output determined by 'ContentName' match]
+                                    1st Within Base sort (Content Name > Data IDs > Version Number) 
+                                    2nd Within Additional sort (Opt Name > Data IDs > RelData ID* > Version Number) 
+                                    3rd Within Updated sort (Change Description > RelData ID* > Version Number)
+                            NOTE : RelData ID* is only checked when the Base Content Category is exempted from search options
+                     */
+
+                    Dbug.Log("Search arguement and search options provided; proceeding with search query; ");
+                    List<SearchResult> initialResults = new();
+                    List<string> contentNames = new();
+
+
+                    // FIRST STEP - Find any results within results limit
+                    Dbug.Log("1st Step: Find all results; ");
+                    Dbug.NudgeIndent(true);
+                    for (int cx = 0; cx < Contents.Count && initialResults.Count < maxResults; cx++)
+                    {
+                        // setup
+                        const int updExcerptLim = 25;
+                        const string updExcerptLimEnd = "~";
+                        List<SearchResult> resultBatch = new();
+                        ResContents content = Contents[cx];
+                        int dbgPrevBatchCount = 0, dbgCountBase = 0, dbgCountAdt = 0, dbgCountUpd = 0;
+
+                        // source - base content
+                        if (searchOpts.IsUsingSource(SourceCategory.Bse))
+                        {
+                            /// base content name
+                            bool? matchContentNameQ = CheckMatch(searchArg, content.ContentName, searchOpts.caseSensitiveQ);
+                            if (matchContentNameQ.HasValue)
+                                resultBatch.Add(new SearchResult(searchArg, searchOpts.ToString(), matchContentNameQ.Value, content.ContentName, content.ContentName, SourceCategory.Bse, content.ShelfID));
+
+                            /// base content ids
+                            for (int idx = 0; idx < content.ConBase.CountIDs; idx++)
+                            {
+                                string id = content.ConBase[idx];
+                                bool? matchIDQ = CheckMatch(searchArg, id, searchOpts.caseSensitiveQ);
+
+                                if (matchIDQ.HasValue)
+                                    resultBatch.Add(new SearchResult(searchArg, searchOpts.ToString(), matchIDQ.Value, id, content.ContentName, SourceCategory.Bse, content.ShelfID));
+                            }
+
+                            /// base content version
+                            bool? matchVersionQ = CheckMatch(searchArg, content.ConBase.VersionNum.ToStringNums(), searchOpts.caseSensitiveQ);
+                            if (matchVersionQ.HasValue)
+                                resultBatch.Add(new SearchResult(searchArg, searchOpts.ToString(), matchVersionQ.Value, content.ConBase.VersionNum.ToStringNums(), content.ContentName, SourceCategory.Bse, content.ShelfID));
+
+                            dbgCountBase = resultBatch.Count;
+                            dbgPrevBatchCount = resultBatch.Count;
+                        }
+
+                        // source - additional content
+                        if (searchOpts.IsUsingSource(SourceCategory.Adt) && content.ConAddits.HasElements())
+                        {
+                            foreach (ContentAdditionals conAddits in content.ConAddits)
+                            {
+                                string additName = conAddits.OptionalName.IsNotNEW() ? $"\"{conAddits.OptionalName}\"" : "";
+
+                                /// optional name
+                                bool? matchOptName = CheckMatch(searchArg, conAddits.OptionalName, searchOpts.caseSensitiveQ);
+                                if (matchOptName.HasValue)
+                                    resultBatch.Add(new SearchResult(searchArg, searchOpts.ToString(), matchOptName.Value, additName, content.ContentName, SourceCategory.Adt, content.ShelfID));
+
+                                /// data IDs
+                                for (int idx = 0; idx < conAddits.CountIDs; idx++)
+                                {
+                                    string id = conAddits[idx];
+                                    bool? matchIdQ = CheckMatch(searchArg, id, searchOpts.caseSensitiveQ);
+                                    if (matchIdQ.HasValue)
+                                        resultBatch.Add(new SearchResult(searchArg, searchOpts.ToString(), matchIdQ.Value, $"{id} {additName}".Trim(), content.ContentName, SourceCategory.Adt, content.ShelfID));
+                                }
+
+                                /// related data ID
+                                if (!searchOpts.IsUsingSource(SourceCategory.Bse))
+                                {
+                                    bool? matchRelIdQ = CheckMatch(searchArg, conAddits.RelatedDataID, searchOpts.caseSensitiveQ);
+                                    if (matchRelIdQ.HasValue)
+                                        resultBatch.Add(new SearchResult(searchArg, searchOpts.ToString(), matchRelIdQ.Value, $"{conAddits.RelatedDataID} {additName}".Trim(), content.ContentName, SourceCategory.Adt, content.ShelfID));
+                                }
+
+                                /// version added number
+                                bool? matchVerQ = CheckMatch(searchArg, conAddits.VersionAdded.ToStringNums(), searchOpts.caseSensitiveQ);
+                                if (matchVerQ.HasValue)
+                                    resultBatch.Add(new SearchResult(searchArg, searchOpts.ToString(), matchVerQ.Value, $"{conAddits.VersionAdded.ToStringNums()} {additName}".Trim(), content.ContentName, SourceCategory.Adt, content.ShelfID));
+                            }
+
+                            dbgCountAdt = resultBatch.Count - dbgPrevBatchCount;
+                            dbgPrevBatchCount = resultBatch.Count;
+                        }
+
+                        // source - updated content
+                        if (searchOpts.IsUsingSource(SourceCategory.Upd) && content.ConChanges.HasElements())
+                        {
+                            foreach (ContentChanges conChanges in content.ConChanges)
+                            {
+                                /// change description
+                                bool? matchDescQ = CheckMatch(searchArg, conChanges.ChangeDesc, searchOpts.caseSensitiveQ);
+                                if (matchDescQ.HasValue)
+                                {
+                                    string searchArgMatch = "";
+                                    int timeOut = 4;
+                                    while (searchArgMatch.IsNE() && timeOut > 0)
+                                    {
+                                        switch (timeOut)
+                                        {
+                                            case 4:
+                                                if (conChanges.ChangeDesc.Contains(searchArg))
+                                                    searchArgMatch = searchArg;
+                                                break;
+
+                                            case 3:
+                                                if (searchArg.Length > 1)
+                                                    if (conChanges.ChangeDesc.Contains($"{searchArg[0].ToString().ToUpper()}{searchArg[1..]}"))
+                                                        searchArgMatch = $"{searchArg[0].ToString().ToUpper()}{searchArg[1..]}";
+                                                break;
+
+                                            case 2:
+                                                if (conChanges.ChangeDesc.Contains(searchArg.ToLower()))
+                                                    searchArgMatch = searchArg.ToLower();
+                                                break;
+
+                                            case 1:
+                                                if (conChanges.ChangeDesc.Contains(searchArg.ToUpper()))
+                                                    searchArgMatch = searchArg.ToUpper();
+                                                break;
+                                        }
+                                        timeOut--;
+                                    }
+
+                                    string shortenedDesc;
+                                    string shortenedDesc_Start = conChanges.ChangeDesc.Clamp(updExcerptLim, updExcerptLimEnd, searchArgMatch, true); 
+                                    string shortenedDesc_End = conChanges.ChangeDesc.Clamp(updExcerptLim, updExcerptLimEnd, searchArgMatch, false);
+
+                                    if (shortenedDesc_Start.Length > shortenedDesc_End.Length)
+                                        shortenedDesc = $"\"~{shortenedDesc_Start}\"";
+                                    else shortenedDesc = $"\"{shortenedDesc_End}~\"";
+
+                                    resultBatch.Add(new SearchResult(searchArg, searchOpts.ToString(), matchDescQ.Value, shortenedDesc, content.ContentName, SourceCategory.Upd, content.ShelfID));
+                                }
+
+                                /// related data id
+                                if (!searchOpts.IsUsingSource(SourceCategory.Bse))
+                                {
+                                    bool? matchRelIdQ = CheckMatch(searchArg, conChanges.RelatedDataID, searchOpts.caseSensitiveQ);
+                                    if (matchRelIdQ.HasValue)
+                                        resultBatch.Add(new SearchResult(searchArg, searchOpts.ToString(), matchRelIdQ.Value, conChanges.RelatedDataID, content.ContentName, SourceCategory.Upd, content.ShelfID));
+                                }
+
+                                /// version changed number
+                                bool? matchVerQ = CheckMatch(searchArg, conChanges.VersionChanged.ToStringNums(), searchOpts.caseSensitiveQ);
+                                if (matchVerQ.HasValue)
+                                    resultBatch.Add(new SearchResult(searchArg, searchOpts.ToString(), matchVerQ.Value, conChanges.VersionChanged.ToStringNums(), content.ContentName, SourceCategory.Upd, content.ShelfID));
+                            }
+
+                            dbgCountUpd = resultBatch.Count - dbgPrevBatchCount;
+                        }
+
+                        // batch any results found for this content
+                        if (resultBatch.HasElements())
+                        {
+                            int dbgInitialResultsCount = initialResults.Count, dbgDupeCount = 0;
+
+                            /// for sorting
+                            contentNames.Add(content.ContentName);
+                            /// batch results
+                            foreach (SearchResult result in resultBatch)
+                            {
+                                if (initialResults.Count < maxResults)
+                                {
+                                    bool isDupeQ = false;
+                                    foreach (SearchResult iniRes in initialResults)
+                                    {
+                                        if (!isDupeQ && iniRes.Equals(result))
+                                        {
+                                            dbgDupeCount++;
+                                            isDupeQ = true;
+                                            break;
+                                        }
+                                    }
+
+                                    if (!isDupeQ)
+                                        initialResults.Add(result);
+                                }
+                            }
+
+                            int dbgOmitCount = dbgInitialResultsCount + resultBatch.Count - dbgDupeCount > maxResults ? dbgInitialResultsCount + resultBatch.Count - dbgDupeCount - maxResults : 0;
+                            Dbug.LogPart($"RC #{content.ShelfID} '{content.ContentName}' provided '{resultBatch.Count}' results:");
+                            Dbug.LogPart($" {(dbgCountBase > 0 ? $"[Bse = {dbgCountBase}]" : "")}");
+                            Dbug.LogPart($" {(dbgCountAdt > 0 ? $"[Adt = {dbgCountAdt}]" : "")}");
+                            Dbug.LogPart($" {(dbgCountUpd > 0 ? $"[Upd = {dbgCountUpd}]" : "")}");
+                            if (dbgDupeCount > 0)
+                                Dbug.LogPart($" -- Removed '{dbgDupeCount}' duplicate results");
+                            if (dbgOmitCount > 0)
+                                Dbug.LogPart($" -- Omitting '{dbgOmitCount}' results (limit reached)");
+                            Dbug.Log("; ");
+                        }
+                    }
+                    Dbug.NudgeIndent(false);
+
+
+                    // SECOND STEP - Sort results by relevance and alphanumeric order
+                    Dbug.Log("2nd Step: relevance and alphanumeric sorting; ");
+                    contentNames = contentNames.ToArray().SortWords();
+                    List<SearchResult> exactResults = new(), priorityPartialResults = new(), partialResults = new();
+                    if (contentNames.HasElements())
+                    {
+                        Dbug.NudgeIndent(true);
+                        for (int nx = 0; nx < contentNames.Count; nx++)
+                        {
+                            string contentName = contentNames[nx];
+                            int dbgPrevExactCount = exactResults.Count, dbgPrevPartialCount = partialResults.Count + priorityPartialResults.Count;
+                            foreach (SearchResult iniResult in initialResults)
+                            {
+                                if (iniResult.IsSetup() && iniResult.contentName == contentName)
+                                {
+                                    if (iniResult.exactMatchQ)
+                                        exactResults.Add(iniResult);
+                                    else
+                                    {
+                                        /// for example, 'Tomato' is exact and its additional "Tomato Stem" is partial, this partial result is prioritized over other partial results
+                                        if (exactResults.Count - dbgPrevExactCount > 0)
+                                            priorityPartialResults.Add(iniResult); 
+                                        else partialResults.Add(iniResult);
+                                    }
+                                }
+                            }
+
+                            Dbug.LogPart($"@{nx + 1} '{contentName}', Exct [{exactResults.Count - dbgPrevExactCount}], Prtl [{partialResults.Count + priorityPartialResults.Count - dbgPrevPartialCount}]");
+                            if (nx % 3 == 2 || contentNames.Count == nx + 1)
+                                Dbug.Log("; ");
+                            else Dbug.LogPart("    //    ");
+                        }
+                        Dbug.NudgeIndent(false);
+                    }
+                    else Dbug.Log("No initial results from 1st step. No results found.");
+
+
+                    // THIRD STEP - Compile results in exact/partial relevance -UNLESS- ignoring relevance
+                    if (contentNames.HasElements())
+                    {
+                        Dbug.Log("3rd Step: compile results exact/partial -or- ignore relevance; ");
+                        Dbug.LogPart(" -> ");
+                        if (!searchOpts.ignoreRelevanceQ)
+                        {
+                            Dbug.LogPart($"Relevance; Exact / Partial - submitting 'exact results' ['{exactResults.Count}' items] and 'partial results' ['{priorityPartialResults.Count}* + {partialResults.Count}' items] to 'results'");
+                            if (exactResults.HasElements())
+                                results.AddRange(exactResults);
+                            if (priorityPartialResults.HasElements())
+                                results.AddRange(priorityPartialResults);
+                            if (partialResults.HasElements())
+                                results.AddRange(partialResults);
+                        }
+                        else
+                        {
+                            Dbug.LogPart($"Ignoring Relevance; Order By Shelf ID - submitting 'initial results' ['{initialResults.Count}' items] to 'results'");
+                            results.AddRange(initialResults);
+                        }
+                        Dbug.Log("; ");
+                    }
+                }
+                else
+                {
+                    Dbug.Log("No search arguement or search options available; selecting results at random; ");
+                    Dbug.LogPart($"Shelf IDs selected ('{maxResults}' items):");
+                    List<int> randomInts = new();
+                    string dbgSelectedItems = "";
+                    for (int rx = 0; rx < maxResults && randomInts.Count < Contents.Count; rx++)
+                    {
+                        int timeOut = 25;
+                        int randInt = Extensions.Random(0, Contents.Count - 1);
+                        while (randomInts.Contains(randInt) && timeOut > 0)
+                        {
+                            randInt = Extensions.Random(0, Contents.Count - 1);
+                            timeOut--;
+                        }
+
+                        Dbug.LogPart($" {randInt}");
+                        randomInts.Add(randInt);
+                        ResContents randomContent = Contents[randInt];
+                        results.Add(new SearchResult(Sep, Sep, false, randomContent.ContentName, randomContent.ContentName, SourceCategory.Bse, randomContent.ShelfID));
+                        dbgSelectedItems += $" '{randomContent.ContentName.Replace(" ", "_")}'";
+                    }
+                    Dbug.Log("; ");
+
+                    Dbug.Log($"Selected Items: ");
+                    Dbug.NudgeIndent(true);
+                    Dbug.Log($"{dbgSelectedItems.Trim().Replace(" ", ", ")}");
+                    Dbug.NudgeIndent(false);
+                }
+                Dbug.EndLogging();
+            }
+
+            return results.ToArray();
+        }
 
 
         /// -
@@ -849,7 +1192,39 @@ namespace HCResourceLibraryApp.DataHandling
             disableAddDbug = prevDADbg;
             return prevSelf;
         }
-
+        /// <summary>For <see cref="SearchLibrary(string, SearchOptions, int)"/>; Checks for any matches of <paramref name="arg"/> in <paramref name="text"/>.</summary>
+        /// <param name="arg">The (search) argument.</param>
+        /// <param name="text">The text to check for any matches against <paramref name="arg"/>.</param>
+        /// <param name="caseSensitiveQ">Whether to make a case-sensitive check.</param>
+        /// <returns>A nullable boolean defining the results of the check: <c>TRUE</c> - exact match, <c>FALSE</c> - partial match, <c>NULL</c> - no matches.</returns>
+        bool? CheckMatch(string arg, string text, bool caseSensitiveQ)
+        {
+            /// null (no match at all)  /  false (partial match)  /  true (exact match)
+            bool? matchingQ = null;
+            if (arg.IsNotNEW() && text.IsNotNEW())
+            {
+                if (text.ToLower().Contains(arg.ToLower()))
+                {
+                    // exact: true & true = TRUE    partial: false & true = FALSE       no match: false & false = FALSE => NULL
+                    bool exactQ, partialQ;
+                    if (caseSensitiveQ)
+                    {
+                        exactQ = text.Equals(arg);
+                        partialQ = text.Contains(arg);
+                        if (exactQ || partialQ)
+                            matchingQ = exactQ && partialQ;
+                    }
+                    else
+                    {
+                        exactQ = text.ToLower().Equals(arg.ToLower());
+                        partialQ = text.ToLower().Contains(arg.ToLower());
+                        if (exactQ || partialQ)
+                            matchingQ = exactQ && partialQ;
+                    }
+                }
+            }
+            return matchingQ;
+        }
 
 
         /// -

@@ -57,7 +57,7 @@ namespace HCResourceLibraryApp.Layout
         static int _wrapIndentHold = wrapUnholdNum, _wrapSource = 0, _cursorLeft, _cursorTop;
         const char DefaultTitleUnderline = cTHB;
         static string _menuMessage, _incorrectionMessage;
-        static bool _isMenuMessageInQueue, _isWarningMenuMessageQ, _enableWordWrapQ = true;
+        static bool _isMenuMessageInQueue, _isWarningMenuMessageQ, _enableWordWrapQ = true, _holdWrapIndentQ;
         static ForECol? _normalAlt, _highlightAlt;
 
 
@@ -168,7 +168,7 @@ namespace HCResourceLibraryApp.Layout
             if (text.IsNotNE())
             {
                 _wrapSource = 0;
-                text = WordWrap(text);
+                text = WordWrap(text, _holdWrapIndentQ);
                 if (VerifyFormatUsage)
                 {
                     Text(FormatUsageKey, Color.DarkGray);                    
@@ -185,7 +185,7 @@ namespace HCResourceLibraryApp.Layout
             if (text.IsNotNE())
             {
                 _wrapSource = 1;
-                text = WordWrap(text);
+                text = WordWrap(text, _holdWrapIndentQ);
                 if (VerifyFormatUsage)
                 {
                     Text(FormatUsageKey, Color.DarkGray);                    
@@ -260,7 +260,7 @@ namespace HCResourceLibraryApp.Layout
                     text = text.Replace("\n", newLineReplace).Replace("\t", tabReplace);
                     Dbug.LogPart($"Wrapping Text: {wrapBuffer} spaces starting at '{wrapStartPos}'; ");
                     Dbug.Log($"Replaced any newline escape characters (\\n) with '{newLineReplace}'; Replaced any 'tab' escape characters (\\t) with 8 spaces; ");
-                    
+
 
                     // -- Separate words into bits --
                     List<string> textsToWrap = new();
@@ -298,7 +298,7 @@ namespace HCResourceLibraryApp.Layout
                     Dbug.Log("Words have been separated: proceeding to wrap words; ");
                     if (textsToWrap.HasElements())
                     { /// wrapping ... as to hide within...
-                        
+
                         string wrappedText = "";
                         int currWrapPos = wrapStartPos;
                         int wrapIndentLevel = 0;
@@ -330,7 +330,7 @@ namespace HCResourceLibraryApp.Layout
                             {
                                 wrapIndentLevel = _wrapIndentHold.Clamp(0, WordWrapIndentLim);
                                 Dbug.LogPart($" [HldInd{wrapIndentLevel}8] ");
-                            }    
+                            }
 
 
                             /// IF printing this text will not exceed buffer width AND text to print is not newline: print text; ELSE...
@@ -456,7 +456,7 @@ namespace HCResourceLibraryApp.Layout
                                         currWrapPos = 0;
                                         string fltWText = wText.Replace(newLineReplace, "");
                                         Dbug.Log($"{fltWText}|<> ");
-                                        
+
                                         wText = wrapIndText;
                                         if (fltWText.IsEW() && fltWText.CountOccuringCharacter(' ') > 0)
                                             wText += fltWText;
@@ -487,6 +487,11 @@ namespace HCResourceLibraryApp.Layout
                 Dbug.EndLogging();
             }
             return text;
+        }
+        /// <param name="holdQ">Default value: <c>false</c>.</param>
+        public static void HoldWrapIndent(bool holdQ)
+        {
+            _holdWrapIndentQ = holdQ;
         }
         public static void ToggleWordWrappingFeature(bool? enabledQ = null)
         {
@@ -608,24 +613,47 @@ namespace HCResourceLibraryApp.Layout
                                         Dbug.LogPart("'");
 
                                         string[] splitWord = word.Split(subKey);
-                                        if (splitWord[0].IsNotNE())
+                                        for (int wx = 0; wx < splitWord.Length; wx++)
                                         {
-                                            Format(splitWord[0], fecNormal);
-                                            Dbug.LogPart($"{splitWord[0]}");
-                                        }
+                                            bool wordEndQ = splitWord.Length == wx + 1;
 
-                                        if (!splitWord[1].IsNotNE() && end && newLine)
-                                            FormatLine(replacePhrase, fecHighlight);
-                                        else Format(replacePhrase, fecHighlight);
-                                        Dbug.LogPart($"[{replacePhrase}]");
+                                            string partWord = splitWord[wx];
+                                            if (partWord.IsNotNE())
+                                            {
+                                                Format(partWord, fecNormal);
+                                                Dbug.LogPart(partWord);
+                                            }
 
-                                        if (splitWord[1].IsNotNE())
-                                        {
-                                            if (!end || !newLine)
-                                                Format(splitWord[1], fecNormal);
-                                            else FormatLine(splitWord[1], fecNormal);
-                                            Dbug.LogPart($"{splitWord[1]}");
+                                            if (!wordEndQ)
+                                            {
+                                                Format(replacePhrase, fecHighlight);
+                                                Dbug.LogPart($"[{replacePhrase}]");
+                                            }
+
+                                            if (wordEndQ)
+                                                if (newLine && end)
+                                                    NewLine();
                                         }
+                                        #region oldcode
+                                        //if (splitWord[0].IsNotNE())
+                                        //{
+                                        //    Format(splitWord[0], fecNormal);
+                                        //    Dbug.LogPart($"{splitWord[0]}");
+                                        //}
+
+                                        //if (!splitWord[1].IsNotNE() && end && newLine)
+                                        //    FormatLine(replacePhrase, fecHighlight);
+                                        //else Format(replacePhrase, fecHighlight);
+                                        //Dbug.LogPart($"[{replacePhrase}]");
+
+                                        //if (splitWord[1].IsNotNE())
+                                        //{
+                                        //    if (!end || !newLine)
+                                        //        Format(splitWord[1], fecNormal);
+                                        //    else FormatLine(splitWord[1], fecNormal);
+                                        //    Dbug.LogPart($"{splitWord[1]}");
+                                        //}
+                                        #endregion
 
                                         Dbug.LogPart("'");
                                     }
@@ -639,6 +667,7 @@ namespace HCResourceLibraryApp.Layout
                             if (!end || !newLine)
                                 Format(word, fecNormal);
                             else FormatLine(word, fecNormal);
+
                             Dbug.Log($"format normal word >> '{word}' (on newline? {end && newLine})");
                         }
 

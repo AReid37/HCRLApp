@@ -1,4 +1,5 @@
 ##[ H I G H   C O N T R A S T   R E S O U R C E   L I B R A R Y   A P P   -   D E S I G N   D O C S   D E V I - L O G ]##
+
 ##	DEVELOPMENT DEVIATIONS LOG	##
 ==================================
 Syntax:		{Num}#
@@ -75,3 +76,12 @@ With regards to the Code Design Structure outlined in the Design Doc, classes 'C
 With regards to the Version Summary display outlined in the Design Doc, this format has been rejected for a sleek structure.
 	- The prior format requires more lines to be displayed.
 	+ The current format occupies less lines and is more suitable for the information to display.
+
+11#
+The initial five search source categories (Nam, RDI, ARC, Upd, Ver) were reduced to three search categories.
+	- The prior format warranted unneccessary division of information sources and thus more unneccessary work.
+	+ The new three search sources reflect the division of ResContents: Bse, Adt, Upd.
+
+12# The display layout of contents being viewed has been changed significantly.
+	- The prior format was very simplistic and potentially difficult to follow.
+	+ The current layout is cleaner and more informative.

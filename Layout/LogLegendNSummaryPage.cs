@@ -232,8 +232,10 @@ namespace HCResourceLibraryApp.Layout
                                     Format(LatestTablePrintText, ForECol.Highlight);
                                     foreach (string summaryPart in sumDataToDisp.SummaryParts)
                                     {
+                                        HoldWrapIndent(true);
                                         Format(" - ", ForECol.Accent);
                                         FormatLine($"{summaryPart}");
+                                        HoldWrapIndent(false);
                                     }
 
                                     if (sumx + 1 < displayCount)
