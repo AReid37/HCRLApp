@@ -62,7 +62,7 @@ namespace HCResourceLibraryApp.Layout
 
 
         // PUBLIC
-        public const int PageSizeLimit = 625; /// OG"500" 
+        public const int PageSizeLimit = 725; /// OG"500" 
         /// <summary>Light Shade (░).</summary>
         public const char cLS = '\x2591';
         /// <summary>Medium Shade (▒).</summary>
@@ -103,8 +103,8 @@ namespace HCResourceLibraryApp.Layout
                 /// tbd...
                 _preferencesRef.GetScreenDimensions(out int tHeight, out int tWidth);
                 Console.SetWindowSize(tWidth, tHeight);
-                Console.SetBufferSize(tWidth, 9001); /// this, while the library search page is in WIP version
-                //Console.SetBufferSize(tWidth, PageSizeLimit);
+                //Console.SetBufferSize(tWidth, 9001); /// this, while the library search page is in WIP version
+                Console.SetBufferSize(tWidth, PageSizeLimit);
 
                 // minimal customization
                 ClearMinimalCustomization(MinimalMethod.All);

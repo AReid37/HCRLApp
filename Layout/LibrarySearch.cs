@@ -273,7 +273,7 @@ namespace HCResourceLibraryApp.Layout
                 int viewEntNum = noEntNum, varyEntryNum = noVary, varyShelfNum = noVary;
                 string entryNavigationIssue = null;
                 prevMaximumResults = maximumResults;
-                maximumResults = 25 + HSNL(0, 25);
+                maximumResults = 50 + HSNL(0, 49);
                 if (!_searchOpts.IsSetup())
                     _searchOpts = new SearchOptions(true, false);
 
@@ -384,38 +384,7 @@ namespace HCResourceLibraryApp.Layout
                         HoldWrapIndent(true);
 
                         /// the possible variations of 'matching text' that may appear in results (for highlighting)
-                        string highlightStr = searchKey;
-                        if (_searchArg.IsNotNEW())
-                        {
-                            int timeOut = 4;
-                            while (highlightStr == searchKey && timeOut > 0)
-                            {
-                                switch (timeOut)
-                                {
-                                    case 4:
-                                        if (result.matchingText.Contains(_searchArg))
-                                            highlightStr = _searchArg;
-                                        break;
-
-                                    case 3:
-                                        if (_searchArg.Length > 1)
-                                            if (result.matchingText.Contains($"{_searchArg[0].ToString().ToUpper()}{_searchArg[1..]}"))
-                                                highlightStr = $"{_searchArg[0].ToString().ToUpper()}{_searchArg[1..]}";
-                                        break;
-
-                                    case 2:
-                                        if (result.matchingText.Contains(_searchArg.ToLower()))
-                                            highlightStr = _searchArg.ToLower();
-                                        break;
-
-                                    case 1:
-                                        if (result.matchingText.Contains(_searchArg.ToUpper()))
-                                            highlightStr = _searchArg.ToUpper();
-                                        break;
-                                }
-                                timeOut--;
-                            }
-                        }                        
+                        string highlightStr = HighlightSearchArg(_searchArg, result.matchingText);                 
 
                         /// the matching text and highlighting -- IF 'match is content': format 'ContentName'; ELSE format 'matchingText' (from 'ContentName')
                         if (result.matchingText == result.contentName)
@@ -786,6 +755,74 @@ namespace HCResourceLibraryApp.Layout
             }
 
             return exitMainPageQ;
+        }
+
+
+        // tool
+        /// <returns>A variation of <paramref name="arg"/> that exists within <paramref name="text"/>.</returns>
+        public static string HighlightSearchArg(string searchArg, string text, string noValue = DataHandlerBase.Sep)
+        {
+            string highlightStr = noValue;
+            if (searchArg.IsNotNEW())
+            {
+                int timeOut = 7;
+                while (highlightStr == noValue && timeOut > 0)
+                {
+                    switch (timeOut)
+                    {
+                        /// arg arg
+                        case 7:
+                            if (text.Contains(searchArg))
+                                highlightStr = searchArg;
+                            break;
+
+                        /// Arg arg
+                        case 6:
+                            if (searchArg.Length > 1)
+                                if (text.Contains($"{searchArg[0].ToString().ToUpper()}{searchArg[1..]}"))
+                                    highlightStr = $"{searchArg[0].ToString().ToUpper()}{searchArg[1..]}";
+                            break;
+
+                        /// Arg Arg
+                        case 5:
+                            if (text.Contains(LogDecoder.FixContentName(searchArg, false)))
+                                highlightStr = LogDecoder.FixContentName(searchArg, false);
+                            break;
+
+                        /// arg Arg
+                        case 4:
+                            if (searchArg.Length > 1)
+                            {
+                                string fixRemain = LogDecoder.FixContentName(searchArg, false);
+                                if (fixRemain.IsNotNE())
+                                    if (text.Contains($"{searchArg[0] + fixRemain[1..]}"))
+                                        highlightStr = $"{searchArg[0] + fixRemain[1..]}";
+                            }                                
+                            break;
+
+                        /// arg arg
+                        case 3:
+                            if (text.Contains(searchArg.ToLower()))
+                                highlightStr = searchArg.ToLower();
+                            break;
+
+                        /// ARG ARG
+                        case 2:
+                            if (text.Contains(searchArg.ToUpper()))
+                                highlightStr = searchArg.ToUpper();
+                            break;
+
+                        /// aRG ARG
+                        case 1:
+                            if (searchArg.Length > 1)
+                                if (text.Contains($"{searchArg[0] + searchArg[1..].ToUpper()}"))
+                                    highlightStr = $"{searchArg[0] + searchArg[1..].ToUpper()}";
+                            break;
+                    }
+                    timeOut--;
+                }
+            }
+            return highlightStr;
         }
     }
 }

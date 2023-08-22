@@ -3012,14 +3012,16 @@ namespace HCResourceLibraryApp.DataHandling
             return str;
         }
         /// <summary>also partly logs "Name recieved: {name} -- Edited name: {fixedName}; "</summary>
-        static string FixContentName(string conNam)
+        public static string FixContentName(string conNam, bool dbgLogQ = true)
         {
-            Dbug.LogPart($"Name recieved: ");
+            if (dbgLogQ)
+                Dbug.LogPart($"Name recieved: ");
             string fixedConNam;
             if (conNam.IsNotNEW())
             {
                 conNam = conNam.Trim();
-                Dbug.LogPart($"{conNam} -- ");
+                if (dbgLogQ)
+                    Dbug.LogPart($"{conNam} -- ");
 
                 fixedConNam = "";
                 bool hadSpaceBefore = false;
@@ -3062,16 +3064,21 @@ namespace HCResourceLibraryApp.DataHandling
                 }
                 fixedConNam = fixedConNam.Trim();
 
-                if (fixedConNam != conNam)
-                    Dbug.LogPart($"Edited name: {fixedConNam}");
-                else Dbug.LogPart("No edits");
+                if (dbgLogQ)
+                {
+                    if (fixedConNam != conNam)
+                        Dbug.LogPart($"Edited name: {fixedConNam}");
+                    else Dbug.LogPart("No edits");
+                }                    
             }
             else
             {
                 fixedConNam = conNam;
-                Dbug.LogPart("<null>");
+                if (dbgLogQ)
+                    Dbug.LogPart("<null>");
             }
-            Dbug.LogPart("; ");
+            if (dbgLogQ)
+                Dbug.LogPart("; ");
             return fixedConNam;
         }
         /// <summary>also partly logs "Removed Esc.Chars: [{n t a f r}]; "</summary>

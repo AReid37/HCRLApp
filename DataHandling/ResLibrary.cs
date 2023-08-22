@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using ConsoleFormat;
+using HCResourceLibraryApp.Layout;
 
 namespace HCResourceLibraryApp.DataHandling
 {
@@ -891,36 +892,7 @@ namespace HCResourceLibraryApp.DataHandling
                                 bool? matchDescQ = CheckMatch(searchArg, conChanges.ChangeDesc, searchOpts.caseSensitiveQ);
                                 if (matchDescQ.HasValue)
                                 {
-                                    string searchArgMatch = "";
-                                    int timeOut = 4;
-                                    while (searchArgMatch.IsNE() && timeOut > 0)
-                                    {
-                                        switch (timeOut)
-                                        {
-                                            case 4:
-                                                if (conChanges.ChangeDesc.Contains(searchArg))
-                                                    searchArgMatch = searchArg;
-                                                break;
-
-                                            case 3:
-                                                if (searchArg.Length > 1)
-                                                    if (conChanges.ChangeDesc.Contains($"{searchArg[0].ToString().ToUpper()}{searchArg[1..]}"))
-                                                        searchArgMatch = $"{searchArg[0].ToString().ToUpper()}{searchArg[1..]}";
-                                                break;
-
-                                            case 2:
-                                                if (conChanges.ChangeDesc.Contains(searchArg.ToLower()))
-                                                    searchArgMatch = searchArg.ToLower();
-                                                break;
-
-                                            case 1:
-                                                if (conChanges.ChangeDesc.Contains(searchArg.ToUpper()))
-                                                    searchArgMatch = searchArg.ToUpper();
-                                                break;
-                                        }
-                                        timeOut--;
-                                    }
-
+                                    string searchArgMatch = LibrarySearch.HighlightSearchArg(searchArg, conChanges.ChangeDesc);
                                     string shortenedDesc;
                                     string shortenedDesc_Start = conChanges.ChangeDesc.Clamp(updExcerptLim, updExcerptLimEnd, searchArgMatch, true); 
                                     string shortenedDesc_End = conChanges.ChangeDesc.Clamp(updExcerptLim, updExcerptLimEnd, searchArgMatch, false);

@@ -211,6 +211,8 @@ namespace HCResourceLibraryApp.Layout
                     "3 3 3 3     333 3 333 3",
                     HSNL(0, 10) < 2 ? null :
                     " ",
+                    HSNL(0, 10) < 4 ? null :
+                    " ",
                     HSNL(0, 10) < 1 ? null :
                     "                          3",
                     "                         3 ",
@@ -233,6 +235,8 @@ namespace HCResourceLibraryApp.Layout
                     " 33      777               ",
                     HSNL(0, 10) < 1 ? null :
                     "3                          ",
+                    HSNL(0, 10) < 4 ? null :
+                    " ",
                     HSNL(0, 10) < 2 ? null :
                     " ",
                     HSNL(0, 10) < 2 ? null :
