@@ -800,14 +800,14 @@ namespace HCResourceLibraryApp.DataHandling
                      */
 
                     Dbug.Log("Search arguement and search options provided; proceeding with search query; ");
-                    List<SearchResult> initialResults = new();
+                    List<SearchResult> initialResultsAll = new(), irrelevantResults = new();
                     List<string> contentNames = new();
 
 
                     // FIRST STEP - Find any results within results limit
                     Dbug.Log("1st Step: Find all results; ");
                     Dbug.NudgeIndent(true);
-                    for (int cx = 0; cx < Contents.Count && initialResults.Count < maxResults; cx++)
+                    for (int cx = 0; cx < Contents.Count; cx++)
                     {
                         // setup
                         const int updExcerptLim = 25;
@@ -952,42 +952,44 @@ namespace HCResourceLibraryApp.DataHandling
                         // batch any results found for this content
                         if (resultBatch.HasElements())
                         {
-                            int dbgInitialResultsCount = initialResults.Count, dbgDupeCount = 0;
+                            int dbgDupeCount = 0;
 
                             /// for sorting
                             contentNames.Add(content.ContentName);
                             /// batch results
                             foreach (SearchResult result in resultBatch)
                             {
-                                if (initialResults.Count < maxResults)
+                                bool isDupeQ = false;
+                                foreach (SearchResult iniRes in initialResultsAll)
                                 {
-                                    bool isDupeQ = false;
-                                    foreach (SearchResult iniRes in initialResults)
+                                    if (!isDupeQ && iniRes.Equals(result))
                                     {
-                                        if (!isDupeQ && iniRes.Equals(result))
-                                        {
-                                            dbgDupeCount++;
-                                            isDupeQ = true;
-                                            break;
-                                        }
+                                        dbgDupeCount++;
+                                        isDupeQ = true;
+                                        break;
                                     }
-
-                                    if (!isDupeQ)
-                                        initialResults.Add(result);
                                 }
+
+                                if (!isDupeQ)
+                                    initialResultsAll.Add(result);
                             }
 
-                            int dbgOmitCount = dbgInitialResultsCount + resultBatch.Count - dbgDupeCount > maxResults ? dbgInitialResultsCount + resultBatch.Count - dbgDupeCount - maxResults : 0;
                             Dbug.LogPart($"RC #{content.ShelfID} '{content.ContentName}' provided '{resultBatch.Count}' results:");
                             Dbug.LogPart($" {(dbgCountBase > 0 ? $"[Bse = {dbgCountBase}]" : "")}");
                             Dbug.LogPart($" {(dbgCountAdt > 0 ? $"[Adt = {dbgCountAdt}]" : "")}");
                             Dbug.LogPart($" {(dbgCountUpd > 0 ? $"[Upd = {dbgCountUpd}]" : "")}");
                             if (dbgDupeCount > 0)
                                 Dbug.LogPart($" -- Removed '{dbgDupeCount}' duplicate results");
-                            if (dbgOmitCount > 0)
-                                Dbug.LogPart($" -- Omitting '{dbgOmitCount}' results (limit reached)");
                             Dbug.Log("; ");
                         }
+                    }
+                    if (initialResultsAll.HasElements())
+                    {
+                        Dbug.LogPart($" -> Shrinking initial results within max results limit '{maxResults}'; ");
+                        for (int ix = 0; ix < initialResultsAll.Count && irrelevantResults.Count < maxResults; ix++)
+                            irrelevantResults.Add(initialResultsAll[ix]);
+
+                        Dbug.Log($"{(irrelevantResults.Count <= maxResults ? "Done" : $"ERROR: improperly limited [{irrelevantResults.Count} <= {maxResults} : False]")}; ");
                     }
                     Dbug.NudgeIndent(false);
 
@@ -998,32 +1000,68 @@ namespace HCResourceLibraryApp.DataHandling
                     List<SearchResult> exactResults = new(), priorityPartialResults = new(), partialResults = new();
                     if (contentNames.HasElements())
                     {
+                        List<SearchResult> iniExactRes = new(), iniPriorityPartialRes = new(), iniPartialRes = new();
+
+                        Dbug.Log(" -> Sorting all results into initial exacts, priority partials*, and partials; ");
                         Dbug.NudgeIndent(true);
                         for (int nx = 0; nx < contentNames.Count; nx++)
                         {
                             string contentName = contentNames[nx];
-                            int dbgPrevExactCount = exactResults.Count, dbgPrevPartialCount = partialResults.Count + priorityPartialResults.Count;
-                            foreach (SearchResult iniResult in initialResults)
+                            int dbgPrevExactCount = iniExactRes.Count, dbgPrevPartialCount = iniPartialRes.Count, dbgPrevPriorityCount = iniPriorityPartialRes.Count;
+                            foreach (SearchResult iniResult in initialResultsAll)
                             {
                                 if (iniResult.IsSetup() && iniResult.contentName == contentName)
                                 {
                                     if (iniResult.exactMatchQ)
-                                        exactResults.Add(iniResult);
+                                        iniExactRes.Add(iniResult);
                                     else
                                     {
                                         /// for example, 'Tomato' is exact and its additional "Tomato Stem" is partial, this partial result is prioritized over other partial results
-                                        if (exactResults.Count - dbgPrevExactCount > 0)
-                                            priorityPartialResults.Add(iniResult); 
-                                        else partialResults.Add(iniResult);
+                                        if (iniExactRes.Count - dbgPrevExactCount > 0)
+                                            iniPriorityPartialRes.Add(iniResult); 
+                                        else iniPartialRes.Add(iniResult);
                                     }
                                 }
                             }
 
-                            Dbug.LogPart($"@{nx + 1} '{contentName}', Exct [{exactResults.Count - dbgPrevExactCount}], Prtl [{partialResults.Count + priorityPartialResults.Count - dbgPrevPartialCount}]");
+                            Dbug.LogPart($"@{nx + 1} '{contentName}', Exct [{iniExactRes.Count - dbgPrevExactCount}], Prtl [{iniPriorityPartialRes.Count - dbgPrevPriorityCount}* + {iniPartialRes.Count - dbgPrevPartialCount}]");
                             if (nx % 3 == 2 || contentNames.Count == nx + 1)
                                 Dbug.Log("; ");
                             else Dbug.LogPart("    //    ");
                         }
+                        Dbug.NudgeIndent(false);
+
+                        Dbug.Log($" -> Limiting exacts [E] ('{iniExactRes.Count}' items), priority partials [R] ('{iniPriorityPartialRes.Count}' items), and partial [P] ('{iniPartialRes.Count}' items) results to cumulative total '{maxResults}'; ");
+                        Dbug.NudgeIndent(true);
+                        int resultTotal = 0;
+                        bool addedResultQ = true;
+                        Dbug.LogPart("Adding ::");
+                        for (int x = 0; resultTotal < maxResults && addedResultQ; x++)
+                        {
+                            int indexPriority = resultTotal - exactResults.Count;
+                            int indexPartial = resultTotal - exactResults.Count - priorityPartialResults.Count;
+                            Dbug.LogPart($" [{resultTotal + 1}]");
+
+                            if (resultTotal < iniExactRes.Count)
+                            {
+                                exactResults.Add(iniExactRes[resultTotal]);
+                                Dbug.LogPart($"E{resultTotal}");
+                            }
+                            else if (indexPriority < iniPriorityPartialRes.Count)
+                            {
+                                priorityPartialResults.Add(iniPriorityPartialRes[indexPriority]);
+                                Dbug.LogPart($"R{indexPriority}");
+                            }
+                            else if (indexPartial < iniPartialRes.Count)
+                            {
+                                partialResults.Add(iniPartialRes[indexPartial]);
+                                Dbug.LogPart($"P{indexPartial}");
+                            }
+                            else addedResultQ = false;
+
+                            resultTotal = exactResults.Count + priorityPartialResults.Count + partialResults.Count;
+                        }
+                        Dbug.Log(";  Done; ");
                         Dbug.NudgeIndent(false);
                     }
                     else Dbug.Log("No initial results from 1st step. No results found.");
@@ -1046,8 +1084,8 @@ namespace HCResourceLibraryApp.DataHandling
                         }
                         else
                         {
-                            Dbug.LogPart($"Ignoring Relevance; Order By Shelf ID - submitting 'initial results' ['{initialResults.Count}' items] to 'results'");
-                            results.AddRange(initialResults);
+                            Dbug.LogPart($"Ignoring Relevance; Order By Shelf ID - submitting 'initial results' ['{irrelevantResults.Count}' items] to 'results'");
+                            results.AddRange(irrelevantResults);
                         }
                         Dbug.Log("; ");
                     }

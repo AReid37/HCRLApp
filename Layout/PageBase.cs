@@ -634,27 +634,6 @@ namespace HCResourceLibraryApp.Layout
                                                 if (newLine && end)
                                                     NewLine();
                                         }
-                                        #region oldcode
-                                        //if (splitWord[0].IsNotNE())
-                                        //{
-                                        //    Format(splitWord[0], fecNormal);
-                                        //    Dbug.LogPart($"{splitWord[0]}");
-                                        //}
-
-                                        //if (!splitWord[1].IsNotNE() && end && newLine)
-                                        //    FormatLine(replacePhrase, fecHighlight);
-                                        //else Format(replacePhrase, fecHighlight);
-                                        //Dbug.LogPart($"[{replacePhrase}]");
-
-                                        //if (splitWord[1].IsNotNE())
-                                        //{
-                                        //    if (!end || !newLine)
-                                        //        Format(splitWord[1], fecNormal);
-                                        //    else FormatLine(splitWord[1], fecNormal);
-                                        //    Dbug.LogPart($"{splitWord[1]}");
-                                        //}
-                                        #endregion
-
                                         Dbug.LogPart("'");
                                     }
                                 }

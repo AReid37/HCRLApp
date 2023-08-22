@@ -7,7 +7,7 @@
     <Version>1.1.9.3</Version>
     <StartupObject></StartupObject>
     <FileVersion>1.1.9.3</FileVersion>
-    <ApplicationIcon>HCINC-L6 (Acronym).ico</ApplicationIcon>
+    <ApplicationIcon>HCRLAicon 1-1 256px.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
@@ -17,7 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="HCINC-L6 (Acronym).ico" />
+    <Content Include="HCRLAicon 1-1 256px.ico" />
   </ItemGroup>
 
   <ItemGroup>
