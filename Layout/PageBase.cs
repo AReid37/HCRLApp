@@ -57,7 +57,7 @@ namespace HCResourceLibraryApp.Layout
         static int _wrapIndentHold = wrapUnholdNum, _wrapSource = 0, _cursorLeft, _cursorTop;
         const char DefaultTitleUnderline = cTHB;
         static string _menuMessage, _incorrectionMessage;
-        static bool _isMenuMessageInQueue, _isWarningMenuMessageQ, _enableWordWrapQ = true, _holdWrapIndentQ;
+        static bool _isMenuMessageInQueue, _isWarningMenuMessageQ, _enableWordWrapQ = true, _holdWrapIndentQ, _enterBugIdeaPageQ;
         static ForECol? _normalAlt, _highlightAlt;
 
 
@@ -79,10 +79,12 @@ namespace HCResourceLibraryApp.Layout
         public const char cBHB = '\x2584';
         public const string exitPagePhrase = "Return to Main Menu";
         public const string exitSubPagePhrase = "Return";
+        public const string openBugIdeaPagePhrase = "@dbi";
 
 
         // PROPERTIES
         public static bool VerifyFormatUsage { get; set; }
+        public static bool WithinBugIdeaPageQ { get; set; }
         #endregion
 
 
@@ -668,6 +670,15 @@ namespace HCResourceLibraryApp.Layout
         public static string StyledInput(string placeholder)
         {
             string input = Input(placeholder, _preferencesRef.Input);
+
+            /// queue bug / idea page
+            if (input == openBugIdeaPagePhrase && !IsEnterBugIdeaPageQueued())
+            {
+                QueueEnterBugIdeaPage();
+                Format($"{Ind34}[Bug/Idea Page Queued] Enter input for previous prompt: ", ForECol.Accent);
+                input = Input(placeholder, _preferencesRef.Input);
+            }
+
             return input;
         }
         /// <summary>Height Sensitive New Line.</summary>
@@ -738,6 +749,7 @@ namespace HCResourceLibraryApp.Layout
             }
             return lineLengthNum;
         }
+
 
 
         // -- -- Validations -- --
@@ -831,7 +843,7 @@ namespace HCResourceLibraryApp.Layout
         /// <summary>
         ///     Creates an options menu in the form of a table. Includes menu validation.
         /// </summary>
-        /// <param name="resultNum">Number-based result key matching the bracketed number preceding a selected option. Is <c>-1</c> if the selected option is invalid.</param>
+        /// <param name="resultNum">One-based numerical result key matching the bracketed number preceding a selected option. Is <c>-1</c> if the selected option is invalid.</param>
         /// <param name="titleText">REQUIRED.</param>
         /// <param name="titleUnderline">If <c>null</c>, will use the <see cref="cTHB"/> ('▀') as an underline.</param>
         /// <param name="titleSpanWidthQ">If <c>true</c>, will have the title of the menu span the width of the program window.</param>
@@ -1038,7 +1050,7 @@ namespace HCResourceLibraryApp.Layout
         }
         static void MenuMessageTrigger()
         {
-            if (_isMenuMessageInQueue)
+            if (_isMenuMessageInQueue && !WithinBugIdeaPageQ)
             {
                 FormatLine(_menuMessage, _isWarningMenuMessageQ ? ForECol.Warning: ForECol.Incorrection);
                 _isMenuMessageInQueue = false;
@@ -1157,6 +1169,18 @@ namespace HCResourceLibraryApp.Layout
         {
             Console.CursorTop = top >= 0 ? top : _cursorTop;
             Console.CursorLeft = left >= 0 ? left : _cursorLeft;
+        }
+        public static void QueueEnterBugIdeaPage()
+        {
+            _enterBugIdeaPageQ = true;
+        }
+        public static bool IsEnterBugIdeaPageQueued()
+        {
+            return _enterBugIdeaPageQ == true;
+        }
+        public static void UnqueueEnterBugIdeaPage()
+        {
+            _enterBugIdeaPageQ = false;
         }
     }
 }

@@ -6,7 +6,6 @@ using static ConsoleFormat.Base;
 using static ConsoleFormat.Minimal;
 using HCResourceLibraryApp.DataHandling;
 using static HCResourceLibraryApp.DataHandling.SFormatterHandler;
-using System.Linq;
 
 namespace HCResourceLibraryApp.Layout
 {
@@ -64,6 +63,8 @@ namespace HCResourceLibraryApp.Layout
             bool exitSteamGenPage = false;
             do
             {
+                BugIdeaPage.OpenPage();
+                
                 Program.LogState("Generate Steam Log");
                 Clear();
                 Title("Generate Steam Log", cTHB, 1);
@@ -159,6 +160,8 @@ namespace HCResourceLibraryApp.Layout
                     noLibraryData = false;
             do
             {
+                BugIdeaPage.OpenPage();
+
                 Program.LogState("Generate Steam Log|Log Version");
                 Clear();
                 Title("Select Log Version", subMenuUnderline, 2);
@@ -544,6 +547,8 @@ namespace HCResourceLibraryApp.Layout
             bool exitFormatterSubPageQ = false;
             do
             {
+                BugIdeaPage.OpenPage();
+
                 Program.LogState("Generate Steam Log|Steam Formatter");
                 Clear();
                 Title("Steam Formatter", subMenuUnderline, 1);
@@ -608,6 +613,8 @@ namespace HCResourceLibraryApp.Layout
             bool exitGenSteamLogSubPageQ;
             do
             {
+                BugIdeaPage.OpenPage();
+
                 /// pre checks
                 bool hasFormatterQ = false, hasLibDataQ = _sfLibraryRef.IsSetup(), isFormatterErrorlessQ = false;
                 if (_formatterData != null)

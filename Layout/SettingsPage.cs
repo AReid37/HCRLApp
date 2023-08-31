@@ -33,6 +33,8 @@ namespace HCResourceLibraryApp.Layout
             bool exitSettingsMain = false;
             do
             {
+                BugIdeaPage.OpenPage();
+
                 Program.LogState("Settings");
                 Clear();
                 Title("Application Settings", cTHB, 1);
@@ -82,6 +84,8 @@ namespace HCResourceLibraryApp.Layout
             Preferences newForeCols = _preferencesRef.ShallowCopy();
             do
             {
+                BugIdeaPage.OpenPage();
+
                 if (activeMenuKey.IsNE())
                     Program.LogState("Settings|Preferences");
 
@@ -482,6 +486,8 @@ namespace HCResourceLibraryApp.Layout
 
             do
             {
+                BugIdeaPage.OpenPage();
+
                 // settings - ConInt main menu
                 if (activeMenuKey.IsNE())
                     Program.LogState("Settings|Content Integrity");
@@ -769,23 +775,21 @@ namespace HCResourceLibraryApp.Layout
                                                 shortFPath += fPath.Clamp(folderCondensingDist / 2, null, fPath.Substring(fPath.Length - endPeekNum).ToString(), false);
                                                 fPathsCondensed.Add(shortFPath);
                                             }
-                                            else fPathsCondensed.Add(fPath);
+                                            else fPathsCondensed.Add(fPath.Replace(ContentValidator.FolderPathDisabledToken, FPDTRep));
                                         }
 
                                         FormatLine($"{Ind14}The following (relative) folder paths have been provided: ", ForECol.Normal);
                                         List(OrderType.Ordered_Numeric, fPathsCondensed.ToArray());
                                         NewLine();
 
-                                        //FormatLine($"{Ind14}An existing folder path may be removed by using their list number.", ForECol.Accent);
-                                        //FormatLine($"{Ind14}Toggle usability or remove a folder path by using their list number above.", ForECol.Accent);
-                                        FormatLine($"{Ind14}An existing folder path may be edited by using their list number.", ForECol.Accent);
-                                        Format($"{Ind14}Edit/remove/submit folder path >> ", ForECol.Normal);
+                                        FormatLine($"{Ind14}Select the folder number to edit or submit a new folder path.", ForECol.Accent);
+                                        Format($"{Ind14}Edit/submit folder path >> ", ForECol.Normal);
                                         placeHolder = $"#  /OR/  " + placeHolder;
                                     }
                                     else
                                     {
                                         FormatLine($"{Ind14}There are no provided folder paths.", ForECol.Normal);
-                                        FormatLine($"{Ind14}A folder's path could also be fetched from a given file's path.", ForECol.Accent);
+                                        FormatLine($"{Ind14}A folder's path can be fetched from a given file's path.", ForECol.Accent);
                                         Format($"{Ind14}Submit folder path >> ", ForECol.Normal);                                        
                                     }
 
@@ -872,7 +876,8 @@ namespace HCResourceLibraryApp.Layout
                                         else
                                         {
                                             NewLine();
-                                            FormatLine($"{Ind14}Press [Enter] to enable/disable usage of this folder path.", ForECol.Accent);
+                                            //FormatLine($"{Ind14}Press [Enter] to enable/disable usage of this folder path.", ForECol.Accent);
+                                            FormatLine($"{Ind14}Press [Enter] to toggle folder usage. Enter any key to remove folder.", ForECol.Accent);
                                             Format($"{Ind14}Remove / toggle usability of this folder path >> ");
                                             if (StyledInput("#a /OR/ __").IsNE())
                                             {
@@ -892,7 +897,7 @@ namespace HCResourceLibraryApp.Layout
                                             {
                                                 string removedPath = folderPaths[folderIx];
                                                 folderPaths.RemoveAt(folderIx);
-                                                Format($"{Ind24}Removed folder path #{folderIx + 1} from paths list:\n{Ind34}{removedPath}.", ForECol.Correction);
+                                                Format($"{Ind24}Removed folder path #{folderIx + 1} from paths list:\n{Ind34}{removedPath.Replace(ContentValidator.FolderPathDisabledToken, FPDTRep)}.", ForECol.Correction);
                                             }
                                         }
                                         Pause();
@@ -1031,7 +1036,7 @@ namespace HCResourceLibraryApp.Layout
                                 DisplayCivResults(_contentValidator.CivInfoDock, civDisplayStyle);
                                 HorizontalRule('-');
 
-                                Highlight(true, $"Percentage of contents verified: {_contentValidator.ValidationPercentage:0.0}% of '{contentCount}' contents.", $"{_contentValidator.ValidationPercentage:0.0}%");
+                                Highlight(true, $"Percentage of contents verified: {_contentValidator.ValidationPercentage:0.00}% of '{contentCount}' contents.", $"{_contentValidator.ValidationPercentage:0.00}%");
                                 NewLine();
 
                                 Format("Current display type is highlighted :: ");
@@ -1351,6 +1356,8 @@ namespace HCResourceLibraryApp.Layout
             bool exitReversionMenu = false;
             do
             {
+                BugIdeaPage.OpenPage();
+                
                 Program.LogState("Settings|Reversion");
                 Clear();
                 //FormatLine("\n", ForECol.Accent);

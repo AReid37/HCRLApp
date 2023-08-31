@@ -12,8 +12,8 @@ namespace HCResourceLibraryApp
     public class Program
     {
         static readonly string consoleTitle = "High Contrast Resource Library App";
-        static readonly string developmentVersion = "[v1.2.8c]";
-        static readonly string lastPublishedVersion = "[v1.2.8b]";
+        static readonly string developmentVersion = "[v1.2.9]";
+        static readonly string lastPublishedVersion = "[v1.2.8c]";
         /// <summary>If <c>true</c>, the application launches for debugging/development. Otherwise, the application launches for the published version.</summary>
         public static readonly bool isDebugVersionQ = true;
         static readonly bool verifyFormatUsageBase = false;
@@ -29,6 +29,7 @@ namespace HCResourceLibraryApp
         static ContentValidator contentValidator;
         static ResLibrary resourceLibrary;
         static SFormatterData formatterData;
+        static BugIdeaData bugIdeaData;
 
         // PUBLIC
         public static bool AllowProgramRestart { get => _programRestartQ; private set => _programRestartQ = value; }
@@ -55,10 +56,11 @@ namespace HCResourceLibraryApp
                 contentValidator = new ContentValidator();
                 resourceLibrary = new ResLibrary();
                 formatterData = new SFormatterData();
+                bugIdeaData = new BugIdeaData();
                 LoadData();
-                contentValidator.GetResourceLibraryReference(resourceLibrary);
                 /// --v printing and pages
                 VerifyFormatUsage = verifyFormatUsageBase && isDebugVersionQ;          
+                contentValidator.GetResourceLibraryReference(resourceLibrary);
                 GetPreferencesReference(preferences);
                 ApplyPreferences();
                 SettingsPage.GetPreferencesReference(preferences);
@@ -68,6 +70,7 @@ namespace HCResourceLibraryApp
                 LibrarySearch.GetResourceLibraryReference(resourceLibrary);
                 GenSteamLogPage.GetResourceLibraryReference(resourceLibrary);
                 GenSteamLogPage.GetSteamFormatterReference(formatterData);
+                BugIdeaPage.GetBugIdeaDataReference(bugIdeaData);
 
                 // testing site
                 if (isDebugVersionQ)
@@ -86,6 +89,7 @@ namespace HCResourceLibraryApp
                     bool mainMenuQ = true;
                     do
                     {
+                        BugIdeaPage.OpenPage();
                         /// Main Menu
                         /// ->  Logs Submission
                         /// ->  Library Search
@@ -97,6 +101,13 @@ namespace HCResourceLibraryApp
 
                         LogState("Main Menu");
                         Clear();
+
+                        if (Extensions.Random(0, 5) < 2)
+                        {
+                            FormatLine($"{Ind14}Report bugs or suggest ideas by entering the phrase '{openBugIdeaPagePhrase}' in any input.", ForECol.Accent);
+                            NewLine();
+                        }
+
                         bool isValidMMOpt = ListFormMenu(out string mainMenuOptKey, "Main Menu", null, $"{Ind24}Option >> ", "a~f", true,
                             "Logs Submission, Library Search, Log Legend and Summaries, Generate Steam Log, Settings, Quit".Split(", "));
                         MenuMessageQueue(mainMenuOptKey == null, false, null);
@@ -140,6 +151,7 @@ namespace HCResourceLibraryApp
 
                     } while (mainMenuQ && !AllowProgramRestart);
                 }
+                else BugIdeaPage.OpenPage();
 
                 restartProgram = AllowProgramRestart;
                 if (AllowProgramRestart)
@@ -241,7 +253,7 @@ namespace HCResourceLibraryApp
             NewLine(2);
             Format($"{saveIcon}\t", ForECol.Accent);
 
-            bool savedDataQ = dataHandler.SaveToFile(preferences, logDecoder, contentValidator, resourceLibrary, formatterData);            
+            bool savedDataQ = dataHandler.SaveToFile(preferences, logDecoder, contentValidator, resourceLibrary, formatterData, bugIdeaData);            
             if (savedDataQ)
                 Format(discreteQ? "auto-save: S." : "Auto-saving data ... success.", discreteQ? ForECol.Accent : ForECol.Correction);
             else Format(discreteQ? "auto-save: F." : "Auto-saving data ... failed.", discreteQ ? ForECol.Accent : ForECol.Incorrection);
@@ -252,7 +264,7 @@ namespace HCResourceLibraryApp
         public static void LoadData()
         {
             LogState("Loading Data");
-            bool outCome = dataHandler.LoadFromFile(preferences, logDecoder, contentValidator, resourceLibrary, formatterData);
+            bool outCome = dataHandler.LoadFromFile(preferences, logDecoder, contentValidator, resourceLibrary, formatterData, bugIdeaData);
             Dbug.SingleLog("Program.LoadData()", $"Outcome of data loading :: {outCome};");
         }
         public static bool SaveReversion()

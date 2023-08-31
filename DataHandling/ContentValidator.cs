@@ -582,7 +582,7 @@ namespace HCResourceLibraryApp.DataHandling
                     Dbug.NudgeIndent(false);
 
                     float percentValidated = (float)(allExpandedDataIDs.Count - countInvalidated) / allExpandedDataIDs.Count * 100f;
-                    string validationTurnout = $"'{allExpandedDataIDs.Count - countInvalidated}' of '{allExpandedDataIDs.Count}' ({percentValidated:0.0}%)";
+                    string validationTurnout = $"'{allExpandedDataIDs.Count - countInvalidated}' of '{allExpandedDataIDs.Count}' ({percentValidated:0.000}%)";
                     Dbug.Log($"Content Integrity Verification process complete; {validationTurnout} contents were validated; Moving list of ConValInfos data to be accessed by other classes; ");
                     _percentValidation = percentValidated;
                     _conValInfoDock = allExpandedDataIDs;

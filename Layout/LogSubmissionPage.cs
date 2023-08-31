@@ -18,6 +18,8 @@ namespace HCResourceLibraryApp.Layout
             bool exitLogSubMain = false;
             do
             {
+                BugIdeaPage.OpenPage();
+                
                 Program.LogState("Log Submission");
                 Clear();
                 Title("Version Log Submission", cTHB, 1);
@@ -55,12 +57,14 @@ namespace HCResourceLibraryApp.Layout
             bool exitSubmissionPage = false;
             do
             {
+                BugIdeaPage.OpenPage();
+
                 /** Stages of verion log submission
                         - Provide path to version log (log location)
                         - Original version log review (raw)
                         - Processed version log review (decoded)
                  */
-                
+
                 Program.LogState("Log Submission|Submit A Log");
                 Clear();
                 Title("Submit a Version Log", subMenuUnderline, 1);

@@ -120,7 +120,7 @@ namespace HCResourceLibraryApp.DataHandling
                             if (resCon.ConChanges.HasElements())
                                 foreach (ContentChanges rcc in resCon.ConChanges)
                                 {
-                                    string updtValue = $"{rcc.RelatedDataID}{PropSep}{rcc.InternalName}{PropSep}{rcc.ChangeDesc}";
+                                    string updtValue = $"{rcc.RelatedDataID}{PropSep}{resCon.ContentName}{PropSep}{rcc.ChangeDesc}";
                                     _updated.Add(updtValue);
                                     Dbug.Log($"New entry to 'Updated' :: {updtValue}   [relID/relName/changeDesc]");
                                 }

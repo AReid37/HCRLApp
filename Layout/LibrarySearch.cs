@@ -28,6 +28,8 @@ namespace HCResourceLibraryApp.Layout
             bool exitSearchPageQ; // = false;
             do
             {
+                BugIdeaPage.OpenPage();
+                
                 Program.LogState("Library Search");
                 Clear();
                 Title($"Library Search", cTHB, 0);
@@ -449,6 +451,8 @@ namespace HCResourceLibraryApp.Layout
                 /// SEARCH OPTIONS PAGE
                 while (!exitSearchOptsPageQ)
                 {
+                    BugIdeaPage.OpenPage();
+
                     Program.LogState("Library Search|Search Options");
                     Clear();
                     Title("Search Options", cTHB, 0);
@@ -550,6 +554,8 @@ namespace HCResourceLibraryApp.Layout
                 /// ENTRY VIEW PAGE
                 while (!exitEntryViewPageQ && viewEntNum > noEntNum)
                 {
+                    BugIdeaPage.OpenPage();
+
                     /// toNext/PrevResults,  toNext/PrevShelf
                     const string toNextRs = ">", toPrevRs = "<", toNextSh = ">>", toPrevSh = "<<";
 
@@ -795,8 +801,8 @@ namespace HCResourceLibraryApp.Layout
                             {
                                 string fixRemain = LogDecoder.FixContentName(searchArg, false);
                                 if (fixRemain.IsNotNE())
-                                    if (text.Contains($"{searchArg[0] + fixRemain[1..]}"))
-                                        highlightStr = $"{searchArg[0] + fixRemain[1..]}";
+                                    if (text.Contains($"{searchArg[0].ToString().ToLower() + fixRemain[1..]}"))
+                                        highlightStr = $"{searchArg[0].ToString().ToLower() + fixRemain[1..]}";
                             }                                
                             break;
 
@@ -815,8 +821,8 @@ namespace HCResourceLibraryApp.Layout
                         /// aRG ARG
                         case 1:
                             if (searchArg.Length > 1)
-                                if (text.Contains($"{searchArg[0] + searchArg[1..].ToUpper()}"))
-                                    highlightStr = $"{searchArg[0] + searchArg[1..].ToUpper()}";
+                                if (text.Contains($"{searchArg[0].ToString().ToLower() + searchArg[1..].ToUpper()}"))
+                                    highlightStr = $"{searchArg[0].ToString().ToLower() + searchArg[1..].ToUpper()}";
                             break;
                     }
                     timeOut--;

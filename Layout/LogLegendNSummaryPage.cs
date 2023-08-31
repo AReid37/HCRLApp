@@ -22,6 +22,8 @@ namespace HCResourceLibraryApp.Layout
             bool exitLegNSumMain = false;
             do
             {
+                BugIdeaPage.OpenPage();
+                
                 Program.LogState("Legend And Summaries View");
                 Clear();
                 Title("Log Legend And Summaries", cTHB, 1);
@@ -158,8 +160,9 @@ namespace HCResourceLibraryApp.Layout
             VerNum selectedVer = VerNum.None;
             do
             {
-                Program.LogState("Legend And Summaries View|Log Summaries View");
-                
+                BugIdeaPage.OpenPage();
+
+                Program.LogState("Legend And Summaries View|Log Summaries View");                
                 Clear();
                 Title("Version Log Summaries", subMenuUnderline, 1);
                 FormatLine("Browse the version summaries obtained from submitted version logs.", ForECol.Accent);

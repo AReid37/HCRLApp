@@ -30,7 +30,13 @@
 
 [X] 10# Gen Steam Log Page -> Formatter Parser: Comparisons against escape characters may not work. If any value returned contains an escape character, that character must be appropriately replaced with the escape characte code (&00; for '"', &01; for '#')
 
-[ ] 11# ...
+[ ] 11# Content Integrity: Verify Content Integrity -> Displays contents as being 100% verified even though 1 content item is confirmed missing (should always be max of 99.9% if ANY items are missing)
+
+[X] 12# Content Integrity: Verify Content Integrity -> Folder editing is very unclear; what to enter and what it will do is a mystery to the user
+
+[ ] 13# LibrarySearch.HighlightSearchArg -> Rebuild algorithm to sift through each character and build the 'matching text' without fail. There too many unpredictable variations to be place in switch-cases alone
+
+[ ] 14# ...
 
 
 
@@ -38,7 +44,7 @@
 ---------------------
       I D E A S
 ---------------------
-[ ] 1# A bug report/idea suggestion route that is accessible from any style input by using a keyphrase (Suggest '@dbi'). Ideas and bugs are saved in a separate file; Ideas & bugs may also be stored with main file data.
+[X] 1# A bug report/idea suggestion route that is accessible from any style input by using a keyphrase (Suggest '@dbi'). Ideas and bugs are saved in a separate file; Ideas & bugs may also be stored with main file data.
 
 [X] 2# Display what base contents the loose contents were connected to after contents have been integrated after a submission. Any mistakes can be undone from a reversion.
 
@@ -60,7 +66,7 @@
 
 [X] 10# Using a certain syntax to substitute a keycode with symbols that are used for log decoding (example: using "&00" to sub for "-", or using "&04" to sub for "("). File encoding/decoding won't be affected and the data remains true to it's name as it bypasses the possible errors from log decoding.
 
-[ ] 11# The option to restart the program on command (either in Main Menu or Settings Menu).
+[.] 11# The option to restart the program on command (either in Main Menu or Settings Menu).
 
 [X] 12# Version reversion may only allow the ability to clear the library's data if only one version's data exists (instead of shunning the user to add more data).
 
@@ -68,6 +74,10 @@
 
 [X] 14# An extra syntax change for 'Updated' section that allows self-updating for entries that need to be updated to content that has been added in the same version.
 
-[ ] 15# SFormatterLibRef: initialization could condense data ID strings using Extensions.CreateNumericDataIDRanges() method. Alternatively, a new property for library references ('condensedIds' or 'rangeIds') could be introduced for specifically condensed data ID strings
+[.] 15# SFormatterLibRef: initialization could condense data ID strings using Extensions.CreateNumericDataIDRanges() method. Alternatively, a new property for library references ('condensedIds' or 'rangeIds') could be introduced for specifically condensed data ID strings
 
-[ ] 16# ...
+[ ] 16# Allow the Content Integrity Verification system to have a secondary actionable: Moving contents from one folder to another (requires double confirmation). Useful for setting up the XNB workstation. 
+
+    [ ] 16a# Perhaps make this its own thing; relocater or sorter, idk. The files could be fetched after a CIV process and sent to this object. Whatever it may be it should be a settings thing...
+
+[ ] 17# ...
