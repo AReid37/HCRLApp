@@ -769,64 +769,73 @@ namespace HCResourceLibraryApp.Layout
         public static string HighlightSearchArg(string searchArg, string text, string noValue = DataHandlerBase.Sep)
         {
             string highlightStr = noValue;
-            if (searchArg.IsNotNEW())
+            if (searchArg.IsNotNEW() && text.IsNotNEW())
             {
-                int timeOut = 7;
-                while (highlightStr == noValue && timeOut > 0)
+                string finalBuildMatchArg = null, buildMatchArg = "", buildMatchArgAlt = "";
+                int matchPoint_Arg = 0, matchPoint_Alt = 0; 
+                for (int mx = 0; mx < searchArg.Length; mx++)
                 {
-                    switch (timeOut)
+                    string character = searchArg[mx].ToString();
+
+                    /// bMA - lower then upper
+                    if (text.Contains(buildMatchArg + character.ToLower()))
+                        buildMatchArg += character.ToLower();                    
+                    else if (text.Contains(buildMatchArg + character.ToUpper()))
+                        buildMatchArg += character.ToUpper();
+
+                    /// bMA Alt - upper then lower
+                    if (text.Contains(buildMatchArgAlt + character.ToUpper()))
+                        buildMatchArgAlt += character.ToUpper();
+                    else if (text.Contains(buildMatchArgAlt + character.ToLower()))
+                        buildMatchArgAlt += character.ToLower();
+
+                    /// match-making checkups: if only one bMA matches, the other non-matching is updated to the matching, and deviation restarts
+                    /// match-making points: A single point awarded for each of the following: A) being the only matching build,  B) matching with search Arg
+                    // -> Points B
+                    if (searchArg.Contains(buildMatchArg))
+                        matchPoint_Arg++;
+                    if (searchArg.Contains(buildMatchArgAlt))
+                        matchPoint_Alt++;
+                    // -> checkups and Points A
+                    if ((!text.Contains(buildMatchArg) || buildMatchArg.Length != buildMatchArgAlt.Length) && text.Contains(buildMatchArgAlt))
                     {
-                        /// arg arg
-                        case 7:
-                            if (text.Contains(searchArg))
-                                highlightStr = searchArg;
-                            break;
-
-                        /// Arg arg
-                        case 6:
-                            if (searchArg.Length > 1)
-                                if (text.Contains($"{searchArg[0].ToString().ToUpper()}{searchArg[1..]}"))
-                                    highlightStr = $"{searchArg[0].ToString().ToUpper()}{searchArg[1..]}";
-                            break;
-
-                        /// Arg Arg
-                        case 5:
-                            if (text.Contains(LogDecoder.FixContentName(searchArg, false)))
-                                highlightStr = LogDecoder.FixContentName(searchArg, false);
-                            break;
-
-                        /// arg Arg
-                        case 4:
-                            if (searchArg.Length > 1)
-                            {
-                                string fixRemain = LogDecoder.FixContentName(searchArg, false);
-                                if (fixRemain.IsNotNE())
-                                    if (text.Contains($"{searchArg[0].ToString().ToLower() + fixRemain[1..]}"))
-                                        highlightStr = $"{searchArg[0].ToString().ToLower() + fixRemain[1..]}";
-                            }                                
-                            break;
-
-                        /// arg arg
-                        case 3:
-                            if (text.Contains(searchArg.ToLower()))
-                                highlightStr = searchArg.ToLower();
-                            break;
-
-                        /// ARG ARG
-                        case 2:
-                            if (text.Contains(searchArg.ToUpper()))
-                                highlightStr = searchArg.ToUpper();
-                            break;
-
-                        /// aRG ARG
-                        case 1:
-                            if (searchArg.Length > 1)
-                                if (text.Contains($"{searchArg[0].ToString().ToLower() + searchArg[1..].ToUpper()}"))
-                                    highlightStr = $"{searchArg[0].ToString().ToLower() + searchArg[1..].ToUpper()}";
-                            break;
+                        buildMatchArg = buildMatchArgAlt;
+                        matchPoint_Alt++;
                     }
-                    timeOut--;
+                    if (text.Contains(buildMatchArg) && (!text.Contains(buildMatchArgAlt) || buildMatchArgAlt.Length != buildMatchArg.Length))
+                    {
+                        buildMatchArgAlt = buildMatchArg;
+                        matchPoint_Arg++;
+                    }
+                    
+
+                    /// assign final matching text
+                    if (mx + 1 == searchArg.Length)
+                    {
+                        /// IF mPArg >= mPAlt: prioritize bMA; ELSE prioritize bMAA;
+                        bool matchPriorityArg = matchPoint_Arg >= matchPoint_Alt;
+                        
+                        if (matchPriorityArg)
+                        {
+                            /// bMA then bMAA
+                            if (buildMatchArg.Length == searchArg.Length && text.Contains(buildMatchArg))
+                                finalBuildMatchArg = buildMatchArg;
+                            else if (buildMatchArgAlt.Length == searchArg.Length && text.Contains(buildMatchArgAlt))
+                                finalBuildMatchArg = buildMatchArgAlt;
+                        }
+                        else
+                        {
+                            /// bMAA then bMA
+                            if (buildMatchArgAlt.Length == searchArg.Length && text.Contains(buildMatchArgAlt))
+                                finalBuildMatchArg = buildMatchArgAlt;
+                            else if (buildMatchArg.Length == searchArg.Length && text.Contains(buildMatchArg))
+                                finalBuildMatchArg = buildMatchArg;
+                        }
+                    }
                 }
+
+                if (finalBuildMatchArg.IsNotNEW() && text.Contains(finalBuildMatchArg))
+                    highlightStr = finalBuildMatchArg;
             }
             return highlightStr;
         }

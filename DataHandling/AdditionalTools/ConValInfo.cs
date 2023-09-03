@@ -23,6 +23,7 @@ namespace HCResourceLibraryApp.DataHandling
 
         // FIELDS / PROPS
         bool validatedQ;
+        string filePath;
         readonly string dataID;
         readonly string ogDataID;
         readonly bool initializedQ;
@@ -30,6 +31,7 @@ namespace HCResourceLibraryApp.DataHandling
         public bool IsValidated { get => validatedQ; }
         public string DataID { get => dataID; }
         public string OriginalDataID { get => ogDataID; }
+        public string FilePath { get => filePath; }
         public static ConValInfo Empty { get => new(); }
         
         // CONSTRUCTOR
@@ -39,8 +41,9 @@ namespace HCResourceLibraryApp.DataHandling
             dataID = null;
             ogDataID = null;
             initializedQ = false;
+            filePath = null;
 
-            if (storedDataID.IsNotNEW())
+            if (storedDataID.IsNotNEW() && expandedDataID.IsNotNEW())
             {
                 ogDataID = storedDataID;
                 dataID = expandedDataID;
@@ -49,9 +52,10 @@ namespace HCResourceLibraryApp.DataHandling
         }
 
         // METHODS
-        public void ConfirmValidation()
+        public void ConfirmValidation(string path = null)
         {
             validatedQ = true;
+            filePath = path;
         }
         public bool Equals(ConValInfo other)
         {
@@ -77,9 +81,10 @@ namespace HCResourceLibraryApp.DataHandling
             }
             return areEquals;
         }
+        /// <returns>A boolean verifiying the values of: initializedQ, dataID, ogDataID, filePath.</returns>
         public bool IsSetup()
         {
-            return initializedQ && dataID.IsNotNEW() && ogDataID.IsNotNEW();
+            return initializedQ && dataID.IsNotNEW() && ogDataID.IsNotNEW() && filePath.IsNotNEW();
         }        
     }
 }

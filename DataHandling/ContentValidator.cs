@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using ConsoleFormat;
+using static HCResourceLibraryApp.Extensions;
 
 namespace HCResourceLibraryApp.DataHandling
 {
@@ -451,7 +452,7 @@ namespace HCResourceLibraryApp.DataHandling
                     {
                         /// non-wordy data IDs ... the regulars here
                         LegendData legData = _libraryRef.Legends[lx];
-                        if (Extensions.CharScore(legData.Key[0]) > 0)
+                        if (CharScore(legData.Key[0]) > 0)
                         {
                             string expandedLegDef = $"{legData[0].Replace(" ", SpaceReplace)}{SpaceReplace}";
                             string dbugPretText = $"{legData.Key} '{expandedLegDef}'";
@@ -522,6 +523,7 @@ namespace HCResourceLibraryApp.DataHandling
                         ConValInfo conToVal = allExpandedDataIDs[cdx];
                         Dbug.LogPart($"Validating {$"'{conToVal.DataID}'", -25}  //  ");
                         bool foundThisContentQ = false;
+                        string filePath = null;
 
                         /// FOR each folder in folders list
                         for (int fdx = 0; fdx < allFoldersList.Count && !foundThisContentQ; fdx++)
@@ -548,6 +550,7 @@ namespace HCResourceLibraryApp.DataHandling
                                         if (foundThisContentQ)
                                         {
                                             string relativePath = fileToCheck.FullName.Clamp(relativePathDist, relativePathClampSuffix, fileToCheck.Name, false);
+                                            filePath = relativePath;
                                             Dbug.LogPart($"VALIDATED!  Found file '{conToVal.DataID}{fileExt}' at following relative path :: {relativePath}");
                                         }
                                         else
@@ -556,6 +559,7 @@ namespace HCResourceLibraryApp.DataHandling
                                             if (foundThisContentQ)
                                             {
                                                 string relativePath = fileToCheck.FullName.Clamp(relativePathDist, relativePathClampSuffix, fileToCheck.Name, false);
+                                                filePath = relativePath;
                                                 Dbug.LogPart($"VALIDATED*  Found file '{conToVal.DataID.Replace("_", " ")}{fileExt}' at following relative path :: {relativePath}");
                                             }
                                         }
@@ -565,7 +569,7 @@ namespace HCResourceLibraryApp.DataHandling
 
                         if (foundThisContentQ)
                         {
-                            conToVal.ConfirmValidation();
+                            conToVal.ConfirmValidation(filePath);
                             allExpandedDataIDs[cdx] = conToVal;
                             if (allExpandedDataIDs[cdx].IsValidated)
                                 Dbug.LogPart(" [!]");
@@ -581,10 +585,11 @@ namespace HCResourceLibraryApp.DataHandling
                     anyInvalidatedQ = countInvalidated != allValidatedNum;
                     Dbug.NudgeIndent(false);
 
-                    float percentValidated = (float)(allExpandedDataIDs.Count - countInvalidated) / allExpandedDataIDs.Count * 100f;
-                    string validationTurnout = $"'{allExpandedDataIDs.Count - countInvalidated}' of '{allExpandedDataIDs.Count}' ({percentValidated:0.000}%)";
+                    float truePercentValidated = (float)(allExpandedDataIDs.Count - countInvalidated) / allExpandedDataIDs.Count * 100f;
+                    float clampedPercentValidated = countInvalidated > 0 ? truePercentValidated.Clamp(0, 99.99f) : truePercentValidated;
+                    string validationTurnout = $"'{allExpandedDataIDs.Count - countInvalidated}' of '{allExpandedDataIDs.Count}' (actual: {truePercentValidated:0.000}% | sent: {clampedPercentValidated:0.00}%)";
                     Dbug.Log($"Content Integrity Verification process complete; {validationTurnout} contents were validated; Moving list of ConValInfos data to be accessed by other classes; ");
-                    _percentValidation = percentValidated;
+                    _percentValidation = clampedPercentValidated;
                     _conValInfoDock = allExpandedDataIDs;
                 }
             }

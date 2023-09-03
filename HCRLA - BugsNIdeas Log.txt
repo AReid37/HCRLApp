@@ -30,11 +30,11 @@
 
 [X] 10# Gen Steam Log Page -> Formatter Parser: Comparisons against escape characters may not work. If any value returned contains an escape character, that character must be appropriately replaced with the escape characte code (&00; for '"', &01; for '#')
 
-[ ] 11# Content Integrity: Verify Content Integrity -> Displays contents as being 100% verified even though 1 content item is confirmed missing (should always be max of 99.9% if ANY items are missing)
+[X] 11# Content Integrity: Verify Content Integrity -> Displays contents as being 100% verified even though 1 content item is confirmed missing (should always be max of 99.9% if ANY items are missing)
 
 [X] 12# Content Integrity: Verify Content Integrity -> Folder editing is very unclear; what to enter and what it will do is a mystery to the user
 
-[ ] 13# LibrarySearch.HighlightSearchArg -> Rebuild algorithm to sift through each character and build the 'matching text' without fail. There too many unpredictable variations to be place in switch-cases alone
+[X] 13# LibrarySearch.HighlightSearchArg -> Rebuild algorithm to sift through each character and build the 'matching text' without fail. There too many unpredictable variations to be place in switch-cases alone
 
 [ ] 14# ...
 
