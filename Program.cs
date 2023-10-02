@@ -12,8 +12,8 @@ namespace HCResourceLibraryApp
     public class Program
     {
         static readonly string consoleTitle = "High Contrast Resource Library App";
-        static readonly string developmentVersion = "[v1.2.9a]";
-        static readonly string lastPublishedVersion = "[v1.2.8c]";
+        static readonly string developmentVersion = "[v1.2.9b]";
+        static readonly string lastPublishedVersion = "[v1.2.9a]";
         /// <summary>If <c>true</c>, the application launches for debugging/development. Otherwise, the application launches for the published version.</summary>
         public static readonly bool isDebugVersionQ = true;
         static readonly bool verifyFormatUsageBase = false;
@@ -34,7 +34,7 @@ namespace HCResourceLibraryApp
         // PUBLIC
         public static bool AllowProgramRestart { get => _programRestartQ; private set => _programRestartQ = value; }
         #endregion
-
+     
         static void Main()
         {
             // Lvl.0 - program launch
@@ -293,8 +293,8 @@ namespace HCResourceLibraryApp
 
 
         // TESTING STUFF
-        static readonly bool runTest = false;
-        static readonly Tests testToRun = Tests.PageBase_HighlightMethod;
+        static readonly bool runTest = true;
+        static readonly Tests testToRun = Tests.MiscRoom;
         enum Tests
         {
             /// <summary>For random tests that need their own space, but no specific test name (variable tests)</summary>
@@ -1129,7 +1129,7 @@ namespace HCResourceLibraryApp
                 /// Misc Room
                 else if (testToRun == Tests.MiscRoom)
                 {
-                    char miscKey = 'd';
+                    char miscKey = 'e';
                     string miscTestName = "<None>";
                     switch (miscKey)
                     {
@@ -1147,6 +1147,10 @@ namespace HCResourceLibraryApp
 
                         case 'd':
                             miscTestName = "Page Base: Word Wrap Testing";
+                            break;
+
+                        case 'e':
+                            miscTestName = "Page Base: Progress Bar";
                             break;
                     }
 
@@ -1492,6 +1496,118 @@ namespace HCResourceLibraryApp
                         }
 
                         Text("End of Word Wrapping Tests...");
+                    }
+                    #endregion
+
+                    #region miscE: pageBase: progressBar
+                    if (miscKey == 'e')
+                    {
+                        hasDebugQ = false;
+                        TextLine("Press [Enter] to begin tests");
+                        Pause();
+
+                        float percentileDefinition = 50, rate = 0.1f;
+                        bool showNodeQ = true, showPercentQ = false, destroyQ = false;
+                        int barCount = 10, shiftH = 0, shiftV = 0;
+                        ForECol bCol = ForECol.Correction, nCol = ForECol.Normal;
+
+                        const int startTestIx = 0;
+                        const int testCount = 10;
+                        for (int tx = startTestIx; tx < testCount; tx++)
+                        {
+                            // CASES
+                            switch (tx)
+                            {
+                                /// 20
+                                case 1:
+                                    barCount = 20;
+                                    break;
+                                /// 50
+                                case 2:
+                                    barCount = 50;
+                                    break;
+
+                                /// 25  -nodes  B.inc
+                                case 3:
+                                    barCount = 25;
+                                    showNodeQ = false;
+                                    bCol = ForECol.Incorrection;
+                                    break;
+
+                                /// +destroy  N.acc
+                                case 4:
+                                    destroyQ = true;
+                                    nCol = ForECol.Accent;
+                                    break;
+
+                                /// 28  +nodes  B.hig
+                                case 5:
+                                    barCount = 28;
+                                    showNodeQ = true;
+                                    bCol = ForECol.Highlight;
+                                    break;
+
+                                /// +percent  -destroy
+                                case 6:
+                                    destroyQ = false;
+                                    showPercentQ = true;                                    
+                                    break;
+
+                                /// -nodes  B.Hea
+                                case 7:
+                                    showNodeQ = false;
+                                    bCol = ForECol.Heading1;
+                                    break;
+
+                                /// 15  H-5  V+1
+                                case 8:
+                                    barCount = 15;
+                                    shiftH = -5;
+                                    shiftV = 1;
+                                    break;
+
+                                /// 16  +nodes  H+8  V-1  B.Cor  N.Nor
+                                case 9:
+                                    barCount = 16;
+                                    shiftH = 8;
+                                    shiftV = -1;
+                                    showNodeQ = true;
+                                    bCol = ForECol.Correction;
+                                    nCol = ForECol.Normal;
+                                    break;
+
+                                default:
+                                    break;
+                            }
+
+                            /// test title
+                            string test = $"{(showPercentQ ? "x%, " : "")}{(showNodeQ ? "node, " : "")}b#{barCount}, {(shiftH == 0 && shiftV == 0 ? "" : $"HV [{shiftH},{shiftV}], ")}B.{bCol.ToString().Clamp(3)}, N.{nCol.ToString().Clamp(3)}{(destroyQ ? ", Dstr" : "")}";
+                            NewLine(4);
+                            TextLine($"STATS*{tx}| {percentileDefinition * rate : 0.0}s |{test}", Color.Yellow);
+
+
+
+                            // RESULTS                            
+                            TextLine("@    .    :    .    :", Color.DarkGray);
+                            Text("@    .    ", Color.DarkGray);
+                            InitializeProgressBar(showPercentQ, !showNodeQ, barCount, shiftH, shiftV, bCol, nCol);
+                            Text(":    .    :", Color.DarkGray);
+                            for (int vx = 0; vx <= percentileDefinition; vx++)
+                            {
+                                UpdateProgressBar(vx / percentileDefinition, destroyQ);
+                                Text($" {vx / percentileDefinition * 100f: 0}%", Color.DarkGray);
+
+                                /// time before next update
+                                Wait(rate);
+                            }
+
+
+                            if (tx < testCount - 1)
+                            {
+                                Text("\n    Next in 1.5s...", Color.DarkGray);
+                                Wait(1.5f);
+                            }
+                        }
                     }
                     #endregion
                 }

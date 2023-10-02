@@ -59,6 +59,9 @@ namespace HCResourceLibraryApp.Layout
         static string _menuMessage, _incorrectionMessage;
         static bool _isMenuMessageInQueue, _isWarningMenuMessageQ, _enableWordWrapQ = true, _holdWrapIndentQ, _enterBugIdeaPageQ;
         static ForECol? _normalAlt, _highlightAlt;
+        static bool _enableBarQ, _showPercentQ, _hideNodeQ;
+        static int _barWidth, _barPosLeft, _barPosTop, _iniCursorLeft, _iniCursorTop;
+        static ForECol _barCol, _barNodeCol;
 
 
         // PUBLIC
@@ -839,6 +842,7 @@ namespace HCResourceLibraryApp.Layout
 
 
 
+
         // -- Menu Builds --
         /// <summary>
         ///     Creates an options menu in the form of a table. Includes menu validation.
@@ -1181,6 +1185,112 @@ namespace HCResourceLibraryApp.Layout
         public static void UnqueueEnterBugIdeaPage()
         {
             _enterBugIdeaPageQ = false;
+        }
+        /// <summary>Initializes a progress bar instance with display preferences. Can only be initialized once until updated to end.</summary>
+        /// <remarks>A Progress bar displays realtime completion of a process. Includes a demarked start and end node and a progressively 'loading' bar (visually updated via <see cref="UpdateProgressBar(float)"/> method).</remarks>
+        /// <param name="showPercentQ">Whether to display the progress percentage (0% ~ 100%) within the 'loading' progress bar.</param>
+        /// <param name="hideNodesQ">Whether to demark the start and end nodes of the progress bar.</param>
+        /// <param name="cursorShiftH">How far left (negative value) or right (positive value) to shift the initial position of progress bar from cursor position. Clamped range [-10, 10].</param>
+        /// <param name="cursorShiftV">How far up (negative value) or down (positive value) to shift the initial position of progress bar from cursor position. Clamped range [-1, 1].</param>
+        /// <param name="barWidth">Determines width of progress bar (includes demarked start and end nodes). Clamped range [10, 50]</param>
+        /// <param name="barCol">Color of 'loading' progress bar.</param>
+        /// <param name="barNodesCol">Color of progress bar start and end nodes. Also determines color of 'unprogressed' displayed percentage.</param>
+        public static void InitializeProgressBar(bool showPercentQ = false, bool hideNodesQ = false, int barWidth = 20, int cursorShiftH = 0, int cursorShiftV = 0, ForECol barCol = ForECol.Correction, ForECol barNodesCol = ForECol.Normal)
+        {
+            if (!_enableBarQ)
+            {
+                _showPercentQ = showPercentQ;
+                _hideNodeQ = hideNodesQ;
+
+                _iniCursorLeft = Console.CursorLeft;
+                _iniCursorTop = Console.CursorTop;
+
+                _barPosLeft = (_iniCursorLeft + cursorShiftH.Clamp(-10, 10)).Clamp(0, Console.BufferWidth);
+                _barPosTop = (_iniCursorTop + cursorShiftV.Clamp(-1, 1)).Clamp(0, PageSizeLimit);
+                _barWidth = barWidth.Clamp(10, 50);
+
+                _barCol = barCol;
+                _barNodeCol = barNodesCol;
+                _enableBarQ = true;
+            }
+        }
+        /// <summary>Prints and updates an initialized progress bar instance to display <paramref name="percentage"/>.</summary>
+        /// <remarks>A Progress bar displays realtime completion of a process. Includes a demarked start and end node and a progressively 'loading' bar (initialized via <see cref="InitializeProgressBar(bool, bool, int, int, int, ForECol, ForECol)"/></remarks>
+        /// <param name="percentage">The quantified loading progress as a float value between 0 and 1 (clamped). The progress bar is deinitialized once <paramref name="percentage"/> hits value of 1.</param>
+        /// <param name="destroyOnEndQ">Will remove the progress bar when <paramref name="percentage"/> hits a value of 1.</param>
+        /// <param name="forceEndQ">Used to forcibly abort updating the progress bar and allowing for reinitializing of progress bar information. Trigger Once.</param>
+        public static void UpdateProgressBar(float percentage, bool destroyOnEndQ = false, bool forceEndQ = false)
+        {
+            if (_enableBarQ)
+            {
+                // setup
+                percentage = percentage.Clamp(0f, 1f);
+                Console.CursorLeft = _barPosLeft;
+                Console.CursorTop = _barPosTop;
+
+                const char dst = ' '; /// DBG'-'   OG' '
+                float barCount = _hideNodeQ ? _barWidth : _barWidth - 2;
+                float barStep = 1f / barCount;
+
+                // string printing
+                string printFull = "", printEmpty = "", percent = $"{percentage * 100 : 0}%", destroyText = "";
+                for (int bx = 0; bx < barCount; bx++)
+                {
+                    const char defFill = cDS, defEmpty = cLS;
+                    char barChar = defFill;
+                    float barValue = (bx + 1) * barStep;
+
+                    /// determines when to print percent text (centered)
+                    if (_showPercentQ)
+                    {
+                        int startPercentPrint = (int)((barCount / 2) - (percent.Length / 2)) - 1; /// (barMidway - halfTextLength) - toIndexNum
+                        if (bx > startPercentPrint && bx - startPercentPrint < percent.Length)
+                            barChar = percent[bx - startPercentPrint];
+                    }
+
+                    /// IF ...: print full; ELSE (IF bar char: print empty; ELSE print percent text);
+                    if (barValue <= percentage)
+                        printFull += barChar;
+                    else printEmpty += barChar == defFill ? defEmpty : barChar;
+
+                    destroyText += dst;
+                }
+
+                // print progress bar
+                if (printFull.IsNotNE() || printEmpty.IsNotNE())
+                {/// wrap
+                    if (!_hideNodeQ)
+                    {
+                        Format(cRHB.ToString(), _barNodeCol);
+                        destroyText += $"{dst}{dst}";
+                    }
+
+                    if (printFull.IsNotNE())
+                        Format(printFull, _barCol);
+                    if (printEmpty.IsNotNE())
+                        Format(printEmpty, _barNodeCol);
+
+                    if (!_hideNodeQ)
+                        Format(cLHB.ToString(), _barNodeCol);
+                }
+
+                // end and disable if complete  -- destroy and reset cursor if applicable
+                if (percentage >= 1 || forceEndQ)
+                {
+                    _enableBarQ = false;
+                    //Text(" END", Color.DarkGray);
+
+                    if (destroyOnEndQ)
+                    {
+                        Console.CursorLeft = _barPosLeft;
+                        Console.CursorTop = _barPosTop;
+                        Format(destroyText);
+
+                        Console.CursorLeft = _barPosLeft;
+                        Console.CursorTop = _barPosTop;
+                    }
+                }
+            }            
         }
     }
 }
