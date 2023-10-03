@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using ConsoleFormat;
+using HCResourceLibraryApp.Layout;
+using static HCResourceLibraryApp.Layout.PageBase;
 
 namespace HCResourceLibraryApp.DataHandling
 {
@@ -39,6 +41,11 @@ namespace HCResourceLibraryApp.DataHandling
             bool noIssues = true;
             if (dataHandlers.HasElements())
             {
+                ProgressBarInitialize(false, true);
+                TaskCount = 1 + 1 + dataHandlers.Length + 2;
+                TaskNum = 0;
+                ProgressBarUpdate(0);
+
                 // fetch data from current file
                 /// index 0 :: file tag   //  index 1 :: file data
                 List<string[]> currentFileData = new();
@@ -67,13 +74,19 @@ namespace HCResourceLibraryApp.DataHandling
                                         currentFileData.Add(new string[] { dataTag, dataInfo });
                                 }
                             }
-                        }
+
+                            TaskNum++;
+                        }                    
                 }
-                
+                ProgressBarUpdate(TaskNum / TaskCount);
 
                 // refresh file
                 if (noIssues)
+                {
                     noIssues = RestartMainEncoding();
+                    TaskNum++;
+                }
+                ProgressBarUpdate(TaskNum / TaskCount);
 
                 // other data
                 for (int i = 0; i < dataHandlers.Length && noIssues; i++)
@@ -88,6 +101,9 @@ namespace HCResourceLibraryApp.DataHandling
 
                     if (!noIssues)
                         Dbug.SingleLog("DataHandlerBase.SaveToFile()", $"Underlying type: {underlyingType}  //  Issue [Error]: {Tools.GetRecentWarnError(false, true)}");
+                    else TaskNum++;
+
+                    ProgressBarUpdate(TaskNum / TaskCount);
                 }
 
                 // if (no issues) {Save current data to backup} else {Revert to current data}  
@@ -114,6 +130,7 @@ namespace HCResourceLibraryApp.DataHandling
                                 _reversionAvailableQ = true;
                                 Dbug.SingleLog("DataHandlerBase.SaveToFile()", $"Previous file save version has been saved to backup file");
                             }
+                            TaskNum++;
                         }
                     }
                 }
@@ -129,8 +146,10 @@ namespace HCResourceLibraryApp.DataHandling
                             if (currData.HasElements(2))
                                 revertingToCurr = Base.FileWrite(false, currData[0], currData[1]);
                         }
+                        TaskNum++;
                     }
                 }
+                ProgressBarUpdate(TaskNum / TaskCount, true, true);
             }
             
             return noIssues;
@@ -143,6 +162,11 @@ namespace HCResourceLibraryApp.DataHandling
             // load other data handlers
             if (dataHandlers.HasElements())
             {
+                ProgressBarInitialize(false, true, 20, 4, 1, ForECol.Accent, ForECol.Accent);
+                TaskCount = dataHandlers.Length + 1;
+                TaskNum = 0;
+
+                ProgressBarUpdate(0);
                 for (int i = 0; i < dataHandlers.Length && noIssues; i++)
                 {
                     string underlyingType = "<None>";
@@ -157,6 +181,9 @@ namespace HCResourceLibraryApp.DataHandling
 
                     if (!noIssues)
                         Dbug.SingleLog("DataHandlerBase.LoadFromFile()", $"Underlying type: {underlyingType}  //  Issue [Error]: {Tools.GetRecentWarnError(false, true)}");
+                    else TaskNum++;
+
+                    ProgressBarUpdate(TaskNum / TaskCount);
                 }
 
                 _reversionAvailableQ = false;
@@ -170,7 +197,10 @@ namespace HCResourceLibraryApp.DataHandling
                             Dbug.SingleLog("DataHandlerBase.LoadFromFile()", "A file save reversion is available");
                         }
                     }
+                    TaskNum++;
                 }
+                
+                ProgressBarUpdate(TaskNum / TaskCount, true, true);
             }
 
             return noIssues;

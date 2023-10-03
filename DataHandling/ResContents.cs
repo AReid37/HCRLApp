@@ -197,7 +197,7 @@ namespace HCResourceLibraryApp.DataHandling
 
                         if (!isDupe && isOkay)
                         {
-                            if (newCC.InternalName != ContentName)
+                            if (newCC.InternalName == ResLibrary.LooseResConName || newCC.InternalName.IsNEW())
                                 newCC = new ContentChanges(newCC.VersionChanged, ContentName, newCC.RelatedDataID, newCC.ChangeDesc);
 
                             ConChanges.Add(newCC);

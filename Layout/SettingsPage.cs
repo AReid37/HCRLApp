@@ -1092,6 +1092,10 @@ namespace HCResourceLibraryApp.Layout
                         Dbug.StartLogging("SettingsPage.SubPage_ContentIntegrity():ViewAllDataIds");
 
                         // gather data
+                        ProgressBarInitialize(false, false, 25, 0, 0, ForECol.Accent);
+                        ProgressBarUpdate(0);
+                        TaskCount = _resLibrary.Legends.Count;
+
                         /// fetch legend keys
                         const string miscPhrase = "Miscellaneous";
                         List<string> legendKeys = new() { miscPhrase }, legendDefs = new() { miscPhrase };
@@ -1112,11 +1116,18 @@ namespace HCResourceLibraryApp.Layout
                             }
                             else legendSymbols.Add(legDat.Key);
                             Dbug.Log("; ");
+
+                            TaskNum++;
+                            ProgressBarUpdate(TaskNum / TaskCount, true);
                         }
                         Dbug.NudgeIndent(false);
                         Dbug.Log("Done, and sorted; ");
                         legendKeys = legendKeys.ToArray().SortWords();
                         legendDefs = legendDefs.ToArray().SortWords();
+
+                        ProgressBarInitialize(false, false, 25);
+                        TaskCount = _resLibrary.Contents.Count;
+                        TaskNum = 0;
 
                         /// fetch all data ids
                         List<string> allDataIds = new();
@@ -1156,11 +1167,16 @@ namespace HCResourceLibraryApp.Layout
                                 }
                             }
                             Dbug.Log("; ");
+
+                            TaskNum++;
+                            ProgressBarUpdate(TaskNum / TaskCount, true);
                         }
                         Dbug.NudgeIndent(false);
                         Dbug.Log("Done, and sorted; ");
                         allDataIds = allDataIds.ToArray().SortWords();
-                        
+
+                        ProgressBarUpdate(1, true);
+
 
                         // print data IDs in categories by legend
                         if (legendKeys.HasElements() && legendDefs.HasElements() && allDataIds.HasElements())

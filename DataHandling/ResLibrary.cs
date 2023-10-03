@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using ConsoleFormat;
 using HCResourceLibraryApp.Layout;
+using static HCResourceLibraryApp.Layout.PageBase;
 
 namespace HCResourceLibraryApp.DataHandling
 {
@@ -75,7 +76,7 @@ namespace HCResourceLibraryApp.DataHandling
             bool addedContentsQ = false;
             if (newContents.HasElements())
             {
-                if (disableAddDbug || Program.isDebugVersionQ)
+                if (disableAddDbug)
                     Dbug.DeactivateNextLogSession();
                 Dbug.StartLogging("ResLibrary.AddContent(prms RC[])");
                 Dbug.LogPart($"Recieved [{newContents.Length}] new ResCons for library; Refresh integration info dock? {keepLooseRCQ}");
@@ -368,7 +369,7 @@ namespace HCResourceLibraryApp.DataHandling
             bool addedLegendQ = false;
             if (newLegends.HasElements())
             {
-                if (disableAddDbug || Program.isDebugVersionQ)
+                if (disableAddDbug)
                     Dbug.DeactivateNextLogSession();
                 Dbug.StartLogging("ResLibrary.AddLegend(prms LegData[])");
                 foreach (LegendData leg in newLegends)
@@ -418,7 +419,7 @@ namespace HCResourceLibraryApp.DataHandling
             bool addedSummaryQ = false;
             if (newSummaries.HasElements())
             {
-                if (disableAddDbug || Program.isDebugVersionQ)
+                if (disableAddDbug)
                     Dbug.DeactivateNextLogSession();
                 Dbug.StartLogging("ResLibrary.AddSummary(SumData[])");
                 foreach (SummaryData sum in newSummaries)
@@ -547,6 +548,11 @@ namespace HCResourceLibraryApp.DataHandling
                                 }
                             }
                             Dbug.Log("; Proceeding to revert versions;");
+
+                            ProgressBarInitialize();
+                            ProgressBarUpdate(0);
+                            TaskCount = unloadableVers.Count;
+
 
                             // version unloading loop here                            
                             for (int ulx = 0; ulx < unloadableVers.Count; ulx++)
@@ -701,6 +707,9 @@ namespace HCResourceLibraryApp.DataHandling
 
                                 // UNINDENT MAJOR
                                 Dbug.NudgeIndent(false);
+
+                                TaskNum++;
+                                ProgressBarUpdate(TaskNum / TaskCount, true);
                             }
 
                             revertedQ = true;
@@ -803,6 +812,10 @@ namespace HCResourceLibraryApp.DataHandling
                     Dbug.Log("Search arguement and search options provided; proceeding with search query; ");
                     List<SearchResult> initialResultsAll = new(), irrelevantResults = new();
                     List<string> contentNames = new();
+
+                    ProgressBarInitialize(true, false, 30, 4, 0);
+                    ProgressBarUpdate(0);
+                    TaskCount = Contents.Count + maxResults + 1;
 
 
                     // FIRST STEP - Find any results within results limit
@@ -954,6 +967,9 @@ namespace HCResourceLibraryApp.DataHandling
                                 Dbug.LogPart($" -- Removed '{dbgDupeCount}' duplicate results");
                             Dbug.Log("; ");
                         }
+
+                        TaskNum++;
+                        ProgressBarUpdate(TaskNum / TaskCount);
                     }
                     if (initialResultsAll.HasElements())
                     {
@@ -1032,6 +1048,9 @@ namespace HCResourceLibraryApp.DataHandling
                             else addedResultQ = false;
 
                             resultTotal = exactResults.Count + priorityPartialResults.Count + partialResults.Count;
+
+                            TaskNum++;
+                            ProgressBarUpdate(TaskNum / TaskCount);
                         }
                         Dbug.Log(";  Done; ");
                         Dbug.NudgeIndent(false);
@@ -1061,6 +1080,7 @@ namespace HCResourceLibraryApp.DataHandling
                         }
                         Dbug.Log("; ");
                     }
+                    ProgressBarUpdate(1, true);
                 }
                 else
                 {

@@ -2595,6 +2595,10 @@ namespace HCResourceLibraryApp.Layout
                 Dbug.StartLogging("GenSteamLogPage.FormattingParser()");
                 Dbug.LogPart($"Received '{formatterLines.Length}' formatting lines; library reference is setup; ");
 
+                ProgressBarInitialize(true, false, 24, 2);
+                ProgressBarUpdate(0);
+                TaskCount = formatterLines.Length;
+
                 // get last parsable line
                 int lastParsableLineNum = 0;
                 for (int lx0 = 0; lx0 < formatterLines.Length; lx0++)
@@ -3027,9 +3031,12 @@ namespace HCResourceLibraryApp.Layout
                         Dbug.Log("- - -");
                     }
                     Dbug.NudgeIndent(false);
+
+                    TaskNum++;
+                    ProgressBarUpdate(TaskNum / TaskCount, true);
                 }
                 Dbug.EndLogging();
-
+                ProgressBarUpdate(1, true);
 
 
                 // METHODS FOR PARSER

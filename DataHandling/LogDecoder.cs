@@ -2,6 +2,8 @@
 using System;
 using System.Collections.Generic;
 using static ConsoleFormat.Base;
+using HCResourceLibraryApp.Layout;
+using static HCResourceLibraryApp.Layout.PageBase;
 
 namespace HCResourceLibraryApp.DataHandling
 {
@@ -163,6 +165,10 @@ namespace HCResourceLibraryApp.DataHandling
                 SummaryData summaryData = new();
                 int ttaNumber = 0;
                 List<string> summaryDataParts = new();
+                // vv progress tracking
+                ProgressBarInitialize(false, false, 25, 4, 1);
+                ProgressBarUpdate(0);
+                TaskCount = logData.Length + 1;
                 #endregion
 
 
@@ -2759,61 +2765,6 @@ namespace HCResourceLibraryApp.DataHandling
                                 Dbug.Log("; ");
                             }
 
-                            #region oldWay
-                            //List<string> unnotedLKeys = new(), unusedLKeys = new();
-                            //foreach (LegendData legDat in legendDatas)
-                            //{
-                            //    if (legDat.Key != legRangeKey.ToString())
-                            //    {
-                            //        /// if used legend key, but no matching legend data, then issue is: undescribed legend key
-                            //        bool noMatchingLegDatQ = true;
-                            //        foreach (string usedLegKey in usedLegendKeys)
-                            //        {
-                            //            if (usedLegKey == legDat.Key)
-                            //                noMatchingLegDatQ = false;
-                            //        }
-                            //        if (noMatchingLegDatQ)
-                            //            unnotedLKeys.Add(legDat.Key);
-
-                            //        /// if legend data, but no used legend key, then issue is: unnecessary legend key
-                            //        else if (!usedLegendKeys.Contains(legDat.Key))
-                            //            unusedLKeys.Add(legDat.Key);
-                            //    }
-                            //}
-
-                            //if (unnotedLKeys.HasElements() || unusedLKeys.HasElements())
-                            //{
-                            //    List<DecodeInfo> newIssues = new();
-
-                            //    /// undescribed legend keys
-                            //    foreach (string unnnotedKey in unnotedLKeys)
-                            //    {
-                            //        DecodeInfo legCheckDI = new("<no source line>", secLeg);
-                            //        Dbug.LogPart($"Legend key [{unnnotedKey}] has no Legend data (undescribed / unnoted)");
-                            //        legCheckDI.NoteIssue($"Undescribed / Unnoted legend key :: {unnnotedKey}");
-                            //        Dbug.Log("; ");
-
-                            //        newIssues.Add(legCheckDI);
-                            //    }
-                            //    /// unnecessary legend keys
-                            //    foreach (string unusedKey in unusedLKeys)
-                            //    {
-                            //        DecodeInfo legCheckDI = new("<no source line>", secLeg);
-                            //        Dbug.LogPart($"Legend key [{unusedKey}] has not been used");
-                            //        legCheckDI.NoteIssue($"Unnecessary (unused) legend key :: {unusedKey}");
-                            //        Dbug.Log("; ");
-
-                            //        newIssues.Add(legCheckDI);
-                            //    }
-
-                            //    if (newIssues.HasElements())
-                            //    {
-                            //        decodingInfoDock.AddRange(newIssues.ToArray());
-                            //        countSectionIssues[currentSectionNumber] += newIssues.Count;
-                            //    }
-                            //}
-                            //else Dbug.Log("All legend keys used within this version log has been noted and described; ");
-                            #endregion
                             Dbug.NudgeIndent(false);
                             Dbug.NudgeIndent(false);
 
@@ -2854,6 +2805,9 @@ namespace HCResourceLibraryApp.DataHandling
                     }
                     else if (endFileReading)
                         Dbug.Log($" --> Decoding from file complete ... ending file reading <cap-{capacityPercentage:0}%>");
+
+                    TaskNum++;
+                    ProgressBarUpdate(TaskNum / TaskCount, true, endFileReading);
                 }
                 Dbug.NudgeIndent(false);
 
@@ -2923,7 +2877,7 @@ namespace HCResourceLibraryApp.DataHandling
                     // -- relay complete decode --
                     hasFullyDecodedLogQ = endFileReading && DecodedLibrary.IsSetup();
                     _hasDecodedQ = hasFullyDecodedLogQ;
-                }                
+                }
             }
 
             _allowLogDecToolsDbugMessagesQ = false;

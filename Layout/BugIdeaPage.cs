@@ -149,11 +149,15 @@ namespace HCResourceLibraryApp.Layout
                         if (optNum == 3)
                         {
                             Confirmation($"{Ind14}Clear all bug reports and idea suggestions? ", true, out bool yesNo);
-                            Confirmation($"{Ind24}Certianly clear these entries? ", true, out bool reYesNo);
+                            bool reYesNo = false;
 
-                            if (yesNo && reYesNo)
-                                _bugIdeaData.biInfo = new List<BugIdeaInfo>();
+                            if (yesNo)
+                            {
+                                Confirmation($"{Ind24}Certianly clear these entries? ", true, out reYesNo);
 
+                                if (yesNo && reYesNo)
+                                    _bugIdeaData.biInfo = new List<BugIdeaInfo>();
+                            }
                             NewLine();
                             ConfirmationResult(yesNo && reYesNo, $"{Ind24}", "Cleared all bug / idea entries.", "Cancelled clearing bug / idea entries.");
                         }

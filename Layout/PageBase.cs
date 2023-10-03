@@ -60,7 +60,8 @@ namespace HCResourceLibraryApp.Layout
         static bool _isMenuMessageInQueue, _isWarningMenuMessageQ, _enableWordWrapQ = true, _holdWrapIndentQ, _enterBugIdeaPageQ;
         static ForECol? _normalAlt, _highlightAlt;
         static bool _enableBarQ, _showPercentQ, _hideNodeQ;
-        static int _barWidth, _barPosLeft, _barPosTop, _iniCursorLeft, _iniCursorTop;
+        static int _barWidth, _barPosLeft, _barPosTop, _iniCursorLeft, _iniCursorTop, _taskNum;
+        static float _taskCount;
         static ForECol _barCol, _barNodeCol;
 
 
@@ -83,11 +84,21 @@ namespace HCResourceLibraryApp.Layout
         public const string exitPagePhrase = "Return to Main Menu";
         public const string exitSubPagePhrase = "Return";
         public const string openBugIdeaPagePhrase = "@dbi";
-
+        public static float TaskCount
+        {
+            get => _taskCount;
+            set => _taskCount = (int)value > 0 ? (int)value : 1;
+        }
+        public static int TaskNum
+        {
+            get => _taskNum;
+            set => _taskNum = value;
+        }
 
         // PROPERTIES
         public static bool VerifyFormatUsage { get; set; }
         public static bool WithinBugIdeaPageQ { get; set; }
+        //public static bool ProgressBarEnabledQ { get => _enableBarQ; }
         #endregion
 
 
@@ -1187,7 +1198,7 @@ namespace HCResourceLibraryApp.Layout
             _enterBugIdeaPageQ = false;
         }
         /// <summary>Initializes a progress bar instance with display preferences. Can only be initialized once until updated to end.</summary>
-        /// <remarks>A Progress bar displays realtime completion of a process. Includes a demarked start and end node and a progressively 'loading' bar (visually updated via <see cref="UpdateProgressBar(float)"/> method).</remarks>
+        /// <remarks>A Progress bar displays realtime completion of a process. Includes a demarked start and end node and a progressively 'loading' bar.</remarks>
         /// <param name="showPercentQ">Whether to display the progress percentage (0% ~ 100%) within the 'loading' progress bar.</param>
         /// <param name="hideNodesQ">Whether to demark the start and end nodes of the progress bar.</param>
         /// <param name="cursorShiftH">How far left (negative value) or right (positive value) to shift the initial position of progress bar from cursor position. Clamped range [-10, 10].</param>
@@ -1195,7 +1206,7 @@ namespace HCResourceLibraryApp.Layout
         /// <param name="barWidth">Determines width of progress bar (includes demarked start and end nodes). Clamped range [10, 50]</param>
         /// <param name="barCol">Color of 'loading' progress bar.</param>
         /// <param name="barNodesCol">Color of progress bar start and end nodes. Also determines color of 'unprogressed' displayed percentage.</param>
-        public static void InitializeProgressBar(bool showPercentQ = false, bool hideNodesQ = false, int barWidth = 20, int cursorShiftH = 0, int cursorShiftV = 0, ForECol barCol = ForECol.Correction, ForECol barNodesCol = ForECol.Normal)
+        public static void ProgressBarInitialize(bool showPercentQ = false, bool hideNodesQ = false, int barWidth = 20, int cursorShiftH = 0, int cursorShiftV = 0, ForECol barCol = ForECol.Correction, ForECol barNodesCol = ForECol.Normal)
         {
             if (!_enableBarQ)
             {
@@ -1212,14 +1223,18 @@ namespace HCResourceLibraryApp.Layout
                 _barCol = barCol;
                 _barNodeCol = barNodesCol;
                 _enableBarQ = true;
+
+                TaskCount = 0;
+                TaskNum = 0;
             }
         }
         /// <summary>Prints and updates an initialized progress bar instance to display <paramref name="percentage"/>.</summary>
-        /// <remarks>A Progress bar displays realtime completion of a process. Includes a demarked start and end node and a progressively 'loading' bar (initialized via <see cref="InitializeProgressBar(bool, bool, int, int, int, ForECol, ForECol)"/></remarks>
+        /// <remarks>A Progress bar displays realtime completion of a process. Includes a demarked start and end node and a progressively 'loading' bar.</remarks>
         /// <param name="percentage">The quantified loading progress as a float value between 0 and 1 (clamped). The progress bar is deinitialized once <paramref name="percentage"/> hits value of 1.</param>
         /// <param name="destroyOnEndQ">Will remove the progress bar when <paramref name="percentage"/> hits a value of 1.</param>
         /// <param name="forceEndQ">Used to forcibly abort updating the progress bar and allowing for reinitializing of progress bar information. Trigger Once.</param>
-        public static void UpdateProgressBar(float percentage, bool destroyOnEndQ = false, bool forceEndQ = false)
+        /// <param name="state">Appends a value to declare the status of the progress bar; what stage of a process the progress bar signifies. Is always printed in <see cref="ForECol.Accent"/>. Maximum of 30 characters.</param>
+        public static void ProgressBarUpdate(float percentage, bool destroyOnEndQ = false, bool forceEndQ = false, string state = null)
         {
             if (_enableBarQ)
             {
@@ -1228,12 +1243,13 @@ namespace HCResourceLibraryApp.Layout
                 Console.CursorLeft = _barPosLeft;
                 Console.CursorTop = _barPosTop;
 
+                const int maxStateLen = 30;
                 const char dst = ' '; /// DBG'-'   OG' '
                 float barCount = _hideNodeQ ? _barWidth : _barWidth - 2;
                 float barStep = 1f / barCount;
 
-                // string printing
-                string printFull = "", printEmpty = "", percent = $"{percentage * 100 : 0}%", destroyText = "";
+                // string printing -- A) progress Bar   B) state
+                string printFull = "", printEmpty = "", percent = $"{percentage * 100 : 0}%", destroyText = "", printState = "";
                 for (int bx = 0; bx < barCount; bx++)
                 {
                     const char defFill = cDS, defEmpty = cLS;
@@ -1255,6 +1271,19 @@ namespace HCResourceLibraryApp.Layout
 
                     destroyText += dst;
                 }
+                if (state.IsNotNEW())
+                {
+                    /// start at negative number for the extra spaces before state text
+                    for (int sx = -1; sx < maxStateLen; sx++)
+                    {
+                        if (sx < state.Length && sx >= 0)
+                            printState += state[sx];
+                        else printState += dst;
+
+                        destroyText += dst;
+                    }
+                }
+
 
                 // print progress bar
                 if (printFull.IsNotNE() || printEmpty.IsNotNE())
@@ -1272,6 +1301,9 @@ namespace HCResourceLibraryApp.Layout
 
                     if (!_hideNodeQ)
                         Format(cLHB.ToString(), _barNodeCol);
+
+                    if (printState.IsNotNEW())
+                        Format(printState, ForECol.Accent);
                 }
 
                 // end and disable if complete  -- destroy and reset cursor if applicable
@@ -1286,10 +1318,14 @@ namespace HCResourceLibraryApp.Layout
                         Console.CursorTop = _barPosTop;
                         Format(destroyText);
 
-                        Console.CursorLeft = _barPosLeft;
-                        Console.CursorTop = _barPosTop;
+                        Console.CursorLeft = _iniCursorLeft;
+                        Console.CursorTop = _iniCursorTop;
                     }
                 }
+
+                /// mostly for checking placement within processes
+                if (Program.isDebugVersionQ)
+                    Wait(0.075f);
             }            
         }
     }

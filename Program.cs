@@ -12,7 +12,7 @@ namespace HCResourceLibraryApp
     public class Program
     {
         static readonly string consoleTitle = "High Contrast Resource Library App";
-        static readonly string developmentVersion = "[v1.2.9b]";
+        static readonly string developmentVersion = "[v1.2.9c]";
         static readonly string lastPublishedVersion = "[v1.2.9a]";
         /// <summary>If <c>true</c>, the application launches for debugging/development. Otherwise, the application launches for the published version.</summary>
         public static readonly bool isDebugVersionQ = true;
@@ -293,7 +293,7 @@ namespace HCResourceLibraryApp
 
 
         // TESTING STUFF
-        static readonly bool runTest = true;
+        static readonly bool runTest = false;
         static readonly Tests testToRun = Tests.MiscRoom;
         enum Tests
         {
@@ -1590,11 +1590,11 @@ namespace HCResourceLibraryApp
                             // RESULTS                            
                             TextLine("@    .    :    .    :", Color.DarkGray);
                             Text("@    .    ", Color.DarkGray);
-                            InitializeProgressBar(showPercentQ, !showNodeQ, barCount, shiftH, shiftV, bCol, nCol);
+                            ProgressBarInitialize(showPercentQ, !showNodeQ, barCount, shiftH, shiftV, bCol, nCol);
                             Text(":    .    :", Color.DarkGray);
                             for (int vx = 0; vx <= percentileDefinition; vx++)
                             {
-                                UpdateProgressBar(vx / percentileDefinition, destroyQ);
+                                ProgressBarUpdate(vx / percentileDefinition, destroyQ);
                                 Text($" {vx / percentileDefinition * 100f: 0}%", Color.DarkGray);
 
                                 /// time before next update

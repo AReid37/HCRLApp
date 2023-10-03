@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using ConsoleFormat;
 using static HCResourceLibraryApp.Extensions;
+using HCResourceLibraryApp.Layout;
+using static HCResourceLibraryApp.Layout.PageBase;
 
 namespace HCResourceLibraryApp.DataHandling
 {
@@ -232,6 +234,7 @@ namespace HCResourceLibraryApp.DataHandling
             Dbug.StartLogging("ContentValidator.Validate()");
             Dbug.Log($"Initiating Content Integrity Validation process...");
 
+            const int progressBarWidth = 32;
             bool civProcessBegunQ = false;
             bool isLibrarySetupQ = false;
             if (_libraryRef != null)
@@ -255,6 +258,9 @@ namespace HCResourceLibraryApp.DataHandling
                 FileExtensions = fileTypeExts;
                 civProcessBegunQ = true;
 
+                ProgressBarInitialize(false, false, progressBarWidth, 0, 0, ForECol.Normal);
+                ProgressBarUpdate(0, false, false, "Folders");
+                TaskCount = folderPaths.Length;
 
                 // + fetch all sub-folders within given folder paths +
                 Dbug.Log("Preparing to fetch all sub-folder paths and contents; ");
@@ -290,6 +296,8 @@ namespace HCResourceLibraryApp.DataHandling
                         /// IF main sub-folders have been fetched: get all sub-folders within the sub-folders
                         if (fPathSubFolders.HasElements())
                         {
+                            TaskCount += fPathSubFolders.Length;
+
                             Dbug.NudgeIndent(true);                            
                             for (int fpsx = 0; fpsx < fPathSubFolders.Length; fpsx++)
                             {
@@ -322,6 +330,8 @@ namespace HCResourceLibraryApp.DataHandling
                                 /// IF sub-folder's sub-folders have been fetched: add valid directories to full list and search
                                 if (subDirs.HasElements())
                                 {
+                                    TaskCount += subDirs.Length;
+
                                     List<string> deepSubDirs = new();
                                     foreach (DirectoryInfo dir in subDirs)
                                     {
@@ -340,10 +350,16 @@ namespace HCResourceLibraryApp.DataHandling
                                     Dbug.NudgeIndent(false);
                                 }
                                 Dbug.NudgeIndent(false);
+
+                                TaskNum++;
+                                ProgressBarUpdate(TaskNum / TaskCount);
                             }                            
                             Dbug.NudgeIndent(false);
                         }
                     }
+
+                    TaskNum++;
+                    ProgressBarUpdate(TaskNum / TaskCount, true, false, "Folders");
                 }
                 /// confirm folders obtained (through Dbug)
                 if (allFoldersList.HasElements())
@@ -357,8 +373,14 @@ namespace HCResourceLibraryApp.DataHandling
                 }
                 Dbug.NudgeIndent(false);
 
+                ProgressBarUpdate(1, true);
+                ProgressBarInitialize(false, false, progressBarWidth, 0, 0, ForECol.Correction);
+                ProgressBarUpdate(0, false, false, "Contents");
+                TaskCount = _libraryRef.Contents.Count + _libraryRef.Legends.Count;
 
-                // + gather all Data IDs accoring to version range, expand them, and store them as a list of ConValInfo instances +
+
+
+                // + gather all Data IDs according to version range, expand them, and store them as a list of ConValInfo instances +
                 List<ConValInfo> allExpandedDataIDs = new();
                 if (continueToStep_gatherDataIDs)
                 { /// wrapping ... oh what a sad excuse to do so...                    
@@ -440,6 +462,9 @@ namespace HCResourceLibraryApp.DataHandling
 
                         if (somethingMightHaveBeenAddedq)
                             Dbug.Log(dbugText + "; ");
+
+                        TaskNum++;
+                        ProgressBarUpdate(TaskNum / TaskCount);
                     }
                     Dbug.NudgeIndent(false);
 
@@ -493,6 +518,9 @@ namespace HCResourceLibraryApp.DataHandling
                             }
                             Dbug.Log("; ");
                         }
+
+                        TaskNum++;
+                        ProgressBarUpdate(TaskNum / TaskCount);
                     }   
                     Dbug.NudgeIndent(false);
 
@@ -501,11 +529,18 @@ namespace HCResourceLibraryApp.DataHandling
                     Dbug.NudgeIndent(false);
                 }
 
+                ProgressBarUpdate(1, true, true);
+                ProgressBarInitialize(true, false, progressBarWidth, 0, 0, ForECol.Highlight);
+
+
 
                 // THE TRUE CIV PROCESS
                 // + iterate through collected folder paths, and confirm the expanded data IDs with regards to given file extensions + 
                 if (allExpandedDataIDs.HasElements() && allFoldersList.HasElements())
                 {
+                    TaskCount = allExpandedDataIDs.Count;
+                    ProgressBarUpdate(0, false, false, "Verifying");
+
                     Dbug.Log("- - - - - - - - - - - - - - - - -");
                     Dbug.Log("Content Integrity Verification process is ready to begin; Proceeding to validate contents; ");
                     Dbug.LogPart("File extensions in use:");
@@ -580,6 +615,9 @@ namespace HCResourceLibraryApp.DataHandling
                             countInvalidated++;
                         }
                         Dbug.Log("; ");
+
+                        TaskNum++;
+                        ProgressBarUpdate(TaskNum / TaskCount);
                     }
 
                     anyInvalidatedQ = countInvalidated != allValidatedNum;
@@ -592,6 +630,8 @@ namespace HCResourceLibraryApp.DataHandling
                     _percentValidation = clampedPercentValidated;
                     _conValInfoDock = allExpandedDataIDs;
                 }
+
+                ProgressBarUpdate(1);
             }
 
             Dbug.EndLogging();
