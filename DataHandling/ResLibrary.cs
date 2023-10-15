@@ -206,6 +206,7 @@ namespace HCResourceLibraryApp.DataHandling
                                             Dbug.LogPart($"Connecting ConChanges ({looseCc.ToStringShortened()}) >> ");
                                             ResContents matchingResCon = null;
                                             rliInfo = new ResLibIntegrationInfo();
+                                            string matchedID = looseCc.RelatedDataID;
 
                                             /// matching here
                                             LogDecoder.DisassembleDataID(looseCc.RelatedDataID, out string dk, out string db, out _);
@@ -220,6 +221,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                 else if (resCon.ContainsDataID(trueRelDataID, out _))
                                                 {
                                                     matchingResCon = resCon;
+                                                    matchedID = trueRelDataID;
                                                     Dbug.LogPart("[by trueID] ");
                                                     break;
                                                 }
@@ -229,7 +231,7 @@ namespace HCResourceLibraryApp.DataHandling
                                             if (matchingResCon != null)
                                             {
                                                 Dbug.LogPart($"Found ResCon {{{matchingResCon}}} >> ");
-                                                if (matchingResCon.ContainsDataID(looseCc.RelatedDataID, out RCFetchSource source, out DataHandlerBase dataSource))
+                                                if (matchingResCon.ContainsDataID(matchedID, out RCFetchSource source, out DataHandlerBase dataSource))
                                                 {
                                                     bool connectCCq = false;
                                                     if (source == RCFetchSource.ConBaseGroup)
@@ -245,6 +247,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                             }
                                                             else Dbug.LogPart($"Rejected ConChanges");
                                                         }
+                                                        else Dbug.LogPart("ConBase could not be fetched");
                                                     }
                                                     else if (source == RCFetchSource.ConAdditionals)
                                                     {
@@ -259,7 +262,9 @@ namespace HCResourceLibraryApp.DataHandling
                                                             }
                                                             else Dbug.LogPart($"Rejected ConChanges");
                                                         }
+                                                        else Dbug.LogPart("ConAddit could not be fetched");
                                                     }
+                                                    else Dbug.LogPart($"Source is neither ConBase nor ConAddits (source: '{source}')");
 
                                                     if (connectCCq)
                                                         rliInfo = new ResLibIntegrationInfo(rliType, looseCc.RelatedDataID, looseCc.ChangeDesc, matchingResCon.ContentName, looseCc.RelatedDataID);

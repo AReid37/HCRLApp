@@ -38,7 +38,8 @@ GUIDELINES
 		'&99' for '' (no character)
 
 INFORMATION FOR EACH SECTION
-	For the explanations below: described syntax elements marked with '*' are required
+* Each section must be preceded by an empty line
+* For the explanations below: described syntax elements marked with '*' are required
 _____
 [Version]
 Syntax: [Version : {a.bb}*]

@@ -45,6 +45,20 @@ namespace HCResourceLibraryApp
                     hasVal = true;
             return hasVal;
         }
+        /// <summary>Checks if a string value is not empty or whitespace.</summary>
+        public static bool IsNotEW(this string s)
+        {
+            bool hasVal = false;
+            if (s == null)
+                hasVal = true;
+            else
+            {
+                if (s != "")
+                    if (s.Replace(" ", "").Length != 0)
+                        hasVal = true;
+            }
+            return hasVal;
+        }
         /// <summary>Checks if a string value is null or empty.</summary>
         public static bool IsNE(this string s)
         {
@@ -58,7 +72,7 @@ namespace HCResourceLibraryApp
         /// <summary>Checks if a string value is empty or whistespaced.</summary>
         public static bool IsEW(this string s)
         {
-            return s.IsNEW() && s != null;
+            return !s.IsNotEW();
         }
         public static bool IsNotNull(this char c)
         {

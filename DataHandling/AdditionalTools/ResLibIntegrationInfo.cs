@@ -21,7 +21,7 @@ namespace HCResourceLibraryApp.DataHandling
 
             connectionDataID = connectedDataID;
             connectionName = connectedName;
-            isConnectedQ = connectionName.IsNotNE() && connectionDataID.IsNotNE();
+            isConnectedQ = connectionName.IsNotNEW() && connectionDataID.IsNotNEW();
 
             switch (infoType)
             {
@@ -41,7 +41,7 @@ namespace HCResourceLibraryApp.DataHandling
         public bool IsSetup()
         {
             /// adtOptName is the only one that doesn't require information
-            return !infoType.IsNone() && (adtDataIDs.IsNotNE() || (updDataID.IsNotNE() && updShortDesc.IsNotNE())) && connectionName.IsNotNE() && connectionDataID.IsNotNE();
+            return !infoType.IsNone() && (adtDataIDs.IsNotNE() || (updDataID.IsNotNE() && updShortDesc.IsNotNE())) && connectionName.IsNotEW() && connectionDataID.IsNotEW();
         }
     }
 }

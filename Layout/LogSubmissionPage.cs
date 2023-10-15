@@ -320,7 +320,8 @@ namespace HCResourceLibraryApp.Layout
                                 if (possibleReason.IsNotNE())
                                 {
                                     NewLine();
-                                    Format($"{Ind24}Hint: {possibleReason}", ForECol.Incorrection);
+                                    FormatLine($"{Ind24}Hint: {possibleReason}", ForECol.Incorrection);
+                                    Format($"{Ind34}Also ensure all sections are separated from each other.", ForECol.Incorrection);
                                 }    
                                 Pause();
                             }
