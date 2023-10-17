@@ -174,8 +174,9 @@ namespace HCResourceLibraryApp.DataHandling
 				for (int dix = 0; dix < _dataIDs.Count && !containsDataIDq; dix++)
 				{
 					/// contains data ID = exact ID match /or/ true ID match
+					LogDecoder.DisassembleDataIDQuiet(dataIDtoFind, out string fdk, out string fdb, out _);
 					LogDecoder.DisassembleDataIDQuiet(this[dix], out string dk, out string db, out _);
-                    containsDataIDq = this[dix] == dataIDtoFind || (dk + db) == dataIDtoFind;
+                    containsDataIDq = this[dix] == dataIDtoFind || (dk + db) == (fdk + fdb);
                 }
 			return containsDataIDq;
         }

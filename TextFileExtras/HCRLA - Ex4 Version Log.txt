@@ -38,6 +38,7 @@ PURPOSE ::
 > Turnip (d7) - Chunkier dust particles.
 > (b13) - Enchanced the graininess of the background
 > (b21) - Enchanced the graininess of the background
+> (t73`) - Darkened the texture colors.
 
 [Legend]
 i - Item

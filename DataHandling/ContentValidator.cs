@@ -376,7 +376,7 @@ namespace HCResourceLibraryApp.DataHandling
                 ProgressBarUpdate(1, true);
                 ProgressBarInitialize(false, false, progressBarWidth, 0, 0, ForECol.Correction);
                 ProgressBarUpdate(0, false, false, "Contents");
-                TaskCount = _libraryRef.Contents.Count + _libraryRef.Legends.Count;
+                TaskCount = _libraryRef.Contents.Count + _libraryRef.Legends.Count + 1;
 
 
 
@@ -529,7 +529,7 @@ namespace HCResourceLibraryApp.DataHandling
                     Dbug.NudgeIndent(false);
                 }
 
-                ProgressBarUpdate(1, true, true);
+                ProgressBarUpdate(1, true);
                 ProgressBarInitialize(true, false, progressBarWidth, 0, 0, ForECol.Highlight);
 
 

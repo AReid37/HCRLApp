@@ -112,6 +112,7 @@ namespace HCResourceLibraryApp.DataHandling
                         if (newRC.ContentName == LooseResConName)
                         {
                             Dbug.LogPart("Identified 'loose' ResCon; ");
+
                             /// IF existing contents and able to sort loose contents: sort loose contents; 
                             if (Contents.HasElements() && !keepLooseRCQ)
                             {

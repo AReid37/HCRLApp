@@ -41,7 +41,7 @@ namespace HCResourceLibraryApp.Layout
                 FormatLine($"{Ind24}Facilitates customization of visual preferences, and has additional tools for content verification and save state reversions.", ForECol.Accent);
                 NewLine(2);
 
-                bool validMenuKey = ListFormMenu(out string setMenuKey, "Settings Menu", null, null, "a~d", true, $"Preferences,Content Integrity Verification,Reversion,{exitPagePhrase}".Split(','));
+                bool validMenuKey = ListFormMenu(out string setMenuKey, "Settings Menu", null, null, "a~d", true, $"Preferences,Content Integrity,Reversion,{exitPagePhrase}".Split(','));
                 MenuMessageQueue(!validMenuKey, false, null);
 
                 if (validMenuKey)
@@ -1376,7 +1376,6 @@ namespace HCResourceLibraryApp.Layout
                 
                 Program.LogState("Settings|Reversion");
                 Clear();
-                //FormatLine("\n", ForECol.Accent);
 
                 string[] revertMenuOpts = { "File Save Reversion", "Version Reversion", $"{exitSubPagePhrase} [Enter]" };
                 bool validKey, quitMenuQ;
@@ -1518,7 +1517,9 @@ namespace HCResourceLibraryApp.Layout
 
                                             if (absoluteYesNo)
                                             {
+                                                Format(Ind34);
                                                 bool reverted = _resLibrary.RevertToVersion(verRevert);
+
                                                 if (!reverted)
                                                 {
                                                     NewLine();

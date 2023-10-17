@@ -188,7 +188,10 @@ namespace HCResourceLibraryApp.Layout
 
                         /// Display plainly without searching
                         if (verHigh.AsNumber - verLow.AsNumber + 1 <= displayCount)
+                        {
                             FormatLine($"{Ind14}Due to the short version range, the ability to browse has been disabled.", ForECol.Highlight);
+                            NewLine();
+                        }
                         /// Display top-most and a few of the following
                         else
                             allowSummaryBrowsingQ = true;

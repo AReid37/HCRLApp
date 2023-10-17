@@ -12,8 +12,8 @@ namespace HCResourceLibraryApp
     public class Program
     {
         static readonly string consoleTitle = "High Contrast Resource Library App";
-        static readonly string developmentVersion = "[v1.2.9d]";
-        static readonly string lastPublishedVersion = "[v1.2.9a]";
+        static readonly string developmentVersion = "[v1.2.9e]";
+        static readonly string lastPublishedVersion = "[v1.2.9d]";
         /// <summary>If <c>true</c>, the application launches for debugging/development. Otherwise, the application launches for the published version.</summary>
         public static readonly bool isDebugVersionQ = true;
         static readonly bool verifyFormatUsageBase = false;
@@ -264,6 +264,9 @@ namespace HCResourceLibraryApp
         public static void LoadData()
         {
             LogState("Loading Data");
+            NewLine();
+            FormatLine($"{Ind14}Loading Data...", ForECol.Accent);
+
             bool outCome = dataHandler.LoadFromFile(preferences, logDecoder, contentValidator, resourceLibrary, formatterData, bugIdeaData);
             Dbug.SingleLog("Program.LoadData()", $"Outcome of data loading :: {outCome};");
         }

@@ -95,9 +95,9 @@ namespace HCResourceLibraryApp.Layout
 
                                 const char tableDiv = ' ';
                                 const Table2Division divType = Table2Division.KCTiny;
-                                const ForECol colBase = ForECol.Normal, colAlt = ForECol.Highlight;
                                 GetCursorPosition();
-
+                                TableRowDivider('.', false, GetPrefsForeColor(ForECol.Accent));
+                                TableRowDivider(true);
 
                                 // bugs here
                                 NewLine();
@@ -105,12 +105,7 @@ namespace HCResourceLibraryApp.Layout
                                 if (biiBugs.HasElements())
                                 {
                                     for (int bx = 0; bx < biiBugs.Count; bx++)
-                                    {
-                                        HoldNextListOrTable();
                                         Table(divType, $"{bx + 1}#", tableDiv, biiBugs[bx].description);
-
-                                        Format(LatestTablePrintText, bx % 2 == 0 ? colBase : colAlt);
-                                    }
                                 }
                                 else FormatLine($"{Ind24}No bugs reported.", ForECol.Accent);
                                 NewLine(2);
@@ -121,18 +116,14 @@ namespace HCResourceLibraryApp.Layout
                                 if (biiIdeas.HasElements())
                                 {
                                     for (int ix = 0; ix < biiIdeas.Count; ix++)
-                                    {
-                                        HoldNextListOrTable();
                                         Table(divType, $"{ix + 1}#", tableDiv, biiIdeas[ix].description);
-
-                                        Format(LatestTablePrintText, ix % 2 == 0 ? colBase : colAlt);
-                                    }
                                 }
                                 else FormatLine($"{Ind24}No ideas suggested.", ForECol.Accent);
                                 NewLine();
 
 
                                 // end
+                                TableRowDivider(false);
                                 Format("#End Bug / Idea", ForECol.Accent);
                                 SetCursorPosition();
                                 Pause();

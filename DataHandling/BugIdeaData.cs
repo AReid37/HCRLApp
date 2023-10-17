@@ -215,6 +215,8 @@ namespace HCResourceLibraryApp.DataHandling
                                 string printLine = $"[{(bii.isBugQ ? "BUG" : "IDEA")}] {bii.description}";
                                 printOut.Add($"\n{printLine}");
                                 Dbug.Log($"Added (new? {bii.isNewQ.ToString()[0]})  ::  '{printLine}'; ");
+
+                                bii.isNewQ = false;
                             }
                         }
                     }

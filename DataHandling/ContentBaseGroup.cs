@@ -147,8 +147,14 @@ namespace HCResourceLibraryApp.DataHandling
                 for (int dix = 0; dix < _dataIDs.Count && !containsDataIdQ; dix++)
                 {
                     /// contains data ID = exact ID match /or/ true ID match
+                    LogDecoder.DisassembleDataIDQuiet(dataIDtoFind, out string fdk, out string fdb, out _);                    
                     LogDecoder.DisassembleDataIDQuiet(this[dix], out string dk, out string db, out _);
-                    containsDataIdQ = this[dix] == dataIDtoFind || (dk + db) == dataIDtoFind;
+                    containsDataIdQ = this[dix] == dataIDtoFind || (dk + db) == (fdk + fdb);
+
+                    /// this[rawID] = find[rawID]   - covers for: rawXraw 
+                    /// this[rawID] = find[trueID]  - covers for: rawXtrue, trueXtrue
+                    /// this[trueID] = find[rawID]  - covers for: rawXraw, trueXraw
+                    /// this[trueID] = find[trueID] - covers for: rawXraw, rawXtrue, trueXraw, trueXtrue   (Best match)
                 }
             return containsDataIdQ;
         }

@@ -39,6 +39,17 @@
 [ ] 14# ...
 
 
+----- F R O M   B U G / I D E A   S U B M I S S I O N   S Y S T E M -----
+[X] 1# Updated entries were discarded when integrating version log. Entries in question were overhauled updates. Log version: v1.38. Pls Fix.
+
+[X] 2# Bug report and idea suggestion print out is repeating. Best guess is because the new submission aren't considered 'old' the first time the report is saved.
+
+[ ] 3# ...
+
+
+
+
+
 
 
 ---------------------
@@ -62,7 +73,7 @@
 
 [.] 9# Reversion; Version Reversion, specific version removal is possible, however only if the version's contents is not referenced in future version (Either allowed or denied reversion thereafter; Generally useful only the case of overwriting a log version's info)
     
-    [.] alt.9# Log Submission; If a Version Log is submitted containing version information that already exists within the library, the option to overwrite the pre-existing information may be available (must include a report on the results of overwriting previous information) 
+    [ ] alt.9# Log Submission; If a Version Log is submitted containing version information that already exists within the library, the option to overwrite the pre-existing information may be available (must include an extensive report on the results of overwriting previous information) 
 
 [X] 10# Using a certain syntax to substitute a keycode with symbols that are used for log decoding (example: using "&00" to sub for "-", or using "&04" to sub for "("). File encoding/decoding won't be affected and the data remains true to it's name as it bypasses the possible errors from log decoding.
 
@@ -82,4 +93,12 @@
 
 [X] 17# PROGRESS BAR! Create a progress bar function for all processes and display this progress to user. Especially helpful where processes can take more than a second (Ex, CIV process).
 
-[ ] 18# ...
+[ ] 18# File chooser sub-page. When the user is prompeted to select a file or folder open a removable sub-page which allows the user to select the desired file or folder the prompt requests. This sub-page could be opened with a prompt (suggest '@browse'), giving way to manually entering a folder or file path alternatively.
+
+[ ] 19# ...
+
+
+----- F R O M   B U G / I D E A   S U B M I S S I O N   S Y S T E M -----
+[X] 1# Remove newlines in bug report descriptions. It looks very weird. Thx.
+
+[ ] 2# ...
