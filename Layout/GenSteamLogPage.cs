@@ -290,8 +290,11 @@ namespace HCResourceLibraryApp.Layout
                                                             foreach (ContentChanges cc in resCon.ConChanges)
                                                                 if (cc.VersionChanged.Equals(selectedVerNum))
                                                                 {
-                                                                    looseDataIDs.Add(cc.RelatedDataID);
-                                                                    looseConChanges.Add(cc);
+                                                                    string contentName = cc.InternalName.IsNE() ? resCon.ContentName : cc.InternalName;
+                                                                    ContentChanges ccClone = new(cc.VersionChanged, contentName, cc.RelatedDataID, cc.ChangeDesc);
+
+                                                                    looseDataIDs.Add(ccClone.RelatedDataID);
+                                                                    looseConChanges.Add(ccClone);
 
                                                                     allDataIDs.Add(cc.RelatedDataID);
                                                                 }
@@ -1112,12 +1115,12 @@ namespace HCResourceLibraryApp.Layout
 
                                     /// IF editing this line: Expand errors with code and messages; ELSE show only error codes below line
                                     if (isLineToEditQ && makingEdit)
-                                        SFormatterHandler.ColorCode($"{Ind34}{error.errorCode} {error.errorMessage}", _formatterData.UseNativeColorCodeQ, true, true);
+                                        ColorCode($"{Ind34}{error.errorCode} {error.errorMessage}", _formatterData.UseNativeColorCodeQ, true, true);
                                     else
                                     {
                                         if (ex == 0)
                                             Format(Ind34);
-                                        SFormatterHandler.ColorCode($"{error.errorCode}{Ind24}", _formatterData.UseNativeColorCodeQ, false, true);
+                                        ColorCode($"{error.errorCode}{Ind24}", _formatterData.UseNativeColorCodeQ, false, true);
                                         if (ex + 1 == linErrors.Length)
                                             NewLine();
                                     }
@@ -1696,9 +1699,10 @@ namespace HCResourceLibraryApp.Layout
                             {
                                 if (addLineNum.IsWithin(lineMinimum, lineCount) && hasLinesQ)
                                 {
-                                    if (addLineNum == lineCount)
-                                        commandPrompt = editorCmdAdd;
-                                    else commandPrompt = $"{editorCmdAdd}{addLineNum}";
+                                    //if (addLineNum == lineCount)
+                                    //    commandPrompt = editorCmdAdd;
+                                    //else commandPrompt = $"{editorCmdAdd}{addLineNum}";
+                                    commandPrompt = $"{editorCmdAdd}{addLineNum}";
 
                                     if ((lineCount + 1).IsWithin(lineMaximum - lineMaxWarnThreshold, lineMaximum))
                                     {

@@ -12,8 +12,8 @@ namespace HCResourceLibraryApp
     public class Program
     {
         static readonly string consoleTitle = "High Contrast Resource Library App";
-        static readonly string developmentVersion = "[v1.2.9e]";
-        static readonly string lastPublishedVersion = "[v1.2.9d]";
+        static readonly string developmentVersion = "[v1.2.9f]";
+        static readonly string lastPublishedVersion = "[v1.2.9f]";
         /// <summary>If <c>true</c>, the application launches for debugging/development. Otherwise, the application launches for the published version.</summary>
         public static readonly bool isDebugVersionQ = true;
         static readonly bool verifyFormatUsageBase = false;
@@ -297,7 +297,7 @@ namespace HCResourceLibraryApp
 
         // TESTING STUFF
         static readonly bool runTest = false;
-        static readonly Tests testToRun = Tests.MiscRoom;
+        static readonly Tests testToRun = Tests.SFormatter_CheckSyntax;
         enum Tests
         {
             /// <summary>For random tests that need their own space, but no specific test name (variable tests)</summary>
@@ -911,7 +911,7 @@ namespace HCResourceLibraryApp
                     NewLine();
                     bool displayAllMessageQ = true; /// not 'const' to avoid 'unreachable code' issue
                     const string secHeader = "|header|", secBreak = "|break|", lineRep = "%%%%%%%", firstOnlyIssueFix = "Post '1st Only' Fix";
-                    string skipToHeaderStartingAs = $"{secHeader}Key";
+                    string skipToHeaderStartingAs = $"{secHeader}Mix";
                     string[] lines = new string[]
                     { /// enter many incorrect entries, and at least one correct entry
 
@@ -1027,6 +1027,7 @@ namespace HCResourceLibraryApp
                         $"{secBreak}Next within Lists/Tables", 
                         "$list[]", "\"nope\"", "\"also nope\"", "$list[]", "if 0 = 0; next;", "$* \"First items\"", "repeat 3; next;", "$* \"Next item #\"", "if 0 = 0; \"break list\"", "$* \"Lost item\"", /// list
                         "$table[]", "\"nope\"", "\"also nope\"", "$table[]", "if0=0; next;", "$th= \"1st\"", "if 1 = 1; next;", "$td= \"slap\",\"slap\"", "repeat 1; \"break it\"", "$td= \"sad\"", "if 0 = 0; next;", "$th= \"numb\"", "\"break again\"", "$th= \"sad^2\"",  /// table
+                        $"{secBreak}No # after $nl and $d", "$nl #", "$d #", "$nl $d #", "$dd # \"#\" $nl # \"#\"", "$nl $dd \"#\"", "$d", "$nl",
                         
                         
 

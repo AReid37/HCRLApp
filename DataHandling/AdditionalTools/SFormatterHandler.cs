@@ -2931,8 +2931,9 @@ namespace HCResourceLibraryApp.DataHandling
                                             for (int trx = 0; trx < theRefs.Length; trx++)
                                             {
                                                 string theRefPart = theRefs[trx];
-                                                if (!theRefPart.StartsWith("$hr") && !theRefPart.StartsWith("$nl") && !theRefPart.StartsWith("$d") && !theRefPart.Contains("[") && !theRefPart.Contains("="))
+                                                if (!theRefPart.StartsWith("$hr") && /*!theRefPart.StartsWith("$nl") && !theRefPart.StartsWith("$d") &&*/ !theRefPart.Contains("[") && !theRefPart.Contains("="))
                                                 {
+                                                    bool isNLorTabq = theRefPart.StartsWith("$nl") || theRefPart.StartsWith("$d");
                                                     bool triggerR038q = false;
                                                     string snipRef = $"{theRefPart.RemoveFromPlainText(' ').SnippetText("$", " ", Snip.Inc, Snip.EndAft)}";
                                                     if (snipRef.IsNotNE())
@@ -2961,7 +2962,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                             snipRef += ID(0);
                                                         }
                                                     }
-                                                    else if (theRefPart.Contains("$") && gscx == 0)
+                                                    else if (theRefPart.Contains("$") && gscx == 0 && !isNLorTabq)
                                                     {
                                                         triggerR038q = true;
                                                         snipRef = theRefPart + ID(1);

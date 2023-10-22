@@ -44,7 +44,13 @@
 
 [X] 2# Bug report and idea suggestion print out is repeating. Best guess is because the new submission aren't considered 'old' the first time the report is saved.
 
-[ ] 3# ...
+[X] 3# Generating Steam Log: Update items keep showing related content name as some 'Loose Content' thing and it's really messing up my print out. PLS FIX ASAP! I've been reading the updates and this one hasn't been fixed when it was claimed to be fixed.
+
+[X] 4# Formatter syntax error might be missing. Line in question: [ repeat {UpdatedCount}; $nl # "&01; " {Updated:#,relatedContent} ]. ... When generating steam log with the line above, the '#' interupts the '$nl' element producing some weird tags like "[nl 1] [nl 2]". The '#' probably shouldn't follow after a steam format tag.
+
+[X] 5# Using command 'add2' in formatter when only two lines place new line at bottom instead placing it before line 2.
+
+[ ] 6# ...
 
 
 
@@ -93,9 +99,11 @@
 
 [X] 17# PROGRESS BAR! Create a progress bar function for all processes and display this progress to user. Especially helpful where processes can take more than a second (Ex, CIV process).
 
-[ ] 18# File chooser sub-page. When the user is prompeted to select a file or folder open a removable sub-page which allows the user to select the desired file or folder the prompt requests. This sub-page could be opened with a prompt (suggest '@browse'), giving way to manually entering a folder or file path alternatively.
+[ ] 18# File chooser sub-page. When the user is prompted to select a file or folder open a removable sub-page which allows the user to select the desired file or folder the prompt requests. This sub-page could be opened with a prompt (suggest '@browse'), giving way to manually entering a folder or file path alternatively.
 
-[ ] 19# ...
+[X] 19# Ability to view an expanded summary of all the additions and changes made in a specified version in Legends and Summaries: Summary Page.
+
+[ ] 20# ...
 
 
 ----- F R O M   B U G / I D E A   S U B M I S S I O N   S Y S T E M -----

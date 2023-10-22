@@ -158,6 +158,7 @@ namespace HCResourceLibraryApp.Layout
             // page function
             bool exitSummarySubPageQ = true;
             VerNum selectedVer = VerNum.None;
+            bool viewDetailsOfTopQ = false;
             do
             {
                 BugIdeaPage.OpenPage();
@@ -195,9 +196,10 @@ namespace HCResourceLibraryApp.Layout
                         /// Display top-most and a few of the following
                         else
                             allowSummaryBrowsingQ = true;
-                        HorizontalRule(subMenuUnderline);
+
 
                         // display version summaries first
+                        HorizontalRule(subMenuUnderline);
                         for (int sumx = 0; sumx < displayCount; sumx++)
                         {
                             // fetch
@@ -245,41 +247,58 @@ namespace HCResourceLibraryApp.Layout
                                     }
 
                                     if (sumx + 1 < displayCount)
+                                    {
+                                        if (sumx == 0 && viewDetailsOfTopQ)
+                                        {
+                                            NewLine();
+                                            FormatLine("Version Details".ToUpper(), ForECol.Highlight);
+                                            DisplayVersionDetails(sumDataToDisp.SummaryVersion, ForECol.Normal, false, true);
+                                        }
                                         HorizontalRule('_');
-                                        //NewLine();
+                                    }
                                 }
                         }
                         HorizontalRule(subMenuUnderline, 1);
                         if (Program.isDebugVersionQ)
                             FormatLine($"## Library has '{_resLibrary.Summaries.Count}' summaries. Display maximum is '{displayCount}' ({displayCountMinimum} + {displayCount - displayCountMinimum})", ForECol.Accent);
 
+
                         // prompt to select a certain version summary after
                         bool allowExitQ = false;
-                        if (allowSummaryBrowsingQ)
-                        {
-                            FormatLine($"{Ind14}Version number as 'a.bb' (major.minor). '{displayCount - 1}' additional {(displayCount - 1 == 1 ? $"summary" : $"summaries")} may follow.", ForECol.Accent);
-                            Format($"{Ind14}View version summary ({verLow.ToStringNums()} ~ {verHigh.ToStringNums()}) >> ");
-                            if (StyledInput("a.bb").IsNotNE())
-                            {
-                                selectedVer = VerNum.None;
-                                if (VerNum.TryParse(LastInput, out VerNum selectVerNum))
-                                {
-                                    if (selectVerNum.AsNumber.IsWithin(verLow.AsNumber, verHigh.AsNumber))
-                                    {
-                                        selectedVer = selectVerNum;
-                                        Format($"{Ind24}Version '{selectedVer.ToStringNums()}' selected as version summary to view.", ForECol.Correction);
-                                        Pause();
-                                    }
-                                    else IncorrectionMessageQueue("Version number is not within library version range");
-                                }
-                                else IncorrectionMessageQueue("Version number did not follow 'a.bb' format");
-                            }
-                            else allowExitQ = true;
+                        const string viewDetailsKey = "vd";
+                        FormatLine($"{Ind14}Version number as 'a.bb' (major.minor). '{displayCount - 1}' additional {(displayCount - 1 == 1 ? $"summary" : $"summaries")} may follow.", ForECol.Accent);
+                        FormatLine($"{Ind14}Enter '{viewDetailsKey}' to toggle details of top-most version. Press [Enter] to exit page.", ForECol.Accent);
 
-                            IncorrectionMessageTrigger($"{Ind34}", ".");
-                            IncorrectionMessageQueue(null);
+                        Format($"{Ind14}View version summary ({verLow.ToStringNums()} ~ {verHigh.ToStringNums()}) >> ");
+                        if (StyledInput($"a.bb / {viewDetailsKey}").IsNotNE())
+                        {
+                            VerNum prevSelectedVerNum = selectedVer;
+                            selectedVer = VerNum.None;
+                            if (VerNum.TryParse(LastInput, out VerNum selectVerNum) && allowSummaryBrowsingQ)
+                            {
+                                if (selectVerNum.AsNumber.IsWithin(verLow.AsNumber, verHigh.AsNumber))
+                                {
+                                    selectedVer = selectVerNum;
+                                    Format($"{Ind24}Version '{selectedVer.ToStringNums()}' selected as version summary to view.", ForECol.Correction);
+                                    Pause();
+                                }
+                                else IncorrectionMessageQueue("Version number is not within library version range");
+                            }
+                            else
+                            {
+                                if (LastInput.Equals(viewDetailsKey))
+                                    viewDetailsOfTopQ = !viewDetailsOfTopQ;
+                                else if (allowSummaryBrowsingQ)
+                                    IncorrectionMessageQueue("Version number did not follow 'a.bb' format");
+                                else IncorrectionMessageQueue("Browsing disabled due to short version range");
+                            }
+
+                            if (!selectedVer.HasValue() && prevSelectedVerNum.HasValue())
+                                selectedVer = prevSelectedVerNum;
                         }
-                        else Pause();
+                        else allowExitQ = true;
+                        IncorrectionMessageTrigger($"{Ind34}", ".");
+                        IncorrectionMessageQueue(null);
 
 
                         // auto-exit page or not?
@@ -301,6 +320,346 @@ namespace HCResourceLibraryApp.Layout
                 }
 
             } while (!exitSummarySubPageQ);            
+        }
+
+        /// <summary>Displays content details of a given version of library contents.</summary>
+        /// <param name="verNum">The version to display.</param>
+        /// <param name="displayCol">The base color of the display version details.</param>
+        /// <param name="useHorizontalRuleQ">Whether to utilize the default horizontal rule accompanied with this display.</param>
+        /// <param name="showContentsOnlyQ">If <c>true</c>, will only display the Added, Additional, and Updated sections.</param>
+        static void DisplayVersionDetails(VerNum verNum, ForECol displayCol = ForECol.Highlight, bool useHorizontalRuleQ = false, bool showContentsOnlyQ = true)
+        {
+            if (verNum.HasValue())
+            {
+                // Fetch contents in specified verison
+                Dbug.DeactivateNextLogSession();
+                Dbug.StartLogging("LogLegendNSummaryPage:DisplayVersionDetails()");
+                ResLibrary verLogDetails = new();
+                List<string> allDataIDs = new();
+                for (int rdx = 0; rdx < 3; rdx++)
+                {
+                    switch (rdx)
+                    {
+                        // contents - get matching ver log number
+                        case 0:
+                            List<ResContents> resContents = new();
+                            List<string> looseDataIDs = new();
+                            List<ContentAdditionals> looseConAddits = new();
+                            List<ContentChanges> looseConChanges = new();
+
+                            /// filtering occurs here
+                            foreach (ResContents resCon in _resLibrary.Contents)
+                            {
+                                ResContents clone = null;
+
+                                if (resCon != null)
+                                    if (resCon.IsSetup())
+                                    {
+                                        bool fetchedConBaseQ = false;
+
+                                        // ConBase
+                                        if (resCon.ConBase.VersionNum.Equals(verNum))
+                                        {
+                                            fetchedConBaseQ = true;
+                                            clone = new ResContents(resCon.ShelfID, resCon.ConBase);
+                                            allDataIDs.AddRange(resCon.ConBase.DataIDString.Split(' '));
+
+                                            /// ConAddits (same ver)
+                                            if (resCon.ConAddits.HasElements())
+                                            {
+                                                foreach (ContentAdditionals rca in resCon.ConAddits)
+                                                    if (rca.VersionAdded.Equals(verNum))
+                                                    {
+                                                        ContentAdditionals rcaClone =
+                                                            new(rca.VersionAdded, rca.RelatedDataID, rca.OptionalName, rca.DataIDString.Split(' '));
+                                                        rcaClone.ContentName = clone.ContentName;
+
+                                                        clone.StoreConAdditional(rcaClone);
+                                                        allDataIDs.AddRange(rca.DataIDString.Split(' '));
+                                                    }
+                                            }
+
+                                            /// ConChanges (same ver)
+                                            if (resCon.ConChanges.HasElements())
+                                            {
+                                                foreach (ContentChanges rcc in resCon.ConChanges)
+                                                    if (rcc.VersionChanged.Equals(verNum))
+                                                    {
+                                                        clone.StoreConChanges(rcc);
+                                                        allDataIDs.Add(rcc.RelatedDataID);
+                                                    }
+                                            }
+
+                                            resContents.Add(clone);
+                                        }
+
+                                        // ConAddits (loose)
+                                        if (!fetchedConBaseQ)
+                                        {
+                                            if (resCon.ConAddits.HasElements())
+                                                foreach (ContentAdditionals ca in resCon.ConAddits)
+                                                    if (ca.VersionAdded.Equals(verNum))
+                                                    {
+                                                        looseDataIDs.Add(ca.RelatedDataID);
+                                                        ContentAdditionals caClone =
+                                                            new(ca.VersionAdded, ca.RelatedDataID, ca.OptionalName, ca.DataIDString.Split(' '));
+                                                        caClone.ContentName = resCon.ContentName;
+                                                        looseConAddits.Add(caClone);
+
+                                                        allDataIDs.Add(ca.RelatedDataID);
+                                                        allDataIDs.AddRange(ca.DataIDString.Split(' '));
+                                                    }
+                                        }
+
+                                        // ConChanges (loose)
+                                        if (!fetchedConBaseQ)
+                                        {
+                                            if (resCon.ConChanges.HasElements())
+                                                foreach (ContentChanges cc in resCon.ConChanges)
+                                                    if (cc.VersionChanged.Equals(verNum))
+                                                    {
+                                                        looseDataIDs.Add(cc.RelatedDataID);
+                                                        looseConChanges.Add(cc);
+
+                                                        allDataIDs.Add(cc.RelatedDataID);
+                                                    }
+                                        }
+                                    }
+                            }
+
+                            /// load into instance
+                            ResContents looseResCon = new(0, new ContentBaseGroup(verNum, ResLibrary.LooseResConName, looseDataIDs.ToArray()));
+                            foreach (ContentAdditionals lca in looseConAddits)
+                                looseResCon.StoreConAdditional(lca);
+                            foreach (ContentChanges lcc in looseConChanges)
+                                looseResCon.StoreConChanges(lcc);
+
+                            resContents.Insert(0, looseResCon);
+                            verLogDetails.AddContent(true, resContents.ToArray());
+                            break;
+
+
+                        // legends - get all of them // actually no.. just get what's there
+                        case 1:
+                            /// gather all unique legend keys used
+                            string legendKeysInUse = " ";
+                            foreach (string dId in allDataIDs)
+                            {
+                                LogDecoder.DisassembleDataID(dId, out string dk, out _, out string sfx);
+                                if (!legendKeysInUse.Contains($" {dk} "))
+                                    legendKeysInUse += $" {dk} ";
+
+                                if (sfx.IsNotNE())
+                                {
+                                    if (!legendKeysInUse.Contains($" {sfx} "))
+                                        legendKeysInUse += $" {sfx} ";
+
+                                    foreach (char sfxC in sfx)
+                                        if (!legendKeysInUse.Contains($" {sfxC} "))
+                                            legendKeysInUse += $" {sfxC} ";
+                                }
+                            }
+                            /// filter legend datas by legend keys in use
+                            List<LegendData> legendsUsed = new();
+                            if (legendKeysInUse.IsNotNEW())
+                                foreach (LegendData legData in _resLibrary.Legends.ToArray())
+                                {
+                                    if (legendKeysInUse.Contains($" {legData.Key} "))
+                                        legendsUsed.Add(legData);
+                                }
+                            /// load into instance
+                            if (legendsUsed.HasElements())
+                                verLogDetails.AddLegend(legendsUsed.ToArray());
+                            //verLogDetails.AddLegend(_resLibrary.Legends.ToArray());
+                            break;
+
+
+                        // summaries - get of matching ver log number
+                        case 2:
+                            bool fetchedSummaryQ = false;
+                            for (int sumx = 0; !fetchedSummaryQ && sumx < _resLibrary.Summaries.Count; sumx++)
+                            {
+                                if (_resLibrary.Summaries[sumx].SummaryVersion.Equals(verNum))
+                                {
+                                    fetchedSummaryQ = true;
+                                    verLogDetails.AddSummary(_resLibrary.Summaries[sumx]);
+                                }
+                            }
+                            break;
+                    }
+                }
+                Dbug.EndLogging();
+
+
+                // display contents of specified version
+                if (useHorizontalRuleQ)
+                    HorizontalRule('-');
+                
+                if (verLogDetails.IsSetup())
+                {
+                    string dataIDList = "";
+                    ResContents looseResCon = new();
+                    if (verLogDetails.Contents[0].ContentName == ResLibrary.LooseResConName)
+                        looseResCon = verLogDetails.Contents[0];
+
+                    bool thereAreAdditionalsQ = false, thereAreUpdatesQ = false;
+                    for (int dispx = 0; dispx < 7; dispx++)
+                    {
+                        switch (dispx)
+                        {
+                            // version
+                            case 0:
+                                if (!showContentsOnlyQ)
+                                {
+                                    FormatLine($"Version : {verNum.ToStringNums()}", displayCol);
+                                    NewLine();
+                                }
+                                break;
+
+                            // added 
+                            case 1:
+                                FormatLine($"Added".ToUpper(), displayCol);
+                                int minusLooseResCon = 0;
+                                for (int rx = 0; rx < verLogDetails.Contents.Count; rx++)
+                                {
+                                    ResContents resCbg = verLogDetails.Contents[rx];
+                                    if (resCbg.ContentName != ResLibrary.LooseResConName)
+                                    {
+                                        FormatLine($"#{rx + 1 - minusLooseResCon,-2} {resCbg.ContentName}    {resCbg.ConBase.DataIDString}", displayCol);
+                                        dataIDList += resCbg.ConBase.DataIDString + " ";
+
+                                        if (resCbg.ConAddits.HasElements() && !thereAreAdditionalsQ)
+                                            thereAreAdditionalsQ = true;
+                                        if (resCbg.ConChanges.HasElements() && !thereAreUpdatesQ)
+                                            thereAreUpdatesQ = true;
+                                    }
+                                    else minusLooseResCon = 1;
+                                }                                
+                                if (showContentsOnlyQ)
+                                {
+                                    if (thereAreAdditionalsQ || looseResCon.ConAddits.HasElements() || thereAreUpdatesQ || looseResCon.ConChanges.HasElements())
+                                        NewLine();
+                                }        
+                                else NewLine();
+                                break;
+
+                            // additional
+                            case 2:
+                                if (looseResCon.ConAddits.HasElements() || thereAreAdditionalsQ)
+                                {
+                                    FormatLine($"Additional".ToUpper(), displayCol);
+                                    foreach (ResContents resCa in verLogDetails.Contents)
+                                    {
+                                        if (resCa.ConAddits.HasElements())
+                                            foreach (ContentAdditionals ca in resCa.ConAddits)
+                                            {
+                                                if (resCa.ContentName == ResLibrary.LooseResConName)
+                                                    Format($">> ", displayCol);
+                                                else Format($"> ", displayCol);
+
+                                                string fixedOptName = ca.OptionalName.IsNE() ? "" : ca.OptionalName + " ";
+                                                string fixedContentName = resCa.ContentName == ResLibrary.LooseResConName ? "" : resCa.ContentName + " ";
+
+                                                FormatLine($"{fixedOptName}({ca.DataIDString}) - {fixedContentName}({ca.RelatedDataID})", displayCol);
+                                                dataIDList += ca.DataIDString + " ";
+                                            }
+                                    }                                    
+                                    
+                                    if (showContentsOnlyQ)
+                                    {
+                                        if (thereAreUpdatesQ || looseResCon.ConChanges.HasElements())
+                                            NewLine();
+                                    }
+                                    else NewLine();
+                                }
+                                break;
+
+                            // tta
+                            case 3:
+                                if (!showContentsOnlyQ)
+                                {
+                                    int ttaNum = verLogDetails.Summaries[0].TTANum;
+                                    FormatLine($"TTA : {ttaNum}", displayCol);
+                                    NewLine();
+                                }
+                                break;
+
+                            // updated
+                            case 4:
+                                if (looseResCon.ConChanges.HasElements() || thereAreUpdatesQ)
+                                {
+                                    FormatLine($"Updated".ToUpper(), displayCol);
+                                    foreach (ResContents resCc in verLogDetails.Contents)
+                                    {
+                                        if (resCc.ConChanges.HasElements())
+                                            foreach (ContentChanges cc in resCc.ConChanges)
+                                            {
+                                                if (resCc.ContentName == ResLibrary.LooseResConName)
+                                                    Format($">> ", displayCol);
+                                                else Format($"> ", displayCol);
+                                                FormatLine($"{cc.InternalName} ({cc.RelatedDataID}) - {cc.ChangeDesc}", displayCol);
+                                            }
+                                    }
+
+                                    if (!showContentsOnlyQ)
+                                        NewLine();
+                                }
+                                break;
+
+                            // legend
+                            case 5:
+                                if (!showContentsOnlyQ)
+                                {
+                                    FormatLine($"Legend".ToUpper(), displayCol);
+                                    List<string> legKeys = new();
+                                    foreach (string dataID in dataIDList.Split(' '))
+                                    {
+                                        LogDecoder.DisassembleDataID(dataID, out string dk, out _, out string sfx);
+                                        if (!legKeys.Contains(dk))
+                                            legKeys.Add(dk);
+                                        if (!legKeys.Contains(sfx))
+                                            legKeys.Add(sfx);
+                                    }
+                                    legKeys = legKeys.ToArray().SortWords();
+                                    if (legKeys.HasElements())
+                                    {
+                                        foreach (string legKey in legKeys)
+                                        {
+                                            foreach (LegendData legData in verLogDetails.Legends)
+                                            {
+                                                if (legData.Key.Equals(legKey))
+                                                {
+                                                    FormatLine($"{legData.Key}/{legData[0]}", displayCol);
+                                                    break;
+                                                }
+                                            }
+                                        }
+
+                                    }
+                                    NewLine();
+                                }
+                                break;
+
+                            // summary
+                            default:
+                                if (!showContentsOnlyQ)
+                                {
+                                    FormatLine($"Summary".ToUpper(), displayCol);
+                                    foreach (string sumPart in verLogDetails.Summaries[0].SummaryParts)
+                                    {
+                                        Format(" - ", displayCol);
+                                        FormatLine(sumPart, displayCol);
+                                    }
+                                }
+                                break;
+                        }
+                    }
+                }
+                else FormatLine($"{Ind24}Unable to display contents of version log '{verNum.ToStringNums()}'.", ForECol.Warning);
+                
+                if (useHorizontalRuleQ)
+                    HorizontalRule('-');
+            }
         }
     }
 }
