@@ -763,9 +763,12 @@ namespace HCResourceLibraryApp.Layout
                                     FormatLine("Folder paths provide the CIV process with a destination to execute content validation. Multiple folder paths may be provided for content validation.", ForECol.Normal);
                                     NewLine();
 
-                                    string placeHolder = @"C:\__\__";
+                                    ToggleFileChooserPage(true);
+                                    string placeHolder = $@"C:\__\__  /OR/  {openFileChooserPhrase}";
+                                    string startingFolderPath = null;
                                     if (folderPaths.HasElements())
                                     {
+                                        startingFolderPath = folderPaths[0].Replace(ContentValidator.FolderPathDisabledToken, "");
                                         List<string> fPathsCondensed = new();
                                         foreach (string fPath in folderPaths)
                                         {
@@ -795,13 +798,19 @@ namespace HCResourceLibraryApp.Layout
 
                                     // input validation
                                     string inputFolder = StyledInput(placeHolder);
+                                    FileChooserPage.ItemType = FileChooserType.Folders;
+                                    FileChooserPage.OpenPage(startingFolderPath);
+                                    ToggleFileChooserPage(false);
+                                    if (inputFolder == openFileChooserPhrase)
+                                        inputFolder = FileChooserPage.SelectedItem;
+
                                     bool fetchedFolderPathOrIndexQ = false;
                                     const int nonFolderIx = -1;
                                     int folderIx = nonFolderIx;
                                     if (inputFolder.IsNotNE())
                                     {
                                         /// IF input contains folder levels key: prep to add folder; ELSE IF there are existing folders: fetch folder to remove number; ELSE invalidate input
-                                        if (inputFolder.Contains(":\\"))
+                                        if (inputFolder.Contains(@":\"))
                                         {
                                             string[] pathParts = inputFolder.Split("\\", StringSplitOptions.RemoveEmptyEntries);
                                             if (pathParts.HasElements(2))
@@ -876,7 +885,6 @@ namespace HCResourceLibraryApp.Layout
                                         else
                                         {
                                             NewLine();
-                                            //FormatLine($"{Ind14}Press [Enter] to enable/disable usage of this folder path.", ForECol.Accent);
                                             FormatLine($"{Ind14}Press [Enter] to toggle folder usage. Enter any key to remove folder.", ForECol.Accent);
                                             Format($"{Ind14}Remove / toggle usability of this folder path >> ");
                                             if (StyledInput("#a /OR/ __").IsNE())

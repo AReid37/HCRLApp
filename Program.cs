@@ -12,7 +12,7 @@ namespace HCResourceLibraryApp
     public class Program
     {
         static readonly string consoleTitle = "High Contrast Resource Library App";
-        static readonly string developmentVersion = "[v1.2.9f]";
+        static readonly string developmentVersion = "[v1.3.0]";
         static readonly string lastPublishedVersion = "[v1.2.9f]";
         /// <summary>If <c>true</c>, the application launches for debugging/development. Otherwise, the application launches for the published version.</summary>
         public static readonly bool isDebugVersionQ = true;
@@ -297,7 +297,7 @@ namespace HCResourceLibraryApp
 
         // TESTING STUFF
         static readonly bool runTest = false;
-        static readonly Tests testToRun = Tests.SFormatter_CheckSyntax;
+        static readonly Tests testToRun = Tests.MiscRoom;
         enum Tests
         {
             /// <summary>For random tests that need their own space, but no specific test name (variable tests)</summary>
@@ -1133,7 +1133,7 @@ namespace HCResourceLibraryApp
                 /// Misc Room
                 else if (testToRun == Tests.MiscRoom)
                 {
-                    char miscKey = 'e';
+                    char miscKey = 'f';
                     string miscTestName = "<None>";
                     switch (miscKey)
                     {
@@ -1155,6 +1155,10 @@ namespace HCResourceLibraryApp
 
                         case 'e':
                             miscTestName = "Page Base: Progress Bar";
+                            break;
+
+                        case 'f':
+                            miscTestName = "File Chooser Page";
                             break;
                     }
 
@@ -1612,6 +1616,29 @@ namespace HCResourceLibraryApp
                                 Wait(1.5f);
                             }
                         }
+                    }
+                    #endregion
+
+                    #region miscF: fileChooserPage
+                    if (miscKey == 'f')
+                    {
+                        hasDebugQ = true;
+                        Text("Press [Enter] to begin browsing files (test)");
+                        Pause();
+
+                        ToggleFileChooserPage(true);
+                        TextLine("The page should be able to create and destroy itself without impeding on the rest of the page.", Color.NavyBlue);
+                        Format($"{Ind14}Started here >> ");
+
+                        StyledInput(openFileChooserPhrase);
+                        FileChooserPage.ItemType = FileChooserType.All;
+                        FileChooserPage.OpenPage("C:\\Users\\ntrc2");
+                        ToggleFileChooserPage(false);
+
+                        Text($"Ended here");
+                        NewLine(2);
+                        Text($"# Test End #", Color.Orange);
+                        Pause();
                     }
                     #endregion
                 }

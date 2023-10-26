@@ -109,9 +109,18 @@ namespace HCResourceLibraryApp.Layout
                                 placeHolder += $"  -or-  {recentDirectoryKey}__.__";
                                 NewLine();
                             }
+                            placeHolder += $"  -or-  {openFileChooserPhrase}";
                             FormatLine("Please enter the file path to the version log being submitted below. The file should be of type 'text file' (.txt) or any similar text-only file type.", ForECol.Normal);
                             Format($"{Ind14}Path >> ", ForECol.Normal);
+
+                            /// enter file path OR browse file path
+                            ToggleFileChooserPage(true);
                             string inputPath = StyledInput(placeHolder);
+                            FileChooserPage.ItemType = FileChooserType.Files;
+                            FileChooserPage.OpenPage(LogDecoder.RecentDirectory);
+                            ToggleFileChooserPage(false);
+                            if (inputPath == openFileChooserPhrase)
+                                inputPath = FileChooserPage.SelectedItem;
 
                             /// file path verification
                             bool validPath = false;

@@ -57,7 +57,7 @@ namespace HCResourceLibraryApp.Layout
         static int _wrapIndentHold = wrapUnholdNum, _wrapSource = 0, _cursorLeft, _cursorTop;
         const char DefaultTitleUnderline = cTHB;
         static string _menuMessage, _incorrectionMessage;
-        static bool _isMenuMessageInQueue, _isWarningMenuMessageQ, _enableWordWrapQ = true, _holdWrapIndentQ, _enterBugIdeaPageQ;
+        static bool _isMenuMessageInQueue, _isWarningMenuMessageQ, _enableWordWrapQ = true, _holdWrapIndentQ, _enterBugIdeaPageQ, _enterFileChooserPageQ, _allowFileChooserPageQ;
         static ForECol? _normalAlt, _highlightAlt;
         static bool _enableBarQ, _showPercentQ, _hideNodeQ;
         static int _barWidth, _barPosLeft, _barPosTop, _iniCursorLeft, _iniCursorTop, _taskNum;
@@ -84,6 +84,7 @@ namespace HCResourceLibraryApp.Layout
         public const string exitPagePhrase = "Return to Main Menu";
         public const string exitSubPagePhrase = "Return";
         public const string openBugIdeaPagePhrase = "@dbi";
+        public const string openFileChooserPhrase = "@bws";
         public static float TaskCount
         {
             get => _taskCount;
@@ -98,7 +99,6 @@ namespace HCResourceLibraryApp.Layout
         // PROPERTIES
         public static bool VerifyFormatUsage { get; set; }
         public static bool WithinBugIdeaPageQ { get; set; }
-        //public static bool ProgressBarEnabledQ { get => _enableBarQ; }
         #endregion
 
 
@@ -683,6 +683,10 @@ namespace HCResourceLibraryApp.Layout
         /// <summary>Input placeholder character limit: 50 characters. <br></br>Placeholder color cannot be changed.</summary>
         public static string StyledInput(string placeholder)
         {
+            /// setup file chooser page
+            if (!IsEnterFileChooserPageQueued() && _allowFileChooserPageQ)
+                FileChooserPage.SetInitialCursorPos();
+
             string input = Input(placeholder, _preferencesRef.Input);
 
             /// queue bug / idea page
@@ -692,7 +696,11 @@ namespace HCResourceLibraryApp.Layout
                 Format($"{Ind34}[Bug/Idea Page Queued] Enter input for previous prompt: ", ForECol.Accent);
                 input = Input(placeholder, _preferencesRef.Input);
             }
-
+            /// queue file chooser page
+            if (input == openFileChooserPhrase && !IsEnterFileChooserPageQueued() && _allowFileChooserPageQ)
+            {
+                QueueEnterFileChooserPage();
+            }
             return input;
         }
         /// <summary>Height Sensitive New Line.</summary>
@@ -1327,6 +1335,22 @@ namespace HCResourceLibraryApp.Layout
                 if (Program.isDebugVersionQ)
                     Wait(0.075f);
             }            
+        }
+        public static void QueueEnterFileChooserPage()
+        {
+            _enterFileChooserPageQ = true;
+        }
+        public static bool IsEnterFileChooserPageQueued()
+        {
+            return _enterFileChooserPageQ == true;
+        }
+        public static void UnqueueEnterFileChooserPage()
+        {
+            _enterFileChooserPageQ = false;
+        }
+        public static void ToggleFileChooserPage(bool enableQ)
+        {
+            _allowFileChooserPageQ = enableQ;
         }
     }
 }

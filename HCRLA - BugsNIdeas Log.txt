@@ -99,7 +99,7 @@
 
 [X] 17# PROGRESS BAR! Create a progress bar function for all processes and display this progress to user. Especially helpful where processes can take more than a second (Ex, CIV process).
 
-[ ] 18# File chooser sub-page. When the user is prompted to select a file or folder open a removable sub-page which allows the user to select the desired file or folder the prompt requests. This sub-page could be opened with a prompt (suggest '@browse'), giving way to manually entering a folder or file path alternatively.
+[X] 18# File chooser sub-page. When the user is prompted to select a file or folder open a removable sub-page which allows the user to select the desired file or folder the prompt requests. This sub-page could be opened with a prompt (suggest '@browse'), giving way to manually entering a folder or file path alternatively.
 
 [X] 19# Ability to view an expanded summary of all the additions and changes made in a specified version in Legends and Summaries: Summary Page.
 
