@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using ConsoleFormat;
 using static ConsoleFormat.Base;
 using static ConsoleFormat.Minimal;
-using HCResourceLibraryApp.Layout;
 using static HCResourceLibraryApp.Layout.PageBase;
 
 namespace HCResourceLibraryApp.Layout

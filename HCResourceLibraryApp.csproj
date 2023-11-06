@@ -4,10 +4,11 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>net5.0-windows</TargetFramework>
     <PackageIcon>HCINC-L6 (Acronym).png</PackageIcon>
-    <Version>1.1.9.3</Version>
-    <StartupObject></StartupObject>
-    <FileVersion>1.1.9.3</FileVersion>
+    <Version>1.3</Version>
+    <StartupObject>HCResourceLibraryApp.Program</StartupObject>
+    <FileVersion>1.3</FileVersion>
     <ApplicationIcon>HCRLAicon 1-1 256px.ico</ApplicationIcon>
+    <AssemblyName>$(MSBuildProjectName.Replace("ResourceLibraryApp", "RLA"))</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>

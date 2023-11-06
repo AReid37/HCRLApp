@@ -109,4 +109,6 @@
 ----- F R O M   B U G / I D E A   S U B M I S S I O N   S Y S T E M -----
 [X] 1# Remove newlines in bug report descriptions. It looks very weird. Thx.
 
-[ ] 2# ...
+[X] 2# I think the library search page is pretty awesome at its job. If possible, I'd like to see a filter specifically for data ids. It can get pretty tough sorting through a thousand entries and having all the content names and stuff mixed in to the fray.
+
+[ ] 3# ...

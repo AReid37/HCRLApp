@@ -251,7 +251,7 @@ namespace HCResourceLibraryApp.Layout
                                         if (sumx == 0 && viewDetailsOfTopQ)
                                         {
                                             NewLine();
-                                            FormatLine("Version Details".ToUpper(), ForECol.Highlight);
+                                            FormatLine("Version Details", ForECol.Highlight);
                                             DisplayVersionDetails(sumDataToDisp.SummaryVersion, ForECol.Normal, false, true);
                                         }
                                         HorizontalRule('_');

@@ -46,7 +46,7 @@ namespace HCResourceLibraryApp.DataHandling
         Keycode syntax is only available in the Added, Additional, and Updated sections
         Example usages
             [ADDED]
-            1 |KCR&00Unit - (i4500)      // Produces ConBase as "v0.00;KCR-Unit;i4500"
+            1 |K&99C&99R&00Unit - (i4500)      // Produces ConBase as "v0.00;KCR-Unit;i4500"
             2a|McHattin's Fedora - (i4554)  // Produce ConBase as "v0.00;Mc Hattin's Fedora;i4554"
             2b|Mc&99Hattin's Fedora - (i4554) // Produce ConBase as "v0.00;McHattin's Fedora;i4554"    (notice difference to 2a)
 
@@ -58,7 +58,7 @@ namespace HCResourceLibraryApp.DataHandling
         const char legRangeKey = '~', updtSelfKey = ':';
         readonly bool enableSelfUpdatingFunction = true, testLibConAddUpdConnectionQ = false;
         static string _prevRecentDirectory, _recentDirectory;
-        bool _hasDecodedQ;
+        bool _hasDecodedQ, _versionAlreadyExistsQ;
         static bool _allowLogDecToolsDbugMessagesQ = false;
         public static string RecentDirectory
         {
@@ -72,6 +72,7 @@ namespace HCResourceLibraryApp.DataHandling
         public ResLibrary DecodedLibrary { get; private set; }
         public List<DecodeInfo> DecodeInfoDock;
         public bool HasDecoded { get => _hasDecodedQ; }
+        public bool OverwriteWarning { get => _versionAlreadyExistsQ; }
 
         /// for decoding
         List<string> usedLegendKeys = new(), usedLegendKeysSources = new();
@@ -123,6 +124,7 @@ namespace HCResourceLibraryApp.DataHandling
             Dbug.StartLogging("LogDecoder.DecodeLogInfo(str[])");
             Dbug.Log($"Recieved collection object (data from log?) to decode; collection has elements? {logData.HasElements()}");
             _allowLogDecToolsDbugMessagesQ = true;
+            _versionAlreadyExistsQ = false;
 
             if (logData.HasElements())
             {
@@ -297,8 +299,9 @@ namespace HCResourceLibraryApp.DataHandling
                                                         {
                                                             if (latestLibVersion.AsNumber == logVersion.AsNumber)
                                                             {
-                                                                Dbug.LogPart($"; Version {logVersion.ToStringNums()} information already exists within library");
-                                                                decodeInfo.NoteIssue($"Version {logVersion.ToStringNums()} information already exists in library");
+                                                                Dbug.LogPart($"; Version {logVersion.ToStringNums()} information already exists within library [OVERWRITE Warning]");
+                                                                decodeInfo.NoteIssue($"Version {logVersion.ToStringNums()} information already exists in library (May be overwritten).");
+                                                                _versionAlreadyExistsQ = true;
                                                             }
                                                             else if (latestLibVersion.AsNumber + 1 != logVersion.AsNumber)
                                                             {

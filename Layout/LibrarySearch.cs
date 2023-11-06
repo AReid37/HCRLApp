@@ -277,7 +277,7 @@ namespace HCResourceLibraryApp.Layout
                 prevMaximumResults = maximumResults;
                 maximumResults = 50 + HSNL(0, 49);
                 if (!_searchOpts.IsSetup())
-                    _searchOpts = new SearchOptions(true, false);
+                    _searchOpts = new SearchOptions(true, false, SourceContents.All);
 
 
                 // ++  BROWSE MENU  ++
@@ -460,7 +460,7 @@ namespace HCResourceLibraryApp.Layout
 
                     NewLine();
                     Title("Search Filter Options");
-                    for (int sfx = 0; sfx < 5; sfx++)
+                    for (int sfx = 0; sfx < 6; sfx++)
                     {
                         string filterSymbol = "";
                         string filterOptName = "";
@@ -497,6 +497,19 @@ namespace HCResourceLibraryApp.Layout
                                 filterOptName = "Source: Updated Contents";
                                 filterStatusOnQ = _searchOpts.IsUsingSource(SourceCategory.Upd);
                                 break;
+
+                            case 5:
+                                filterSymbol = _searchOpts.sourceContent.ToString();
+                                filterOptName = "Source Type: ";
+                                filterOptName += _searchOpts.sourceContent switch
+                                {
+                                    SourceContents.All => "All",
+                                    SourceContents.Ids => "Data IDs Only",
+                                    SourceContents.NId => "No Data IDs",
+                                    _ => ""
+                                };
+                                filterStatusOnQ = true;
+                                break;
                         }
 
                         if (filterSymbol.IsNotNEW() && filterOptName.IsNotNEW())
@@ -516,7 +529,7 @@ namespace HCResourceLibraryApp.Layout
                     // toggle filter settings here
                     exitSearchOptsPageQ = true;
                     if (soInput.IsNotNE())
-                        if (MenuOptions(soInput, out short filterOptNum, "1,2,3,4,5".Split(',')))
+                        if (MenuOptions(soInput, out short filterOptNum, "1,2,3,4,5,6".Split(',')))
                         {
                             bool toggledSourceQ = true;
                             exitSearchOptsPageQ = false;
@@ -524,11 +537,11 @@ namespace HCResourceLibraryApp.Layout
                             {
                                 // case sensitive
                                 case 0:
-                                    _searchOpts = new(!_searchOpts.caseSensitiveQ, _searchOpts.ignoreRelevanceQ, _searchOpts.sourcesUsed);
+                                    _searchOpts = new(!_searchOpts.caseSensitiveQ, _searchOpts.ignoreRelevanceQ, _searchOpts.sourceContent, _searchOpts.sourcesUsed);
                                     break;
                                 // ignore relevance
                                 case 1:
-                                    _searchOpts = new(_searchOpts.caseSensitiveQ, !_searchOpts.ignoreRelevanceQ, _searchOpts.sourcesUsed);
+                                    _searchOpts = new(_searchOpts.caseSensitiveQ, !_searchOpts.ignoreRelevanceQ, _searchOpts.sourceContent, _searchOpts.sourcesUsed);
                                     break;
                                 // base content
                                 case 2:
@@ -541,6 +554,10 @@ namespace HCResourceLibraryApp.Layout
                                 // updated content
                                 case 4:
                                     toggledSourceQ = _searchOpts.ToggleSource(SourceCategory.Upd);
+                                    break;
+                                // source content
+                                case 5:
+                                    _searchOpts.ToggleContent();
                                     break;
                             }
 

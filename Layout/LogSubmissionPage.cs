@@ -251,6 +251,8 @@ namespace HCResourceLibraryApp.Layout
                                 else DataReadingIssue();
                             }
 
+                            // primed for next steps: logDecoder.OverwriteWarning; (boolean) //
+
                             if (logDecoder.HasDecoded)
                             {
                                 /// small section relaying how decoding went

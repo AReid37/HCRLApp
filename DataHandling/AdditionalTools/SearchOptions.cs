@@ -13,6 +13,15 @@ namespace HCResourceLibraryApp.DataHandling
         /// <summary>Sourced from Updated information of Base Content (Precedence:3)</summary>
         Upd,
     }
+    public enum SourceContents
+    {
+        /// <summary>Results will contain data IDs and other content information.</summary>
+        All,
+        /// <summary>Results will only contain data IDs.</summary>
+        Ids,
+        /// <summary>Results will not contain data IDs.</summary>
+        NId
+    }
 
     public struct SearchOptions
     {
@@ -51,16 +60,18 @@ namespace HCResourceLibraryApp.DataHandling
         private bool isSetupQ;
         public bool caseSensitiveQ;
         public bool ignoreRelevanceQ;
+        public SourceContents sourceContent;
         public SourceCategory[] sourcesUsed;
 
 
         // CONSTRUTOR
         /// <param name="sourcesCategoryUsed">If left empty, all source categories will be applied.</param>
-        public SearchOptions(bool isCaseSensitive, bool isIgnoringRelevance, params SourceCategory[] sourcesCategoryUsed)
+        public SearchOptions(bool isCaseSensitive, bool isIgnoringRelevance, SourceContents resultContents, params SourceCategory[] sourcesCategoryUsed)
         {
             isSetupQ = true;
             caseSensitiveQ = isCaseSensitive;
             ignoreRelevanceQ = isIgnoringRelevance;
+            sourceContent = resultContents;
             sourcesUsed = new SourceCategory[3]
             {
                 SourceCategory.Bse,
@@ -97,7 +108,7 @@ namespace HCResourceLibraryApp.DataHandling
             bool areEquals = IsSetup() == so.IsSetup();
             if (areEquals)
             {
-                for (int x = 0; x < 3 && areEquals; x++)
+                for (int x = 0; x < 4 && areEquals; x++)
                 {
                     switch (x)
                     {
@@ -110,6 +121,10 @@ namespace HCResourceLibraryApp.DataHandling
                             break;
 
                         case 2:
+                            areEquals = sourceContent == so.sourceContent;
+                            break;
+
+                        case 3:
                             areEquals = sourcesUsed.HasElements() == so.sourcesUsed.HasElements();
                             if (areEquals && sourcesUsed.HasElements())
                             {
@@ -181,14 +196,25 @@ namespace HCResourceLibraryApp.DataHandling
             }
             return toggledSourcesQ;
         }
+        /// <summary>Toggles <see cref="sourceContent"/>'s value through the source content options that can be retrieved. </summary>
+        /// <remarks>Refer to the values of <see cref="SourceContents"/>.</remarks>
+        public void ToggleContent()
+        {
+            if (IsSetup())
+            {
+                Array scEnum = Enum.GetValues(typeof(SourceContents));
+                sourceContent = (SourceContents)((sourceContent.GetHashCode() + 1) % scEnum.Length);
+            }
+        }
 
         public override string ToString()
         {
             string toStrV = "SO::";
             if (isSetupQ)
             {
-                toStrV += caseSensitiveQ ? "CaseSens " : "";
+                toStrV += caseSensitiveQ ? "CasSen " : "";
                 toStrV += ignoreRelevanceQ ? "IgnRel " : "";
+                toStrV += $"{sourceContent} ";
                 toStrV += IsUsingSource(SourceCategory.Bse) ? "SrcBse " : "";
                 toStrV += IsUsingSource(SourceCategory.Adt) ? "SrcAdt " : "";
                 toStrV += IsUsingSource(SourceCategory.Upd) ? "SrcUpd " : "";

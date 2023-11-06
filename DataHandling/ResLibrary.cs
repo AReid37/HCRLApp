@@ -834,18 +834,21 @@ namespace HCResourceLibraryApp.DataHandling
                         const string updExcerptLimEnd = "~";
                         List<SearchResult> resultBatch = new();
                         ResContents content = Contents[cx];
+                        bool getIdsQ = searchOpts.sourceContent == SourceContents.All || searchOpts.sourceContent == SourceContents.Ids;
+                        bool getInfoQ = searchOpts.sourceContent == SourceContents.All || searchOpts.sourceContent == SourceContents.NId;
                         int dbgPrevBatchCount = 0, dbgCountBase = 0, dbgCountAdt = 0, dbgCountUpd = 0;
+                        
 
                         // source - base content
                         if (searchOpts.IsUsingSource(SourceCategory.Bse))
                         {
                             /// base content name
                             bool? matchContentNameQ = CheckMatch(searchArg, content.ContentName, searchOpts.caseSensitiveQ);
-                            if (matchContentNameQ.HasValue)
+                            if (matchContentNameQ.HasValue && getInfoQ)
                                 resultBatch.Add(new SearchResult(searchArg, searchOpts.ToString(), matchContentNameQ.Value, content.ContentName, content.ContentName, SourceCategory.Bse, content.ShelfID));
 
                             /// base content ids
-                            for (int idx = 0; idx < content.ConBase.CountIDs; idx++)
+                            for (int idx = 0; idx < content.ConBase.CountIDs && getIdsQ; idx++)
                             {
                                 string id = content.ConBase[idx];
                                 bool? matchIDQ = CheckMatch(searchArg, id, searchOpts.caseSensitiveQ);
@@ -856,7 +859,7 @@ namespace HCResourceLibraryApp.DataHandling
 
                             /// base content version
                             bool? matchVersionQ = CheckMatch(searchArg, content.ConBase.VersionNum.ToStringNums(), searchOpts.caseSensitiveQ);
-                            if (matchVersionQ.HasValue)
+                            if (matchVersionQ.HasValue && getInfoQ)
                                 resultBatch.Add(new SearchResult(searchArg, searchOpts.ToString(), matchVersionQ.Value, content.ConBase.VersionNum.ToStringNums(), content.ContentName, SourceCategory.Bse, content.ShelfID));
 
                             dbgCountBase = resultBatch.Count;
@@ -872,11 +875,11 @@ namespace HCResourceLibraryApp.DataHandling
 
                                 /// optional name
                                 bool? matchOptName = CheckMatch(searchArg, conAddits.OptionalName, searchOpts.caseSensitiveQ);
-                                if (matchOptName.HasValue)
+                                if (matchOptName.HasValue && getInfoQ)
                                     resultBatch.Add(new SearchResult(searchArg, searchOpts.ToString(), matchOptName.Value, additName, content.ContentName, SourceCategory.Adt, content.ShelfID));
 
                                 /// data IDs
-                                for (int idx = 0; idx < conAddits.CountIDs; idx++)
+                                for (int idx = 0; idx < conAddits.CountIDs && getIdsQ; idx++)
                                 {
                                     string id = conAddits[idx];
                                     bool? matchIdQ = CheckMatch(searchArg, id, searchOpts.caseSensitiveQ);
@@ -888,13 +891,13 @@ namespace HCResourceLibraryApp.DataHandling
                                 if (!searchOpts.IsUsingSource(SourceCategory.Bse))
                                 {
                                     bool? matchRelIdQ = CheckMatch(searchArg, conAddits.RelatedDataID, searchOpts.caseSensitiveQ);
-                                    if (matchRelIdQ.HasValue)
+                                    if (matchRelIdQ.HasValue && getIdsQ)
                                         resultBatch.Add(new SearchResult(searchArg, searchOpts.ToString(), matchRelIdQ.Value, $"{conAddits.RelatedDataID} {additName}".Trim(), content.ContentName, SourceCategory.Adt, content.ShelfID));
                                 }
 
                                 /// version added number
                                 bool? matchVerQ = CheckMatch(searchArg, conAddits.VersionAdded.ToStringNums(), searchOpts.caseSensitiveQ);
-                                if (matchVerQ.HasValue)
+                                if (matchVerQ.HasValue && getInfoQ)
                                     resultBatch.Add(new SearchResult(searchArg, searchOpts.ToString(), matchVerQ.Value, $"{conAddits.VersionAdded.ToStringNums()} {additName}".Trim(), content.ContentName, SourceCategory.Adt, content.ShelfID));
                             }
 
@@ -909,7 +912,7 @@ namespace HCResourceLibraryApp.DataHandling
                             {
                                 /// change description
                                 bool? matchDescQ = CheckMatch(searchArg, conChanges.ChangeDesc, searchOpts.caseSensitiveQ);
-                                if (matchDescQ.HasValue)
+                                if (matchDescQ.HasValue && getInfoQ)
                                 {
                                     string searchArgMatch = LibrarySearch.HighlightSearchArg(searchArg, conChanges.ChangeDesc);
                                     string shortenedDesc;
@@ -927,13 +930,13 @@ namespace HCResourceLibraryApp.DataHandling
                                 if (!searchOpts.IsUsingSource(SourceCategory.Bse))
                                 {
                                     bool? matchRelIdQ = CheckMatch(searchArg, conChanges.RelatedDataID, searchOpts.caseSensitiveQ);
-                                    if (matchRelIdQ.HasValue)
+                                    if (matchRelIdQ.HasValue && getIdsQ)
                                         resultBatch.Add(new SearchResult(searchArg, searchOpts.ToString(), matchRelIdQ.Value, conChanges.RelatedDataID, content.ContentName, SourceCategory.Upd, content.ShelfID));
                                 }
 
                                 /// version changed number
                                 bool? matchVerQ = CheckMatch(searchArg, conChanges.VersionChanged.ToStringNums(), searchOpts.caseSensitiveQ);
-                                if (matchVerQ.HasValue)
+                                if (matchVerQ.HasValue && getInfoQ)
                                     resultBatch.Add(new SearchResult(searchArg, searchOpts.ToString(), matchVerQ.Value, conChanges.VersionChanged.ToStringNums(), content.ContentName, SourceCategory.Upd, content.ShelfID));
                             }
 
