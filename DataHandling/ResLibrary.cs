@@ -46,6 +46,7 @@ namespace HCResourceLibraryApp.DataHandling
         List<LegendData> _legends, _prevLegends;
         List<SummaryData> _summaries, _prevSummaries;
         List<ResLibIntegrationInfo> rliInfoDock;
+        //List<ResLibOverwriteInfo> rloInfoDock;
 
         // public
         public const string LooseResConName = "!Loose%Content!";
@@ -460,7 +461,7 @@ namespace HCResourceLibraryApp.DataHandling
         }        
         public void Integrate(ResLibrary other, out ResLibIntegrationInfo[] resLibIntegrationInfoDock)
         {
-            Dbug.StartLogging("ResLibrary.Integrate(ResLib)");
+            Dbug.StartLogging("ResLibrary.Integrate()");
             resLibIntegrationInfoDock = null;
             if (other != null)
             {
@@ -485,6 +486,184 @@ namespace HCResourceLibraryApp.DataHandling
             else Dbug.Log("Other ResLibrary is null; ");
             Dbug.EndLogging();
         }
+        
+        // --- WIP ---
+        public void Overwrite(ResLibrary other, out ResLibOverwriteInfo[] resLibOverwriteInfoDock)
+        {
+            /// PLANNING
+            ///     Need : version number, overwriting library (X)
+            ///         Note : version number can be fetched from overwriting library information.   
+            /// 
+            ///     - Get all the contents, legends, and summaries added in version N of this instance (A)
+            ///     - Contents
+            ///         With exception to loose contents, 'A's contents should be organized similarly to 'Xs' contents for simple match up
+            ///         #Base Contents
+            ///             - For every X contents: Adopt As[x] shelf number to Xs[x] then compare (duplicate or different)
+            ///                 If As[x] is same as Xs[x]; discard Xs[x] as 'no changes', else replace object As[x] with Xs[x]
+            ///                 If Xs[x] does not have a matching As[x], use AddContent() to add the new object.
+            ///             - Overwite should note any differences between the two objects if any, and information on the two objects
+            ///                 Notable info: CBG (name, ids), CAs / CCs (loosened* due to CBG ids changes, ids, names, desc)
+            ///         #Loose Contents
+            ///             - For every X contents: Check if As[x] contains data ID of Xs[0] addit/change content
+            ///                 If As[x] addits/change is same as matched Xs[0] addit/change; discard Xs[0] a/c as 'no changes', else replace matching As[x] addits/change object
+            ///                 If Xs[0] addit/change has no base content to connect to; note and discard the addit/change object.
+            ///             - Overwrite should note any difference between the two objects of any, and information on the two objects
+            ///                 Notable info: CA (ids, optName, relName, relID), CC (relID, relName, changeDesc)
+            ///     - Legends
+            ///         Legends in 'A' with a matching version number are the only objects necessary to being checked. Additional definition will be completely ignored.
+            ///         - For every legend in A: If As[x] verNum equals overwriting verNum
+            ///             If As[x] legend key equals Xs[x] legend key and As[x] contains Xs[x] definition, no change; else replace As[x] definition with Xs[x] 
+            ///     - Summaries
+            ///         The summary in 'A' with a matching version number is completely overwritten
+            ///             - For every summary in A: If As[x] summary verNum equals Xs[x] summary verNum
+            ///                 If As[x] summary parts is equivalent to Xs[x] summary parts, 'no changes'; else replace As[x] summary object with Xs[x] summary object
+            ///      
+
+            resLibOverwriteInfoDock = null;
+            if (other != null)
+            {
+                Dbug.StartLogging("ResLibrary.Overwrite()");
+                Dbug.Log($"Received other ResLib instance; Is Setup? {other.IsSetup()};");
+                if (other.IsSetup())
+                {
+                    VerNum verNum = other.Summaries[0].SummaryVersion;
+                    Dbug.Log($"Instance is setup, Contents [{other.Contents.Count}], Legends [{other.Legends.Count}], Summaries [{other.Summaries.Count}], Version to overwrite [{verNum}]; ");
+
+                    ResLibrary libVer = GetVersion(verNum);
+                    if (libVer != null)
+                    {
+                        Dbug.Log($"Fetched library version {verNum.ToStringNums()} -- Is Setup? [{libVer.IsSetup()}] :: Contents? [{libVer.Contents.HasElements()}], Legends? [{libVer.Legends.HasElements()}], Summaries? [{libVer.Summaries.HasElements()}]; ");
+                        bool otherContainsLooseQ = other.Contents[0].ContentName == LooseResConName;
+                        List<ResLibOverwriteInfo> rloInfoDock = new List<ResLibOverwriteInfo>();
+                        Dbug.Log("Initialized ResLibrary Overwrite Info Dock; ");
+
+                        // OVERWRITING : Base Contents
+                        if (libVer.Contents.HasElements())
+                        {
+                            Dbug.Log("Overwriting: Base Contents; ");
+                            Dbug.NudgeIndent(true);
+
+                            /// PLANNING snippet
+                            ///     - Contents
+                            ///         With exception to loose contents, 'A's contents should be organized similarly to 'Xs' contents for simple match up
+                            ///         #Base Contents
+                            ///             - For every X contents: Adopt As[x] shelf number to Xs[x] then compare (duplicate or different)
+                            ///                 If As[x] is same as Xs[x]; discard Xs[x] as 'no changes', else replace object As[x] with Xs[x]
+                            ///                 If Xs[x] does not have a matching As[x], use AddContent() to add the new object.
+                            ///             - Overwite should note any differences between the two objects if any, and information on the two objects
+                            ///                 Notable info: CBG (name, ids), CAs / CCs (loosened* due to CBG ids changes, ids, names, desc)
+                            ///         #Loose Contents
+                            ///             - For every X contents: Check if As[x] contains data ID of Xs[0] addit/change content
+                            ///                 If As[x] addits/change is same as matched Xs[0] addit/change; discard Xs[0] a/c as 'no changes', else replace matching As[x] addits/change object
+                            ///                 If Xs[0] addit/change has no base content to connect to; note and discard the addit/change object.
+                            ///             - Overwrite should note any difference between the two objects of any, and information on the two objects
+                            ///                 Notable info: CA (ids, optName, relName, relID), CC (relID, relName, changeDesc)
+
+                            int ixOtherStart = otherContainsLooseQ ? 1 : 0;
+                            for (int lvx = 0; lvx < libVer.Contents.Count; lvx++)
+                            {
+                                ResContents resConA = libVer.Contents[lvx];
+                                ResContents resConO = null;
+                                if ((lvx + ixOtherStart).IsWithin(0, other.Contents.Count - 1))
+                                    resConO = other.Contents[lvx + ixOtherStart];
+
+                                // ALTERNATIVELY  (and probably for the better)
+                                /// Introduce a method for ResContents, ConBaseGroup, ConAdditionals, and ConChanges that handles self-overwriting (Suggest; .Overwrite())
+                                /// ... rather than squeezing all that work into this method
+                                ///     PROS
+                                ///         - Overwriting content is simplified; 
+                                ///             Instead of removing and replacing content information, the instance edits itself with the new information.
+                                ///         - Overwriting of loose contents is simplified; 
+                                ///             Instead of a complicated process of searching, remomving, and replacing, the connected instance edits itself with the new information
+                                ///     CONS
+                                ///         - Loss of super-detailed Dbug logs possible
+                                ///         - Loss of detailed ResLib Overwrite Info possible; Existing / Overwriting variables may have to change from DataHandlerBase type to string type.
+                                ///             > Counter: the new methods could be made to return ResLib Overwrite Info on use.
+                                ///             
+                                /// ------ aside note ------
+                                /// Regarding cloning; ResContents, LegendData, and SummaryData classes should adapt a new method for proper cloning which will be utilized when adding to library.
+                                ///             
+
+
+                                bool overwriteQ = !resConA.Equals(resConO);
+                                if (overwriteQ)
+                                {
+                                    ResContents resConNew = new ResContents();
+                                    ContentBaseGroup conBaseNew;
+                                    if (!resConA.ConBase.Equals(resConO.ConBase))
+                                        conBaseNew = new ContentBaseGroup(verNum, resConO.ConBase.ContentName, resConO.ConBase.DataIDString.Split(" "));
+                                    else conBaseNew = new ContentBaseGroup(verNum, resConA.ConBase.ContentName, resConA.ConBase.DataIDString.Split(" "));
+
+                                    List<ContentAdditionals> conAdditsNew = new List<ContentAdditionals>();
+                                    List<ContentChanges> conChangesNew = new List<ContentChanges>();
+                                    if (resConA.ConAddits.HasElements() || resConO.ConAddits.HasElements())
+                                    {
+                                        bool noAdditsQ = false;
+                                        int diffVerPenaltyIx = 0;
+                                        for (int cax = 0; !noAdditsQ; cax++)
+                                        {
+                                            ContentAdditionals additA = null, additO = null, additNew = null;
+                                            if (resConA.ConAddits.HasElements(cax + 1))
+                                                additA = resConA.ConAddits[cax];
+                                            if (resConO.ConAddits.HasElements(cax + 1 - diffVerPenaltyIx))
+                                                additO = resConO.ConAddits[cax - diffVerPenaltyIx];
+
+                                            noAdditsQ = additO == null && additA == null;
+                                            if (!noAdditsQ)
+                                            {
+                                                bool overrideAdditNewQ = false;
+                                                if (additA != null && additO != null)
+                                                {
+                                                    overrideAdditNewQ = false;
+                                                    if (additA.VersionAdded.Equals(verNum))
+                                                        overrideAdditNewQ = !additA.Equals(additO);
+                                                    else diffVerPenaltyIx++;
+                                                }
+                                                else if (additA == null)
+                                                {
+                                                    overrideAdditNewQ = true;
+                                                }
+                                                else if (additO == null)
+                                                {
+                                                    
+                                                }
+
+                                                if (overrideAdditNewQ)
+                                                    additNew = new ContentAdditionals(verNum, additO.RelatedDataID, additO.OptionalName, additO.DataIDString.Split(" "));
+                                                else additNew = new ContentAdditionals(verNum, additA.RelatedDataID, additA.OptionalName, additA.DataIDString.Split(" "));
+                                            }
+
+                                            if (additNew != null)
+                                                if (additNew.IsSetup())
+                                                    conAdditsNew.Add(additNew);
+                                        }
+                                    }
+                                }
+                            }
+
+                            Dbug.NudgeIndent(false);
+                        }
+
+                        // OVERWRITING : Legend Contents
+
+
+                        // OVERWRITING : Summary Contents
+
+
+                    }
+                    else Dbug.Log($"Could not fetch library version details; Cancelling overwriting; ");
+
+
+
+
+                }
+                else Dbug.Log("Instance is not setup; Cancelling overwriting; ");
+                Dbug.EndLogging();
+            }
+
+        }
+        // --- WIP ---
+
         public bool GetVersionRange(out VerNum lowest, out VerNum highest)
         {
             lowest = VerNum.None;
@@ -1124,6 +1303,177 @@ namespace HCResourceLibraryApp.DataHandling
             }
 
             return results.ToArray();
+        }
+        /// <summary>Generates a copy of the current instance.</summary>
+        public ResLibrary CloneLibrary()
+        {
+            ResLibrary clone = null;
+            bool prevDADbg = disableAddDbug;
+            disableAddDbug = true;
+            Dbug.StartLogging("ResLibrary.CloneLibrary()");
+            Dbug.Log($"Cloning current ResLibrary instance; Instance is setup? {IsSetup()} [#:{GetHashCode()}]; ");
+            if (IsSetup())
+            {
+                Dbug.LogPart(">> Cloning  ::  ");
+                clone = new ResLibrary();
+
+                Dbug.LogPart($"Contents [{Contents.Count}] / ");
+                clone.AddContent(Contents.ToArray());
+
+                Dbug.LogPart($"Legends [{Legends.Count}] / ");
+                clone.AddLegend(Legends.ToArray());
+
+                Dbug.LogPart($"Summaries [{Summaries.Count}]");
+                clone.AddSummary(Summaries.ToArray());
+
+                Dbug.Log($"  //  Clone ResLibrary instance returned [#:{clone.GetHashCode()}]; ");
+            }
+            else Dbug.Log("Cloning cancelled; NULL instance returned [#:--]; ");
+
+            disableAddDbug = prevDADbg;
+            return clone;
+        }
+        /// <summary>Fetches the contents, legends, and summaries introduced in a given <paramref name="version"/>. The returned instance may not have elements for all collections.</summary>
+        public ResLibrary GetVersion(VerNum version)
+        {
+            //Dbug.DeactivateNextLogSession();
+            //Dbug.StartLogging("ResLibrary.GetVersion()");
+            ResLibrary verLogDetails = new();
+            List<string> allDataIDs = new();
+            
+            if (IsSetup())
+            {
+                for (int rdx = 0; rdx < 3; rdx++)
+                {
+                    switch (rdx)
+                    {
+                        // contents - get matching ver log number
+                        case 0:
+                            List<ResContents> resContents = new();
+                            List<string> looseDataIDs = new();
+                            List<ContentAdditionals> looseConAddits = new();
+                            List<ContentChanges> looseConChanges = new();
+
+                            /// filtering occurs here
+                            foreach (ResContents resCon in Contents)
+                            {
+                                ResContents clone = null;
+                                if (resCon != null)
+                                    if (resCon.IsSetup())
+                                    {
+                                        bool fetchedConBaseQ = false;
+
+                                        // ConBase
+                                        if (resCon.ConBase.VersionNum.Equals(version))
+                                        {
+                                            fetchedConBaseQ = true;
+                                            clone = new ResContents(resCon.ShelfID, resCon.ConBase);
+                                            allDataIDs.AddRange(resCon.ConBase.DataIDString.Split(' '));
+
+                                            /// ConAddits (same ver)
+                                            if (resCon.ConAddits.HasElements())
+                                            {
+                                                foreach (ContentAdditionals rca in resCon.ConAddits)
+                                                    if (rca.VersionAdded.Equals(version))
+                                                    {
+                                                        ContentAdditionals rcaClone =
+                                                            new(rca.VersionAdded, rca.RelatedDataID, rca.OptionalName, rca.DataIDString.Split(' '));
+                                                        rcaClone.ContentName = clone.ContentName;
+
+                                                        clone.StoreConAdditional(rcaClone);
+                                                        allDataIDs.AddRange(rca.DataIDString.Split(' '));
+                                                    }
+                                            }
+
+                                            /// ConChanges (same ver)
+                                            if (resCon.ConChanges.HasElements())
+                                            {
+                                                foreach (ContentChanges rcc in resCon.ConChanges)
+                                                    if (rcc.VersionChanged.Equals(version))
+                                                    {
+                                                        clone.StoreConChanges(rcc);
+                                                        allDataIDs.Add(rcc.RelatedDataID);
+                                                    }
+                                            }
+
+                                            resContents.Add(clone);
+                                        }
+
+                                        // ConAddits (loose)
+                                        if (!fetchedConBaseQ)
+                                        {
+                                            if (resCon.ConAddits.HasElements())
+                                                foreach (ContentAdditionals ca in resCon.ConAddits)
+                                                    if (ca.VersionAdded.Equals(version))
+                                                    {
+                                                        looseDataIDs.Add(ca.RelatedDataID);
+                                                        ContentAdditionals caClone =
+                                                            new(ca.VersionAdded, ca.RelatedDataID, ca.OptionalName, ca.DataIDString.Split(' '));
+                                                        caClone.ContentName = resCon.ContentName;
+                                                        looseConAddits.Add(caClone);
+
+                                                        allDataIDs.Add(ca.RelatedDataID);
+                                                        allDataIDs.AddRange(ca.DataIDString.Split(' '));
+                                                    }
+                                        }
+
+                                        // ConChanges (loose)
+                                        if (!fetchedConBaseQ)
+                                        {
+                                            if (resCon.ConChanges.HasElements())
+                                                foreach (ContentChanges cc in resCon.ConChanges)
+                                                    if (cc.VersionChanged.Equals(version))
+                                                    {
+                                                        looseDataIDs.Add(cc.RelatedDataID);
+                                                        looseConChanges.Add(cc);
+
+                                                        allDataIDs.Add(cc.RelatedDataID);
+                                                    }
+                                        }
+                                    }
+                            }
+
+                            /// load into instance
+                            ResContents looseResCon = new(0, new ContentBaseGroup(version, LooseResConName, looseDataIDs.ToArray()));
+                            foreach (ContentAdditionals lca in looseConAddits)
+                                looseResCon.StoreConAdditional(lca);
+                            foreach (ContentChanges lcc in looseConChanges)
+                                looseResCon.StoreConChanges(lcc);
+
+                            resContents.Insert(0, looseResCon);
+                            verLogDetails.AddContent(true, resContents.ToArray());
+                            break;
+
+
+                        // legends - get of matching ver log number
+                        case 1:
+                            for (int legx = 0; legx < Legends.Count; legx++)
+                            {
+                                if (Legends[legx].VersionIntroduced.Equals(version))
+                                    verLogDetails.AddLegend(Legends[legx]);
+                            }
+                            break;
+
+
+                        // summaries - get of matching ver log number
+                        case 2:
+                            bool fetchedSummaryQ = false;
+                            for (int sumx = 0; !fetchedSummaryQ && sumx < Summaries.Count; sumx++)
+                            {
+                                if (Summaries[sumx].SummaryVersion.Equals(version))
+                                {
+                                    fetchedSummaryQ = true;
+                                    verLogDetails.AddSummary(Summaries[sumx]);
+                                }
+                            }
+                            break;
+                    }
+                }
+            }
+
+            //Dbug.EndLogging();
+
+            return verLogDetails;
         }
 
 

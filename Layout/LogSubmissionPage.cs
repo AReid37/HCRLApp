@@ -251,8 +251,6 @@ namespace HCResourceLibraryApp.Layout
                                 else DataReadingIssue();
                             }
 
-                            // primed for next steps: logDecoder.OverwriteWarning; (boolean) //
-
                             if (logDecoder.HasDecoded)
                             {
                                 /// small section relaying how decoding went
@@ -297,21 +295,86 @@ namespace HCResourceLibraryApp.Layout
                                     /// integrate into library
                                     else
                                     {
-                                        mainLibrary.Integrate(logDecoder.DecodedLibrary, out ResLibIntegrationInfo[] resLibIntInfoDock);
-                                        
-                                        /// report of connections for loose contents
-                                        if (resLibIntInfoDock.HasElements())
+                                        bool notNormalIntegrationQ = false;
+                                        NewLine(2);
+                                        Title("Integration Evaluation", subMenuUnderline, 0);
+                                        Format($"{Ind14}Generating outcome of library integration. This may take a moment...", ForECol.Accent);
+                                        ResLibrary tangentLibrary = mainLibrary.CloneLibrary();
+                                        NewLine();
+
+                                        /// IF; integrate overwrite
+                                        if (logDecoder.OverwriteWarning)
                                         {
-                                            NewLine();
-                                            Title("Loose Contents Connection Reports");
-                                            DisplayIntegrationInfo(resLibIntInfoDock);
-                                            NewLine();
+                                            tangentLibrary.Overwrite(logDecoder.DecodedLibrary, out ResLibOverwriteInfo[] resLibOverInfoDock);
+
+                                            /// report of overwriting contents
+                                            if (resLibOverInfoDock.HasElements())
+                                            {
+                                                notNormalIntegrationQ = true;
+                                                Title("Overwriting Contents Outcome");
+                                                // DisplayOverwritingInfo(...)
+                                                NewLine();
+                                            }                                           
                                         }
 
-                                        /// user validation of content integration
-                                        Format($"{Ind24}Integrated contents into library.", ForECol.Correction);
-                                        Pause();
-                                        exitSubmissionPage = true;
+                                        /// ELSE; intergrate loose
+                                        else
+                                        {
+                                            tangentLibrary.Integrate(logDecoder.DecodedLibrary, out ResLibIntegrationInfo[] resLibIntInfoDock);
+
+                                            /// report of connections for loose contents
+                                            if (resLibIntInfoDock.HasElements())
+                                            {
+                                                notNormalIntegrationQ = true;
+                                                NewLine();
+                                                Title("Loose Contents Connection Outcome");
+                                                DisplayIntegrationInfo(resLibIntInfoDock);
+                                                NewLine();
+                                            }
+                                        }
+
+
+                                        // user validation of content integration
+                                        /// IF loose content integration -or- overwrite integration: integration requires confirmation; ELSE integration automatic
+                                        if (!notNormalIntegrationQ)
+                                        {
+                                            FormatLine($"{Ind14}The section above estimates the outcome of {(logDecoder.OverwriteWarning? "overwrit" : "integrat")}ing the decoded contents.", ForECol.Warning);
+                                            Confirmation($"{Ind14}Confirm {(logDecoder.OverwriteWarning ? "overwriting with" : "integration of")} decoded contents? ", true, out bool yesNo);
+                                            
+                                            if (!yesNo)
+                                            {
+                                                NewLine();
+                                                FormatLine($"{Ind14}By cancelling integration / overwriting of new contents, log submission will end.", ForECol.Accent);
+                                                Confirmation($"{Ind14}Are you sure you wish to cancel this process? ", true, out bool yesNoProcess);
+
+                                                if (yesNoProcess)
+                                                {
+                                                    stopSubmission = true;
+                                                    pathToVersionLog = null;
+                                                }
+                                                else unallowStagePass = true;
+                                            }
+
+                                            if (yesNo)
+                                            {
+                                                /// OVERWRITE integration
+                                                if (logDecoder.OverwriteWarning)
+                                                    mainLibrary.Overwrite(logDecoder.DecodedLibrary, out _);
+                                                /// LOOSE CONTENT integration
+                                                else mainLibrary.Integrate(logDecoder.DecodedLibrary, out _);
+                                                exitSubmissionPage = true;
+                                            }
+
+                                            if (!unallowStagePass)
+                                                ConfirmationResult(yesNo, $"{Ind24}", $"Contents {(logDecoder.OverwriteWarning ? "overwritten " : " integrated in")}to library.", $"Content {(logDecoder.OverwriteWarning ? "overwriting" : "integration")} cancelled.");
+                                        }
+                                        else
+                                        {
+                                            mainLibrary.Integrate(logDecoder.DecodedLibrary, out _);
+                                            Format($"{Ind24}Integrated new contents into library.", ForECol.Correction);
+                                            Pause();
+                                            exitSubmissionPage = true;
+                                        }
                                     }
                                 }
                             }
@@ -381,7 +444,7 @@ namespace HCResourceLibraryApp.Layout
             //    Program.SaveData(true);
         }
         
-        // public for now, so i may test it
+        // public, so i may test it
         public static void DisplayLogInfo(LogDecoder logDecoder, bool showDecodeInfosQ)
         {
             /** RELATED INFO FROM DESIGN DOC

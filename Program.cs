@@ -12,7 +12,7 @@ namespace HCResourceLibraryApp
     public class Program
     {
         static readonly string consoleTitle = "High Contrast Resource Library App";
-        static readonly string developmentVersion = "[v1.3.0a]";
+        static readonly string developmentVersion = "[v1.3.0b]";
         static readonly string lastPublishedVersion = "[v1.3.0]";
         /// <summary>If <c>true</c>, the application launches for debugging/development. Otherwise, the application launches for the published version.</summary>
         public static readonly bool isDebugVersionQ = true;
@@ -296,7 +296,7 @@ namespace HCResourceLibraryApp
 
 
         // TESTING STUFF
-        static readonly bool runTest = false;
+        static readonly bool runTest = true;
         static readonly Tests testToRun = Tests.MiscRoom;
         enum Tests
         {
@@ -1133,7 +1133,7 @@ namespace HCResourceLibraryApp
                 /// Misc Room
                 else if (testToRun == Tests.MiscRoom)
                 {
-                    char miscKey = 'f';
+                    char miscKey = 'g';
                     string miscTestName = "<None>";
                     switch (miscKey)
                     {
@@ -1159,6 +1159,10 @@ namespace HCResourceLibraryApp
 
                         case 'f':
                             miscTestName = "File Chooser Page";
+                            break;
+
+                        case 'g':
+                            miscTestName = "Nested Instance Cloning";
                             break;
                     }
 
@@ -1639,6 +1643,81 @@ namespace HCResourceLibraryApp
                         NewLine(2);
                         Text($"# Test End #", Color.Orange);
                         Pause();
+                    }
+                    #endregion
+
+                    #region miscG: nestedInstanceCloning
+                    if (miscKey == 'g')
+                    {
+                        hasDebugQ = false;
+                        NewLine();
+                        TextLine("This tests the referencing of classes within a collection of classes for differences (Verification of being a separate object).");
+                        TextLine("The differences will be verified by checking the hashcode (#) of the objects", Color.Yellow);
+                        
+                        NewLine(2);
+                        Title("Simple Example - struct instances");
+                        VerNum v1 = new VerNum(1, 0);
+                        VerNum v2 = new VerNum(1, 1);
+                        TextLine($"VerNum1 ('{v1}' | #{v1.GetHashCode()})\nVerNum2 ('{v2}' | #{v2.GetHashCode()})");
+
+
+                        NewLine(2);
+                        Title("Simple Example 2 - class instances");
+                        BugIdeaInfo b1 = new BugIdeaInfo(false, "Not bug");
+                        BugIdeaInfo b2 = new BugIdeaInfo(true, "Is a bug");
+                        TextLine($"BugIdea1 ('{b1.Encode().Replace("%", "-")}' | #{b1.GetHashCode()})\nBugIdea2 ('{b2.Encode().Replace("%", "-")}' | #{b2.GetHashCode()})");
+                        Text("True Test follow after...", Color.DarkGray);
+                        Pause();
+
+
+                        NewLine(2);
+                        Title("Nested Instances Test - classes and lists");
+                        VerNum verNum = new VerNum(1, 3);
+                        ResLibrary lib1 = new ResLibrary();
+                        ContentBaseGroup cbg1a = new ContentBaseGroup(verNum, "Object 1", "o0");
+                        ContentBaseGroup cbg1b = new ContentBaseGroup(verNum, "Object 2", "o1", "o2", "j1");
+                        ResContents resCon1a = new ResContents(null, cbg1a);
+                        ResContents resCon1b = new ResContents(null, cbg1b);
+                        LegendData legDat1a = new LegendData("o", verNum, "Object");
+                        LegendData legDat1b = new LegendData("j", verNum, "Jj");
+                        SummaryData sumDat1 = new SummaryData(verNum, 2, "Testing testing...");
+                        lib1.AddContent(resCon1a, resCon1b);
+                        lib1.AddLegend(legDat1a, legDat1b);
+                        lib1.AddSummary(sumDat1);
+                        ResLibrary lib2 = lib1.CloneLibrary();
+                        //// -- display
+                        Color sectionCol = Color.Teal;
+                        /// 1. raw material
+                        TextLine("Raw Materials", sectionCol);
+                        TextLine($"ConBase 1a ('{cbg1a}' | #{cbg1a.GetHashCode()})\nConBase 1b ('{cbg1b}' | #{cbg1b.GetHashCode()})");
+                        TextLine($"ResContent 1a ('{resCon1a}' | #{resCon1a.GetHashCode()})\nResContent 1b ('{resCon1b}' | #{resCon1b.GetHashCode()})");
+                        TextLine($"Legend 1a ('{legDat1a}' | #{legDat1a.GetHashCode()})\nLegend 1b ('{legDat1b}') | #{legDat1b.GetHashCode()})");
+                        TextLine($"Summary 1 ('{sumDat1}' | #{sumDat1.GetHashCode()})");
+                        /// 2. original library compile
+                        TextLine("Library 1", sectionCol);
+                        TextLine($"Lib1 (#{lib1.GetHashCode()})\nContents (#{lib1.Contents.GetHashCode()}) | Legends (#{lib1.Legends.GetHashCode()}) | Summaries (#{lib1.Summaries.GetHashCode()})");
+                        TextLine($"  RC1a (#{lib1.Contents[0].GetHashCode()}) |> CBG1a (#{lib1.Contents[0].ConBase.GetHashCode()})");
+                        TextLine($"  RC1b (#{lib1.Contents[1].GetHashCode()}) |> CBG1b (#{lib1.Contents[1].ConBase.GetHashCode()})");
+                        TextLine($"  Leg1a (#{lib1.Legends[0].GetHashCode()}) | Leg1b (#{lib1.Legends[1].GetHashCode()}) | Sum1 (#{lib1.Summaries[0].GetHashCode()})");
+                        /// 3. cloned library compile
+                        TextLine("Cloned Library 1", sectionCol);
+                        TextLine($"Lib2 (#{lib2.GetHashCode()})\nContents (#{lib2.Contents.GetHashCode()}) | Legends (#{lib2.Legends.GetHashCode()}) | Summaries (#{lib2.Summaries.GetHashCode()})");
+                        TextLine($"  RC1a (#{lib2.Contents[0].GetHashCode()}) |> CBG1a (#{lib2.Contents[0].ConBase.GetHashCode()})");
+                        TextLine($"  RC1b (#{lib2.Contents[1].GetHashCode()}) |> CBG1b (#{lib2.Contents[1].ConBase.GetHashCode()})");
+                        TextLine($"  Leg1a (#{lib2.Legends[0].GetHashCode()}) | Leg1b (#{lib2.Legends[1].GetHashCode()}) | Sum1 (#{lib2.Summaries[0].GetHashCode()})");
+                        /// 4. changing data
+                        TextLine("* Adding a definition to 1st LegData of cloned library. *", sectionCol);
+                        lib2.Legends[0].AddKeyDefinition("Obj");
+                        TextLine($"Lib1 |> Leg1a ('{lib1.Legends[0]}' | #{lib1.Legends[0].GetHashCode()})");
+                        TextLine($"Lib2 |> Leg1a ('{lib2.Legends[0]}' | #{lib2.Legends[0].GetHashCode()})");
+
+                        NewLine();
+                        TextLine("Conclusion", sectionCol);
+                        Text("If a new class object is not created. It will remain referenced; the same object will exist in different list and be edited simultaneously. ");
+                        TextLine("Library cloning process was edited to fix this issue shortly after the end of the tests. May not reflect observed issues in later versions.", Color.DarkGray);
+
+                        // PAUSE HERE
+                        /// Regarding cloning, the ResContents, LegendData, and SummaryData classes should adapt a new method for proper cloning which will be utilized when adding to library.
                     }
                     #endregion
                 }
