@@ -8,20 +8,6 @@ using System.Diagnostics;
 
 namespace HCResourceLibraryApp.Layout
 {
-    /// <summary>Foreground Element Color</summary>
-    public enum ForECol
-    {
-        Normal,
-        Highlight, 
-        Accent,
-        Correction, 
-        Incorrection, 
-        Warning,
-        Heading1, 
-        Heading2,
-        InputColor
-    }
-
     public static class PageBase
     {
         /* WHAT SHOULD PAGE BASE INCLUDE?

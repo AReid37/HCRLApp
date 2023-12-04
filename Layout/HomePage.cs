@@ -4,7 +4,6 @@ using ConsoleFormat;
 using static ConsoleFormat.Minimal;
 using static ConsoleFormat.Base;
 using static HCResourceLibraryApp.Layout.PageBase;
-using HCResourceLibraryApp.DataHandling;
 
 namespace HCResourceLibraryApp.Layout
 {

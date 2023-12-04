@@ -7,16 +7,6 @@ using static HCResourceLibraryApp.Layout.PageBase;
 
 namespace HCResourceLibraryApp.Layout
 {
-    public enum FileChooserType
-    {
-        /// <summary>Only select file items.</summary>
-        Files, 
-        /// <summary>Only select directory (folder) items.</summary>
-        Folders,
-        /// <summary>Select either directory (folder) or file items.</summary>
-        All
-    }
-
     public class FileChooserPage
     {
         static readonly char subMenuUnderline = '|';

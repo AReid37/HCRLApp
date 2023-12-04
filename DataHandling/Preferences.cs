@@ -4,33 +4,6 @@ using ConsoleFormat;
 
 namespace HCResourceLibraryApp.DataHandling
 {
-    public enum DimHeight
-    {
-        /// <summary>40% height scale.</summary>
-        Squished,
-        /// <summary>50% height scale.</summary>
-        Short,
-        /// <summary>60% height scale.</summary>
-        Normal,
-        /// <summary>80% height scale.</summary>
-        Tall,
-        /// <summary>100% height scale.</summary>
-        Fill
-    }
-    public enum DimWidth
-    {
-        /// <summary>40% width scale.</summary>
-        Thin,
-        /// <summary>50% width scale.</summary>
-        Slim,
-        /// <summary>60% width scale.</summary>
-        Normal,
-        /// <summary>80% width scale.</summary>
-        Broad,
-        /// <summary>100% width scale.</summary>
-        Fill
-    }
-
     public class Preferences : DataHandlerBase
     {
         #region props / fields

@@ -238,6 +238,37 @@ namespace HCResourceLibraryApp.DataHandling
 		{
 			return _summaryVersion.HasValue() && _ttaNumber >= 0 && _summaryParts.HasElements();
 		}
+		public SummaryData CloneSummary()
+		{
+			SummaryData clone = null;
+			if (IsSetup())
+				clone = new SummaryData(SummaryVersion, TTANum, SummaryParts.ToArray());
+			return clone;
+        }
+		public void Overwrite(SummaryData sumNew, out ResLibOverwriteInfo info)
+		{
+			info = new ResLibOverwriteInfo();
+			if (IsSetup() && sumNew != null)
+			{
+				/// considerations
+				///		- the overwriting summary should have the same version number as existing
+				///			- the summary is completely overwritten: the tta number and summary parts are all overwritten where applicable.
+
+				info = new ResLibOverwriteInfo(ToString(), sumNew.ToString(), SourceOverwrite.Summary);
+				if (sumNew.IsSetup() && !Equals(sumNew))
+				{
+					if (SummaryVersion.Equals(sumNew.SummaryVersion))
+					{
+						_ttaNumber = sumNew._ttaNumber;
+						_summaryParts.Clear();
+						_summaryParts.AddRange(sumNew._summaryParts.ToArray());
+						info.SetOverwriteStatus();
+					}
+					else info.SetOverwriteStatus(false);
+				}
+			}
+		}
+
 
 		public override string ToString()
 		{

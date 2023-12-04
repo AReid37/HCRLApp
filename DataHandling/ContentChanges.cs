@@ -52,6 +52,7 @@
 		// private
 		VerNum _versionChanged, _prevVersionChanged;
 		string _internalName, _relatedDataID, _changeDesc, _prevInternalName, _prevRelatedDataID, _prevChangeDesc;
+		int _relatedShelfID;
 
 		//public
 		public const string ccIdentityKey = "^";
@@ -95,9 +96,14 @@
 					_changeDesc = value;
             }
         }
-		#endregion
+        /// <summary>The Shelf ID of the related <see cref="ResContents"/> instance.</summary>
+        public int RelatedShelfID
+        {
+            get => _relatedShelfID;
+        }
+        #endregion
 
-		public ContentChanges() { }
+        public ContentChanges() { }
 		public ContentChanges(VerNum verNumChanged, string internalName, string relatedDataID, string description)
         {
 			VersionChanged = verNumChanged;
@@ -232,6 +238,63 @@
 		public override bool IsSetup()
         {
 			return _versionChanged.HasValue() && /*_internalName.IsNotNEW() &&*/ _relatedDataID.IsNotNEW() && _changeDesc.IsNotNEW();
+        }
+		public ContentChanges Clone()
+		{
+			ContentChanges clone = null;
+			if (IsSetup())
+			{
+                clone = new ContentChanges(VersionChanged, InternalName, RelatedDataID, ChangeDesc);
+				clone.AdoptShelfID(_relatedShelfID);
+            }
+			return clone;
+		}
+        /// <returns>A loosened instance of this (existing or overwritten) object if it no longer relates to its parent <see cref="ResContents"/>. Returns a <c>null</c> value otherwise.</returns>
+        public ContentChanges OverwriteLoose(ContentChanges looseCc, ResContents parentRC, out ResLibOverwriteInfo info)
+		{
+			ContentChanges loosenedCc = null;
+			info = new ResLibOverwriteInfo();
+			if (IsSetup() && looseCc != null)
+			{
+                /// considerations
+                ///		- the overwriting loose changes should have the same related data ID and version number as the existing
+                ///			- If it does, then overwriting can replace the existing info
+                ///			- If not, then the overwriting is ignored; the existing info cannot be overwritten (must enter through regular integration)
+
+				if (looseCc.IsSetup() && !Equals(looseCc))
+				{
+					info = new ResLibOverwriteInfo(ToString(), looseCc.ToString());
+					info.SetSourceSubCategory(SourceCategory.Upd);
+					if (RelatedDataID == looseCc.RelatedDataID && VersionChanged.Equals(looseCc.VersionChanged))
+					{
+						if (looseCc.InternalName.IsNotEW() && looseCc.InternalName != ResLibrary.LooseResConName)
+							InternalName = looseCc.InternalName;
+						ChangeDesc = looseCc.ChangeDesc;
+						info.SetOverwriteStatus();
+					}
+					else info.SetOverwriteStatus(false);
+
+
+                    /// check if loosened
+                    if (parentRC != null)
+                    {
+                        if (parentRC.IsSetup())
+                            if (!parentRC.ContainsDataID(RelatedDataID, out _))
+                            {
+                                loosenedCc = Clone();
+                                parentRC.DisposeConChanges(loosenedCc);
+                            }
+                    }
+                }
+            }
+
+			return loosenedCc;
+        }
+        /// <summary>Stores the Shelf ID of the related <see cref="ResContents"> instance. Minimum value of <c>0</c>.</summary>
+        public void AdoptShelfID(int shelfID)
+        {
+            if (shelfID >= 0 && _relatedShelfID == ResContents.NoShelfNum)
+                _relatedShelfID = shelfID;
         }
 
         public override string ToString()

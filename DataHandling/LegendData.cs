@@ -316,12 +316,47 @@ namespace HCResourceLibraryApp.DataHandling
         {
             return _key.IsNotNEW() && _definitions.HasElements();
         }
+        public LegendData CloneLegend()
+        {
+            LegendData clone = null;
+            if (IsSetup())
+                clone = new LegendData(Key, VersionIntroduced, _definitions.ToArray());
+            return clone;
+        }
+        public void Overwrite(LegendData legNew, out ResLibOverwriteInfo info)
+        {
+            info = new ResLibOverwriteInfo();
+            if (IsSetup() && legNew != null)
+            {
+                /// considerations
+				///		- the overwriting info must have the same key as existing
+                ///		    - if same key 'and' same version or before, the existing key's first definition is replaced with the overwriting's first definition 
+                ///		    - if same key 'and' version after, the overwriting's definition is added to existing's definitions list
+                ///		    - if not same key, the overwriting definition is ignored; the existing remains unedited
+
+                if (legNew.IsSetup() && !Equals(legNew))
+                {
+                    info = new ResLibOverwriteInfo(ToString(), legNew.ToString(), SourceOverwrite.Legend);
+                    if (Key == legNew.Key)
+                    {
+                        if (VersionIntroduced.AsNumber <= legNew.VersionIntroduced.AsNumber)
+                        {
+                            _definitions[0] = legNew[0];
+                            info.SetOverwriteStatus();
+                        }
+                        else
+                        {
+                            AddKeyDefinition(legNew[0]);
+                            info.SetOverwriteStatus();
+                        }
+                    }
+                    else info.SetOverwriteStatus(false);
+                }
+            }
+        }
+
 
         public override string ToString()
-        {
-            return Encode().Replace(Sep, ";").Clamp(50, "...");
-        }
-        public string ToStringLengthy()
         {
             return Encode().Replace(Sep, ";");
         }

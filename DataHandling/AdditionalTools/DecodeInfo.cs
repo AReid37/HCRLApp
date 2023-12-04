@@ -1,23 +1,5 @@
 ﻿namespace HCResourceLibraryApp.DataHandling
 {
-    public enum DecodedSection
-    {
-        /// <summary>Version</summary>
-        Version, 
-        /// <summary>Added</summary>
-        Added,
-        /// <summary>Additional</summary>
-        Additional,
-        /// <summary>Total Textures Added</summary>
-        TTA,
-        /// <summary>Updated</summary>
-        Updated,
-        /// <summary>Legend</summary>
-        Legend,
-        /// <summary>Summary</summary>
-        Summary
-    }
-
     /// <summary>Relays information regarding the decoding process of each line from version log files.</summary>
     public struct DecodeInfo
     {

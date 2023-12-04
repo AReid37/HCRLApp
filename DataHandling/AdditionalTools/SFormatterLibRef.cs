@@ -311,25 +311,4 @@ namespace HCResourceLibraryApp.DataHandling
             return _isSetupQ;
         }
     }
-
-    /// <summary>Properties for Library References (Steam Formatter Usage).</summary>
-    public enum LibRefProp
-    {
-        /// <summary>Applies to: <see cref="DecodedSection.Added"/>, <see cref="DecodedSection.Additional"/>; Fetches content's data IDs.</summary>
-        Ids,
-        /// <summary>Applies to: <see cref="DecodedSection.Added"/>, <see cref="DecodedSection.Additional"/>; Fetches content name (optional content name for <see cref="DecodedSection.Additional"/>).</summary>
-        Name,
-        /// <summary>Applies to: <see cref="DecodedSection.Additional"/>, <see cref="DecodedSection.Updated"/>; Fetches related content ID.</summary>
-        RelatedID,
-        /// <summary>Applies to: <see cref="DecodedSection.Additional"/>, <see cref="DecodedSection.Updated"/>; Fetches related content name.</summary>
-        RelatedName,
-        /// <summary>Applies only to <see cref="DecodedSection.Updated"/>; Fetches change description.</summary>
-        ChangeDesc,
-        /// <summary>Applies only to <see cref="DecodedSection.Legend"/>; Fetches legend key.</summary>
-        Key,
-        /// <summary>Applies only to <see cref="DecodedSection.Legend"/>; Fetches legend key definition.</summary>
-        Definition,
-        /// <summary>Applies only to <see cref="DecodedSection.Summary"/>; Fetches summary parts.</summary>
-        SummaryPart
-    }
 }

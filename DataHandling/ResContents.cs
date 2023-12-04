@@ -2,14 +2,6 @@
 
 namespace HCResourceLibraryApp.DataHandling
 {
-    public enum RCFetchSource
-    {
-        None,
-        ConBaseGroup,
-        ConAdditionals,
-        ConChanges
-    }
-
     /// <summary>Short-hand for "ResourceContents".</summary>
     public class ResContents : DataHandlerBase
     {
@@ -58,13 +50,13 @@ namespace HCResourceLibraryApp.DataHandling
         #region fields / props
         // private
         const string Sep3 = Sep + Sep + Sep;
-        const int noShelfNum = -1;
         int _shelfID, _prevShelfID;
         ContentBaseGroup _conBase, _prevConBase;
         List<ContentAdditionals> _conAddits, _prevConAddits;
         List<ContentChanges> _conChanges, _prevConChanges;
 
         // public
+        public const int NoShelfNum = -1;
         /// <summary>Also serves as the saving tag for this ResCon.</summary>
         public int ShelfID
         {
@@ -106,29 +98,41 @@ namespace HCResourceLibraryApp.DataHandling
 
         public ResContents()
         {
-            ShelfID = noShelfNum;
+            ShelfID = NoShelfNum;
             ConBase = new ContentBaseGroup();
         }      
         public ResContents(int? shelfID, ContentBaseGroup conBase)
         {
             if (shelfID.HasValue)
                 ShelfID = shelfID.Value;
-            else ShelfID = noShelfNum;
-            ConBase = conBase;
+            else ShelfID = NoShelfNum;
+
+            if (conBase != null)
+                ConBase = conBase;
+            else ConBase = new();
+            ConBase.AdoptShelfID(ShelfID);
         }
         public ResContents(int? shelfID, ContentBaseGroup conBase, ContentAdditionals[] additionals, ContentChanges[] changes) 
         {
             if (shelfID.HasValue)
                 ShelfID = shelfID.Value;
-            else ShelfID = noShelfNum;
-            ConBase = conBase;
+            else ShelfID = NoShelfNum;
+
+            if (conBase != null)
+                ConBase = conBase;
+            else ConBase = new();
+            ConBase.AdoptShelfID(ShelfID);
+
             if (additionals.HasElements())
             {
                 ConAddits = new List<ContentAdditionals>();
                 foreach (ContentAdditionals ca in additionals)
                     if (ca != null)
                         if (ca.IsSetup())
+                        {
+                            ca.AdoptShelfID(ShelfID);
                             ConAddits.Add(ca);
+                        }
             }
             if (changes.HasElements())
             {
@@ -136,7 +140,10 @@ namespace HCResourceLibraryApp.DataHandling
                 foreach (ContentChanges cc in changes)
                     if (cc != null)
                         if (cc.IsSetup())
+                        {
+                            cc.AdoptShelfID(ShelfID);
                             ConChanges.Add(cc);
+                        }
             }
         }
 
@@ -152,6 +159,9 @@ namespace HCResourceLibraryApp.DataHandling
                 if (newCA != null)
                     if (newCA.IsSetup())
                     {
+                        newCA = newCA.Clone();
+                        newCA.AdoptShelfID(ShelfID);
+
                         bool isDupe = false, isOkay = ConBase.ContainsDataID(newCA.RelatedDataID);
                         if (ConAddits.HasElements())
                         {
@@ -180,6 +190,9 @@ namespace HCResourceLibraryApp.DataHandling
                 if (newCC != null)
                     if (newCC.IsSetup())
                     {
+                        newCC = newCC.Clone();
+                        newCC.AdoptShelfID(ShelfID);
+
                         bool isDupe = false, isOkay;
                         isOkay = ConBase.ContainsDataID(newCC.RelatedDataID);
                         if (!isOkay && ConAddits.HasElements())
@@ -309,6 +322,234 @@ namespace HCResourceLibraryApp.DataHandling
         {
             bool containsDIDq = ContainsDataID(dataIDtoFind, out source, out _);
             return containsDIDq;
+        }
+        public void Overwrite(ResContents rcNew, out ResLibOverwriteInfo[] info)
+        {
+            List<ResLibOverwriteInfo> infoDock = new();
+            if (IsSetup() && rcNew != null)
+            {
+                rcNew.ShelfID = ShelfID;
+                bool beginOverwriteQ = IsSetup() && rcNew.IsSetup() && !Equals(rcNew);                
+                ResLibOverwriteInfo rcInfo = new(ToString(), rcNew.ToString());
+
+                if (beginOverwriteQ)
+                {
+                    VerNum verNum = ConBase.VersionNum;
+                    /// steps
+                    ///     Renew and replace ConBase object -- 1 RLOInfo
+                    ///     Renew addits list, sort through addits and replace of same version -- 1 RLOInfo each
+                    ///     Renew changes list, sort through changes and replace of same version -- 1 RLOInfo each
+
+                    // Base
+                    ResLibOverwriteInfo cbgInfo = new(ConBase.ToString(), rcNew.ConBase.ToString());
+                    cbgInfo.SetSourceSubCategory(SourceCategory.Bse);
+                    /// IF not same as existing base: replace with overwriting; ELSE retain existing
+                    if (!ConBase.Equals(rcNew.ConBase))
+                    {
+                        ConBase = rcNew.ConBase.Clone();
+                        cbgInfo.SetOverwriteStatus();
+                    }
+                    else cbgInfo.SetOverwriteStatus(false);
+
+
+                    // Additions
+                    /// IF existing or overwriting has additions: Proceed to overwriting edits; 
+                    if (ConAddits.HasElements() || rcNew.ConAddits.HasElements())
+                    {
+                        List<ContentAdditionals> conAdditsNew = new();
+
+                        int nonMatchBackSetIx = 0, sameVerInsIx = 0;
+                        bool noMoreCaQ = false;
+                        for (int cax = 0; !noMoreCaQ; cax++)
+                        {
+                            ContentAdditionals ca = null, caNew = null;
+                            string caStr = null, caNewStr = null;
+                            if (ConAddits.HasElements(cax + 1))
+                            {
+                                ca = ConAddits[cax];
+                                caStr = ca.ToString();
+                            }
+                            if (rcNew.ConAddits.HasElements(cax + 1 - nonMatchBackSetIx))
+                            {
+                                caNew = rcNew.ConAddits[cax - nonMatchBackSetIx];
+                                caNewStr = caNew.ToString();
+                            }
+
+                            ResLibOverwriteInfo caInfo = new(caStr, caNewStr);
+                            caInfo.SetSourceSubCategory(SourceCategory.Adt);
+                            noMoreCaQ = ca == null && caNew == null;
+
+                            if (!noMoreCaQ)
+                            {
+                                /// IF existing conAddit exists:..; ...
+                                if (ca != null)
+                                {
+                                    /// IF same version as overwritten:..; ...
+                                    if (ca.VersionAdded.Equals(verNum))
+                                    {
+                                        /// IF got overwriting instance: 
+                                        ///     IF not same as existing addit 'and' can be connected to base: replace with overwriting; ELSE retain existing;
+                                        /// ELSE remove existing
+                                        if (caNew != null)
+                                        {
+                                            if (!ca.Equals(caNew) && ContainsDataID(caNew.RelatedDataID, out _))
+                                            {
+                                                conAdditsNew.Add(caNew.Clone());
+                                                caInfo.SetOverwriteStatus();
+                                            }
+                                            else
+                                            {
+                                                caInfo.SetOverwriteStatus(false);
+                                                conAdditsNew.Add(ca);
+                                            }
+                                        }
+
+                                        /// this conAddit instance is then... DELETED!
+                                        else caInfo.SetOverwriteStatus(true);
+                                    }
+                                    /// ELSE retain existing;
+                                    else
+                                    {
+                                        caInfo.SetOverwriteStatus(false);
+                                        conAdditsNew.Add(ca);
+                                        nonMatchBackSetIx++;
+                                    }
+
+                                    if (ca.VersionAdded.AsNumber <= verNum.AsNumber)
+                                        sameVerInsIx++;
+                                }
+
+                                /// 'ELSE' IF no existing but have overwriting: (IF can be connected to base: add overwriting); 
+                                if (ca == null && caNew != null)
+                                {
+                                    if (ContainsDataID(caNew.RelatedDataID, out _))
+                                    {
+                                        /// adds the overwrite instance at the end of matching version number group where applicable
+                                        if (conAdditsNew.Count <= sameVerInsIx)
+                                            conAdditsNew.Add(caNew.Clone());
+                                        else
+                                        {
+                                            conAdditsNew.Insert(sameVerInsIx, caNew.Clone());
+                                            sameVerInsIx++;
+                                        }
+                                        caInfo.SetOverwriteStatus();
+                                    }
+                                }                                
+                            }                            
+
+                            // add overwriting info
+                            if (caInfo.IsSetup())
+                                infoDock.Add(caInfo);
+                        }
+                    }
+
+
+                    // Changes
+                    /// IF existing or overwriting has changes: Proceed to overwriting edits; 
+                    if (ConChanges.HasElements() || rcNew.ConChanges.HasElements())
+                    {
+                        List<ContentChanges> conChangesNew = new();
+
+                        int nonMatchBacksetIx = 0, sameVerInsIx = 0;
+                        bool noMoreCcQ = false;
+                        for (int ccx = 0; !noMoreCcQ; ccx++)
+                        {
+                            ContentChanges cc = null, ccNew = null;
+                            string ccStr = null, ccNewStr = null;
+                            if (ConChanges.HasElements(ccx + 1))
+                            {
+                                cc = ConChanges[ccx];
+                                ccStr = cc.ToString();
+                            }
+                            if (rcNew.ConChanges.HasElements(ccx + 1 - nonMatchBacksetIx))
+                            {
+                                ccNew = rcNew.ConChanges[ccx + nonMatchBacksetIx];
+                                ccNewStr = ccNew.ToString();
+                            }
+
+                            ResLibOverwriteInfo ccInfo = new(ccStr, ccNewStr);
+                            ccInfo.SetSourceSubCategory(SourceCategory.Upd);
+                            noMoreCcQ = cc == null && ccNew == null;
+
+                            if (!noMoreCcQ)
+                            {
+                                /// IF existing conChange exists
+                                if (cc != null)
+                                {
+                                    /// IF same version as overwritten:..; ...
+                                    if (cc.VersionChanged.Equals(verNum))
+                                    {
+                                        /// IF got overwriting instance: 
+                                        ///     IF not same as existing changes 'and' can be connected to base: replace with overwriting; ELSE retain existing;
+                                        /// ELSE remove existing
+                                        if (ccNew != null)
+                                        {
+                                            if (!cc.Equals(ccNew) && ContainsDataID(ccNew.RelatedDataID, out _))
+                                            {
+                                                conChangesNew.Add(ccNew.Clone());
+                                                ccInfo.SetOverwriteStatus();
+                                            }
+                                            else
+                                            {
+                                                ccInfo.SetOverwriteStatus(false);
+                                                conChangesNew.Add(cc);
+                                            }
+                                        }
+
+                                        /// this conChanges instance is then... DELETED!
+                                        else ccInfo.SetOverwriteStatus(true);
+                                    }
+                                    /// ELSE retain existing;
+                                    else
+                                    {
+                                        ccInfo.SetOverwriteStatus(false);
+                                        conChangesNew.Add(cc);
+                                        nonMatchBacksetIx++;
+                                    }
+
+                                    if (cc.VersionChanged.AsNumber <= verNum.AsNumber)
+                                        sameVerInsIx++;
+                                }
+                                /// 'ELSE' IF no existing but have overwriting: (IF can be connected to base: add overwriting)
+                                if (cc == null && ccNew != null)
+                                {
+                                    if (ContainsDataID(ccNew.RelatedDataID, out _))
+                                    {
+                                        /// adds the overwrite instance at the end of matching version number group where applicable
+                                        if (conChangesNew.Count <= sameVerInsIx)
+                                            conChangesNew.Add(ccNew.Clone());
+                                        else
+                                        {
+                                            conChangesNew.Insert(sameVerInsIx, ccNew.Clone());
+                                            sameVerInsIx++;
+                                        }
+                                        ccInfo.SetOverwriteStatus();
+                                    }
+                                }
+                            }
+
+                            // add overwriting info
+                            if (ccInfo.IsSetup())
+                                infoDock.Add(ccInfo);
+                        }
+                    }
+
+
+                    // Insert conBase info to infoDock
+                    if (cbgInfo.IsSetup())
+                        infoDock.Insert(0, cbgInfo);
+                }
+
+                // Insert resCon info to infoDock
+                rcInfo.SetOverwriteStatus(beginOverwriteQ);
+                if (rcInfo.IsSetup())
+                    infoDock.Insert(0, rcInfo);
+            }
+
+            /// Compile final info dock (if it has info)
+            if (infoDock.HasElements())
+                info = infoDock.ToArray();
+            else info = null;
         }
         public string[] EncodeGroups()
         {
@@ -520,12 +761,38 @@ namespace HCResourceLibraryApp.DataHandling
             if (ConBase != null)
                 conBaseSetup = ConBase.IsSetup();
 
-            return ShelfID != noShelfNum && conBaseSetup;
+            return ShelfID != NoShelfNum && conBaseSetup;
         }
+        public ResContents CloneResContent(bool bypassSetupQ = false)
+        {
+            ResContents clone = null;
+            if (IsSetup() || bypassSetupQ)
+            {
+                ContentBaseGroup cloneCBG = new ContentBaseGroup(_conBase.VersionNum, _conBase.ContentName, _conBase.DataIDString.Split(' '));
+                List<ContentAdditionals> cloneCAs = new List<ContentAdditionals>();
+                List<ContentChanges> cloneCCs = new List<ContentChanges>();
+
+                if (ConAddits.HasElements())
+                {
+                    foreach (ContentAdditionals ca in ConAddits)
+                        cloneCAs.Add(new ContentAdditionals(ca.VersionAdded, ca.RelatedDataID, ca.OptionalName, ca.DataIDString.Split(' ')));
+                }
+
+                if (ConChanges.HasElements())
+                {
+                    foreach (ContentChanges cc in ConChanges)
+                        cloneCCs.Add(new ContentChanges(cc.VersionChanged, cc.InternalName, cc.RelatedDataID, cc.ChangeDesc));
+                }
+
+                clone = new ResContents(ShelfID, cloneCBG, cloneCAs.ToArray(), cloneCCs.ToArray());
+            }
+            return clone;
+        }
+
 
         public override string ToString()
         {
-            string resConToStr = $"(RC) #{(ShelfID == noShelfNum ? "_" : ShelfID)};";
+            string resConToStr = $"(RC) #{(ShelfID == NoShelfNum ? "_" : ShelfID)};";
             if (ConBase != null)
             {
                 if (ConBase.IsSetup())

@@ -3,26 +3,6 @@ using System.Collections.Generic;
 
 namespace HCResourceLibraryApp.DataHandling
 {
-    /// <summary>The sources from which a relevant library search may specifically reference of matching content.</summary>
-    public enum SourceCategory
-    {
-        /// <summary>Sourced from Base Content Name (Precedence:1)</summary>
-        Bse,
-        /// <summary>Sourced from Additional Related Content of a Base Content (Precedence:2)</summary>
-        Adt,
-        /// <summary>Sourced from Updated information of Base Content (Precedence:3)</summary>
-        Upd,
-    }
-    public enum SourceContents
-    {
-        /// <summary>Results will contain data IDs and other content information.</summary>
-        All,
-        /// <summary>Results will only contain data IDs.</summary>
-        Ids,
-        /// <summary>Results will not contain data IDs.</summary>
-        NId
-    }
-
     public struct SearchOptions
     {
         /** ORIGINAL PLAN 

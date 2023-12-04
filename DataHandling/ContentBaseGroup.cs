@@ -61,8 +61,9 @@ namespace HCResourceLibraryApp.DataHandling
         VerNum _versionNumber, _prevVersionNumber;
         string _contentName, _prevContentName;
         List<string> _dataIDs, _prevDataIDs;
+        int _relatedShelfID = ResContents.NoShelfNum;
 
-        // public
+        // public        
         /// <summary>Version number this content was added.</summary>
         public VerNum VersionNum
         {
@@ -119,6 +120,11 @@ namespace HCResourceLibraryApp.DataHandling
                         dataIDs += $"{datId} ";
                 return dataIDs.Trim();
             }
+        }
+        /// <summary>The Shelf ID of the related <see cref="ResContents"/> instance.</summary>
+        public int RelatedShelfID
+        {
+            get => _relatedShelfID;
         }
         #endregion
 
@@ -295,6 +301,22 @@ namespace HCResourceLibraryApp.DataHandling
             }
             return areEqual;
         /// <summary>Compares two instances for similarities against: .</summary>
+        }
+        public ContentBaseGroup Clone()
+        {
+            ContentBaseGroup clone = null;
+            if (IsSetup())
+            {
+                clone = new ContentBaseGroup(VersionNum, ContentName, _dataIDs.ToArray());
+                clone.AdoptShelfID(_relatedShelfID);
+            }
+            return clone;
+        }
+        /// <summary>Stores the Shelf ID of the related <see cref="ResContents"> instance. Minimum value of <c>0</c>.</summary>
+        public void AdoptShelfID(int shelfID)
+        {
+            if (shelfID >= 0 && _relatedShelfID == ResContents.NoShelfNum)
+                _relatedShelfID = shelfID;
         }
 
         public override string ToString()

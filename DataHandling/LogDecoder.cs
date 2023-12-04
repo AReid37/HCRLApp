@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using static ConsoleFormat.Base;
-using HCResourceLibraryApp.Layout;
 using static HCResourceLibraryApp.Layout.PageBase;
 
 namespace HCResourceLibraryApp.DataHandling
@@ -2224,8 +2223,8 @@ namespace HCResourceLibraryApp.DataHandling
 
 
                                                     LegendData newLegData = new(splitLegKyDef[0], logVersion, splitLegKyDef[1]);
-                                                    Dbug.Log($"Generated new {nameof(LegendData)} :: {newLegData.ToStringLengthy()}; ");
-                                                    decodeInfo.NoteResult($"Generated {nameof(LegendData)} :: {newLegData.ToStringLengthy()}");
+                                                    Dbug.Log($"Generated new {nameof(LegendData)} :: {newLegData.ToString()}; ");
+                                                    decodeInfo.NoteResult($"Generated {nameof(LegendData)} :: {newLegData.ToString()}");
 
                                                     if (legendDatas.HasElements())
                                                     {
@@ -2263,8 +2262,8 @@ namespace HCResourceLibraryApp.DataHandling
                                                             bool addedDef = matchingLegDat.AddKeyDefinition(newLegData[0]);
                                                             if (addedDef)
                                                             {
-                                                                Dbug.LogPart($"Expanded legend data :: {matchingLegDat.ToStringLengthy()}");
-                                                                newDecInfo.NoteResult($"Edited existing legend data (new definition) :: {matchingLegDat.ToStringLengthy()}");
+                                                                Dbug.LogPart($"Expanded legend data :: {matchingLegDat.ToString()}");
+                                                                newDecInfo.NoteResult($"Edited existing legend data (new definition) :: {matchingLegDat.ToString()}");
                                                             }
                                                             else
                                                             {
@@ -2642,7 +2641,7 @@ namespace HCResourceLibraryApp.DataHandling
                                     DecodeInfo lgdDi = decodingInfoDock[lix];
                                     if (lgdDi.IsSetup() && lgdDi.sectionName == secLeg)
                                         if (lgdDi.NotedResultQ)
-                                            if (lgdDi.resultingInfo.Contains(legDat.ToStringLengthy()))
+                                            if (lgdDi.resultingInfo.Contains(legDat.ToString()))
                                             {
                                                 diIx = $"@{lix}";
                                                 decodeInfoIndicies.Add(lix);

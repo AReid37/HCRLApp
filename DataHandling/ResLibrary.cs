@@ -105,8 +105,9 @@ namespace HCResourceLibraryApp.DataHandling
 
                 Dbug.Log("Proceeding to add new ResCons to library; ");
                 Dbug.NudgeIndent(true);
-                foreach (ResContents newRC in newContents)
+                for (int x = 0; x < newContents.Length; x++)
                 {
+                    ResContents newRC = newContents[x].CloneResContent(true);
                     if (newRC != null)
                     {
                         // find connections for ConAdts and ConChgs
@@ -379,8 +380,9 @@ namespace HCResourceLibraryApp.DataHandling
                 if (disableAddDbug)
                     Dbug.DeactivateNextLogSession();
                 Dbug.StartLogging("ResLibrary.AddLegend(prms LegData[])");
-                foreach (LegendData leg in newLegends)
+                for (int lx = 0; lx < newLegends.Length; lx++)
                 {
+                    LegendData leg = newLegends[lx].CloneLegend();
                     if (leg != null)
                         if (leg.IsSetup())
                         {
@@ -407,10 +409,10 @@ namespace HCResourceLibraryApp.DataHandling
                             {
                                 bool edited = dupedLegData.AddKeyDefinition(leg[0]);
                                 if (edited)
-                                    Dbug.Log($"Edited Lgd :: {dupedLegData.ToStringLengthy()}");
+                                    Dbug.Log($"Edited Lgd :: {dupedLegData.ToString()}");
                                 else
                                 {
-                                    bool isPartial = leg.ToStringLengthy() != dupedLegData.ToStringLengthy();
+                                    bool isPartial = leg.ToString() != dupedLegData.ToString();
                                     Dbug.Log($"Rejected {(isPartial ? "partial " : "")}duplicate :: {leg}");
                                 }
                             }
@@ -429,8 +431,9 @@ namespace HCResourceLibraryApp.DataHandling
                 if (disableAddDbug)
                     Dbug.DeactivateNextLogSession();
                 Dbug.StartLogging("ResLibrary.AddSummary(SumData[])");
-                foreach (SummaryData sum in newSummaries)
+                for (int sx = 0; sx < newSummaries.Length; sx++)
                 {
+                    SummaryData sum = newSummaries[sx].CloneSummary();
                     if (sum != null)
                         if (sum.IsSetup())
                         {
@@ -582,6 +585,10 @@ namespace HCResourceLibraryApp.DataHandling
                                 ///             
                                 /// ------ aside note ------
                                 /// Regarding cloning; ResContents, LegendData, and SummaryData classes should adapt a new method for proper cloning which will be utilized when adding to library.
+                                /// 
+                                /// 
+                                /// *******
+                                /// Both addressed, now to redo this section of overwriting!  (after a quick commit)
                                 ///             
 
 
@@ -1318,13 +1325,16 @@ namespace HCResourceLibraryApp.DataHandling
                 clone = new ResLibrary();
 
                 Dbug.LogPart($"Contents [{Contents.Count}] / ");
-                clone.AddContent(Contents.ToArray());
+                foreach (ResContents rc in Contents)
+                    clone.AddContent(rc.CloneResContent());
 
                 Dbug.LogPart($"Legends [{Legends.Count}] / ");
-                clone.AddLegend(Legends.ToArray());
+                foreach (LegendData lg in Legends)
+                    clone.AddLegend(lg.CloneLegend());
 
                 Dbug.LogPart($"Summaries [{Summaries.Count}]");
-                clone.AddSummary(Summaries.ToArray());
+                foreach (SummaryData sm in Summaries)
+                    clone.AddSummary(sm.CloneSummary());
 
                 Dbug.Log($"  //  Clone ResLibrary instance returned [#:{clone.GetHashCode()}]; ");
             }
@@ -1832,7 +1842,7 @@ namespace HCResourceLibraryApp.DataHandling
                                 if (decodedLegd.Decode(legData))
                                 {
                                     Legends.Add(decodedLegd);
-                                    Dbug.Log($"Decoded Legend :: {decodedLegd.ToStringLengthy()}; ");
+                                    Dbug.Log($"Decoded Legend :: {decodedLegd.ToString()}; ");
                                 }
                                 else Dbug.Log($"Legend Data could not be decoded{(!expandDecodeDebug ? $" :: source ({legData})" : "")};");
                                 Dbug.NudgeIndent(false);

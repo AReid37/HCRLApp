@@ -6,21 +6,6 @@ using HCResourceLibraryApp.DataHandling;
 
 namespace HCResourceLibraryApp
 {
-    /// <summary>Options that modify the returned value of <see cref="Extensions.SnippetText(string, string, string, Snip[])"/></summary>
-    public enum Snip
-    {
-        /// <summary>Will include start and ending words in snippet.</summary>
-        Inc, 
-        /// <summary>Will ensure that the ending word comes after starting word in snippet.</summary>
-        EndAft,
-        /// <summary>Will ensure that the snippet ends with the second occurence of the ending word after starting word.</summary>
-        End2nd,
-        /// <summary>Will ensure that the snippet ends with the last occurence of the ending word after starting word.</summary>
-        EndLast,
-        /// <summary>Utilizies Snippet Options: <see cref="Inc"/>, <see cref="EndAft"/>, <see cref="EndLast"/>.</summary>
-        All
-    }
-
     public static class Extensions
     {
         // GENERAL  --> STRINGS and CHARS

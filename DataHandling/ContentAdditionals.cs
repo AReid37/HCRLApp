@@ -64,10 +64,11 @@ namespace HCResourceLibraryApp.DataHandling
 		string _optionalName, _relatedDataID, _prevOptionalName, _prevRelatedDataID;
 		List<string> _dataIDs, _prevDataIDs;
 		string _fetchedContentName;
+        int _relatedShelfID = ResContents.NoShelfNum;
 
-		// public
-		/// <summary>Version number this additional content was added (to base content).</summary>
-		public VerNum VersionAdded
+        // public
+        /// <summary>Version number this additional content was added (to base content).</summary>
+        public VerNum VersionAdded
 		{
 			get => _versionAdded;
 			private set
@@ -145,9 +146,14 @@ namespace HCResourceLibraryApp.DataHandling
 				return dataIds.Trim();
 			}
 		}
-		#endregion
+        /// <summary>The Shelf ID of the related <see cref="ResContents"/> instance.</summary>
+        public int RelatedShelfID
+        {
+            get => _relatedShelfID;
+        }
+        #endregion
 
-		public ContentAdditionals() { }
+        public ContentAdditionals() { }
 		public ContentAdditionals(VerNum verNumAddit, string relatedDataID, string optionalName, params string[] dataIDs)
         {
 			VersionAdded = verNumAddit;
@@ -328,6 +334,63 @@ namespace HCResourceLibraryApp.DataHandling
 			}
 			return areEquals;
         }
+		public ContentAdditionals Clone()
+		{
+			ContentAdditionals clone = null;
+			if (IsSetup())
+			{
+                clone = new ContentAdditionals(VersionAdded, RelatedDataID, OptionalName, _dataIDs.ToArray());
+				clone.AdoptShelfID(clone._relatedShelfID);
+            }
+			return clone;
+		}
+		/// <returns>A loosened instance of this (existing or overwritten) object if it no longer relates to its parent <see cref="ResContents"/>. Returns a <c>null</c> value otherwise.</returns>
+		public ContentAdditionals OverwriteLoose(ContentAdditionals looseCa, ResContents parentRC, out ResLibOverwriteInfo info)
+		{
+			ContentAdditionals loosenedCa = null;
+			info = new ResLibOverwriteInfo();
+			if (IsSetup() && looseCa != null)
+			{
+				/// considerations
+				///		- the overwriting loose addit should have the same related data ID and version number as the existing
+				///			- If it does, then overwriting can replace the existing info
+				///			- If not, then the overwriting is ignored; the existing info cannot be overwritten (must enter through regular integration)
+				
+				if (looseCa.IsSetup() && !Equals(looseCa))
+				{
+					info = new ResLibOverwriteInfo(ToString(), looseCa.ToString());
+					info.SetSourceSubCategory(SourceCategory.Adt);
+					if (RelatedDataID == looseCa.RelatedDataID && VersionAdded.Equals(looseCa.VersionAdded))
+					{
+						_dataIDs.Clear();
+						_dataIDs.AddRange(looseCa._dataIDs.ToArray());
+						OptionalName = looseCa.OptionalName;
+						info.SetOverwriteStatus(true);
+					}
+					else info.SetOverwriteStatus(false);
+
+                    /// check if loosened
+                    if (parentRC != null)
+                    {
+                        if (parentRC.IsSetup())
+                            if (!parentRC.ContainsDataID(RelatedDataID, out _))
+                            {
+                                loosenedCa = Clone();
+                                parentRC.DisposeConAdditional(loosenedCa);
+                            }
+                    }
+                }
+            }
+
+			return loosenedCa;
+		}
+        /// <summary>Stores the Shelf ID of the related <see cref="ResContents"> instance. Minimum value of <c>0</c>.</summary>
+        public void AdoptShelfID(int shelfID)
+        {
+            if (shelfID >= 0 && _relatedShelfID == ResContents.NoShelfNum)
+                _relatedShelfID = shelfID;
+        }
+
 
         public override string ToString()
         {
