@@ -287,7 +287,21 @@ namespace HCResourceLibraryApp.Layout
                             else
                             {
                                 if (LastInput.Equals(viewDetailsKey))
+                                {
                                     viewDetailsOfTopQ = !viewDetailsOfTopQ;
+                                    /// for limited search detail viewing
+                                    if (!allowSummaryBrowsingQ)
+                                    {
+                                        if (!selectedVer.Equals(VerNum.None))
+                                            selectedVer = selectedVer.AsNumber + 1 <= verHigh.AsNumber ? new VerNum(selectedVer.AsNumber + 1) : VerNum.None;
+
+                                        if (selectedVer.Equals(VerNum.None))
+                                            selectedVer = verLow;
+
+                                        viewDetailsOfTopQ = true;
+                                        allowSummaryBrowsingQ = true;
+                                    }
+                                }
                                 else if (allowSummaryBrowsingQ)
                                     IncorrectionMessageQueue("Version number did not follow 'a.bb' format");
                                 else IncorrectionMessageQueue("Browsing disabled due to short version range");

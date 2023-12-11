@@ -51,6 +51,7 @@ namespace HCResourceLibraryApp.DataHandling
         VerNum _versionIntroduced, _prevVersionIntroduced;
         string _key, _prevKey;
         List<string> _definitions, _prevDefinitions;
+        int index = ResContents.NoShelfNum;
 
         // public        
         public VerNum VersionIntroduced
@@ -111,6 +112,8 @@ namespace HCResourceLibraryApp.DataHandling
                 return defs;
             }
         }
+        /// <summary>The index number of this instance within a <see cref="ResLibrary.Legends"/>.</summary>
+        public int Index { get => index; }
         #endregion
 
         public LegendData() { }
@@ -329,14 +332,15 @@ namespace HCResourceLibraryApp.DataHandling
             if (IsSetup() && legNew != null)
             {
                 /// considerations
-				///		- the overwriting info must have the same key as existing
+                ///		- the overwriting info must have the same key as existing
                 ///		    - if same key 'and' same version or before, the existing key's first definition is replaced with the overwriting's first definition 
                 ///		    - if same key 'and' version after, the overwriting's definition is added to existing's definitions list
                 ///		    - if not same key, the overwriting definition is ignored; the existing remains unedited
 
+                info = new ResLibOverwriteInfo(ToString(), legNew.ToString(), SourceOverwrite.Legend);
+                info.SetOverwriteStatus(false);
                 if (legNew.IsSetup() && !Equals(legNew))
                 {
-                    info = new ResLibOverwriteInfo(ToString(), legNew.ToString(), SourceOverwrite.Legend);
                     if (Key == legNew.Key)
                     {
                         if (VersionIntroduced.AsNumber <= legNew.VersionIntroduced.AsNumber)
@@ -349,10 +353,16 @@ namespace HCResourceLibraryApp.DataHandling
                             AddKeyDefinition(legNew[0]);
                             info.SetOverwriteStatus();
                         }
+                        info.SetResult(ToString());
                     }
-                    else info.SetOverwriteStatus(false);
                 }
             }
+        }
+        /// <summary>Stores the index of which this instance exists within <see cref="ResLibrary.Legends"/>. Minimum value of <c>0</c>.</summary>
+        public void AdoptIndex(int ix)
+        {
+            if (ix >= 0)
+                index = ix;
         }
 
 

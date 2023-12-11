@@ -200,7 +200,7 @@ namespace HCResourceLibraryApp.Layout
                                     isValidOptQ = true;
 
                                 /// print number and lable of each item whether file or folder
-                                Dbug.LogPart(" > Item @{dx}  ::  ");
+                                Dbug.LogPart($" > Item @{dx}  ::  ");
                                 if (!isErrorMsgQ)
                                 {
                                     Dbug.LogPart($"#[{itemNum}], name [{itemName}], isDirQ [{isDirQ}], validQ [{isValidOptQ}], fullName [{itemFullName}]");
@@ -293,7 +293,7 @@ namespace HCResourceLibraryApp.Layout
                                 {
                                     SelectedItem = itemFullName;
                                     exitFileChooserPageQ = true;
-                                    Dbug.LogPart("; Existing File Chooser page, an item was selected");
+                                    Dbug.LogPart("; Exiting File Chooser page, an item was selected");
                                 }
                                 else if (isDirQ)
                                     isValidTypeQ = false; /// enter given dir on decline

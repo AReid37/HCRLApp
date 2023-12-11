@@ -77,7 +77,7 @@ namespace HCResourceLibraryApp.Layout
                 if (input.IsNotNEW())
                 {
                     LogDecoder logDecoder = new();
-                    bool stopSubmission = false, compactDisplayQ = true;
+                    bool stopSubmission = false, expandedDisplayQ = false;
                     int stageNum = 1;
                     const char minorChar = '-';
                     while (stageNum <= 3 && !stopSubmission)
@@ -253,11 +253,15 @@ namespace HCResourceLibraryApp.Layout
 
                             if (logDecoder.HasDecoded)
                             {
-                                /// small section relaying how decoding went
-                                if (compactDisplayQ)
-                                    DisplayLogInfo(logDecoder, false);
-                                /// large section showing how decoding went
-                                else DisplayLogInfo(logDecoder, true);
+                                // ++ DECODED LOG DISPLAY ++ //
+                                DisplayLogInfo(logDecoder, expandedDisplayQ);
+
+                                ///// small section relaying how decoding went
+                                //if (expandedDisplayQ)
+                                //    DisplayLogInfo(logDecoder, false);
+                                ///// large section showing how decoding went
+                                //else DisplayLogInfo(logDecoder, true);
+
 
                                 NewLine(3);
                                 HorizontalRule(minorChar, 1);
@@ -269,55 +273,47 @@ namespace HCResourceLibraryApp.Layout
                                 if (input.IsNE())
                                 {
                                     unallowStagePass = true;
-                                    compactDisplayQ = !compactDisplayQ;
+                                    expandedDisplayQ = !expandedDisplayQ;
                                 }
                                 else
                                 {
-                                    NewLine(2);
-                                    Title("Integrate new contents to library");
-                                    Format($"Enter any key to add the new contents to resource library >> ", ForECol.Normal);
-                                    input = StyledInput(null);
+                                    //NewLine(2);
+                                    //Title("Integrate new contents to library");
+                                    //Format($"Enter any key to proceed to content integration >> ", ForECol.Normal);
+                                    //input = StyledInput(null);
 
-                                    /// cancel integration
-                                    if (input.IsNEW())
-                                    {
-                                        FormatLine($"{Ind24}By discontinuing integration of new contents, log submission will end.", ForECol.Accent);
-                                        Confirmation($"{Ind24}Are you sure you wish to cancel content integration? ", true, out bool yesNo);
-                                        if (yesNo)
-                                        {
-                                            Format($"{Ind34}Cancelled integration of new contents.", ForECol.Incorrection);
-                                            stopSubmission = true;
-                                            pathToVersionLog = null;
-                                            Pause();
-                                        }
-                                        else unallowStagePass = true;
-                                    }
-                                    /// integrate into library
-                                    else
-                                    {
-                                        bool notNormalIntegrationQ = false;
-                                        NewLine(2);
-                                        Title("Integration Evaluation", subMenuUnderline, 0);
-                                        Format($"{Ind14}Generating outcome of library integration. This may take a moment...", ForECol.Accent);
-                                        ResLibrary tangentLibrary = mainLibrary.CloneLibrary();
-                                        NewLine();
+                                    bool notNormalIntegrationQ = false;
+                                    NewLine(3);
+                                    Title("Content Integration Evaluation", subMenuUnderline, 0);
+                                    Format($"{Ind14}Generating outcome of library integration. This may take a moment...", ForECol.Accent);
+                                    ResLibrary tangentLibrary = mainLibrary.CloneLibrary();
+                                    NewLine();
 
-                                        /// IF; integrate overwrite
+                                    if (tangentLibrary != null)
+                                    {
+                                        /// IF; integrate overwrite - evaluation
                                         if (logDecoder.OverwriteWarning)
                                         {
-                                            tangentLibrary.Overwrite(logDecoder.DecodedLibrary, out ResLibOverwriteInfo[] resLibOverInfoDock);
+                                            tangentLibrary.Overwrite(logDecoder.DecodedLibrary, out ResLibOverwriteInfo[] resLibOverInfoDock, out ResLibIntegrationInfo[] looseIntegrationInfoDock);
 
                                             /// report of overwriting contents
                                             if (resLibOverInfoDock.HasElements())
                                             {
                                                 notNormalIntegrationQ = true;
-                                                Title("Overwriting Contents Outcome");
-                                                // DisplayOverwritingInfo(...)
                                                 NewLine();
-                                            }                                           
-                                        }
+                                                Title("Overwriting Contents Outcome");
+                                                DisplayOverwritingInfo(resLibOverInfoDock);
 
-                                        /// ELSE; intergrate loose
+                                                if (looseIntegrationInfoDock.HasElements())
+                                                {
+                                                    NewLine(2);
+                                                    Title("Integrating Loosened Contents Outcome");
+                                                    DisplayIntegrationInfo(looseIntegrationInfoDock);
+                                                }
+                                                NewLine(2);
+                                            }
+                                        }
+                                        /// ELSE; intergrate loose - evaluation
                                         else
                                         {
                                             tangentLibrary.Integrate(logDecoder.DecodedLibrary, out ResLibIntegrationInfo[] resLibIntInfoDock);
@@ -329,53 +325,85 @@ namespace HCResourceLibraryApp.Layout
                                                 NewLine();
                                                 Title("Loose Contents Connection Outcome");
                                                 DisplayIntegrationInfo(resLibIntInfoDock);
-                                                NewLine();
+                                                NewLine(2);
                                             }
-                                        }
-
-
-                                        // user validation of content integration
-                                        /// IF loose content integration -or- overwrite integration: integration requires confirmation; ELSE integration automatic
-                                        if (!notNormalIntegrationQ)
-                                        {
-                                            FormatLine($"{Ind14}The section above estimates the outcome of {(logDecoder.OverwriteWarning? "overwrit" : "integrat")}ing the decoded contents.", ForECol.Warning);
-                                            Confirmation($"{Ind14}Confirm {(logDecoder.OverwriteWarning ? "overwriting with" : "integration of")} decoded contents? ", true, out bool yesNo);
-                                            
-                                            if (!yesNo)
-                                            {
-                                                NewLine();
-                                                FormatLine($"{Ind14}By cancelling integration / overwriting of new contents, log submission will end.", ForECol.Accent);
-                                                Confirmation($"{Ind14}Are you sure you wish to cancel this process? ", true, out bool yesNoProcess);
-
-                                                if (yesNoProcess)
-                                                {
-                                                    stopSubmission = true;
-                                                    pathToVersionLog = null;
-                                                }
-                                                else unallowStagePass = true;
-                                            }
-
-                                            if (yesNo)
-                                            {
-                                                /// OVERWRITE integration
-                                                if (logDecoder.OverwriteWarning)
-                                                    mainLibrary.Overwrite(logDecoder.DecodedLibrary, out _);
-                                                /// LOOSE CONTENT integration
-                                                else mainLibrary.Integrate(logDecoder.DecodedLibrary, out _);
-                                                exitSubmissionPage = true;
-                                            }
-
-                                            if (!unallowStagePass)
-                                                ConfirmationResult(yesNo, $"{Ind24}", $"Contents {(logDecoder.OverwriteWarning ? "overwritten " : " integrated in")}to library.", $"Content {(logDecoder.OverwriteWarning ? "overwriting" : "integration")} cancelled.");
-                                        }
-                                        else
-                                        {
-                                            mainLibrary.Integrate(logDecoder.DecodedLibrary, out _);
-                                            Format($"{Ind24}Integrated new contents into library.", ForECol.Correction);
-                                            Pause();
-                                            exitSubmissionPage = true;
                                         }
                                     }
+
+                                    // user validation of content integration
+                                    /// IF loose content integration -or- overwrite integration: integration requires confirmation; ELSE integration automatic
+                                    if (notNormalIntegrationQ)
+                                    {
+                                        FormatLine($"{Ind14}Evaluation complete. Note: Overwriting contents will require a restart.", ForECol.Accent);
+                                        FormatLine($"{Ind14}The section above estimates the outcome of {(logDecoder.OverwriteWarning ? "overwrit" : "integrat")}ing the decoded contents.", ForECol.Warning);
+                                        Confirmation($"{Ind14}Confirm {(logDecoder.OverwriteWarning ? "overwriting with" : "integration of")} decoded contents? ", true, out bool yesNo);
+
+                                        if (!yesNo)
+                                        {
+                                            NewLine();
+                                            FormatLine($"{Ind14}By cancelling integration / overwriting of new contents, log submission will end.", ForECol.Accent);
+                                            Confirmation($"{Ind14}Are you sure you wish to cancel this process? ", true, out bool yesNoProcess);
+
+                                            if (yesNoProcess)
+                                            {
+                                                //Format($"{Ind34}Cancelled integration of new contents.", ForECol.Incorrection);
+                                                stopSubmission = true;
+                                                pathToVersionLog = null;
+                                                Pause();
+                                            }
+                                            else unallowStagePass = true;
+                                        }
+
+                                        if (yesNo)
+                                        {
+                                            /// OVERWRITE integration
+                                            if (logDecoder.OverwriteWarning)
+                                                mainLibrary.Overwrite(logDecoder.DecodedLibrary, out _, out _);
+                                            /// LOOSE CONTENT integration
+                                            else mainLibrary.Integrate(logDecoder.DecodedLibrary, out _);
+                                            exitSubmissionPage = true;
+                                        }
+
+                                        if (!unallowStagePass)
+                                        {
+                                            ConfirmationResult(yesNo, $"{Ind24}", $"Contents {(logDecoder.OverwriteWarning ? "overwritten " : " integrated in")}to library.", $"Content {(logDecoder.OverwriteWarning ? "overwriting" : "integration")} cancelled.");
+
+                                            if (logDecoder.OverwriteWarning && yesNo)
+                                            {
+                                                NewLine();
+                                                FormatLine($"{Ind24}The library has been overwritten and a program restart is required.", ForECol.Warning);
+                                                Format($"{Ind24}Proceed to restarting the program >> ");
+                                                Pause();
+
+                                                Program.RequireRestart();
+                                            }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        FormatLine($"{Ind24}Evaluation complete. No additional steps required.");
+
+                                        mainLibrary.Integrate(logDecoder.DecodedLibrary, out _);
+                                        Format($"{Ind24}Integrated new contents into library.", ForECol.Correction);
+                                        Pause();
+                                        exitSubmissionPage = true;
+                                    }
+
+
+                                    /// cancel integration
+                                    //if (input.IsNEW() && false)
+                                    //{
+                                    //    FormatLine($"{Ind24}By discontinuing integration of new contents, log submission will end.", ForECol.Accent);
+                                    //    Confirmation($"{Ind24}Are you sure you wish to cancel content integration? ", true, out bool yesNo);
+                                    //    if (yesNo)
+                                    //    {
+                                    //        Format($"{Ind34}Cancelled integration of new contents.", ForECol.Incorrection);
+                                    //        stopSubmission = true;
+                                    //        pathToVersionLog = null;
+                                    //        Pause();
+                                    //    }
+                                    //    else unallowStagePass = true;
+                                    //}
                                 }
                             }
                             else
@@ -434,7 +462,7 @@ namespace HCResourceLibraryApp.Layout
                 }
                 else exitSubmissionPage = true;
             }
-            while (!exitSubmissionPage);
+            while (!exitSubmissionPage && !Program.AllowProgramRestart);
 
             // auto-saves: 
             //      -> LogDecoder recentDirectory
@@ -1050,6 +1078,150 @@ namespace HCResourceLibraryApp.Layout
                         FormatLine("'.", ForECol.Normal);
                     }
                 }
+            }
+        }
+        static void DisplayOverwritingInfo(ResLibOverwriteInfo[] overwritingInfoDock)
+        {
+            if (overwritingInfoDock.HasElements())
+            {
+                /** OVERWRITTEN CONTENTS REPORT - Display Concept
+                    What do I have?
+                        Within each ResLibOverwriteInfo instance 
+                        - the (previously) existing content, 
+                        - the (new) ovewriting content, 
+                        - an overwritten status (true/false), 
+                        - the final form of the content in question (resulting)
+                        - and ignore overwriting status (to say if ovewritting and object has been bypassed) [currently unused], 
+                        - the information source: contents (base, addit, update), legends, summaries
+
+                    What do I want to know?
+                        - The possibly overwritten instance in question
+                        - If an instance has been overwritten (edited, with 'overwrittenStatus'), added (no existing), or removed (no overwriting), and where this is situated (information source)
+                        - If this particular ovewrite instance has been igrnored [currently unused]
+
+
+                    Visualize:
+                    .............................
+                    Form: [{Source}] {OverwriteSymbol} {Result} 
+                            {Replaced} 
+
+                    {Source} : Where this overwriting instance occurs
+                        - Normal Foreground Color
+
+                    {OvewriteSymbol} : Signifies a change to the existing contents and reflects overwriting status and ignorance
+                        = No changes - Highlight ForECol
+                        + Overwritten / Added - Correction ForECol
+                        - Removed - Incorrection ForECol
+                        * Ignored - Normal ForECol
+
+                    {Result} : The final result of this overwrite. If there has been an overwrite, the overwriting or resulting will be displayed. Otherwise, the existing or resulting.
+                        - Colors reflect that of the Overwrite Symbol
+
+                    {Replaced} Displays for an overwritten or ignored instance, showing the existing or overwriting instance that was replaced or ignored due to the final result
+                        - Accent Foreground Color
+                    .............................
+
+                    
+                    EXAMPLES
+                    .........................
+                Ex1
+                    [Contents:Bse] + Ben's Buckle; BensShoeBuckle
+                        Ben's Buckle; BensBeltBuckle
+                    [Legend] = s;Sizzle
+                    [Contents:Adt] + y32 y44; Flyer Trails; s45; 
+                    [Legend] * y;Yuck
+                        y;Yucky
+                    .........................
+                 */
+
+                SourceOverwrite prevSource = SourceOverwrite.Content;
+                int subSourceBacksetIx = 0;
+                for (int rx = 0; rx < overwritingInfoDock.Length; rx++)
+                {
+                    ResLibOverwriteInfo rloi = overwritingInfoDock[rx];
+                    if (rloi.IsSetup())
+                    {
+                        const string symEql = "=", symEdt = "+", symIgn = "*", symRem = "-";
+                        ForECol colEqual = ForECol.Highlight, colEdit = ForECol.Correction, colIgn = ForECol.Normal, colRem = ForECol.Incorrection;
+                        string overwriteSym, source, overwriteResult, overwriteReplaced = "";
+                        ForECol overwriteCol;
+
+                        /// determine source
+                        source = rloi.source.ToString();
+                        if (rloi.subSource.HasValue)
+                            source += $":{rloi.subSource.Value}";
+
+                        /// overwriting sign, color, and resulting text
+                        if (rloi.contentExisting.IsNotNEW())
+                        {
+                            if (rloi.contentOverwriting.IsNotNEW())
+                            {
+                                overwriteSym = rloi.OverwrittenQ ? symEdt : symEql;
+                                overwriteCol = rloi.OverwrittenQ ? colEdit : colEqual;
+                                if (rloi.OverwrittenQ)
+                                {
+                                    overwriteResult = rloi.contentResulting.IsNotNEW() ? rloi.contentResulting : rloi.contentOverwriting;
+                                    overwriteReplaced = rloi.contentExisting;
+                                }
+                                else
+                                    overwriteResult = rloi.contentExisting;
+                            }
+                            else
+                            {
+                                overwriteSym = rloi.OverwrittenQ ? symRem : symEql;
+                                overwriteCol = rloi.OverwrittenQ ? colRem : colEqual;
+                                overwriteResult = rloi.contentExisting;
+                            }
+                        }
+                        else //if (rloi.contentOverwriting.IsNotNEW())
+                        {
+                            overwriteSym = rloi.OverwrittenQ ? symEdt : symEql;
+                            overwriteCol = rloi.OverwrittenQ ? colEdit : colEqual;
+                            overwriteResult = rloi.contentOverwriting;
+                        }
+                        
+                        /// ignoring overwrite, specific 
+                        if (rloi.ignoreOverwriteQ)
+                        {
+                            overwriteSym = symIgn;
+                            overwriteCol = colIgn;
+                        }
+
+
+
+
+                        // DISPLAY overwrite info
+                        bool subSourceQ = source.Contains(":");
+                        subSourceBacksetIx += subSourceQ ? 1 : 0;
+                        if (prevSource != rloi.source)
+                            NewLine();
+                        if (!subSourceQ)
+                            Format($"{Ind14}{rx + 1 - subSourceBacksetIx,-2}|", ForECol.Accent);
+                        else Format($"{Ind24}");
+                        Format($"[{source}] ");
+                        FormatLine($"{overwriteSym} {overwriteResult}", overwriteCol);
+                        if (overwriteReplaced.IsNotNEW())
+                            FormatLine($"{(subSourceQ ? Ind34 : Ind24)}{overwriteReplaced}", ForECol.Accent);                        
+
+                        // DISPLAY legend
+                        if (rx + 1 >= overwritingInfoDock.Length)
+                        {
+                            NewLine(2);
+                            Title("Overwriting Legend");
+                            /// overwriting display legend
+                            FormatLine($"Outcome Symbols :: '{symEql}' No change  |  '{symEdt}' Overwritten / Added  |  '{symRem}' Removed  |  '{symIgn}' Ignored", ForECol.Accent);
+                            Format("[ContentSource] ");
+                            FormatLine("{Outcome Symbol} Resulting Outcome");
+                            FormatLine($"{Ind24}{{Discarded due to change}}");
+
+                            /// content format legend
+                            /// ...to be considered versus changing the inputed existing/overwriting strings
+                        }
+
+                        prevSource = rloi.source;
+                    }
+                }
+
             }
         }
     }

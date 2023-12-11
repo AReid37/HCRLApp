@@ -402,6 +402,7 @@ namespace HCResourceLibraryApp.DataHandling
 
                             if (!isDupe)
                             {
+                                leg.AdoptIndex(Legends.Count);
                                 Legends.Add(leg);
                                 Dbug.Log($"Added Lgd :: {leg}");
                             }
@@ -409,7 +410,7 @@ namespace HCResourceLibraryApp.DataHandling
                             {
                                 bool edited = dupedLegData.AddKeyDefinition(leg[0]);
                                 if (edited)
-                                    Dbug.Log($"Edited Lgd :: {dupedLegData.ToString()}");
+                                    Dbug.Log($"Edited Lgd :: {dupedLegData}");
                                 else
                                 {
                                     bool isPartial = leg.ToString() != dupedLegData.ToString();
@@ -452,6 +453,7 @@ namespace HCResourceLibraryApp.DataHandling
                             if (!isDupe)
                             {
                                 addedSummaryQ = true;
+                                sum.AdoptIndex(Summaries.Count);
                                 Summaries.Add(sum);
                                 Dbug.Log($"Added Smry :: {sum.ToStringShortened()}");
                             }
@@ -488,10 +490,8 @@ namespace HCResourceLibraryApp.DataHandling
             }
             else Dbug.Log("Other ResLibrary is null; ");
             Dbug.EndLogging();
-        }
-        
-        // --- WIP ---
-        public void Overwrite(ResLibrary other, out ResLibOverwriteInfo[] resLibOverwriteInfoDock)
+        }        
+        public void Overwrite(ResLibrary other, out ResLibOverwriteInfo[] resLibOverwriteInfoDock, out ResLibIntegrationInfo[] looseIntegrationInfoDock)
         {
             /// PLANNING
             ///     Need : version number, overwriting library (X)
@@ -523,54 +523,44 @@ namespace HCResourceLibraryApp.DataHandling
             ///      
 
             resLibOverwriteInfoDock = null;
+            looseIntegrationInfoDock = null;            
             if (other != null)
             {
                 Dbug.StartLogging("ResLibrary.Overwrite()");
                 Dbug.Log($"Received other ResLib instance; Is Setup? {other.IsSetup()};");
-                if (other.IsSetup())
+                if (other.Contents.HasElements())
                 {
-                    VerNum verNum = other.Summaries[0].SummaryVersion;
-                    Dbug.Log($"Instance is setup, Contents [{other.Contents.Count}], Legends [{other.Legends.Count}], Summaries [{other.Summaries.Count}], Version to overwrite [{verNum}]; ");
+                    VerNum verNum = other.Contents[0].ConBase.VersionNum;
+                    if (other.Contents[0].ContentName == LooseResConName && other.Contents.HasElements(2))
+                        verNum = other.Contents[1].ConBase.VersionNum;
+
+                    Dbug.LogPart($"Other ResLib instance information :: Contents [{other.Contents.Count}], ");
+                    if (other.Legends.HasElements())
+                        Dbug.LogPart($"Legends [{other.Legends.Count}], ");
+                    if (other.Summaries.HasElements())
+                        Dbug.LogPart($"Summaries [{other.Summaries.Count}], ");
+                    Dbug.Log($"Version to overwrite [{verNum}];");
+
 
                     ResLibrary libVer = GetVersion(verNum);
                     if (libVer != null)
                     {
                         Dbug.Log($"Fetched library version {verNum.ToStringNums()} -- Is Setup? [{libVer.IsSetup()}] :: Contents? [{libVer.Contents.HasElements()}], Legends? [{libVer.Legends.HasElements()}], Summaries? [{libVer.Summaries.HasElements()}]; ");
-                        bool otherContainsLooseQ = other.Contents[0].ContentName == LooseResConName;
                         List<ResLibOverwriteInfo> rloInfoDock = new List<ResLibOverwriteInfo>();
+                        ResContents integrationQueueRC = null;
                         Dbug.Log("Initialized ResLibrary Overwrite Info Dock; ");
 
                         // OVERWRITING : Base Contents
+                        Dbug.Log($"Overwriting: Base Contents; {(libVer.Contents.HasElements() ? "Proceed..." : "Skip")}");
                         if (libVer.Contents.HasElements())
                         {
-                            Dbug.Log("Overwriting: Base Contents; ");
                             Dbug.NudgeIndent(true);
 
-                            /// PLANNING snippet
-                            ///     - Contents
-                            ///         With exception to loose contents, 'A's contents should be organized similarly to 'Xs' contents for simple match up
-                            ///         #Base Contents
-                            ///             - For every X contents: Adopt As[x] shelf number to Xs[x] then compare (duplicate or different)
-                            ///                 If As[x] is same as Xs[x]; discard Xs[x] as 'no changes', else replace object As[x] with Xs[x]
-                            ///                 If Xs[x] does not have a matching As[x], use AddContent() to add the new object.
-                            ///             - Overwite should note any differences between the two objects if any, and information on the two objects
-                            ///                 Notable info: CBG (name, ids), CAs / CCs (loosened* due to CBG ids changes, ids, names, desc)
-                            ///         #Loose Contents
-                            ///             - For every X contents: Check if As[x] contains data ID of Xs[0] addit/change content
-                            ///                 If As[x] addits/change is same as matched Xs[0] addit/change; discard Xs[0] a/c as 'no changes', else replace matching As[x] addits/change object
-                            ///                 If Xs[0] addit/change has no base content to connect to; note and discard the addit/change object.
-                            ///             - Overwrite should note any difference between the two objects of any, and information on the two objects
-                            ///                 Notable info: CA (ids, optName, relName, relID), CC (relID, relName, changeDesc)
-
-                            int ixOtherStart = otherContainsLooseQ ? 1 : 0;
-                            for (int lvx = 0; lvx < libVer.Contents.Count; lvx++)
+                            bool noMoreRCq = false;
+                            int ixExistingLoose = 0, ixOtherLoose = 0, ixInfoDockLatest = 0;
+                            for (int lvx = 0; !noMoreRCq; lvx++)
                             {
-                                ResContents resConA = libVer.Contents[lvx];
-                                ResContents resConO = null;
-                                if ((lvx + ixOtherStart).IsWithin(0, other.Contents.Count - 1))
-                                    resConO = other.Contents[lvx + ixOtherStart];
-
-                                // ALTERNATIVELY  (and probably for the better)
+                                /// ALTERNATIVELY  (and probably for the better)
                                 /// Introduce a method for ResContents, ConBaseGroup, ConAdditionals, and ConChanges that handles self-overwriting (Suggest; .Overwrite())
                                 /// ... rather than squeezing all that work into this method
                                 ///     PROS
@@ -589,88 +579,525 @@ namespace HCResourceLibraryApp.DataHandling
                                 /// 
                                 /// *******
                                 /// Both addressed, now to redo this section of overwriting!  (after a quick commit)
-                                ///             
+                                ///     
 
-
-                                bool overwriteQ = !resConA.Equals(resConO);
-                                if (overwriteQ)
+                                ResContents resConE = null, resConO = null;
+                                string strExist = "", strOther = "";
+                                if ((lvx - ixOtherLoose).IsWithin(0, libVer.Contents.Count - 1))
                                 {
-                                    ResContents resConNew = new ResContents();
-                                    ContentBaseGroup conBaseNew;
-                                    if (!resConA.ConBase.Equals(resConO.ConBase))
-                                        conBaseNew = new ContentBaseGroup(verNum, resConO.ConBase.ContentName, resConO.ConBase.DataIDString.Split(" "));
-                                    else conBaseNew = new ContentBaseGroup(verNum, resConA.ConBase.ContentName, resConA.ConBase.DataIDString.Split(" "));
+                                    resConE = libVer.Contents[lvx - ixOtherLoose];
+                                    strExist = resConE.ToString();
+                                }
+                                if ((lvx - ixExistingLoose).IsWithin(0, other.Contents.Count - 1))
+                                {
+                                    resConO = other.Contents[lvx - ixExistingLoose];
+                                    strOther = resConO.ToString();
+                                }
+                                
+                                Dbug.Log($"@{lvx} | Existing {{{strExist}}}  //  Overwriting {{{strOther}}}");                                
 
-                                    List<ContentAdditionals> conAdditsNew = new List<ContentAdditionals>();
-                                    List<ContentChanges> conChangesNew = new List<ContentChanges>();
-                                    if (resConA.ConAddits.HasElements() || resConO.ConAddits.HasElements())
+                                noMoreRCq = resConE == null && resConO == null;
+                                if (!noMoreRCq)
+                                {
+                                    bool enableLooseHandlingQ = false;
+
+                                    Dbug.LogPart(" -> ");
+                                    /// IF has existing:
+                                    ///     IF existing is loose: Enable Loose Handling*;
+                                    ///     ELSE 'IF existing is not loose:'
+                                    ///         IF has overwriting:
+                                    ///             IF overwriting is loose: Enable Loose Handling*;    
+                                    ///             ELSE 'IF overwriting is not loose': edit existing with overwriting;
+                                    ///         ELSE remove existing;
+                                    /// ELSE 'IF has overwriting:' 
+                                    ///     IF overwriting is loose: Enable Loose Handling*;
+                                    ///     ELSE 'IF overwriting is not loose:' add overwriting;                                    
+                                    if (resConE != null)
                                     {
-                                        bool noAdditsQ = false;
-                                        int diffVerPenaltyIx = 0;
-                                        for (int cax = 0; !noAdditsQ; cax++)
+                                        Dbug.LogPart("Existing RC exists; ");
+                                        if (resConE.ContentName == LooseResConName)
                                         {
-                                            ContentAdditionals additA = null, additO = null, additNew = null;
-                                            if (resConA.ConAddits.HasElements(cax + 1))
-                                                additA = resConA.ConAddits[cax];
-                                            if (resConO.ConAddits.HasElements(cax + 1 - diffVerPenaltyIx))
-                                                additO = resConO.ConAddits[cax - diffVerPenaltyIx];
-
-                                            noAdditsQ = additO == null && additA == null;
-                                            if (!noAdditsQ)
+                                            enableLooseHandlingQ = true;
+                                            Dbug.LogPart("Existing RC is loose");
+                                        }
+                                        else
+                                        {
+                                            Dbug.LogPart($"{(resConO == null ? "No overwriting RC" : "Overwriting RC exists")}; ");
+                                            if (resConO != null)
                                             {
-                                                bool overrideAdditNewQ = false;
-                                                if (additA != null && additO != null)
+                                                if (resConO.ContentName == LooseResConName)
+                                                    enableLooseHandlingQ = true;
+                                                else
                                                 {
-                                                    overrideAdditNewQ = false;
-                                                    if (additA.VersionAdded.Equals(verNum))
-                                                        overrideAdditNewQ = !additA.Equals(additO);
-                                                    else diffVerPenaltyIx++;
+                                                    Contents[resConE.ShelfID].Overwrite(resConO, out ResLibOverwriteInfo[] info);
+                                                    AddToInfoDock(info);
                                                 }
-                                                else if (additA == null)
-                                                {
-                                                    overrideAdditNewQ = true;
-                                                }
-                                                else if (additO == null)
-                                                {
-                                                    
-                                                }
-
-                                                if (overrideAdditNewQ)
-                                                    additNew = new ContentAdditionals(verNum, additO.RelatedDataID, additO.OptionalName, additO.DataIDString.Split(" "));
-                                                else additNew = new ContentAdditionals(verNum, additA.RelatedDataID, additA.OptionalName, additA.DataIDString.Split(" "));
+                                                Dbug.LogPart($"{(enableLooseHandlingQ ? "Overwriting RC is loose" : "Existing RC may be overwritten by overwriting RC")}");
                                             }
+                                            else
+                                            {
+                                                Contents[resConE.ShelfID] = new ResContents();
+                                                ResLibOverwriteInfo info = new(resConE.ToString(), null);
+                                                info.SetSourceSubCategory(SourceCategory.Bse);
+                                                info.SetOverwriteStatus();
+                                                Dbug.LogPart($"Removed existing RC (shelf ix {resConE.ShelfID}) from library contents");
 
-                                            if (additNew != null)
-                                                if (additNew.IsSetup())
-                                                    conAdditsNew.Add(additNew);
+                                                AddToInfoDock(info);
+                                            }
                                         }
                                     }
+                                    else
+                                    {                                        
+                                        if (resConO.ContentName == LooseResConName)
+                                            enableLooseHandlingQ = true;
+                                        else
+                                        {
+                                            AddContent(resConO);
+                                            ResLibOverwriteInfo info = new(null, resConO.ToString());
+                                            info.SetOverwriteStatus();
+                                            info.SetSourceSubCategory(SourceCategory.Bse);
+
+                                            AddToInfoDock(info);
+                                        }
+                                        Dbug.LogPart($"Overwriting RC exists (no existing RC); {(enableLooseHandlingQ ? "Overwriting RC is loose" : "Added overwriting RC to library as new content")}");
+                                    }
+                                    Dbug.Log("; ");
+
+
+                                    /// IF Enable Loose Handling*:
+                                    ///     IF has existing: (IF existing is loose: increment Existing Loose Index (ELI));
+                                    ///     IF has overwriting: (IF overwriting is loose: increment Overwriting Loose Index (OLI));
+                                    ///     IF ELI equals OLI: Set both OLI and ELI to '0';
+                                    ///     
+                                    ///     FOR: loop until 'No More Loose Contents' is true
+                                    ///         IF has existing loose:
+                                    ///             IF has overwriting loose: edit existing loose with overwriting loose (*If loosened as result of changes, add to integration queue);
+                                    ///             ELSE remove existing loose;
+                                    ///         ELSE 'IF has overwriting loose:' add overwriting loose to integration queue;
+                                    ///     
+                                    if (enableLooseHandlingQ)
+                                    {
+                                        bool isLooseE = false, isLooseO = false;
+                                        List<string> queueLooseDataIDs = new();
+                                        List<ContentAdditionals> queueLooseAddits = new();
+                                        List<ContentChanges> queueLooseChanges = new();
+
+                                        Dbug.LogPart(" >> ");
+                                        Dbug.LogPart("Handling Loose : ");
+                                        if (resConE != null)
+                                        {
+                                            isLooseE = resConE.ContentName == LooseResConName;
+                                            ixExistingLoose = isLooseE ? 1 : 0;
+                                        }
+                                        if (resConO != null)
+                                        {
+                                            isLooseO = resConO.ContentName == LooseResConName;
+                                            ixOtherLoose = isLooseO ? 1 : 0;
+                                        }
+                                        Dbug.LogPart($"Existing is loose? [{ixExistingLoose == 1}], Overwriting is loose? [{ixOtherLoose == 1}];");
+                                        if (ixExistingLoose == ixOtherLoose)
+                                        {
+                                            ixExistingLoose = 0;
+                                            ixOtherLoose = 0;
+                                        }
+                                        Dbug.Log($"Back sets (Ex/Ov) [{ixOtherLoose} / {ixExistingLoose}]; ");
+
+                                        
+                                        bool noMoreLooseQ = false;
+                                        Dbug.NudgeIndent(true);
+                                        for (int lx = 0; !noMoreLooseQ; lx++)
+                                        {
+                                            ContentAdditionals caE = null, caO = null;
+                                            ContentChanges ccE = null, ccO = null;
+                                            string strAdtE = "", strAdtO = "", strUpdE = "", strUpdO = "";
+
+                                            if (isLooseE)
+                                            {
+                                                if (resConE.ConAddits.HasElements(lx + 1))
+                                                {
+                                                    caE = resConE.ConAddits[lx];
+                                                    strAdtE = caE.ToString();
+                                                }
+                                                if (resConE.ConChanges.HasElements(lx + 1))
+                                                {
+                                                    ccE = resConE.ConChanges[lx];
+                                                    strUpdE = ccE.ToString();
+                                                }
+                                            }
+                                            if (isLooseO)
+                                            {
+                                                if (resConO.ConAddits.HasElements(lx + 1))
+                                                {
+                                                    caO = resConO.ConAddits[lx];
+                                                    strAdtO = caO.ToString();
+                                                }
+                                                if (resConO.ConChanges.HasElements(lx + 1))
+                                                {
+                                                    ccO = resConO.ConChanges[lx];
+                                                    strUpdO = ccO.ToString();
+                                                }
+                                            }
+
+                                            noMoreLooseQ = caE == null && ccE == null && caO == null && ccO == null;
+
+                                            // content additionals
+                                            Dbug.Log($"ConAdt @{lx} | Existing [{strAdtE}]  //  Overwriting [{strAdtO}]; ");
+                                            Dbug.LogPart(" -> ");
+                                            if (caE != null)
+                                            {
+                                                Dbug.LogPart($"Existing Addit exists; ");
+                                                if (caO != null)
+                                                {
+                                                    ResContents parentRC = null;
+                                                    if (caE.RelatedShelfID != ResContents.NoShelfNum)
+                                                        parentRC = Contents[caE.RelatedShelfID];
+                                                    ContentAdditionals loosened = caE.OverwriteLoose(caO, parentRC, out ResLibOverwriteInfo info);
+
+                                                    Dbug.LogPart($"Existing Addit may be overwritten; {(loosened != null ? "Edited existing has been loosened, adding to loose queue" : "")}");
+                                                    if (loosened != null)
+                                                    {
+                                                        queueLooseDataIDs.Add(loosened.RelatedDataID);
+                                                        queueLooseAddits.Add(loosened);
+                                                    }
+
+                                                    AddToInfoDock(info);
+                                                }
+                                                else
+                                                {
+                                                    Dbug.LogPart("Removing existing addit from connected RC");
+                                                    ResContents parentRC = null;
+                                                    if (caE.RelatedShelfID != ResContents.NoShelfNum)
+                                                        parentRC = Contents[caE.RelatedShelfID];
+
+                                                    ResLibOverwriteInfo info = new(caE.ToString(), null);
+                                                    info.SetSourceSubCategory(SourceCategory.Adt);
+                                                    if (parentRC != null)
+                                                    {
+                                                        info.SetOverwriteStatus();
+                                                        parentRC.DisposeConAdditional(caE);
+                                                    }
+                                                    else
+                                                    {
+                                                        info.SetOverwriteStatus(false);
+                                                        Dbug.LogPart(" (Failed)");
+                                                    }
+
+                                                    AddToInfoDock(info);
+                                                }
+                                            }
+                                            else
+                                            {
+                                                Dbug.LogPart("Overwriting Addit exists (no existing addit); Adding overwriting addit to loose queue");
+                                                ResLibOverwriteInfo info = new(null, caO.ToString());
+                                                info.SetSourceSubCategory(SourceCategory.Adt);
+
+                                                queueLooseDataIDs.Add(caO.RelatedDataID);
+                                                queueLooseAddits.Add(caO);
+                                                info.SetOverwriteStatus();
+
+                                                AddToInfoDock(info);
+                                            }
+                                            Dbug.Log("; ");
+
+
+                                            // content changes
+                                            Dbug.Log($"ConChg @{lx} | Existing [{strUpdE}]  //  Overwriting [{strUpdO}]; ");
+                                            Dbug.LogPart(" -> ");
+                                            if (ccE != null)
+                                            {
+                                                Dbug.LogPart("Existing changes exists; ");
+                                                if (ccO != null)
+                                                {
+                                                    ResContents parentRC = null;
+                                                    if (ccE.RelatedShelfID != ResContents.NoShelfNum)
+                                                        parentRC = Contents[ccE.RelatedShelfID];
+                                                    ContentChanges loosened = ccE.OverwriteLoose(ccO, parentRC, out ResLibOverwriteInfo info);
+
+                                                    Dbug.LogPart($"Existing Changes may be overwritten; {(loosened != null ? "Edited existing has been loosened, adding to loose queue" : "")}");
+                                                    if (loosened != null)
+                                                    {
+                                                        queueLooseDataIDs.Add(loosened.RelatedDataID);
+                                                        queueLooseChanges.Add(loosened);
+                                                    }
+
+                                                    AddToInfoDock(info);
+                                                }
+                                                else
+                                                {
+                                                    Dbug.LogPart("Removing existing changes from connected RC");
+                                                    ResContents parentRC = null;
+                                                    if (ccE.RelatedShelfID != ResContents.NoShelfNum)
+                                                        parentRC = Contents[ccE.RelatedShelfID];
+
+                                                    ResLibOverwriteInfo info = new(ccE.ToString(), null);
+                                                    info.SetSourceSubCategory(SourceCategory.Upd);
+                                                    if (parentRC != null)
+                                                    {
+                                                        parentRC.DisposeConChanges(ccE);
+                                                        info.SetOverwriteStatus();
+                                                    }
+                                                    else
+                                                    {
+                                                        info.SetOverwriteStatus(false);
+                                                        Dbug.LogPart(" (Failed)");
+                                                    }
+
+                                                    AddToInfoDock(info);
+                                                }
+                                            }
+                                            else
+                                            {
+                                                Dbug.LogPart("Overwriting changes exists (no existing changes); Adding overwriting changes to loose queue");
+                                                ResLibOverwriteInfo info = new(null, ccO.ToString());
+                                                info.SetSourceSubCategory(SourceCategory.Upd);
+
+                                                queueLooseDataIDs.Add(ccO.RelatedDataID);
+                                                queueLooseChanges.Add(ccO);
+                                                info.SetOverwriteStatus();
+
+                                                AddToInfoDock(info);
+                                            }
+                                            Dbug.Log("; ");
+
+
+                                            // compile loose queue
+                                            Dbug.LogPart("Compiling queued loose contents");
+                                            if (queueLooseDataIDs.HasElements())
+                                            {
+                                                ContentBaseGroup looseCbg = new(verNum, LooseResConName, queueLooseDataIDs.ToArray());
+                                                integrationQueueRC = new ResContents(0, looseCbg, queueLooseAddits.ToArray(), queueLooseChanges.ToArray());
+                                                Dbug.LogPart($"; Loose queue compilied :: {integrationQueueRC}");
+                                            }
+                                            Dbug.Log("; ");
+                                        }
+                                        Dbug.NudgeIndent(false);
+                                    }
+
+                                }
+                                else Dbug.Log("No ResCons provided; Base Contents overwriting End; ");
+
+
+                                // reports the new overwriting info items
+                                if (rloInfoDock.HasElements() && !noMoreRCq)
+                                {
+                                    Dbug.Log("Overwrite summary of these ResContents; ");
+                                    Dbug.NudgeIndent(true);
+                                    for (int ix = ixInfoDockLatest; ix < rloInfoDock.Count; ix++)
+                                        Dbug.Log(rloInfoDock[ix].ToString() + "; ");
+                                    ixInfoDockLatest = rloInfoDock.Count;
+                                    Dbug.NudgeIndent(false);
                                 }
                             }
 
                             Dbug.NudgeIndent(false);
                         }
 
+
                         // OVERWRITING : Legend Contents
+                        Dbug.Log($"Overwriting: Legends; {(libVer.Legends.HasElements() || other.Legends.HasElements() ? "Proceed..." : "Skip")}");
+                        if (libVer.Legends.HasElements() || other.Legends.HasElements())
+                        {
+                            Dbug.NudgeIndent(true);
+
+                            /// The overwriting process for the legends will need to be redone.
+                            ///     - Previously, only the introduced legends would be fetched from the library, overlooking the array of used legends from the overwriting library (other)
+                            ///     - The list of overwriting legends may not necessarily match that the existing library's legends. Mis-matches could make for near impossible overwrites
+                            ///     - In this case, legends from each have to be matched up by their key before continuing to the overwriting process
+                            ///     
+
+                            bool noMoreLegsQ = false;
+                            for (int lgx = 0; !noMoreLegsQ; lgx++)
+                            {
+                                LegendData legE = null, legO = null;
+                                string strLegE = "", strLegO = "", strLegOMatchMethod = "";
+                                if (libVer.Legends.HasElements(lgx + 1))
+                                {
+                                    legE = libVer.Legends[lgx];
+                                    strLegE = legE.ToString();
+                                }
+                                /// IF has existing: find matching overwriting legend for overwrite process; ELSE fetch next overwriting legend in list
+                                if (legE != null)
+                                {
+                                    strLegOMatchMethod = "Match with existing";
+                                    /// a one-time loop here that finds a overwriting legend data with the same key as existing (if existing exists)
+                                    foreach (LegendData oLeg in other.Legends)
+                                        if (oLeg.Key == legE.Key)
+                                        {
+                                            legO = oLeg;
+                                            strLegO = legO.ToString();
+                                            break;
+                                        }
+                                }
+                                else
+                                {
+                                    strLegOMatchMethod = "Fetch next overwriting";
+                                    if (other.Legends.HasElements(lgx + 1))
+                                    {
+                                        legO = other.Legends[lgx];
+                                        strLegO = legO.ToString();
+                                    }
+                                }
+
+                                
+                                Dbug.Log($"@ix{lgx}  |  Existing [{strLegE}]  //  Overwriting [{strLegO}] (Match method : {strLegOMatchMethod}); ");
+                                ResLibOverwriteInfo info = new(strLegE, strLegO, SourceOverwrite.Legend);
+                                info.SetOverwriteStatus(false);
+
+                                noMoreLegsQ = legE == null && legO == null;
+
+                                if (!noMoreLegsQ)
+                                {
+                                    Dbug.LogPart(" -> ");
+                                    if (legE != null)
+                                    {
+                                        Dbug.LogPart("Existing Legend exists; ");
+                                        if (legO != null)
+                                        {
+                                            Dbug.LogPart("Overwriting Legend exists; Existing Legend may be overwritten with Overwriting Legend");
+                                            if (legE.Index != ResContents.NoShelfNum)
+                                                Legends[legE.Index].Overwrite(legO, out info);
+                                            else Dbug.LogPart(" (Failed)");
+
+                                            AddToInfoDock(info);
+                                        }
+                                        else
+                                        {
+                                            Dbug.LogPart("No overwriting legend; ");
+                                            if (legE.VersionIntroduced.Equals(verNum))
+                                            {
+                                                Dbug.LogPart($"Existing Legend introduced in current version ({verNum}); Removing Existing Legend");
+                                                if (legE.Index != ResContents.NoShelfNum)
+                                                {
+                                                    LegendData trueLegE = Legends[legE.Index];
+                                                    if (trueLegE.Equals(legE))
+                                                    {
+                                                        Legends[legE.Index] = new LegendData();
+                                                        info.SetOverwriteStatus();
+                                                    }
+                                                }
+
+                                                AddToInfoDock(info);
+                                            }
+                                            else Dbug.LogPart($"Existing Legend introduced in a different version, no changes made");
+                                        }
+                                    }
+                                    else
+                                    {
+                                        Dbug.LogPart("Overwriting Legend exists (no existing Legend); Adding new Legend item to library");
+                                        bool addedLegOq = AddLegend(legO);
+                                        info.SetOverwriteStatus(addedLegOq);
+
+                                        AddToInfoDock(info);
+                                    }
+                                    Dbug.Log("; ");
+                                    Dbug.Log($" -> Legend Overwriting Outcome: {info}; ");
+                                }
+                                else Dbug.Log("No Legends provided; Legends overwriting End; ");
+                            }
+                            Dbug.NudgeIndent(false);
+                        }
 
 
                         // OVERWRITING : Summary Contents
+                        Dbug.Log($"Overwriting: Summaries; {(libVer.Summaries.HasElements() || other.Summaries.HasElements() ? "Proceed..." : "Skip")}");
+                        if (libVer.Summaries.HasElements() || other.Summaries.HasElements())
+                        {
+                            Dbug.NudgeIndent(true);
+
+                            bool noMoreSumsQ = false;
+                            for (int smx = 0; !noMoreSumsQ; smx++)
+                            {
+                                SummaryData sumE = null, sumO = null;
+                                string strSumE = "", strSumO = "";
+                                if (libVer.Summaries.HasElements(smx + 1))
+                                {
+                                    sumE = libVer.Summaries[smx];
+                                    strSumE = sumE.ToString();
+                                }
+                                if (other.Summaries.HasElements(smx + 1))
+                                {
+                                    sumO = other.Summaries[smx];
+                                    strSumO = sumO.ToString();
+                                }
+                                Dbug.Log($"@ix{smx}  |  Existing [{strSumE}]  //  Overwriting [{strSumO}]; ");
+                                ResLibOverwriteInfo info = new(strSumE, strSumO, SourceOverwrite.Summary);
+                                info.SetOverwriteStatus(false);
+
+                                noMoreSumsQ = sumE == null && sumO == null;
+
+                                if (!noMoreSumsQ)
+                                {
+                                    // note: summaries can be replaced, but they can never be removed, and therefore an 'add' also may never occur
+                                    // There must always be a summary, a maximum of 1!
+                                    Dbug.LogPart(" -> ");
+                                    if (sumE != null)
+                                    {
+                                        Dbug.LogPart("Existing Summary exists; ");
+                                        if (sumO != null)
+                                        {
+                                            Dbug.LogPart("Overwriting Summary exists; Existing Summary may be overwritten with Overwriting Summary");
+                                            if (sumE.Index != ResContents.NoShelfNum)
+                                                Summaries[sumE.Index].Overwrite(sumO, out info);
+                                            else Dbug.LogPart(" (Failed)");
+                                        }
+                                        else Dbug.LogPart("No overwriting summary; No changes made");
+                                    }
+                                    else Dbug.LogPart("Overwriting Summary exists (no existing summary); No changes made (!! no existing?! : ISSUE !!)");
+                                    Dbug.Log("; ");
+                                    Dbug.Log($" -> Summary Overwriting Outcome: {info}; ");
+                                }
+                                else Dbug.Log("No Summaries provided; Summaries overwriting End; ");
+
+                                AddToInfoDock(info);
+                            }
+                            Dbug.NudgeIndent(false);
+                        }
 
 
+                        // OVERWRITING : Loose integration
+                        Dbug.Log($"Overwriting: Looose Content Integration :: {(integrationQueueRC != null ? "Proceed..." : "Skip")}");
+                        if (integrationQueueRC != null)
+                        {
+                            bool integratedLooseQ = AddContent(false, integrationQueueRC);
+                            Dbug.Log($" -> Received loose ResCon: {integrationQueueRC}; Integration successful? {(integratedLooseQ ? "Yes" : "No")}; ");
+                        }
+
+
+
+                        // information send-off
+                        Dbug.LogPart("Compiling information docks (overwriting [");
+                        if (rloInfoDock.HasElements())
+                        {
+                            resLibOverwriteInfoDock = rloInfoDock.ToArray();
+                            Dbug.LogPart($"{resLibOverwriteInfoDock.Length}");
+                        }
+                        else Dbug.LogPart("0");
+                        Dbug.LogPart("], integration [");
+                        if (rliInfoDock.HasElements())
+                        {
+                            looseIntegrationInfoDock = rliInfoDock.ToArray();
+                            Dbug.LogPart($"{rliInfoDock.ToArray()}");
+                        }
+                        else Dbug.LogPart("0");
+                        Dbug.Log("]); ");
+
+
+                        // LOCAL METHOD
+                        void AddToInfoDock(params ResLibOverwriteInfo[] infos)
+                        {
+                            if (infos.HasElements())
+                                foreach (ResLibOverwriteInfo info in infos)
+                                {
+                                    if (info.IsSetup())
+                                        rloInfoDock.Add(info);
+                                }
+                        }
                     }
                     else Dbug.Log($"Could not fetch library version details; Cancelling overwriting; ");
-
-
-
-
                 }
-                else Dbug.Log("Instance is not setup; Cancelling overwriting; ");
                 Dbug.EndLogging();
             }
-
         }
-        // --- WIP ---
-
         public bool GetVersionRange(out VerNum lowest, out VerNum highest)
         {
             lowest = VerNum.None;
@@ -1339,12 +1766,14 @@ namespace HCResourceLibraryApp.DataHandling
                 Dbug.Log($"  //  Clone ResLibrary instance returned [#:{clone.GetHashCode()}]; ");
             }
             else Dbug.Log("Cloning cancelled; NULL instance returned [#:--]; ");
+            Dbug.EndLogging();
 
             disableAddDbug = prevDADbg;
             return clone;
         }
         /// <summary>Fetches the contents, legends, and summaries introduced in a given <paramref name="version"/>. The returned instance may not have elements for all collections.</summary>
-        public ResLibrary GetVersion(VerNum version)
+        /// <param name="getUsedLegendQ">If <c>true</c>, will get all legends that are used within the given version. Otherwise, only legends that were introduced in given version.</param>
+        public ResLibrary GetVersion(VerNum version, bool getUsedLegendQ = true)
         {
             //Dbug.DeactivateNextLogSession();
             //Dbug.StartLogging("ResLibrary.GetVersion()");
@@ -1353,6 +1782,7 @@ namespace HCResourceLibraryApp.DataHandling
             
             if (IsSetup())
             {
+                disableAddDbug = true;
                 for (int rdx = 0; rdx < 3; rdx++)
                 {
                     switch (rdx)
@@ -1457,11 +1887,45 @@ namespace HCResourceLibraryApp.DataHandling
 
                         // legends - get of matching ver log number
                         case 1:
+                            /// fetch used legend keys
+                            string legendKeysStr = " ";
+                            if (allDataIDs.HasElements())
+                            {
+                                /// for the range indicator in specific                                
+                                string condensedAllDataIDsStr = Extensions.CreateNumericDataIDRanges(allDataIDs.ToArray());
+                                if (condensedAllDataIDsStr.IsNotNEW())
+                                {
+                                    if (condensedAllDataIDsStr.Contains("~"))
+                                        legendKeysStr += $"~ ";
+                                }
+
+                                foreach (string dataID in allDataIDs)
+                                {
+                                    LogDecoder.DisassembleDataID(dataID, out string dk, out _, out string sfx);
+                                    if (!legendKeysStr.Contains($" {dk} "))
+                                        legendKeysStr += $"{dk} ";
+                                    if (!legendKeysStr.Contains($" {sfx} "))
+                                        legendKeysStr += $"{sfx} ";
+                                }
+
+
+                            }
+                            /// fetch legend datas
                             for (int legx = 0; legx < Legends.Count; legx++)
                             {
-                                if (Legends[legx].VersionIntroduced.Equals(version))
-                                    verLogDetails.AddLegend(Legends[legx]);
-                            }
+                                /// IF get used legends: legend data that have been used; ELSE get legend data introduced in version;
+                                if (getUsedLegendQ)
+                                {
+                                    if (legendKeysStr.Contains($" {Legends[legx].Key} "))
+                                        verLogDetails.AddLegend(Legends[legx]);
+                                }
+                                else
+                                {
+                                    if (Legends[legx].VersionIntroduced.Equals(version))
+                                        verLogDetails.AddLegend(Legends[legx]);
+                                }
+                                
+                            }                                                        
                             break;
 
 
@@ -1479,6 +1943,7 @@ namespace HCResourceLibraryApp.DataHandling
                             break;
                     }
                 }
+                disableAddDbug = false;
             }
 
             //Dbug.EndLogging();
@@ -1841,8 +2306,9 @@ namespace HCResourceLibraryApp.DataHandling
                                 LegendData decodedLegd = new();
                                 if (decodedLegd.Decode(legData))
                                 {
+                                    decodedLegd.AdoptIndex(Legends.Count);
                                     Legends.Add(decodedLegd);
-                                    Dbug.Log($"Decoded Legend :: {decodedLegd.ToString()}; ");
+                                    Dbug.Log($"Decoded Legend :: {decodedLegd}; ");
                                 }
                                 else Dbug.Log($"Legend Data could not be decoded{(!expandDecodeDebug ? $" :: source ({legData})" : "")};");
                                 Dbug.NudgeIndent(false);
@@ -1875,6 +2341,7 @@ namespace HCResourceLibraryApp.DataHandling
                                 SummaryData decodedSmry = new();
                                 if (decodedSmry.Decode(sumData))
                                 {
+                                    decodedSmry.AdoptIndex(Summaries.Count);
                                     Summaries.Add(decodedSmry);
                                     Dbug.Log($"Decoded Summary :: {decodedSmry.ToStringShortened()}; ");
                                 }

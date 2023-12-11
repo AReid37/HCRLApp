@@ -52,6 +52,7 @@ namespace HCResourceLibraryApp.DataHandling
 		VerNum _summaryVersion, _prevSummaryVersion;
 		int _ttaNumber, _prevTtaNumber;
 		List<string> _summaryParts, _prevSummaryParts;
+		int index = ResContents.NoShelfNum;
 
         // public
 		public VerNum SummaryVersion
@@ -77,6 +78,8 @@ namespace HCResourceLibraryApp.DataHandling
 					_summaryParts = value;
 			}
 		}
+        /// <summary>The index number of this instance within a <see cref="ResLibrary.Summaries"/>.</summary>
+        public int Index { get => index; }
 		#endregion
 
 		public SummaryData() { }
@@ -255,7 +258,8 @@ namespace HCResourceLibraryApp.DataHandling
 				///			- the summary is completely overwritten: the tta number and summary parts are all overwritten where applicable.
 
 				info = new ResLibOverwriteInfo(ToString(), sumNew.ToString(), SourceOverwrite.Summary);
-				if (sumNew.IsSetup() && !Equals(sumNew))
+                info.SetOverwriteStatus(false);
+                if (sumNew.IsSetup() && !Equals(sumNew))
 				{
 					if (SummaryVersion.Equals(sumNew.SummaryVersion))
 					{
@@ -263,14 +267,19 @@ namespace HCResourceLibraryApp.DataHandling
 						_summaryParts.Clear();
 						_summaryParts.AddRange(sumNew._summaryParts.ToArray());
 						info.SetOverwriteStatus();
+						info.SetResult(ToString());
 					}
-					else info.SetOverwriteStatus(false);
 				}
 			}
 		}
+        /// <summary>Stores the index of which this instance exists within <see cref="ResLibrary.Summaries"/>. Minimum value of <c>0</c>.</summary>
+        public void AdoptIndex(int ix)
+        {
+            if (ix >= 0)
+                index = ix;
+        }
 
-
-		public override string ToString()
+        public override string ToString()
 		{
 			return Encode().Replace(Sep, ";");
 		}

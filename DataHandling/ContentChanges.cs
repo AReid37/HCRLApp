@@ -271,6 +271,7 @@
 							InternalName = looseCc.InternalName;
 						ChangeDesc = looseCc.ChangeDesc;
 						info.SetOverwriteStatus();
+						info.SetResult(ToString());
 					}
 					else info.SetOverwriteStatus(false);
 
@@ -293,7 +294,7 @@
         /// <summary>Stores the Shelf ID of the related <see cref="ResContents"> instance. Minimum value of <c>0</c>.</summary>
         public void AdoptShelfID(int shelfID)
         {
-            if (shelfID >= 0 && _relatedShelfID == ResContents.NoShelfNum)
+            if (shelfID >= 0)
                 _relatedShelfID = shelfID;
         }
 

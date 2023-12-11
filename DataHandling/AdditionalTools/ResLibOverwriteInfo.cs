@@ -11,6 +11,8 @@ namespace HCResourceLibraryApp.DataHandling
         public readonly string contentExisting;
         /// <summary>The new content that may replace an existing content.</summary>
         public readonly string contentOverwriting;
+        /// <summary>The final form of the content if a change has occured.</summary>
+        public string contentResulting;
         bool? overwrittenQ;
         public bool ignoreOverwriteQ;
         public readonly SourceOverwrite source;
@@ -31,12 +33,13 @@ namespace HCResourceLibraryApp.DataHandling
         public ResLibOverwriteInfo(string existing, string overwriting, SourceOverwrite sourceType = SourceOverwrite.Content)
         {
             isSetupQ = true;
-            if (existing != null)
-                contentExisting = existing.ToString();
+            if (existing.IsNotNEW())
+                contentExisting = existing;
             else contentExisting = null;
-            if (overwriting != null)
-                contentOverwriting = overwriting.ToString();
+            if (overwriting.IsNotNEW())
+                contentOverwriting = overwriting;
             else contentOverwriting = null;
+            contentResulting = null;
             overwrittenQ = null;
             ignoreOverwriteQ = false;
             source = sourceType;
@@ -56,6 +59,11 @@ namespace HCResourceLibraryApp.DataHandling
         public void SetIgnoreOverwrite(bool overwriteDisableQ = true)
         {
             ignoreOverwriteQ = overwriteDisableQ;
+        }
+        public void SetResult(string result)
+        {
+            if (result.IsNotNEW())
+                contentResulting = result;
         }
         /// <summary>Set a sub-source category for <see cref="subSource"/>. Only applies for a source type of <see cref="SourceOverwrite.Content"/>.</summary>
         public void SetSourceSubCategory(SourceCategory category)

@@ -366,6 +366,7 @@ namespace HCResourceLibraryApp.DataHandling
 						_dataIDs.AddRange(looseCa._dataIDs.ToArray());
 						OptionalName = looseCa.OptionalName;
 						info.SetOverwriteStatus(true);
+						info.SetResult(ToString());
 					}
 					else info.SetOverwriteStatus(false);
 
@@ -387,7 +388,7 @@ namespace HCResourceLibraryApp.DataHandling
         /// <summary>Stores the Shelf ID of the related <see cref="ResContents"> instance. Minimum value of <c>0</c>.</summary>
         public void AdoptShelfID(int shelfID)
         {
-            if (shelfID >= 0 && _relatedShelfID == ResContents.NoShelfNum)
+            if (shelfID >= 0)
                 _relatedShelfID = shelfID;
         }
 

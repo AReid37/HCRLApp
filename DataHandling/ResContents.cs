@@ -110,7 +110,8 @@ namespace HCResourceLibraryApp.DataHandling
             if (conBase != null)
                 ConBase = conBase;
             else ConBase = new();
-            ConBase.AdoptShelfID(ShelfID);
+            if (ConBase != null)
+                ConBase.AdoptShelfID(ShelfID);
         }
         public ResContents(int? shelfID, ContentBaseGroup conBase, ContentAdditionals[] additionals, ContentChanges[] changes) 
         {
@@ -121,7 +122,8 @@ namespace HCResourceLibraryApp.DataHandling
             if (conBase != null)
                 ConBase = conBase;
             else ConBase = new();
-            ConBase.AdoptShelfID(ShelfID);
+            if (ConBase != null)
+                ConBase.AdoptShelfID(ShelfID);
 
             if (additionals.HasElements())
             {
@@ -172,6 +174,7 @@ namespace HCResourceLibraryApp.DataHandling
 
                         if (!isDupe && isOkay)
                         {
+                            newCA.AdoptShelfID(ShelfID);
                             ConAddits.Add(newCA);
                             storedCAq = true;
                         }
@@ -213,6 +216,7 @@ namespace HCResourceLibraryApp.DataHandling
                             if ((newCC.InternalName == ResLibrary.LooseResConName || newCC.InternalName.IsNEW()) && ContentName != ResLibrary.LooseResConName)
                                 newCC = new ContentChanges(newCC.VersionChanged, ContentName, newCC.RelatedDataID, newCC.ChangeDesc);
 
+                            newCC.AdoptShelfID(ShelfID);
                             ConChanges.Add(newCC);
                             storedCCq = true;
                         }
@@ -543,7 +547,10 @@ namespace HCResourceLibraryApp.DataHandling
                 // Insert resCon info to infoDock
                 rcInfo.SetOverwriteStatus(beginOverwriteQ);
                 if (rcInfo.IsSetup())
+                {
+                    rcInfo.SetResult(ToString());
                     infoDock.Insert(0, rcInfo);
+                }
             }
 
             /// Compile final info dock (if it has info)
@@ -766,7 +773,7 @@ namespace HCResourceLibraryApp.DataHandling
         public ResContents CloneResContent(bool bypassSetupQ = false)
         {
             ResContents clone = null;
-            if (IsSetup() || bypassSetupQ)
+            if (IsSetup() || (bypassSetupQ && _conBase != null))
             {
                 ContentBaseGroup cloneCBG = new ContentBaseGroup(_conBase.VersionNum, _conBase.ContentName, _conBase.DataIDString.Split(' '));
                 List<ContentAdditionals> cloneCAs = new List<ContentAdditionals>();
