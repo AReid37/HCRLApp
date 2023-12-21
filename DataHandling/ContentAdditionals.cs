@@ -351,12 +351,15 @@ namespace HCResourceLibraryApp.DataHandling
 			info = new ResLibOverwriteInfo();
 			if (IsSetup() && looseCa != null)
 			{
-				/// considerations
-				///		- the overwriting loose addit should have the same related data ID and version number as the existing
-				///			- If it does, then overwriting can replace the existing info
-				///			- If not, then the overwriting is ignored; the existing info cannot be overwritten (must enter through regular integration)
-				
-				if (looseCa.IsSetup() && !Equals(looseCa))
+                /// considerations
+                ///		- the overwriting loose addit should have the same related data ID and version number as the existing
+                ///			- If it does, then overwriting can replace the existing info
+                ///			- If not, then the overwriting is ignored; the existing info cannot be overwritten (must enter through regular integration)
+                ///			----
+                ///			Post consideration
+                ///			- If the related IDs are not the same, but otherwise the addits are the same, overwrite the related data ID [not implemented]
+
+                if (looseCa.IsSetup() && !Equals(looseCa))
 				{
 					info = new ResLibOverwriteInfo(ToString(), looseCa.ToString());
 					info.SetSourceSubCategory(SourceCategory.Adt);

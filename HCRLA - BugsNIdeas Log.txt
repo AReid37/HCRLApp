@@ -103,7 +103,11 @@
 
 [X] 19# Ability to view an expanded summary of all the additions and changes made in a specified version in Legends and Summaries: Summary Page.
 
-[ ] 20# ...
+[ ] 20# Profiles! Profiles dammit, profiles! I want to be able to separate my different library files without manually switching them out. Can we get some user profiles up in this place?
+
+[ ] 21# Better looking Main Menu. Versus the title page art and some of the other stylish pages the Main Menu seems very dull. Probably could use some decoration.
+
+[ ] 22# ...
 
 
 ----- F R O M   B U G / I D E A   S U B M I S S I O N   S Y S T E M -----

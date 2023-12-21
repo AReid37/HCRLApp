@@ -291,9 +291,9 @@ namespace HCResourceLibraryApp.Layout
 
                  *********************/
 
-                /// 6: 'HCRLA' acronym design similar to Terraria logo
+                /// 6: 'HCRLA' acronym design similar to Terraria logo with a layered surface background
 
-                /// 7: pending... (Required checkpoint: All other checkpoints hit) 
+                /// 7: simple acronym design within a layered cave perspective
                 /// NOTE :: up to 7 designs maximum
 
                 /// n: test style clipping and centering

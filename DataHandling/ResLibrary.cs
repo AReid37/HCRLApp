@@ -72,9 +72,10 @@ namespace HCResourceLibraryApp.DataHandling
 
         #region methods
         // CONTENT / LIBRARY INFORMATION HANDLING METHODS
-        public bool AddContent(bool keepLooseRCQ, params ResContents[] newContents)
+        public bool AddContent(bool keepLooseRCQ, out int[] newShelfIDs, params ResContents[] newContents)
         {
             bool addedContentsQ = false;
+            List<int> newShelfIdList = new();
             if (newContents.HasElements())
             {
                 if (disableAddDbug)
@@ -324,6 +325,7 @@ namespace HCResourceLibraryApp.DataHandling
                                 /// add to content library
                                 if (newRC.IsSetup())
                                 {
+                                    newShelfIdList.Add(newRC.ShelfID);
                                     Contents.Add(newRC);
                                     Dbug.Log($"Added :: {newRC}");
                                 }
@@ -353,11 +355,16 @@ namespace HCResourceLibraryApp.DataHandling
                     return newShelfNum;
                 }
             }
+            newShelfIDs = newShelfIdList.ToArray();
             return addedContentsQ;
+        }
+        public bool AddContent(bool keepLooseRCQ, params ResContents[] newContents)
+        {
+            return AddContent(keepLooseRCQ, out _, newContents);
         }
         public bool AddContent(params ResContents[] newContents)
         {
-            return AddContent(false, newContents);
+            return AddContent(false, out _, newContents);
         }
         bool IsDuplicateInLibrary(ResContents resCon)
         {
@@ -556,6 +563,141 @@ namespace HCResourceLibraryApp.DataHandling
                         {
                             Dbug.NudgeIndent(true);
 
+                            // net change detection loop
+                            Dbug.LogPart("Generating net changes list (aligns with existing list)  //  ");
+                            Dbug.Log("NCLegend :: [=]Existing & Overwriting has,  [-]Only Existing has,  [+]Only Overwriting has,  (indexExisting:indexOverwriting),  [*]alternate ResCon Matching,  [l]loose ResCon; ");
+                            Dbug.LogPart("> Net Changes Results ::");
+                            /// Net Change List usage
+                            /// - Aligns with existing content list, sources numbers from overwriting list
+                            ///     Existing has, Overwriting Matches ->indexO [in existing range]
+                            ///     Existing has, Overwriting does not have -> null 
+                            ///     No existing, Overwriting has -> indexO [out of existing range]
+                            List<int?> netChangeList = new();
+                            string otherIndexList = "";
+                            bool endNetChangeQ = false;
+                            int netIxOtherLooseBackset = 0;
+                            for (int ncx = 0; !endNetChangeQ; ncx++)
+                            {
+                                /// matches are determined by exact equivalence, otherwise by content name or data IDs
+                                string ncResult = null;
+                                ResContents resConE = null;
+                                int? indexOther = null, indexExisting = null;
+                                bool looseRCEq = false;
+
+                                /// get existing
+                                if ((ncx - netIxOtherLooseBackset).IsWithin(0, libVer.Contents.Count - 1))
+                                {
+                                    resConE = libVer.Contents[ncx - netIxOtherLooseBackset];
+                                    indexExisting = ncx - netIxOtherLooseBackset;
+                                    if (resConE.ContentName == LooseResConName)
+                                        looseRCEq = true;
+                                }
+
+                                /// get overwriting: either matching, or addition; 
+                                /// determine index and match result
+                                if (other.Contents.HasElements())
+                                {
+                                    bool foundOther = false;
+                                    for (int nox = 0; !foundOther && nox < other.Contents.Count; nox++)
+                                    {
+                                        ResContents resConO = other.Contents[nox];
+                                        bool looseRCOq = false;
+                                        if (resConO != null)
+                                        {
+                                            if (resConO.ConBase != null)
+                                                looseRCOq = resConO.ContentName == LooseResConName;
+                                        }
+
+                                        if (!looseRCOq)
+                                        {
+                                            /// get matching
+                                            if (resConE != null)
+                                            {
+                                                ncResult = "-";
+                                                if (resConO != null)
+                                                {
+                                                    if (!looseRCEq)
+                                                    {
+                                                        resConO = resConO.CloneResContent(true);
+                                                        resConO.ShelfID = resConE.ShelfID;
+
+                                                        bool alternateResConMatchQ = false;
+                                                        if (resConO.IsSetup() && resConE.IsSetup() && !resConO.Equals(resConE))
+                                                            alternateResConMatchQ = resConO.ContentName == resConE.ContentName || resConO.ConBase.DataIDString == resConE.ConBase.DataIDString;
+
+
+                                                        if ((resConO.Equals(resConE) || alternateResConMatchQ) && !otherIndexList.Contains($" {nox} "))
+                                                        {
+                                                            ncResult = "=" + (alternateResConMatchQ ? "*" : "");
+                                                            indexOther = nox;
+                                                            foundOther = true;
+                                                            otherIndexList += $" {nox} ";
+                                                        }
+                                                    }
+                                                    else
+                                                    {
+                                                        ncResult += "l";
+                                                        foundOther = true;
+                                                    }
+                                                }
+                                            }
+                                            /// get addition
+                                            else
+                                            {
+                                                if (resConO != null)
+                                                {
+                                                    if (!otherIndexList.Contains($" {nox} "))
+                                                    {
+                                                        ncResult = "+";
+                                                        indexOther = nox;
+                                                        foundOther = true;
+                                                        otherIndexList += $" {nox} ";
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        else
+                                        {
+                                            if (!otherIndexList.Contains($" {nox} "))
+                                            {
+                                                if (looseRCEq)
+                                                    ncResult = "=l";
+                                                else
+                                                {
+                                                    ncResult = "+l";
+                                                    netIxOtherLooseBackset += 1;
+                                                }
+                                                indexOther = nox;
+                                                foundOther = true;
+                                                otherIndexList += $" {nox} ";
+                                            }
+                                        }
+                                    }
+                                    
+                                    /// ---
+                                }
+
+                                /// add result to list
+                                if (ncResult.IsNotNEW())
+                                {
+                                    netChangeList.Add(indexOther);
+
+                                    Dbug.LogPart($"  {ncResult}(");
+                                    if (indexExisting.HasValue)
+                                        Dbug.LogPart(indexExisting.Value.ToString());
+                                    else Dbug.LogPart("'");
+                                    Dbug.LogPart(":");
+                                    if (indexOther.HasValue)
+                                        Dbug.LogPart(indexOther.Value.ToString());
+                                    else Dbug.LogPart("'");
+                                    Dbug.LogPart(")");
+                                }
+                                else endNetChangeQ = true;
+                            }
+                            Dbug.Log("; ");
+
+
+                            // overwriting loop
                             bool noMoreRCq = false;
                             int ixExistingLoose = 0, ixOtherLoose = 0, ixInfoDockLatest = 0;
                             for (int lvx = 0; !noMoreRCq; lvx++)
@@ -588,12 +730,31 @@ namespace HCResourceLibraryApp.DataHandling
                                     resConE = libVer.Contents[lvx - ixOtherLoose];
                                     strExist = resConE.ToString();
                                 }
-                                if ((lvx - ixExistingLoose).IsWithin(0, other.Contents.Count - 1))
+                                if (lvx.IsWithin(0, netChangeList.Count - 1))
                                 {
-                                    resConO = other.Contents[lvx - ixExistingLoose];
-                                    strOther = resConO.ToString();
+                                    int? oIx = netChangeList[lvx];
+                                    if (oIx.HasValue)
+                                    {
+                                        if (oIx.Value.IsWithin(0, other.Contents.Count - 1))
+                                        {
+                                            resConO = other.Contents[oIx.Value];
+                                            strOther = resConO.ToString();
+                                        }
+                                    }
                                 }
-                                
+                                #region oldCode
+                                //if ((lvx - ixOtherLoose).IsWithin(0, libVer.Contents.Count - 1))
+                                //{
+                                //    resConE = libVer.Contents[lvx - ixOtherLoose];
+                                //    strExist = resConE.ToString();
+                                //}
+                                //if ((lvx - ixExistingLoose).IsWithin(0, other.Contents.Count - 1))
+                                //{
+                                //    resConO = other.Contents[lvx - ixExistingLoose];
+                                //    strOther = resConO.ToString();
+                                //}
+                                #endregion
+
                                 Dbug.Log($"@{lvx} | Existing {{{strExist}}}  //  Overwriting {{{strOther}}}");                                
 
                                 noMoreRCq = resConE == null && resConO == null;
@@ -638,7 +799,6 @@ namespace HCResourceLibraryApp.DataHandling
                                             {
                                                 Contents[resConE.ShelfID] = new ResContents();
                                                 ResLibOverwriteInfo info = new(resConE.ToString(), null);
-                                                info.SetSourceSubCategory(SourceCategory.Bse);
                                                 info.SetOverwriteStatus();
                                                 Dbug.LogPart($"Removed existing RC (shelf ix {resConE.ShelfID}) from library contents");
 
@@ -652,11 +812,13 @@ namespace HCResourceLibraryApp.DataHandling
                                             enableLooseHandlingQ = true;
                                         else
                                         {
-                                            AddContent(resConO);
+                                            AddContent(false, out int[] shelfNums, resConO);
+                                            resConO = resConO.CloneResContent(true);
+                                            if (shelfNums.HasElements())
+                                                resConO.ShelfID = shelfNums[0];
+
                                             ResLibOverwriteInfo info = new(null, resConO.ToString());
                                             info.SetOverwriteStatus();
-                                            info.SetSourceSubCategory(SourceCategory.Bse);
-
                                             AddToInfoDock(info);
                                         }
                                         Dbug.LogPart($"Overwriting RC exists (no existing RC); {(enableLooseHandlingQ ? "Overwriting RC is loose" : "Added overwriting RC to library as new content")}");
@@ -878,6 +1040,7 @@ namespace HCResourceLibraryApp.DataHandling
 
 
                                 // reports the new overwriting info items
+                                Dbug.NudgeIndent(true);
                                 if (rloInfoDock.HasElements() && !noMoreRCq)
                                 {
                                     Dbug.Log("Overwrite summary of these ResContents; ");
@@ -887,6 +1050,7 @@ namespace HCResourceLibraryApp.DataHandling
                                     ixInfoDockLatest = rloInfoDock.Count;
                                     Dbug.NudgeIndent(false);
                                 }
+                                Dbug.NudgeIndent(false);
                             }
 
                             Dbug.NudgeIndent(false);

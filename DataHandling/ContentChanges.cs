@@ -260,8 +260,11 @@
                 ///		- the overwriting loose changes should have the same related data ID and version number as the existing
                 ///			- If it does, then overwriting can replace the existing info
                 ///			- If not, then the overwriting is ignored; the existing info cannot be overwritten (must enter through regular integration)
+				///			----
+                ///			Post consideration
+                ///			- If the related IDs are not the same, but otherwise the addits are the same, overwrite the related data ID [not implemented]
 
-				if (looseCc.IsSetup() && !Equals(looseCc))
+                if (looseCc.IsSetup() && !Equals(looseCc))
 				{
 					info = new ResLibOverwriteInfo(ToString(), looseCc.ToString());
 					info.SetSourceSubCategory(SourceCategory.Upd);

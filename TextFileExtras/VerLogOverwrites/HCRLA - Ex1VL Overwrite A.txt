@@ -36,17 +36,22 @@ PURPOSE ::
 > Mashed Potato (t32) - Potato (i34)
 > Stripped Garlic Clove Dust (d12) - (t47)
 > Garlic Stem (t49) - GarlicClove (t46)
-> Garlic Stem (d18) - GarlicClove (t46)
+-- > Garlic Stem (d18) - GarlicClove (t46)  // Just changing the related data ID here
+> Garlic Stem (d18) - GarlicClove (t47)
+-- !open --
 -- Let's add a new one but with a twist; it is the same as above but connected through a different id. 
 > Garlic Stem (d18) - GarlicClove (t47)
+	Post testing, this is the same as just adding another additional to the base content.
+	The objectively realistic test should remove the old addit and add the new addit. Explains the changes above this omission block.
+-- !close --
 > (b5,11`,13,19~21) - Grains Biome Backgrounds
--- > (AppleSauce_Chunks) - (i68)
-> (AppleSauce) - (i68)		// This tests for a simple data ID change, sound simple enough
+-- > (AppleSauce_Chunks) - (i68)   // This tests for a simple data ID change, sound simple enough
+> (AppleSauce) - (i68)
 > OnionShell (t56) - (i76)
 > Tomato Stem Dust(d29~30) - (t93)
 
-[TTA: 70]
--- Although TTA is part of the summary, it will remain the same as it is.
+[TTA: 68]
+-- [TTA: 70]	// Updated TTA with the overwriting changes
 
 [UPDATED]
 

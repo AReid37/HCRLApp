@@ -349,7 +349,7 @@ namespace HCResourceLibraryApp.Layout
                                                 //Format($"{Ind34}Cancelled integration of new contents.", ForECol.Incorrection);
                                                 stopSubmission = true;
                                                 pathToVersionLog = null;
-                                                Pause();
+                                                //Pause();
                                             }
                                             else unallowStagePass = true;
                                         }
@@ -388,22 +388,6 @@ namespace HCResourceLibraryApp.Layout
                                         Pause();
                                         exitSubmissionPage = true;
                                     }
-
-
-                                    /// cancel integration
-                                    //if (input.IsNEW() && false)
-                                    //{
-                                    //    FormatLine($"{Ind24}By discontinuing integration of new contents, log submission will end.", ForECol.Accent);
-                                    //    Confirmation($"{Ind24}Are you sure you wish to cancel content integration? ", true, out bool yesNo);
-                                    //    if (yesNo)
-                                    //    {
-                                    //        Format($"{Ind34}Cancelled integration of new contents.", ForECol.Incorrection);
-                                    //        stopSubmission = true;
-                                    //        pathToVersionLog = null;
-                                    //        Pause();
-                                    //    }
-                                    //    else unallowStagePass = true;
-                                    //}
                                 }
                             }
                             else
@@ -1197,11 +1181,11 @@ namespace HCResourceLibraryApp.Layout
                             NewLine();
                         if (!subSourceQ)
                             Format($"{Ind14}{rx + 1 - subSourceBacksetIx,-2}|", ForECol.Accent);
-                        else Format($"{Ind24}");
+                        else Format($"\t");
                         Format($"[{source}] ");
                         FormatLine($"{overwriteSym} {overwriteResult}", overwriteCol);
                         if (overwriteReplaced.IsNotNEW())
-                            FormatLine($"{(subSourceQ ? Ind34 : Ind24)}{overwriteReplaced}", ForECol.Accent);                        
+                            FormatLine($"{(subSourceQ ? $"\t{Ind14}" : Ind34)}{overwriteReplaced}", ForECol.Accent);                        
 
                         // DISPLAY legend
                         if (rx + 1 >= overwritingInfoDock.Length)
@@ -1209,7 +1193,8 @@ namespace HCResourceLibraryApp.Layout
                             NewLine(2);
                             Title("Overwriting Legend");
                             /// overwriting display legend
-                            FormatLine($"Outcome Symbols :: '{symEql}' No change  |  '{symEdt}' Overwritten / Added  |  '{symRem}' Removed  |  '{symIgn}' Ignored", ForECol.Accent);
+                            //FormatLine($"Outcome Symbols :: '{symEql}' No change  |  '{symEdt}' Overwritten / Added  |  '{symRem}' Removed  |  '{symIgn}' Ignored", ForECol.Accent);
+                            FormatLine($"Outcome Symbols :: '{symEql}' No change  |  '{symEdt}' Overwritten / Added  |  '{symRem}' Removed", ForECol.Accent);
                             Format("[ContentSource] ");
                             FormatLine("{Outcome Symbol} Resulting Outcome");
                             FormatLine($"{Ind24}{{Discarded due to change}}");

@@ -332,6 +332,7 @@ namespace HCResourceLibraryApp.DataHandling
             List<ResLibOverwriteInfo> infoDock = new();
             if (IsSetup() && rcNew != null)
             {
+                rcNew = rcNew.CloneResContent(true);
                 rcNew.ShelfID = ShelfID;
                 bool beginOverwriteQ = IsSetup() && rcNew.IsSetup() && !Equals(rcNew);                
                 ResLibOverwriteInfo rcInfo = new(ToString(), rcNew.ToString());
@@ -392,14 +393,30 @@ namespace HCResourceLibraryApp.DataHandling
                                     if (ca.VersionAdded.Equals(verNum))
                                     {
                                         /// IF got overwriting instance: 
-                                        ///     IF not same as existing addit 'and' can be connected to base: replace with overwriting; ELSE retain existing;
+                                        ///     IF not same as existing addit:
+                                        ///         IF can be connected to base: replace with overwriting; 
+                                        ///         ELSE 
+                                        ///             IF existing connects to base: retain existing; ELSE remove existing;
+                                        ///     ELSE retain existing;
                                         /// ELSE remove existing
                                         if (caNew != null)
                                         {
-                                            if (!ca.Equals(caNew) && ContainsDataID(caNew.RelatedDataID, out _))
+                                            if (!ca.Equals(caNew))
                                             {
-                                                conAdditsNew.Add(caNew.Clone());
-                                                caInfo.SetOverwriteStatus();
+                                                if (ContainsDataID(caNew.RelatedDataID, out _))
+                                                {
+                                                    conAdditsNew.Add(caNew.Clone());
+                                                    caInfo.SetOverwriteStatus();
+                                                }
+                                                else
+                                                {
+                                                    if (ContainsDataID(ca.RelatedDataID, out _))
+                                                    {
+                                                        caInfo.SetOverwriteStatus(false);
+                                                        conAdditsNew.Add(ca);
+                                                    }
+                                                    else caInfo.SetOverwriteStatus();
+                                                }                                                
                                             }
                                             else
                                             {
@@ -407,9 +424,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                 conAdditsNew.Add(ca);
                                             }
                                         }
-
-                                        /// this conAddit instance is then... DELETED!
-                                        else caInfo.SetOverwriteStatus(true);
+                                        else caInfo.SetOverwriteStatus();
                                     }
                                     /// ELSE retain existing;
                                     else
@@ -444,6 +459,15 @@ namespace HCResourceLibraryApp.DataHandling
                             // add overwriting info
                             if (caInfo.IsSetup())
                                 infoDock.Add(caInfo);
+                        }
+
+                        /// updates to new list of conAddits
+                        if (conAdditsNew.HasElements())
+                        {
+                            if (ConAddits.HasElements())
+                                ConAddits.Clear();
+                            else ConAddits = new List<ContentAdditionals>();
+                            ConAddits.AddRange(conAdditsNew.ToArray());
                         }
                     }
 
@@ -484,14 +508,30 @@ namespace HCResourceLibraryApp.DataHandling
                                     if (cc.VersionChanged.Equals(verNum))
                                     {
                                         /// IF got overwriting instance: 
-                                        ///     IF not same as existing changes 'and' can be connected to base: replace with overwriting; ELSE retain existing;
+                                        ///     IF not same as existing addit:
+                                        ///         IF can be connected to base: replace with overwriting; 
+                                        ///         ELSE 
+                                        ///             IF existing connects to base: retain existing; ELSE remove existing;
+                                        ///     ELSE retain existing;
                                         /// ELSE remove existing
                                         if (ccNew != null)
                                         {
-                                            if (!cc.Equals(ccNew) && ContainsDataID(ccNew.RelatedDataID, out _))
+                                            if (!cc.Equals(ccNew))
                                             {
-                                                conChangesNew.Add(ccNew.Clone());
-                                                ccInfo.SetOverwriteStatus();
+                                                if (ContainsDataID(ccNew.RelatedDataID, out _))
+                                                {
+                                                    conChangesNew.Add(ccNew.Clone());
+                                                    ccInfo.SetOverwriteStatus();
+                                                }
+                                                else
+                                                {
+                                                    if (ContainsDataID(cc.RelatedDataID, out _))
+                                                    {
+                                                        conChangesNew.Add(cc);
+                                                        ccInfo.SetOverwriteStatus(false);
+                                                    }
+                                                    else ccInfo.SetOverwriteStatus();
+                                                }
                                             }
                                             else
                                             {
@@ -535,6 +575,15 @@ namespace HCResourceLibraryApp.DataHandling
                             // add overwriting info
                             if (ccInfo.IsSetup())
                                 infoDock.Add(ccInfo);
+                        }
+
+                        /// updates to new list of conChanges
+                        if (conChangesNew.HasElements())
+                        {
+                            if (ConChanges.HasElements())
+                                ConChanges.Clear();
+                            else ConChanges = new List<ContentChanges>();
+                            ConChanges.AddRange(conChangesNew.ToArray());
                         }
                     }
 
