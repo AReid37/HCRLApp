@@ -19,6 +19,14 @@ namespace HCResourceLibraryApp.Layout
         static SearchResult[] searchResults;
         static int maximumResults, prevMaximumResults;
 
+        public static void ClearCookies()
+        {
+            _searchOpts = new SearchOptions();
+            _prevSearchOpts = new SearchOptions();
+            searchResults = Array.Empty<SearchResult>();
+            _searchArg = null;
+            _prevSearchArg = null;
+        }
         public static void GetResourceLibraryReference(ResLibrary resourceLibrary)
         {
             _resLibrary = resourceLibrary;
@@ -575,6 +583,7 @@ namespace HCResourceLibraryApp.Layout
 
                     /// toNext/PrevResults,  toNext/PrevShelf
                     const string toNextRs = ">", toPrevRs = "<", toNextSh = ">>", toPrevSh = "<<";
+                    int toNextEntMod = noVary, toPrevEntMod = noVary;
 
                     Program.LogState("Library Search|Entry View");
                     Clear();
@@ -677,22 +686,45 @@ namespace HCResourceLibraryApp.Layout
                         int entNumViewed = viewEntNum + varyEntryNum;
                         Title("Other Search Results", '-', 0);
 
-                        /// get adjacent results
+                        /// get adjacent (non-identical) results
                         string prevRes = $"[{toPrevRs}]{Ind24}", nextRes = $"[{toNextRs}]{Ind24}";
-                        if (entNumViewed + 1 <= searchResults.Length)
+                        SearchResult currResult = searchResults[entNumViewed - 1];
+                        bool foundNextQ = false, foundPrevQ = false;
+
+                        while (entNumViewed + toNextEntMod <= searchResults.Length && !foundNextQ)
                         {
-                            SearchResult nextResult = searchResults[entNumViewed];
-                            nextRes += $"#{entNumViewed + 1} '{nextResult.contentName}'";
-                            //if (nextResult.contentName != nextResult.matchingText && nextResult.matchingText != searchKey)
-                            //    nextRes += $" ::  {nextResult.matchingText}";
+                            SearchResult nextResult = searchResults[entNumViewed + toNextEntMod - 1];
+                            if (nextResult.contentName == currResult.contentName)
+                                toNextEntMod++;
+                            else
+                            {
+                                nextRes += $"#{entNumViewed + toNextEntMod} '{nextResult.contentName}'";
+                                foundNextQ = true;
+                            }
                         }
-                        if (entNumViewed - 1 > noEntNum)
+                        while (entNumViewed - toPrevEntMod > noEntNum && !foundPrevQ)
                         {
-                            SearchResult prevResult = searchResults[entNumViewed - 2];
-                            prevRes += $"#{entNumViewed - 1} '{prevResult.contentName}'";
-                            //if (prevResult.contentName != prevResult.matchingText && prevResult.matchingText != searchKey)
-                            //    prevRes += $" ::  {prevResult.matchingText}";
+                            SearchResult prevResult = searchResults[entNumViewed - toPrevEntMod - 1];
+                            if (prevResult.contentName == currResult.contentName)
+                                toPrevEntMod++;
+                            else
+                            {
+                                prevRes += $"#{entNumViewed - toPrevEntMod} '{prevResult.contentName}'";
+                                foundPrevQ = true;
+                            }
                         }
+                        #region oldCode                        
+                        //if (entNumViewed + 1 <= searchResults.Length)
+                        //{
+                        //    SearchResult nextResult = searchResults[entNumViewed];
+                        //    nextRes += $"#{entNumViewed + 1} '{nextResult.contentName}'";
+                        //}
+                        //if (entNumViewed - 1 > noEntNum)
+                        //{
+                        //    SearchResult prevResult = searchResults[entNumViewed - 2];
+                        //    prevRes += $"#{entNumViewed - 1} '{prevResult.contentName}'";
+                        //}
+                        #endregion
 
                         /// print adjacent results
                         Table(Table2Division.Even, prevRes, divSeeAlso, nextRes);
@@ -735,14 +767,14 @@ namespace HCResourceLibraryApp.Layout
                             bool toNextQ = navInput.Equals(toNextRs);
                             if (toNextQ)
                             {
-                                if (viewEntNum + varyEntryNum + 1 <= searchResults.Length)
-                                    varyEntryNum += 1;
+                                if (viewEntNum + varyEntryNum + toNextEntMod <= searchResults.Length)
+                                    varyEntryNum += toNextEntMod;
                                 else entryNavigationIssue = "No next results";
                             }
                             else
                             {
-                                if (viewEntNum + varyEntryNum - 1 > noEntNum)
-                                    varyEntryNum -= 1;
+                                if (viewEntNum + varyEntryNum - toPrevEntMod > noEntNum)
+                                    varyEntryNum -= toPrevEntMod;
                                 else entryNavigationIssue = "No previous results";
                             }
                             varyShelfNum = noVary;
@@ -772,7 +804,7 @@ namespace HCResourceLibraryApp.Layout
             }
             else
             {
-                Format($"Library is empty. No searches to be made.");
+                Format($"{Ind24}Library is empty. No searches to be made.");
                 Pause();
                 exitMainPageQ = true;
             }
@@ -814,12 +846,12 @@ namespace HCResourceLibraryApp.Layout
                     if (searchArg.Contains(buildMatchArgAlt))
                         matchPoint_Alt++;
                     // -> checkups and Points A
-                    if ((!text.Contains(buildMatchArg) || buildMatchArg.Length != buildMatchArgAlt.Length) && text.Contains(buildMatchArgAlt))
+                    if ((!text.Contains(buildMatchArg) || buildMatchArg.Length < buildMatchArgAlt.Length) && text.Contains(buildMatchArgAlt))
                     {
                         buildMatchArg = buildMatchArgAlt;
                         matchPoint_Alt++;
                     }
-                    if (text.Contains(buildMatchArg) && (!text.Contains(buildMatchArgAlt) || buildMatchArgAlt.Length != buildMatchArg.Length))
+                    if (text.Contains(buildMatchArg) && (!text.Contains(buildMatchArgAlt) || buildMatchArgAlt.Length < buildMatchArg.Length))
                     {
                         buildMatchArgAlt = buildMatchArg;
                         matchPoint_Arg++;

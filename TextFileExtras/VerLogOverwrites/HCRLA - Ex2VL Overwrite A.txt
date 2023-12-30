@@ -1,0 +1,61 @@
+﻿-- !open --
+## <HIGH CONTRAST RESOURCE LIBRARY APP - Version Log Example Log #2 - Overwrite A> ##
+PURPOSE :: 
+	The 1st copy of Ex1 Version Log for testing of the overwriting process.
+	Testing specifics: Loose additional / updates changes, legend definition addition
+-- !close --
+
+-- ========== ---
+[VERSION : 1.1]
+
+[ADDED]
+1 |Two Item -(i2; t1,2 d2,3)
+2 |Zero Item -(i0; d0)
+3 |Leek		-(i56)
+4 |Asparagus -(i107; t72*)
+5 |AsparagusStem - (i108; t72*)
+6 |Asparagus Wall - (i110; t73,74)
+7 |Shughar dounut - (i324)
+8 |Egg Shell Bucket - (i70; a3~4)
+9 |Egg Shell Harness - (i71; a5)
+10|Egg Shell Loafers - (i72; a6)
+
+[ADDITIONAL]
+-- > OneItemGlows (g0,g2`~g4`) - One Item (i1)		// We're gonna remove this loose additional. We'll also take one those glows and throw it elsewhere
+> ZeroItemGlow (g2) - (i0)
+> (Shr_Donut) - ShugharDounut (i324)
+-- > Grain View Controller (i242) - Grains Biome Backgrounds (b11`)	// this loose additional will just be altered
+> Granule Shape Shifter (i242) - (b11`) 
+
+-- The summary itself may not changes, but changing the TTA num will still alter the summary instance
+[TTA : 25]
+
+[UPDATED]
+-- > Mashed Potato (t32) - Redesigned to look more creamy.		// This loose update is just removed
+> Spoiled Potato (i38) - Recolored to look less appetizing.
+> (d11) - Brightened the shadows of the texture.
+> Stripped Garlic Clove Dust (d12) - Brightened the shadows of the texture.
+-- > (i109) - Added more sprigs to texture.		// Altered description of this loose update
+> (i109) - Removed some sprigs from texture for design clarity.
+> (t93) - Made tomato more delicious looking.
+> (i101) - Edited to match new tile's texture.
+-- > (t95) - Made tomato more soggier looking.			// This loose update is also removed
+
+[LEGEND]
+i - Item
+t - Tiles
+-- d - Dust		// Add a new definition through overwrite
+d - Particles
+b - Background
+g - Glow
+a - Armor
+` - LOTB
+-- ~ - Num Range	// Add a new definition through overwrite
+~ - NoRng
+* - Content introduced in a previous version
+
+[SUMMARY]
+> Zero and Two Items, One Item glows, Leek, Asparagus (block, stem, wall)
+> Edited many vegetable sprites for clarity of desired texture
+> Grains Controller, DONUT, Egg Shell Armor
+-- ========== ---

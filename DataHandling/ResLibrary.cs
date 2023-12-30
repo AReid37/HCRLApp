@@ -552,7 +552,11 @@ namespace HCResourceLibraryApp.DataHandling
                     ResLibrary libVer = GetVersion(verNum);
                     if (libVer != null)
                     {
-                        Dbug.Log($"Fetched library version {verNum.ToStringNums()} -- Is Setup? [{libVer.IsSetup()}] :: Contents? [{libVer.Contents.HasElements()}], Legends? [{libVer.Legends.HasElements()}], Summaries? [{libVer.Summaries.HasElements()}]; ");
+                        VerNum libVerVerify = libVer.Contents[0].ConBase.VersionNum;
+                        if (libVer.Contents[0].ContentName == LooseResConName && libVer.Contents.HasElements(2))
+                            libVerVerify = libVer.Contents[1].ConBase.VersionNum;
+
+                        Dbug.Log($"Fetched library version {verNum.ToStringNums()} [Confirmed? {libVerVerify.Equals(verNum)}] -- Is Setup? [{libVer.IsSetup()}] :: Contents? [{libVer.Contents.HasElements()}], Legends? [{libVer.Legends.HasElements()}], Summaries? [{libVer.Summaries.HasElements()}]; ");
                         List<ResLibOverwriteInfo> rloInfoDock = new List<ResLibOverwriteInfo>();
                         ResContents integrationQueueRC = null;
                         Dbug.Log("Initialized ResLibrary Overwrite Info Dock; ");
@@ -742,18 +746,6 @@ namespace HCResourceLibraryApp.DataHandling
                                         }
                                     }
                                 }
-                                #region oldCode
-                                //if ((lvx - ixOtherLoose).IsWithin(0, libVer.Contents.Count - 1))
-                                //{
-                                //    resConE = libVer.Contents[lvx - ixOtherLoose];
-                                //    strExist = resConE.ToString();
-                                //}
-                                //if ((lvx - ixExistingLoose).IsWithin(0, other.Contents.Count - 1))
-                                //{
-                                //    resConO = other.Contents[lvx - ixExistingLoose];
-                                //    strOther = resConO.ToString();
-                                //}
-                                #endregion
 
                                 Dbug.Log($"@{lvx} | Existing {{{strExist}}}  //  Overwriting {{{strOther}}}");                                
 
@@ -856,7 +848,7 @@ namespace HCResourceLibraryApp.DataHandling
                                             isLooseO = resConO.ContentName == LooseResConName;
                                             ixOtherLoose = isLooseO ? 1 : 0;
                                         }
-                                        Dbug.LogPart($"Existing is loose? [{ixExistingLoose == 1}], Overwriting is loose? [{ixOtherLoose == 1}];");
+                                        Dbug.LogPart($"Existing is loose? [{ixExistingLoose == 1}], Overwriting is loose? [{ixOtherLoose == 1}]; ");
                                         if (ixExistingLoose == ixOtherLoose)
                                         {
                                             ixExistingLoose = 0;
@@ -866,6 +858,7 @@ namespace HCResourceLibraryApp.DataHandling
 
                                         
                                         bool noMoreLooseQ = false;
+                                        string matchMethodAdt = "", matchMethodUpd = "", ixAdtListO = "", ixUpdListO = "";
                                         Dbug.NudgeIndent(true);
                                         for (int lx = 0; !noMoreLooseQ; lx++)
                                         {
@@ -888,22 +881,82 @@ namespace HCResourceLibraryApp.DataHandling
                                             }
                                             if (isLooseO)
                                             {
-                                                if (resConO.ConAddits.HasElements(lx + 1))
+                                                if (resConO.ConAddits.HasElements())
                                                 {
-                                                    caO = resConO.ConAddits[lx];
-                                                    strAdtO = caO.ToString();
+                                                    for (int cox = 0; cox < resConO.ConAddits.Count && caO == null; cox++)
+                                                    {
+                                                        ContentAdditionals caO_ = resConO.ConAddits[cox];
+                                                        string ixKey = $" {cox} ";
+
+                                                        if (!ixAdtListO.Contains(ixKey))
+                                                        {
+                                                            if (caE != null)
+                                                            {
+                                                                if (caO_.RelatedDataID == caE.RelatedDataID)
+                                                                {
+                                                                    matchMethodAdt = $" (ID Match @{cox})";
+                                                                    caO = caO_;
+                                                                    strAdtO = caO_.ToString();
+                                                                }
+                                                            }
+                                                            else
+                                                            {
+                                                                caO = caO_;
+                                                                strAdtO = caO_.ToString();
+                                                            }
+
+                                                            if (caO != null)
+                                                                ixAdtListO += ixKey;
+                                                        }
+                                                    }                                                    
                                                 }
-                                                if (resConO.ConChanges.HasElements(lx + 1))
+
+                                                if (resConO.ConChanges.HasElements())
                                                 {
-                                                    ccO = resConO.ConChanges[lx];
-                                                    strUpdO = ccO.ToString();
+                                                    for (int cox = 0; cox < resConO.ConChanges.Count && ccO == null; cox++)
+                                                    {
+                                                        ContentChanges ccO_ = resConO.ConChanges[cox];
+                                                        string ixKey = $" {cox} ";
+
+                                                        if (!ixUpdListO.Contains(ixKey))
+                                                        {
+                                                            if (ccE != null)
+                                                            {
+                                                                if (ccO_.RelatedDataID == ccE.RelatedDataID)
+                                                                {
+                                                                    matchMethodUpd = $" (ID Match @{cox})";
+                                                                    ccO = ccO_;
+                                                                    strUpdO = ccO_.ToString();
+                                                                }
+                                                            }
+                                                            else
+                                                            {
+                                                                ccO = ccO_;
+                                                                strUpdO = ccO_.ToString();
+                                                            }
+
+                                                            if (ccO != null)
+                                                                ixUpdListO += ixKey;
+                                                        }
+                                                    }
                                                 }
+
+                                                //if (resConO.ConAddits.HasElements(lx + 1))
+                                                //{
+                                                //    caO = resConO.ConAddits[lx];
+                                                //    strAdtO = caO.ToString();
+                                                //}
+                                                //if (resConO.ConChanges.HasElements(lx + 1))
+                                                //{
+                                                //    ccO = resConO.ConChanges[lx];
+                                                //    strUpdO = ccO.ToString();
+                                                //}
                                             }
 
                                             noMoreLooseQ = caE == null && ccE == null && caO == null && ccO == null;
 
                                             // content additionals
-                                            Dbug.Log($"ConAdt @{lx} | Existing [{strAdtE}]  //  Overwriting [{strAdtO}]; ");
+                                            Dbug.Log($"ConAdt @{lx} | Existing [{strAdtE}]  //  Overwriting [{strAdtO}]{matchMethodAdt}; ");
                                             Dbug.LogPart(" -> ");
                                             if (caE != null)
                                             {
@@ -911,9 +964,17 @@ namespace HCResourceLibraryApp.DataHandling
                                                 if (caO != null)
                                                 {
                                                     ResContents parentRC = null;
+                                                    ContentAdditionals loosened;
                                                     if (caE.RelatedShelfID != ResContents.NoShelfNum)
+                                                    {
                                                         parentRC = Contents[caE.RelatedShelfID];
-                                                    ContentAdditionals loosened = caE.OverwriteLoose(caO, parentRC, out ResLibOverwriteInfo info);
+                                                        if (caE.Index != ResContents.NoShelfNum && parentRC.ConAddits.HasElements(caE.Index + 1))
+                                                        {
+                                                            if (caE.Equals(parentRC.ConAddits[caE.Index]))
+                                                                caE = parentRC.ConAddits[caE.Index];
+                                                        }
+                                                    }
+                                                    loosened = caE.OverwriteLoose(caO, parentRC, out ResLibOverwriteInfo info);
 
                                                     Dbug.LogPart($"Existing Addit may be overwritten; {(loosened != null ? "Edited existing has been loosened, adding to loose queue" : "")}");
                                                     if (loosened != null)
@@ -935,8 +996,9 @@ namespace HCResourceLibraryApp.DataHandling
                                                     info.SetSourceSubCategory(SourceCategory.Adt);
                                                     if (parentRC != null)
                                                     {
-                                                        info.SetOverwriteStatus();
-                                                        parentRC.DisposeConAdditional(caE);
+                                                        bool disposedQ = parentRC.DisposeConAdditional(caE);  
+                                                        info.SetOverwriteStatus(disposedQ);
+                                                        Dbug.LogPart($" {(disposedQ ? "(Done)" : "(Undisposed, Failed)")}");
                                                     }
                                                     else
                                                     {
@@ -949,21 +1011,25 @@ namespace HCResourceLibraryApp.DataHandling
                                             }
                                             else
                                             {
-                                                Dbug.LogPart("Overwriting Addit exists (no existing addit); Adding overwriting addit to loose queue");
-                                                ResLibOverwriteInfo info = new(null, caO.ToString());
-                                                info.SetSourceSubCategory(SourceCategory.Adt);
+                                                if (caO != null)
+                                                {
+                                                    Dbug.LogPart("Overwriting Addit exists (no existing addit); Adding overwriting addit to loose queue");
+                                                    ResLibOverwriteInfo info = new(null, caO.ToString());
+                                                    info.SetSourceSubCategory(SourceCategory.Adt);
 
-                                                queueLooseDataIDs.Add(caO.RelatedDataID);
-                                                queueLooseAddits.Add(caO);
-                                                info.SetOverwriteStatus();
+                                                    queueLooseDataIDs.Add(caO.RelatedDataID);
+                                                    queueLooseAddits.Add(caO);
+                                                    info.SetOverwriteStatus();
 
-                                                AddToInfoDock(info);
+                                                    AddToInfoDock(info);
+                                                }
+                                                else Dbug.LogPart("No overwriting or existing addit; ");
                                             }
                                             Dbug.Log("; ");
 
 
                                             // content changes
-                                            Dbug.Log($"ConChg @{lx} | Existing [{strUpdE}]  //  Overwriting [{strUpdO}]; ");
+                                            Dbug.Log($"ConChg @{lx} | Existing [{strUpdE}]  //  Overwriting [{strUpdO}]{matchMethodUpd}; ");
                                             Dbug.LogPart(" -> ");
                                             if (ccE != null)
                                             {
@@ -971,9 +1037,17 @@ namespace HCResourceLibraryApp.DataHandling
                                                 if (ccO != null)
                                                 {
                                                     ResContents parentRC = null;
+                                                    ContentChanges loosened;
                                                     if (ccE.RelatedShelfID != ResContents.NoShelfNum)
+                                                    {
                                                         parentRC = Contents[ccE.RelatedShelfID];
-                                                    ContentChanges loosened = ccE.OverwriteLoose(ccO, parentRC, out ResLibOverwriteInfo info);
+                                                        if (ccE.Index != ResContents.NoShelfNum && parentRC.ConChanges.HasElements(ccE.Index + 1))
+                                                        {
+                                                            if (ccE.Equals(parentRC.ConChanges[ccE.Index]))
+                                                                ccE = parentRC.ConChanges[ccE.Index];
+                                                        }
+                                                    }
+                                                    loosened = ccE.OverwriteLoose(ccO, parentRC, out ResLibOverwriteInfo info);
 
                                                     Dbug.LogPart($"Existing Changes may be overwritten; {(loosened != null ? "Edited existing has been loosened, adding to loose queue" : "")}");
                                                     if (loosened != null)
@@ -995,8 +1069,9 @@ namespace HCResourceLibraryApp.DataHandling
                                                     info.SetSourceSubCategory(SourceCategory.Upd);
                                                     if (parentRC != null)
                                                     {
-                                                        parentRC.DisposeConChanges(ccE);
-                                                        info.SetOverwriteStatus();
+                                                        bool disposedQ = parentRC.DisposeConChanges(ccE);
+                                                        info.SetOverwriteStatus(disposedQ);
+                                                        Dbug.LogPart($" {(disposedQ ? "(Done)" : "(Undisposed, Failed)")}");
                                                     }
                                                     else
                                                     {
@@ -1009,27 +1084,32 @@ namespace HCResourceLibraryApp.DataHandling
                                             }
                                             else
                                             {
-                                                Dbug.LogPart("Overwriting changes exists (no existing changes); Adding overwriting changes to loose queue");
-                                                ResLibOverwriteInfo info = new(null, ccO.ToString());
-                                                info.SetSourceSubCategory(SourceCategory.Upd);
+                                                if (ccO != null)
+                                                {
+                                                    Dbug.LogPart("Overwriting changes exists (no existing changes); Adding overwriting changes to loose queue");
+                                                    ResLibOverwriteInfo info = new(null, ccO.ToString());
+                                                    info.SetSourceSubCategory(SourceCategory.Upd);
 
-                                                queueLooseDataIDs.Add(ccO.RelatedDataID);
-                                                queueLooseChanges.Add(ccO);
-                                                info.SetOverwriteStatus();
+                                                    queueLooseDataIDs.Add(ccO.RelatedDataID);
+                                                    queueLooseChanges.Add(ccO);
+                                                    info.SetOverwriteStatus();
 
-                                                AddToInfoDock(info);
+                                                    AddToInfoDock(info);
+                                                }
+                                                else Dbug.LogPart("No overwriting or existing changes; ");
                                             }
                                             Dbug.Log("; ");
 
 
                                             // compile loose queue
-                                            Dbug.LogPart("Compiling queued loose contents");
+                                            Dbug.LogPart("Compiling any queued loose contents");
                                             if (queueLooseDataIDs.HasElements())
                                             {
                                                 ContentBaseGroup looseCbg = new(verNum, LooseResConName, queueLooseDataIDs.ToArray());
                                                 integrationQueueRC = new ResContents(0, looseCbg, queueLooseAddits.ToArray(), queueLooseChanges.ToArray());
                                                 Dbug.LogPart($"; Loose queue compilied :: {integrationQueueRC}");
                                             }
+                                            else Dbug.LogPart(" (None recieved)");
                                             Dbug.Log("; ");
                                         }
                                         Dbug.NudgeIndent(false);
@@ -1908,6 +1988,8 @@ namespace HCResourceLibraryApp.DataHandling
             ResLibrary clone = null;
             bool prevDADbg = disableAddDbug;
             disableAddDbug = true;
+
+            Dbug.DeactivateNextLogSession();
             Dbug.StartLogging("ResLibrary.CloneLibrary()");
             Dbug.Log($"Cloning current ResLibrary instance; Instance is setup? {IsSetup()} [#:{GetHashCode()}]; ");
             if (IsSetup())
@@ -1980,8 +2062,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                 foreach (ContentAdditionals rca in resCon.ConAddits)
                                                     if (rca.VersionAdded.Equals(version))
                                                     {
-                                                        ContentAdditionals rcaClone =
-                                                            new(rca.VersionAdded, rca.RelatedDataID, rca.OptionalName, rca.DataIDString.Split(' '));
+                                                        ContentAdditionals rcaClone = rca.Clone();
                                                         rcaClone.ContentName = clone.ContentName;
 
                                                         clone.StoreConAdditional(rcaClone);
@@ -1995,12 +2076,13 @@ namespace HCResourceLibraryApp.DataHandling
                                                 foreach (ContentChanges rcc in resCon.ConChanges)
                                                     if (rcc.VersionChanged.Equals(version))
                                                     {
-                                                        clone.StoreConChanges(rcc);
+                                                        clone.StoreConChanges(rcc.Clone());
                                                         allDataIDs.Add(rcc.RelatedDataID);
                                                     }
                                             }
 
-                                            resContents.Add(clone);
+                                            if (clone.IsSetup())
+                                                resContents.Add(clone);
                                         }
 
                                         // ConAddits (loose)
@@ -2011,8 +2093,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                     if (ca.VersionAdded.Equals(version))
                                                     {
                                                         looseDataIDs.Add(ca.RelatedDataID);
-                                                        ContentAdditionals caClone =
-                                                            new(ca.VersionAdded, ca.RelatedDataID, ca.OptionalName, ca.DataIDString.Split(' '));
+                                                        ContentAdditionals caClone = ca.Clone();
                                                         caClone.ContentName = resCon.ContentName;
                                                         looseConAddits.Add(caClone);
 
@@ -2029,7 +2110,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                     if (cc.VersionChanged.Equals(version))
                                                     {
                                                         looseDataIDs.Add(cc.RelatedDataID);
-                                                        looseConChanges.Add(cc);
+                                                        looseConChanges.Add(cc.Clone());
 
                                                         allDataIDs.Add(cc.RelatedDataID);
                                                     }
@@ -2044,8 +2125,10 @@ namespace HCResourceLibraryApp.DataHandling
                             foreach (ContentChanges lcc in looseConChanges)
                                 looseResCon.StoreConChanges(lcc);
 
-                            resContents.Insert(0, looseResCon);
-                            verLogDetails.AddContent(true, resContents.ToArray());
+                            if (looseResCon.IsSetup())
+                                resContents.Insert(0, looseResCon);
+                            verLogDetails.Contents = new();
+                            verLogDetails.Contents.AddRange(resContents.ToArray());
                             break;
 
 
@@ -2075,20 +2158,23 @@ namespace HCResourceLibraryApp.DataHandling
 
                             }
                             /// fetch legend datas
+                            verLogDetails.Legends = new();
                             for (int legx = 0; legx < Legends.Count; legx++)
                             {
-                                /// IF get used legends: legend data that have been used; ELSE get legend data introduced in version;
-                                if (getUsedLegendQ)
+                                if (Legends[legx].IsSetup())
                                 {
-                                    if (legendKeysStr.Contains($" {Legends[legx].Key} "))
-                                        verLogDetails.AddLegend(Legends[legx]);
-                                }
-                                else
-                                {
-                                    if (Legends[legx].VersionIntroduced.Equals(version))
-                                        verLogDetails.AddLegend(Legends[legx]);
-                                }
-                                
+                                    /// IF get used legends: legend data that have been used; ELSE get legend data introduced in version;
+                                    if (getUsedLegendQ)
+                                    {
+                                        if (legendKeysStr.Contains($" {Legends[legx].Key} "))
+                                            verLogDetails.Legends.Add(Legends[legx]);
+                                    }
+                                    else
+                                    {
+                                        if (Legends[legx].VersionIntroduced.Equals(version))
+                                            verLogDetails.Legends.Add(Legends[legx]);
+                                    }
+                                }                                
                             }                                                        
                             break;
 
@@ -2096,13 +2182,15 @@ namespace HCResourceLibraryApp.DataHandling
                         // summaries - get of matching ver log number
                         case 2:
                             bool fetchedSummaryQ = false;
+                            verLogDetails.Summaries = new();
                             for (int sumx = 0; !fetchedSummaryQ && sumx < Summaries.Count; sumx++)
                             {
-                                if (Summaries[sumx].SummaryVersion.Equals(version))
-                                {
-                                    fetchedSummaryQ = true;
-                                    verLogDetails.AddSummary(Summaries[sumx]);
-                                }
+                                if (Summaries[sumx].IsSetup())
+                                    if (Summaries[sumx].SummaryVersion.Equals(version))
+                                    {
+                                        fetchedSummaryQ = true;
+                                        verLogDetails.Summaries.Add(Summaries[sumx]);
+                                    }
                             }
                             break;
                     }

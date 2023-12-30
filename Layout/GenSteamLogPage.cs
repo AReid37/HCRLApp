@@ -19,6 +19,15 @@ namespace HCResourceLibraryApp.Layout
         static List<SFormatterHistory> _editorHistory1 = new(), _editorHistory2 = new();
         static int historyActionNumber1, historyActionNumber2;
 
+        public static void ClearCookies()
+        {
+            _sfLibraryRef = new();
+            isUsingFormatterNo1Q = true;
+            _editorHistory1.Clear();
+            _editorHistory2.Clear();
+            historyActionNumber1 = 0;
+            historyActionNumber2 = 0;
+        }
         public static void GetResourceLibraryReference(ResLibrary mainLibrary)
         {
             _resLibrary = mainLibrary;

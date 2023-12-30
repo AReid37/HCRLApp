@@ -78,5 +78,13 @@ namespace HCResourceLibraryApp.DataHandling
             }
             return areEquals;
         }
+
+        public override string ToString()
+        {
+            string srText = "(SearchResult)";
+            srText += isSetupQ ? "" : " NOT SETUP |";
+            srText += $" ix@{shelfID} '{contentName}', arg[{searchArg}], match with :: {matchingText}";
+            return srText;
+        }
     }
 }

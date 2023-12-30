@@ -2,6 +2,7 @@
 ## <HIGH CONTRAST RESOURCE LIBRARY APP - Version Log Example Log #1 - Overwrite A> ##
 PURPOSE :: 
 	The 1st copy of Ex1 Version Log for testing of the overwriting process.
+	Testing specifics: Same version, content name and ID changes, content additional changes, legend and summary replacements.
 -- !close --
 
 -- ========== ---
@@ -14,8 +15,13 @@ PURPOSE ::
 -- 4 |Gravel			-(i20; t116)	// Gravel will just be removed. Let's see how this is handled
 5 |Spoiled p>		-(i38)
 6 |Peanut			-(i78; p54 t114)
+-- !open --
 7 |Walnut			-(i79; t115)
 8 |Almond			-(i77; t113)
+	// Just switching around the data IDs between these two and mess up their names. Tests for alternate matching between data IDs for Net Change list
+-- !close --
+7 |Walmond			-(i77; t113)
+8 |Alnut			-(i79; t115)
 9 |Large Macadamia Nut-(i80; t117,118)
 10|Garlic Clove		-(i69; d11 t46~48)
 11|Turnip			-(i14; p1 d6,7)
@@ -43,6 +49,7 @@ PURPOSE ::
 > Garlic Stem (d18) - GarlicClove (t47)
 	Post testing, this is the same as just adding another additional to the base content.
 	The objectively realistic test should remove the old addit and add the new addit. Explains the changes above this omission block.
+	Changing this additional also works for testing alternate matching by name for Net Change List
 -- !close --
 > (b5,11`,13,19~21) - Grains Biome Backgrounds
 -- > (AppleSauce_Chunks) - (i68)   // This tests for a simple data ID change, sound simple enough

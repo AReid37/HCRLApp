@@ -52,7 +52,7 @@
 		// private
 		VerNum _versionChanged, _prevVersionChanged;
 		string _internalName, _relatedDataID, _changeDesc, _prevInternalName, _prevRelatedDataID, _prevChangeDesc;
-		int _relatedShelfID;
+		int _relatedShelfID = ResContents.NoShelfNum, _index = ResContents.NoShelfNum;
 
 		//public
 		public const string ccIdentityKey = "^";
@@ -96,10 +96,15 @@
 					_changeDesc = value;
             }
         }
-        /// <summary>The Shelf ID of the related <see cref="ResContents"/> instance.</summary>
+        /// <summary>The Shelf ID of the related <see cref="ResContents"/> instance. Default value of <see cref="ResContents.NoShelfNum"/>.</summary>
         public int RelatedShelfID
         {
             get => _relatedShelfID;
+        }
+        /// <summary>The index number of this instance within the <see cref="ResContents.ConAddits"/> of a related <see cref="ResContents"/>. Default value of <see cref="ResContents.NoShelfNum"/>.</summary>
+        public int Index
+        {
+            get => _index;
         }
         #endregion
 
@@ -245,7 +250,7 @@
 			if (IsSetup())
 			{
                 clone = new ContentChanges(VersionChanged, InternalName, RelatedDataID, ChangeDesc);
-				clone.AdoptShelfID(_relatedShelfID);
+				clone.AdoptIDs(_relatedShelfID, _index);
             }
 			return clone;
 		}
@@ -273,7 +278,7 @@
 						if (looseCc.InternalName.IsNotEW() && looseCc.InternalName != ResLibrary.LooseResConName)
 							InternalName = looseCc.InternalName;
 						ChangeDesc = looseCc.ChangeDesc;
-						info.SetOverwriteStatus();
+						info.SetOverwriteStatus(info.contentExisting != ToString());
 						info.SetResult(ToString());
 					}
 					else info.SetOverwriteStatus(false);
@@ -294,11 +299,14 @@
 
 			return loosenedCc;
         }
-        /// <summary>Stores the Shelf ID of the related <see cref="ResContents"> instance. Minimum value of <c>0</c>.</summary>
-        public void AdoptShelfID(int shelfID)
+        /// <summary>Stores the Shelf ID of the related <see cref="ResContents"/> instance and its Index number within the related instance. Both at a minimum value of <c>0</c>.</summary>
+        public void AdoptIDs(int shelfID, int index)
         {
             if (shelfID >= 0)
                 _relatedShelfID = shelfID;
+
+			if (index >= 0)
+				_index = index;
         }
 
         public override string ToString()

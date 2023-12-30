@@ -273,7 +273,8 @@ namespace HCResourceLibraryApp.Layout
                         if (StyledInput($"a.bb / {viewDetailsKey}").IsNotNE())
                         {
                             VerNum prevSelectedVerNum = selectedVer;
-                            selectedVer = VerNum.None;
+                            if (allowSummaryBrowsingQ)
+                                selectedVer = VerNum.None;
                             if (VerNum.TryParse(LastInput, out VerNum selectVerNum) && allowSummaryBrowsingQ)
                             {
                                 if (selectVerNum.AsNumber.IsWithin(verLow.AsNumber, verHigh.AsNumber))

@@ -243,11 +243,11 @@ namespace HCResourceLibraryApp.Layout
                             bool unallowStagePass = false;
                             if (!logDecoder.HasDecoded)
                             {
-                                mainLibrary.GetVersionRange(out _, out VerNum latestLibVer);
+                                mainLibrary.GetVersionRange(out VerNum earliestLibVer, out VerNum latestLibVer);
 
                                 SetFileLocation(pathToVersionLog);
                                 if (FileRead(null, out string[] fileData))
-                                    logDecoder.DecodeLogInfo(fileData, latestLibVer);
+                                    logDecoder.DecodeLogInfo(fileData, earliestLibVer, latestLibVer);
                                 else DataReadingIssue();
                             }
 
@@ -334,7 +334,8 @@ namespace HCResourceLibraryApp.Layout
                                     /// IF loose content integration -or- overwrite integration: integration requires confirmation; ELSE integration automatic
                                     if (notNormalIntegrationQ)
                                     {
-                                        FormatLine($"{Ind14}Evaluation complete. Note: Overwriting contents will require a restart.", ForECol.Accent);
+                                        Format($"{Ind14}Evaluation complete. Note: ", ForECol.Accent);
+                                        FormatLine($"{(logDecoder.OverwriteWarning ? "Overwriting contents will require a restart." : "Integrating contents does not require a restart.")}", ForECol.Accent);
                                         FormatLine($"{Ind14}The section above estimates the outcome of {(logDecoder.OverwriteWarning ? "overwrit" : "integrat")}ing the decoded contents.", ForECol.Warning);
                                         Confirmation($"{Ind14}Confirm {(logDecoder.OverwriteWarning ? "overwriting with" : "integration of")} decoded contents? ", true, out bool yesNo);
 
@@ -346,10 +347,8 @@ namespace HCResourceLibraryApp.Layout
 
                                             if (yesNoProcess)
                                             {
-                                                //Format($"{Ind34}Cancelled integration of new contents.", ForECol.Incorrection);
                                                 stopSubmission = true;
                                                 pathToVersionLog = null;
-                                                //Pause();
                                             }
                                             else unallowStagePass = true;
                                         }
@@ -1055,7 +1054,7 @@ namespace HCResourceLibraryApp.Layout
                         Format($"{Ind34}'", ForECol.Normal);
                         if (isAdtq)
                             Format($"{(rlii.adtOptName.IsNE() ? "" : $"{rlii.adtOptName.Clamp(adtNameLim, "...")}; ")}{rlii.adtDataIDs.Clamp(adtIDsLim, "...")}", ForECol.Highlight);
-                        else Format($"{rlii.updDataID}; {rlii.updShortDesc.Clamp(updtDescLim, "...")}", ForECol.Highlight);
+                        else Format($"{rlii.updDataID}; {rlii.updShortDesc.Clamp((rlii.isConnectedQ ? updtDescLim : updtDescLim * 2), "...")}", ForECol.Highlight);
 
                         if (rlii.isConnectedQ)
                             Format($"' to '{rlii.connectionName}' by '{rlii.connectionDataID}", ForECol.Normal);                    
@@ -1119,7 +1118,7 @@ namespace HCResourceLibraryApp.Layout
                  */
 
                 SourceOverwrite prevSource = SourceOverwrite.Content;
-                int subSourceBacksetIx = 0;
+                int subSourceBacksetIx = 0, countPrints = 0;
                 for (int rx = 0; rx < overwritingInfoDock.Length; rx++)
                 {
                     ResLibOverwriteInfo rloi = overwritingInfoDock[rx];
@@ -1174,18 +1173,34 @@ namespace HCResourceLibraryApp.Layout
 
 
 
-                        // DISPLAY overwrite info
+                        // DISPLAY overwrite info                        
                         bool subSourceQ = source.Contains(":");
                         subSourceBacksetIx += subSourceQ ? 1 : 0;
+                        /// indentation for loose contents (always at top)
+                        if (subSourceQ && countPrints == 0)
+                        {
+                            Format($"{Ind14}--|", ForECol.Accent);
+                            FormatLine("[Loose Contents]", ForECol.Normal);
+                        }
+                        /// separation between categories (sources) : content, legend, summary
                         if (prevSource != rloi.source)
-                            NewLine();
+                            NewLine();     
+                        /// item number and indentation
                         if (!subSourceQ)
                             Format($"{Ind14}{rx + 1 - subSourceBacksetIx,-2}|", ForECol.Accent);
                         else Format($"\t");
+                        /// for wrapping of summary
+                        if (source.Contains(SourceOverwrite.Summary.ToString()))
+                            HoldWrapIndent(true); 
+                        /// information formatting
                         Format($"[{source}] ");
                         FormatLine($"{overwriteSym} {overwriteResult}", overwriteCol);
                         if (overwriteReplaced.IsNotNEW())
-                            FormatLine($"{(subSourceQ ? $"\t{Ind14}" : Ind34)}{overwriteReplaced}", ForECol.Accent);                        
+                            FormatLine($"{(subSourceQ ? $"\t{Ind14}" : Ind34)}{overwriteReplaced}", ForECol.Accent);
+                        /// for wrapping of summary
+                        if (source.Contains(SourceOverwrite.Summary.ToString()))
+                            HoldWrapIndent(false);
+
 
                         // DISPLAY legend
                         if (rx + 1 >= overwritingInfoDock.Length)
@@ -1204,6 +1219,7 @@ namespace HCResourceLibraryApp.Layout
                         }
 
                         prevSource = rloi.source;
+                        countPrints++;
                     }
                 }
 

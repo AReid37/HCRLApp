@@ -117,7 +117,7 @@ namespace HCResourceLibraryApp.DataHandling
         }
 
         // log file decoding
-        public bool DecodeLogInfo(string[] logData, VerNum latestLibVersion)
+        public bool DecodeLogInfo(string[] logData, VerNum earliestLibVersion, VerNum latestLibVersion)
         {
             bool hasFullyDecodedLogQ = false;
             Dbug.StartLogging("LogDecoder.DecodeLogInfo(str[])");
@@ -294,24 +294,41 @@ namespace HCResourceLibraryApp.DataHandling
                                                         sectionIssueQ = false;
 
                                                         // log version suggestions / version clashes
-                                                        if (latestLibVersion.HasValue())
+                                                        if (latestLibVersion.HasValue() && earliestLibVersion.HasValue())
                                                         {
-                                                            if (latestLibVersion.AsNumber == logVersion.AsNumber)
+                                                            if (logVersion.AsNumber.IsWithin(earliestLibVersion.AsNumber, latestLibVersion.AsNumber))
                                                             {
                                                                 Dbug.LogPart($"; Version {logVersion.ToStringNums()} information already exists within library [OVERWRITE Warning]");
                                                                 decodeInfo.NoteIssue($"Version {logVersion.ToStringNums()} information already exists in library (May be overwritten).");
                                                                 _versionAlreadyExistsQ = true;
-                                                            }
-                                                            else if (latestLibVersion.AsNumber + 1 != logVersion.AsNumber)
+                                                            }                                                            
+                                                            
+                                                            if (logVersion.AsNumber > latestLibVersion.AsNumber && latestLibVersion.AsNumber + 1 != logVersion.AsNumber)
                                                             {
                                                                 bool nextMajor = latestLibVersion.MinorNumber + 1 >= 100;
                                                                 VerNum suggestedVer;
                                                                 if (nextMajor)
-                                                                    suggestedVer = new VerNum(latestLibVersion.MajorNumber + 1, latestLibVersion.MinorNumber - 99);
+                                                                    suggestedVer = new VerNum(latestLibVersion.MajorNumber + 1, 0);
                                                                 else suggestedVer = new VerNum(latestLibVersion.MajorNumber, latestLibVersion.MinorNumber + 1);
 
                                                                 Dbug.LogPart($"; Suggesting version log number: {suggestedVer}");
                                                                 decodeInfo.NoteIssue($"Suggesting version log number: {suggestedVer}");
+                                                            }                                                            
+                                                            else if (logVersion.AsNumber < earliestLibVersion.AsNumber && earliestLibVersion.AsNumber - 1 != logVersion.AsNumber)
+                                                            {
+                                                                bool lowestVer = latestLibVersion.AsNumber - 1 == 0;
+                                                                bool prevMajor = latestLibVersion.MinorNumber - 1 < 0 && latestLibVersion.MajorNumber >= 1;
+
+                                                                if (!lowestVer)
+                                                                {
+                                                                    VerNum suggestedVer;
+                                                                    if (prevMajor)
+                                                                        suggestedVer = new VerNum(latestLibVersion.MajorNumber - 1, 99);
+                                                                    else suggestedVer = new VerNum(latestLibVersion.MajorNumber, latestLibVersion.MinorNumber - 1);
+
+                                                                    Dbug.LogPart($"; Suggesting version log number: {suggestedVer}");
+                                                                    decodeInfo.NoteIssue($"Suggesting version log number: {suggestedVer}");
+                                                                }
                                                             }
                                                         }
                                                     }
@@ -2888,7 +2905,7 @@ namespace HCResourceLibraryApp.DataHandling
         }
         public bool DecodeLogInfo(string[] logData)
         {
-            return DecodeLogInfo(logData, VerNum.None);
+            return DecodeLogInfo(logData, VerNum.None, VerNum.None);
         }
 
 

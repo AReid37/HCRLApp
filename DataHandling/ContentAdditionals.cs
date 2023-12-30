@@ -64,7 +64,7 @@ namespace HCResourceLibraryApp.DataHandling
 		string _optionalName, _relatedDataID, _prevOptionalName, _prevRelatedDataID;
 		List<string> _dataIDs, _prevDataIDs;
 		string _fetchedContentName;
-        int _relatedShelfID = ResContents.NoShelfNum;
+        int _relatedShelfID = ResContents.NoShelfNum, _index = ResContents.NoShelfNum;
 
         // public
         /// <summary>Version number this additional content was added (to base content).</summary>
@@ -146,11 +146,16 @@ namespace HCResourceLibraryApp.DataHandling
 				return dataIds.Trim();
 			}
 		}
-        /// <summary>The Shelf ID of the related <see cref="ResContents"/> instance.</summary>
+        /// <summary>The Shelf ID of the related <see cref="ResContents"/> instance. Default value of <see cref="ResContents.NoShelfNum"/>.</summary>
         public int RelatedShelfID
         {
             get => _relatedShelfID;
         }
+        /// <summary>The index number of this instance within the <see cref="ResContents.ConAddits"/> of a related <see cref="ResContents"/>. Default value of <see cref="ResContents.NoShelfNum"/>.</summary>
+        public int Index
+		{
+			get => _index;
+		}
         #endregion
 
         public ContentAdditionals() { }
@@ -340,7 +345,7 @@ namespace HCResourceLibraryApp.DataHandling
 			if (IsSetup())
 			{
                 clone = new ContentAdditionals(VersionAdded, RelatedDataID, OptionalName, _dataIDs.ToArray());
-				clone.AdoptShelfID(clone._relatedShelfID);
+				clone.AdoptIDs(_relatedShelfID, _index);
             }
 			return clone;
 		}
@@ -368,7 +373,7 @@ namespace HCResourceLibraryApp.DataHandling
 						_dataIDs.Clear();
 						_dataIDs.AddRange(looseCa._dataIDs.ToArray());
 						OptionalName = looseCa.OptionalName;
-						info.SetOverwriteStatus(true);
+						info.SetOverwriteStatus(info.contentExisting != ToString());
 						info.SetResult(ToString());
 					}
 					else info.SetOverwriteStatus(false);
@@ -388,11 +393,14 @@ namespace HCResourceLibraryApp.DataHandling
 
 			return loosenedCa;
 		}
-        /// <summary>Stores the Shelf ID of the related <see cref="ResContents"> instance. Minimum value of <c>0</c>.</summary>
-        public void AdoptShelfID(int shelfID)
+        /// <summary>Stores the Shelf ID of the related <see cref="ResContents"/> instance and its Index number within the related instance. Both at a minimum value of <c>0</c>.</summary>
+        public void AdoptIDs(int shelfID, int index)
         {
             if (shelfID >= 0)
                 _relatedShelfID = shelfID;
+
+			if (index >= 0) 
+				_index = index;
         }
 
 

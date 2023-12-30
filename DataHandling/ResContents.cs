@@ -132,7 +132,7 @@ namespace HCResourceLibraryApp.DataHandling
                     if (ca != null)
                         if (ca.IsSetup())
                         {
-                            ca.AdoptShelfID(ShelfID);
+                            ca.AdoptIDs(ShelfID, ConAddits.Count);
                             ConAddits.Add(ca);
                         }
             }
@@ -143,7 +143,7 @@ namespace HCResourceLibraryApp.DataHandling
                     if (cc != null)
                         if (cc.IsSetup())
                         {
-                            cc.AdoptShelfID(ShelfID);
+                            cc.AdoptIDs(ShelfID, ConChanges.Count);
                             ConChanges.Add(cc);
                         }
             }
@@ -162,7 +162,6 @@ namespace HCResourceLibraryApp.DataHandling
                     if (newCA.IsSetup())
                     {
                         newCA = newCA.Clone();
-                        newCA.AdoptShelfID(ShelfID);
 
                         bool isDupe = false, isOkay = ConBase.ContainsDataID(newCA.RelatedDataID);
                         if (ConAddits.HasElements())
@@ -174,7 +173,8 @@ namespace HCResourceLibraryApp.DataHandling
 
                         if (!isDupe && isOkay)
                         {
-                            newCA.AdoptShelfID(ShelfID);
+                            if (ContentName != ResLibrary.LooseResConName) 
+                                newCA.AdoptIDs(ShelfID, ConAddits.Count);
                             ConAddits.Add(newCA);
                             storedCAq = true;
                         }
@@ -194,7 +194,6 @@ namespace HCResourceLibraryApp.DataHandling
                     if (newCC.IsSetup())
                     {
                         newCC = newCC.Clone();
-                        newCC.AdoptShelfID(ShelfID);
 
                         bool isDupe = false, isOkay;
                         isOkay = ConBase.ContainsDataID(newCC.RelatedDataID);
@@ -216,7 +215,8 @@ namespace HCResourceLibraryApp.DataHandling
                             if ((newCC.InternalName == ResLibrary.LooseResConName || newCC.InternalName.IsNEW()) && ContentName != ResLibrary.LooseResConName)
                                 newCC = new ContentChanges(newCC.VersionChanged, ContentName, newCC.RelatedDataID, newCC.ChangeDesc);
 
-                            newCC.AdoptShelfID(ShelfID);
+                            if (ContentName != ResLibrary.LooseResConName) 
+                                newCC.AdoptIDs(ShelfID, ConChanges.Count);
                             ConChanges.Add(newCC);
                             storedCCq = true;
                         }
@@ -332,6 +332,7 @@ namespace HCResourceLibraryApp.DataHandling
             List<ResLibOverwriteInfo> infoDock = new();
             if (IsSetup() && rcNew != null)
             {
+                ResContents prevSelf = CloneResContent();
                 rcNew = rcNew.CloneResContent(true);
                 rcNew.ShelfID = ShelfID;
                 bool beginOverwriteQ = IsSetup() && rcNew.IsSetup() && !Equals(rcNew);                
@@ -594,7 +595,7 @@ namespace HCResourceLibraryApp.DataHandling
                 }
 
                 // Insert resCon info to infoDock
-                rcInfo.SetOverwriteStatus(beginOverwriteQ);
+                rcInfo.SetOverwriteStatus(beginOverwriteQ && !Equals(prevSelf));
                 if (rcInfo.IsSetup())
                 {
                     rcInfo.SetResult(ToString());
@@ -696,7 +697,10 @@ namespace HCResourceLibraryApp.DataHandling
                         {
                             ContentAdditionals newCa = new();
                             if (newCa.DecodeSecondGroup(conAdtInfo))
+                            {
+                                newCa.AdoptIDs(ShelfID, ConAddits.Count);
                                 ConAddits.Add(newCa);
+                            }
                         }
                     }
                     /// deflect to 3rd group
@@ -722,7 +726,10 @@ namespace HCResourceLibraryApp.DataHandling
                     {
                         ContentChanges newChg = new();
                         if (newChg.DecodeThirdGroup(conChgInfo))
+                        {
+                            newChg.AdoptIDs(ShelfID, ConChanges.Count);
                             ConChanges.Add(newChg);
+                        }
                     }
                 }
 
@@ -824,20 +831,20 @@ namespace HCResourceLibraryApp.DataHandling
             ResContents clone = null;
             if (IsSetup() || (bypassSetupQ && _conBase != null))
             {
-                ContentBaseGroup cloneCBG = new ContentBaseGroup(_conBase.VersionNum, _conBase.ContentName, _conBase.DataIDString.Split(' '));
-                List<ContentAdditionals> cloneCAs = new List<ContentAdditionals>();
-                List<ContentChanges> cloneCCs = new List<ContentChanges>();
+                ContentBaseGroup cloneCBG = _conBase.Clone();
+                List<ContentAdditionals> cloneCAs = new();
+                List<ContentChanges> cloneCCs = new();
 
                 if (ConAddits.HasElements())
                 {
                     foreach (ContentAdditionals ca in ConAddits)
-                        cloneCAs.Add(new ContentAdditionals(ca.VersionAdded, ca.RelatedDataID, ca.OptionalName, ca.DataIDString.Split(' ')));
+                        cloneCAs.Add(ca.Clone());
                 }
 
                 if (ConChanges.HasElements())
                 {
                     foreach (ContentChanges cc in ConChanges)
-                        cloneCCs.Add(new ContentChanges(cc.VersionChanged, cc.InternalName, cc.RelatedDataID, cc.ChangeDesc));
+                        cloneCCs.Add(cc.Clone());
                 }
 
                 clone = new ResContents(ShelfID, cloneCBG, cloneCAs.ToArray(), cloneCCs.ToArray());

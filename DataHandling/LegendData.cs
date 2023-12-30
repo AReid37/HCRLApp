@@ -112,7 +112,7 @@ namespace HCResourceLibraryApp.DataHandling
                 return defs;
             }
         }
-        /// <summary>The index number of this instance within a <see cref="ResLibrary.Legends"/>.</summary>
+        /// <summary>The index number of this instance within a <see cref="ResLibrary.Legends"/>. Default value of <see cref="ResContents.NoShelfNum"/>.</summary>
         public int Index { get => index; }
         #endregion
 
@@ -323,7 +323,10 @@ namespace HCResourceLibraryApp.DataHandling
         {
             LegendData clone = null;
             if (IsSetup())
+            {
                 clone = new LegendData(Key, VersionIntroduced, _definitions.ToArray());
+                clone.AdoptIndex(index);
+            }
             return clone;
         }
         public void Overwrite(LegendData legNew, out ResLibOverwriteInfo info)
@@ -343,15 +346,39 @@ namespace HCResourceLibraryApp.DataHandling
                 {
                     if (Key == legNew.Key)
                     {
-                        if (VersionIntroduced.AsNumber <= legNew.VersionIntroduced.AsNumber)
+                        if (VersionIntroduced.AsNumber >= legNew.VersionIntroduced.AsNumber)
                         {
-                            _definitions[0] = legNew[0];
-                            info.SetOverwriteStatus();
+                            /// This might have seemed easy, but after breaking it down, it's got a couple steps
+                            bool dupeDefQ = false;
+                            int dupeDefIx = 0;
+                            for (int ldx = 0; ldx < _definitions.Count && !dupeDefQ; ldx++)
+                            {
+                                string def = _definitions[ldx];
+                                if (legNew[0].ToLower() == def.ToLower())
+                                {
+                                    dupeDefQ = true;
+                                    dupeDefIx = ldx;
+                                }    
+                            }
+
+                            /// IF 1st existing definition (to lower) is not same as 1st overwriting definition (to lower): ..
+                            ///     IF 1st overwriting definition is a duplicate of any existing definition 'and' at least two existing definitions: Shift 1st overwriting definition to index zero; 
+                            ///     ELSE Set 1st existing definition to 1st overwriting definition
+                            if (_definitions[0].ToLower() != legNew[0].ToLower())
+                            {
+                                if (dupeDefQ && _definitions.HasElements(2))
+                                {
+                                    _definitions.RemoveAt(dupeDefIx);
+                                    _definitions.Insert(0, legNew[0]);
+                                }
+                                else _definitions[0] = legNew[0];
+                                info.SetOverwriteStatus();
+                            }
                         }
                         else
                         {
-                            AddKeyDefinition(legNew[0]);
-                            info.SetOverwriteStatus();
+                            bool addNewDefQ = AddKeyDefinition(legNew[0]);
+                            info.SetOverwriteStatus(addNewDefQ);
                         }
                         info.SetResult(ToString());
                     }

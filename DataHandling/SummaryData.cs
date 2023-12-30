@@ -78,7 +78,7 @@ namespace HCResourceLibraryApp.DataHandling
 					_summaryParts = value;
 			}
 		}
-        /// <summary>The index number of this instance within a <see cref="ResLibrary.Summaries"/>.</summary>
+        /// <summary>The index number of this instance within a <see cref="ResLibrary.Summaries"/>. Default value of <see cref="ResContents.NoShelfNum"/>.</summary>
         public int Index { get => index; }
 		#endregion
 
@@ -245,7 +245,10 @@ namespace HCResourceLibraryApp.DataHandling
 		{
 			SummaryData clone = null;
 			if (IsSetup())
-				clone = new SummaryData(SummaryVersion, TTANum, SummaryParts.ToArray());
+			{
+                clone = new SummaryData(SummaryVersion, TTANum, SummaryParts.ToArray());
+				clone.AdoptIndex(index);
+            }
 			return clone;
         }
 		public void Overwrite(SummaryData sumNew, out ResLibOverwriteInfo info)
