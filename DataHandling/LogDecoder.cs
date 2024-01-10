@@ -2104,6 +2104,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                                     ContentChanges copy4NonLoose = new(logVersion, newConChanges.InternalName + Sep, updtDataID, updtChangeDesc);
                                                                     looseConChanges.Add(copy4NonLoose); 
                                                                     looseInfoRCDataIDs.Add(copy4NonLoose.RelatedDataID);
+                                                                    Dbug.LogPart($" Added ConChanges copy (IntNam: '{copy4NonLoose.InternalName}') to loose for decode display");
                                                                 }
                                                             }
 

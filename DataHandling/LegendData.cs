@@ -278,13 +278,15 @@ namespace HCResourceLibraryApp.DataHandling
             return new LegendData(_prevKey, _prevVersionIntroduced, prevDefs);
         }
         /// <summary>Compares two instances for similarities against: Setup state, Key, Definitions.</summary>
-        public bool Equals(LegendData legDat)
+        /// <param name="compareVerNumQ">If <c>true</c>, will include the values of <see cref="VersionIntroduced"/> in equality comparison.</param>
+        public bool Equals(LegendData legDat, bool compareVerNumQ = false)
         {
             bool areEquals = false;
             if (legDat != null)
             {
                 areEquals = true;
-                for (int ldx = 0; ldx < 3 && areEquals; ldx++)
+                int cmpPlus = compareVerNumQ ? 1 : 0;
+                for (int ldx = 0; ldx < 3 + cmpPlus && areEquals; ldx++)
                 {
                     switch (ldx)
                     {
@@ -307,6 +309,10 @@ namespace HCResourceLibraryApp.DataHandling
                                         areEquals = _definitions[dx] == legDat._definitions[dx];
                                 }
                             }
+                            break;
+
+                        case 3:
+                            areEquals = _versionIntroduced.Equals(legDat._versionIntroduced);
                             break;
                     }
                 }
@@ -342,7 +348,7 @@ namespace HCResourceLibraryApp.DataHandling
 
                 info = new ResLibOverwriteInfo(ToString(), legNew.ToString(), SourceOverwrite.Legend);
                 info.SetOverwriteStatus(false);
-                if (legNew.IsSetup() && !Equals(legNew))
+                if (legNew.IsSetup() && !Equals(legNew, true))
                 {
                     if (Key == legNew.Key)
                     {
@@ -364,6 +370,7 @@ namespace HCResourceLibraryApp.DataHandling
                             /// IF 1st existing definition (to lower) is not same as 1st overwriting definition (to lower): ..
                             ///     IF 1st overwriting definition is a duplicate of any existing definition 'and' at least two existing definitions: Shift 1st overwriting definition to index zero; 
                             ///     ELSE Set 1st existing definition to 1st overwriting definition
+                            VersionIntroduced = legNew.VersionIntroduced;
                             if (_definitions[0].ToLower() != legNew[0].ToLower())
                             {
                                 if (dupeDefQ && _definitions.HasElements(2))
@@ -371,9 +378,9 @@ namespace HCResourceLibraryApp.DataHandling
                                     _definitions.RemoveAt(dupeDefIx);
                                     _definitions.Insert(0, legNew[0]);
                                 }
-                                else _definitions[0] = legNew[0];
-                                info.SetOverwriteStatus();
+                                else _definitions[0] = legNew[0];                                
                             }
+                            info.SetOverwriteStatus();
                         }
                         else
                         {

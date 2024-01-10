@@ -67,6 +67,7 @@
             }
         }
 		/// <summary>The name of the content being updated.</summary>
+		/// <remarks>On a self-updated log decode, this value will end with <see cref="DataHandlerBase.Sep"/>.</remarks>
 		public string InternalName
         {
 			get => _internalName;
@@ -206,7 +207,8 @@
 			return new ContentChanges(_prevVersionChanged, _prevInternalName, _prevRelatedDataID, _prevChangeDesc);
 		}
 		/// <summary>Compares two instances for similarities against: Setup state, Version Changed, Internal Name, Related Data ID, Change Description.</summary>
-		public bool Equals(ContentChanges cc)
+		/// <param name="ignoreVerQ">If <c>true</c>, will compare the instances without comparing <see cref="VersionChanged"/> values.</param>
+		public bool Equals(ContentChanges cc, bool ignoreVerQ = false)
         {
 			bool areEquals = false;
 			if (cc != null)
@@ -220,7 +222,7 @@
 							break;
 
 						case 1:
-							areEquals = cc.VersionChanged.Equals(VersionChanged);
+							areEquals = ignoreVerQ || cc.VersionChanged.Equals(VersionChanged);
 							break;
 
 						case 2:

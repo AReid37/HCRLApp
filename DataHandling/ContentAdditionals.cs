@@ -295,8 +295,9 @@ namespace HCResourceLibraryApp.DataHandling
 				prevDataIDs = _prevDataIDs.ToArray();
 			return new ContentAdditionals(_prevVersionAdded, _prevRelatedDataID, _prevOptionalName, prevDataIDs);
 		}
-		/// <summary>Compares two instances for similarities against: Setup state, Version Added, Optional Name, Related Data ID, Data IDs.</summary>
-		public bool Equals(ContentAdditionals ca)
+        /// <summary>Compares two instances for similarities against: Setup state, Version Added, Optional Name, Related Data ID, Data IDs.</summary>
+        /// /// <param name="ignoreVerQ">If <c>true</c>, will compare the instances without comparing <see cref="VersionAdded"/> values.</param>
+        public bool Equals(ContentAdditionals ca, bool ignoreVerQ = false)
         {
 			bool areEquals = false;
 			if (ca != null)
@@ -311,7 +312,7 @@ namespace HCResourceLibraryApp.DataHandling
 							break;
 
 						case 1:
-							areEquals = VersionAdded.Equals(ca.VersionAdded);
+							areEquals = ignoreVerQ || VersionAdded.Equals(ca.VersionAdded);
 							break;
 
 						case 2:

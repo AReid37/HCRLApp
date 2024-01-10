@@ -34,13 +34,15 @@ PURPOSE ::
 18|Rice				-(i9; t14` p5)
 19|Lettuce			-(i214; t172)
 20|Apple			-(i24; t18`,18_2`)
-21|Bluberry			-(i42; t29 p6)
+-- 21|Bluberry			-(i42; t29 p6)		// Tests for alternate matching between content name for Net Change List
+21|Bluberry			-(i42; t209 p6)
 22|Passion Fruit	-(i43; t31)
 23|Strawberry		-(i115; t128)
 
 [ADDITIONAL]
 > Mashed Potato (t32) - Potato (i34)
-> Stripped Garlic Clove Dust (d12) - (t47)
+-- > Stripped Garlic Clove Dust (d12) - (t47)	// Just changing the optional name this one
+> Garlic Clove Dust (d12) - (t47)
 > Garlic Stem (t49) - GarlicClove (t46)
 -- > Garlic Stem (d18) - GarlicClove (t46)  // Just changing the related data ID here
 > Garlic Stem (d18) - GarlicClove (t47)
@@ -49,15 +51,15 @@ PURPOSE ::
 > Garlic Stem (d18) - GarlicClove (t47)
 	Post testing, this is the same as just adding another additional to the base content.
 	The objectively realistic test should remove the old addit and add the new addit. Explains the changes above this omission block.
-	Changing this additional also works for testing alternate matching by name for Net Change List
+	Changing this additional also works for testing alternate matching by name for Net Change List, albeit indirectly
 -- !close --
 > (b5,11`,13,19~21) - Grains Biome Backgrounds
 -- > (AppleSauce_Chunks) - (i68)   // This tests for a simple data ID change, sound simple enough
 > (AppleSauce) - (i68)
-> OnionShell (t56) - (i76)
+-- > OnionShell (t56) - (i76)   // The Onion Shell is removed from the list of additionss
 > Tomato Stem Dust(d29~30) - (t93)
 
-[TTA: 68]
+[TTA: 67]
 -- [TTA: 70]	// Updated TTA with the overwriting changes
 
 [UPDATED]

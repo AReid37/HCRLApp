@@ -46,6 +46,7 @@ namespace HCResourceLibraryApp.DataHandling
         List<LegendData> _legends, _prevLegends;
         List<SummaryData> _summaries, _prevSummaries;
         List<ResLibIntegrationInfo> rliInfoDock;
+        List<ResLibAddInfo> rlaInfoDock;
         //List<ResLibOverwriteInfo> rloInfoDock;
 
         // public
@@ -207,78 +208,86 @@ namespace HCResourceLibraryApp.DataHandling
                                     {
                                         if (looseCc.IsSetup())
                                         {
-                                            Dbug.LogPart($"Connecting ConChanges ({looseCc.ToStringShortened()}) >> ");
-                                            ResContents matchingResCon = null;
-                                            rliInfo = new ResLibIntegrationInfo();
-                                            string matchedID = looseCc.RelatedDataID;
+                                            bool selfUpdatedQ = false;
+                                            if (looseCc.InternalName.IsNotNEW())
+                                                selfUpdatedQ = looseCc.InternalName.EndsWith(Sep) || looseCc.InternalName.Equals(Sep);
 
-                                            /// matching here
-                                            LogDecoder.DisassembleDataID(looseCc.RelatedDataID, out string dk, out string db, out _);
-                                            string trueRelDataID = dk + db;
-                                            foreach (ResContents resCon in Contents)
+                                            if (!selfUpdatedQ)
                                             {
-                                                if (resCon.ContainsDataID(looseCc.RelatedDataID, out _))
-                                                {
-                                                    matchingResCon = resCon;
-                                                    break;
-                                                }
-                                                else if (resCon.ContainsDataID(trueRelDataID, out _))
-                                                {
-                                                    matchingResCon = resCon;
-                                                    matchedID = trueRelDataID;
-                                                    Dbug.LogPart("[by trueID] ");
-                                                    break;
-                                                }
-                                            }
+                                                Dbug.LogPart($"Connecting ConChanges ({looseCc.ToStringShortened()}) >> ");
+                                                ResContents matchingResCon = null;
+                                                rliInfo = new ResLibIntegrationInfo();
+                                                string matchedID = looseCc.RelatedDataID;
 
-                                            /// connection here
-                                            if (matchingResCon != null)
-                                            {
-                                                Dbug.LogPart($"Found ResCon {{{matchingResCon}}} >> ");
-                                                if (matchingResCon.ContainsDataID(matchedID, out RCFetchSource source, out DataHandlerBase dataSource))
+                                                /// matching here
+                                                LogDecoder.DisassembleDataID(looseCc.RelatedDataID, out string dk, out string db, out _);
+                                                string trueRelDataID = dk + db;
+                                                foreach (ResContents resCon in Contents)
                                                 {
-                                                    bool connectCCq = false;
-                                                    if (source == RCFetchSource.ConBaseGroup)
+                                                    if (resCon.ContainsDataID(looseCc.RelatedDataID, out _))
                                                     {
-                                                        ContentBaseGroup matchCbg = (ContentBaseGroup)dataSource;
-                                                        if (matchCbg != null)
-                                                        {
-                                                            if (matchingResCon.StoreConChanges(looseCc))
-                                                            {
-                                                                RCextras.Add(matchingResCon.ToString());
-                                                                Dbug.LogPart($"Connected with ConBase ({matchCbg}) [by ID '{looseCc.RelatedDataID}']");
-                                                                connectCCq = true;
-                                                            }
-                                                            else Dbug.LogPart($"Rejected ConChanges");
-                                                        }
-                                                        else Dbug.LogPart("ConBase could not be fetched");
+                                                        matchingResCon = resCon;
+                                                        break;
                                                     }
-                                                    else if (source == RCFetchSource.ConAdditionals)
+                                                    else if (resCon.ContainsDataID(trueRelDataID, out _))
                                                     {
-                                                        ContentAdditionals matchCa = (ContentAdditionals)dataSource;
-                                                        if (matchCa != null)
-                                                        {
-                                                            if (matchingResCon.StoreConChanges(looseCc))
-                                                            {
-                                                                RCextras.Add(matchingResCon.ToString());
-                                                                Dbug.LogPart($"Connected with ConAddits ({matchCa}) [by ID '{looseCc.RelatedDataID}']");
-                                                                connectCCq = true;
-                                                            }
-                                                            else Dbug.LogPart($"Rejected ConChanges");
-                                                        }
-                                                        else Dbug.LogPart("ConAddit could not be fetched");
+                                                        matchingResCon = resCon;
+                                                        matchedID = trueRelDataID;
+                                                        Dbug.LogPart("[by trueID] ");
+                                                        break;
                                                     }
-                                                    else Dbug.LogPart($"Source is neither ConBase nor ConAddits (source: '{source}')");
-
-                                                    if (connectCCq)
-                                                        rliInfo = new ResLibIntegrationInfo(rliType, looseCc.RelatedDataID, looseCc.ChangeDesc, matchingResCon.ContentName, looseCc.RelatedDataID);
                                                 }
-                                            }
-                                            else Dbug.LogPart("No connections found (discarded)");
 
-                                            if (!rliInfo.IsSetup())
-                                                rliInfo = new ResLibIntegrationInfo(rliType, looseCc.RelatedDataID, looseCc.ChangeDesc, null, null);
-                                            Dbug.LogPart(" <rlii> "); /// this logs regardless of what happens
+                                                /// connection here
+                                                if (matchingResCon != null)
+                                                {
+                                                    Dbug.LogPart($"Found ResCon {{{matchingResCon}}} >> ");
+                                                    if (matchingResCon.ContainsDataID(matchedID, out RCFetchSource source, out DataHandlerBase dataSource))
+                                                    {
+                                                        bool connectCCq = false;
+                                                        if (source == RCFetchSource.ConBaseGroup)
+                                                        {
+                                                            ContentBaseGroup matchCbg = (ContentBaseGroup)dataSource;
+                                                            if (matchCbg != null)
+                                                            {
+                                                                if (matchingResCon.StoreConChanges(looseCc))
+                                                                {
+                                                                    RCextras.Add(matchingResCon.ToString());
+                                                                    Dbug.LogPart($"Connected with ConBase ({matchCbg}) [by ID '{looseCc.RelatedDataID}']");
+                                                                    connectCCq = true;
+                                                                }
+                                                                else Dbug.LogPart($"Rejected ConChanges");
+                                                            }
+                                                            else Dbug.LogPart("ConBase could not be fetched");
+                                                        }
+                                                        else if (source == RCFetchSource.ConAdditionals)
+                                                        {
+                                                            ContentAdditionals matchCa = (ContentAdditionals)dataSource;
+                                                            if (matchCa != null)
+                                                            {
+                                                                if (matchingResCon.StoreConChanges(looseCc))
+                                                                {
+                                                                    RCextras.Add(matchingResCon.ToString());
+                                                                    Dbug.LogPart($"Connected with ConAddits ({matchCa}) [by ID '{looseCc.RelatedDataID}']");
+                                                                    connectCCq = true;
+                                                                }
+                                                                else Dbug.LogPart($"Rejected ConChanges");
+                                                            }
+                                                            else Dbug.LogPart("ConAddit could not be fetched");
+                                                        }
+                                                        else Dbug.LogPart($"Source is neither ConBase nor ConAddits (source: '{source}')");
+
+                                                        if (connectCCq)
+                                                            rliInfo = new ResLibIntegrationInfo(rliType, looseCc.RelatedDataID, looseCc.ChangeDesc, matchingResCon.ContentName, looseCc.RelatedDataID);
+                                                    }
+                                                }
+                                                else Dbug.LogPart("No connections found (discarded)");
+
+                                                if (!rliInfo.IsSetup())
+                                                    rliInfo = new ResLibIntegrationInfo(rliType, looseCc.RelatedDataID, looseCc.ChangeDesc, null, null);
+                                                Dbug.LogPart(" <rlii> "); /// this logs regardless of what happens
+                                            }
+                                            else Dbug.LogPart($"Skipping self-updating ConChanges ({looseCc.ToStringShortened()})");
                                         }
                                         Dbug.Log("; ");
 
@@ -299,9 +308,7 @@ namespace HCResourceLibraryApp.DataHandling
                             /// ELSE don't sort loose contents
                             else
                             {
-                                if (!keepLooseRCQ)
-                                    Dbug.Log("No pre-existing library contents to search for connections; ");
-                                else
+                                if (keepLooseRCQ)
                                 {
                                     Dbug.Log("Unallowed from sorting loose ResCon; ");
                                     newRC.ShelfID = GetNewShelfNum();
@@ -309,6 +316,42 @@ namespace HCResourceLibraryApp.DataHandling
 
                                     Contents.Add(newRC);
                                     Dbug.Log($"*Added* :: {newRC}; ");
+                                }
+                                else
+                                {
+                                    Dbug.LogPart("No pre-existing library contents to search for connections");
+                                    if (newRC.ConAddits.HasElements())
+                                    {
+                                        Dbug.LogPart($"; Discarding loose conAddits [{newRC.ConAddits.Count}]");
+                                        foreach (ContentAdditionals disCa in newRC.ConAddits)
+                                        {
+                                            ResLibIntegrationInfo info = new(RCFetchSource.ConAdditionals, disCa.DataIDString, disCa.OptionalName, null, null);
+                                            if (info.IsSetup())
+                                                rliInfoDock.Add(info);
+                                        }    
+                                    }
+                                    if (newRC.ConChanges.HasElements())
+                                    {
+                                        Dbug.LogPart($"; Discarding loose conChanges [{newRC.ConChanges.Count}]");
+                                        int countUpdt = 0;
+                                        foreach (ContentChanges disCc in newRC.ConChanges)
+                                        {
+                                            bool selfUpdatedQ = false;
+                                            if (disCc.InternalName.IsNotNEW())
+                                                selfUpdatedQ = disCc.InternalName.EndsWith(Sep) || disCc.InternalName.Equals(Sep);
+
+                                            ResLibIntegrationInfo info = new(RCFetchSource.ConChanges, disCc.RelatedDataID, disCc.ChangeDesc, null, null);
+                                            if (info.IsSetup() && !selfUpdatedQ)
+                                            {
+                                                countUpdt++;
+                                                rliInfoDock.Add(info);
+                                            }
+                                        }
+
+                                        if (countUpdt < newRC.ConChanges.Count)
+                                            Dbug.LogPart($"; Omitted [{newRC.ConChanges.Count - countUpdt}] self-updated conChanges");
+                                    }
+                                    Dbug.Log("; ");
                                 }
                             }
                         }
@@ -371,10 +414,15 @@ namespace HCResourceLibraryApp.DataHandling
             bool foundDupe = false;
             if (Contents.HasElements() && resCon != null)
             {
+                resCon = resCon.CloneResContent(true);
                 if (resCon.IsSetup())
                 {
                     for (int x = 0; x < Contents.Count && !foundDupe; x++)
-                        foundDupe = Contents[x].Equals(resCon);
+                    {
+                        ResContents resConX = Contents[x];
+                        //resCon.ShelfID = resConX.ShelfID;
+                        foundDupe = resConX.Equals(resCon) | resConX.ConBase.DataIDString == resCon.ConBase.DataIDString | resConX.ContentName == resCon.ContentName;
+                    }
                 }
             }
             return foundDupe;
@@ -415,13 +463,21 @@ namespace HCResourceLibraryApp.DataHandling
                             }
                             else
                             {
-                                bool edited = dupedLegData.AddKeyDefinition(leg[0]);
+                                bool edited, byOverwriteQ = false;
+                                if (leg.VersionIntroduced.AsNumber < dupedLegData.VersionIntroduced.AsNumber)
+                                {
+                                    dupedLegData.Overwrite(leg, out ResLibOverwriteInfo info);
+                                    edited = info.OverwrittenQ;
+                                    byOverwriteQ = true;
+                                }
+                                else edited = dupedLegData.AddKeyDefinition(leg[0]);
+
                                 if (edited)
-                                    Dbug.Log($"Edited Lgd :: {dupedLegData}");
+                                    Dbug.Log($"Edited Lgd {(byOverwriteQ? "(ovr) " : "")}:: {dupedLegData}");
                                 else
                                 {
                                     bool isPartial = leg.ToString() != dupedLegData.ToString();
-                                    Dbug.Log($"Rejected {(isPartial ? "partial " : "")}duplicate :: {leg}");
+                                    Dbug.Log($"Rejected {(isPartial ? "partial " : "")}duplicate {(byOverwriteQ ? "(ovr) " : "")}:: {leg}");
                                 }
                             }
                             addedLegendQ = true;
@@ -827,7 +883,13 @@ namespace HCResourceLibraryApp.DataHandling
                                     ///         IF has existing loose:
                                     ///             IF has overwriting loose: edit existing loose with overwriting loose (*If loosened as result of changes, add to integration queue);
                                     ///             ELSE remove existing loose;
-                                    ///         ELSE 'IF has overwriting loose:' add overwriting loose to integration queue;
+                                    ///         
+                                    ///      a  ELSE; 
+                                    ///             IF has overwriting loose addit: add overwriting loose addit to integration queue; ELSE -nothing-;
+                                    ///      b  ELSE:
+                                    ///             IF has overwriting loose change: 
+                                    ///                 IF overwriting loose change is not self-updated: add overwriting loose change to integration queue; ELSE -nothing-;
+                                    ///                 ELSE -nothing-
                                     ///     
                                     if (enableLooseHandlingQ)
                                     {
@@ -1023,7 +1085,7 @@ namespace HCResourceLibraryApp.DataHandling
 
                                                     AddToInfoDock(info);
                                                 }
-                                                else Dbug.LogPart("No overwriting or existing addit; ");
+                                                else Dbug.LogPart("No overwriting or existing addit");
                                             }
                                             Dbug.Log("; ");
 
@@ -1086,31 +1148,42 @@ namespace HCResourceLibraryApp.DataHandling
                                             {
                                                 if (ccO != null)
                                                 {
-                                                    Dbug.LogPart("Overwriting changes exists (no existing changes); Adding overwriting changes to loose queue");
-                                                    ResLibOverwriteInfo info = new(null, ccO.ToString());
-                                                    info.SetSourceSubCategory(SourceCategory.Upd);
+                                                    bool isSelfUpdatedQ = false;
+                                                    if (ccO.InternalName.IsNotNEW())
+                                                        isSelfUpdatedQ = ccO.InternalName.EndsWith(Sep) || ccO.InternalName.Equals(Sep);
 
-                                                    queueLooseDataIDs.Add(ccO.RelatedDataID);
-                                                    queueLooseChanges.Add(ccO);
-                                                    info.SetOverwriteStatus();
+                                                    if (!isSelfUpdatedQ)
+                                                    {
+                                                        Dbug.LogPart("Overwriting changes exists (no existing changes); Adding overwriting changes to loose queue");
+                                                        ResLibOverwriteInfo info = new(null, ccO.ToString());
+                                                        info.SetSourceSubCategory(SourceCategory.Upd);
 
-                                                    AddToInfoDock(info);
+                                                        queueLooseDataIDs.Add(ccO.RelatedDataID);
+                                                        queueLooseChanges.Add(ccO);
+                                                        info.SetOverwriteStatus();
+
+                                                        AddToInfoDock(info);
+                                                    }
+                                                    else Dbug.LogPart("Overwriting changes were self-updated, skipping");
                                                 }
-                                                else Dbug.LogPart("No overwriting or existing changes; ");
+                                                else Dbug.LogPart("No overwriting or existing changes");
                                             }
                                             Dbug.Log("; ");
 
 
                                             // compile loose queue
-                                            Dbug.LogPart("Compiling any queued loose contents");
-                                            if (queueLooseDataIDs.HasElements())
+                                            if (noMoreLooseQ)
                                             {
-                                                ContentBaseGroup looseCbg = new(verNum, LooseResConName, queueLooseDataIDs.ToArray());
-                                                integrationQueueRC = new ResContents(0, looseCbg, queueLooseAddits.ToArray(), queueLooseChanges.ToArray());
-                                                Dbug.LogPart($"; Loose queue compilied :: {integrationQueueRC}");
-                                            }
-                                            else Dbug.LogPart(" (None recieved)");
-                                            Dbug.Log("; ");
+                                                Dbug.LogPart("Compiling any queued loose contents");
+                                                if (queueLooseDataIDs.HasElements())
+                                                {
+                                                    ContentBaseGroup looseCbg = new(verNum, LooseResConName, queueLooseDataIDs.ToArray());
+                                                    integrationQueueRC = new ResContents(0, looseCbg, queueLooseAddits.ToArray(), queueLooseChanges.ToArray());
+                                                    Dbug.LogPart($"; Loose queue compilied :: {integrationQueueRC}");
+                                                }
+                                                else Dbug.LogPart(" (None recieved)");
+                                                Dbug.Log("; ");
+                                            }                                            
                                         }
                                         Dbug.NudgeIndent(false);
                                     }
@@ -1150,6 +1223,7 @@ namespace HCResourceLibraryApp.DataHandling
                             ///     
 
                             bool noMoreLegsQ = false;
+                            string ixKeyLegendsO = "";
                             for (int lgx = 0; !noMoreLegsQ; lgx++)
                             {
                                 LegendData legE = null, legO = null;
@@ -1165,24 +1239,35 @@ namespace HCResourceLibraryApp.DataHandling
                                     strLegOMatchMethod = "Match with existing";
                                     /// a one-time loop here that finds a overwriting legend data with the same key as existing (if existing exists)
                                     foreach (LegendData oLeg in other.Legends)
-                                        if (oLeg.Key == legE.Key)
+                                        if (oLeg.Key == legE.Key && !ixKeyLegendsO.Contains($" {oLeg.Key} "))
                                         {
                                             legO = oLeg;
                                             strLegO = legO.ToString();
+                                            ixKeyLegendsO += $" {oLeg.Key} ";
                                             break;
                                         }
                                 }
                                 else
                                 {
                                     strLegOMatchMethod = "Fetch next overwriting";
-                                    if (other.Legends.HasElements(lgx + 1))
+                                    foreach (LegendData oLeg in other.Legends)
                                     {
-                                        legO = other.Legends[lgx];
-                                        strLegO = legO.ToString();
+                                        if (!ixKeyLegendsO.Contains($" {oLeg.Key} "))
+                                        {
+                                            legO = oLeg;
+                                            strLegO = legO.ToString();
+                                            ixKeyLegendsO += $" {oLeg.Key} ";
+                                        }
                                     }
+
+                                    //if (other.Legends.HasElements(lgx + 1))
+                                    //{
+                                    //    legO = other.Legends[lgx];
+                                    //    strLegO = legO.ToString();
+                                    //}
                                 }
 
-                                
+
                                 Dbug.Log($"@ix{lgx}  |  Existing [{strLegE}]  //  Overwriting [{strLegO}] (Match method : {strLegOMatchMethod}); ");
                                 ResLibOverwriteInfo info = new(strLegE, strLegO, SourceOverwrite.Legend);
                                 info.SetOverwriteStatus(false);
@@ -1375,11 +1460,6 @@ namespace HCResourceLibraryApp.DataHandling
             _legends = new List<LegendData>();
             _summaries = new List<SummaryData>();
         }
-        // all the method ideas below will be combined into this single method (for beyond this, they may not be utilized)
-        //  bool RemoveContent(ResCon rcToRemove)
-        //  bool RemoveContent(int shelfID)
-        //  bool RemoveLegend(string key)  // Necessary?? Contents and summaries would be removed, but does the legend *have* to be removed?
-        //  bool RemoveSummary(VerNum versionNum)
         public bool RevertToVersion(VerNum verReversion)
         {
             Dbug.StartLogging("ResLibrary.RevertToVersion(VerNum)");

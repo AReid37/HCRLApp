@@ -1,0 +1,154 @@
+﻿<##   O V E R W R I T E  .  T E S T L I S T   ##>
+=================================================
+A checklist for test cases of the overwriting method of content libraries.
+
+-- Format --
+[Status:' '/'X'] Test Case: Outcome and Conditions
+    > How test case is tested and verified (where applicable)
+
+
+
+TEST CASES
+""""""""""
+[X] ResCon overwrite through matched Name, by same version and new Data IDs
+    > Test: Submit Ex1VL, Overwrite with Ex1VLOa
+    > Overwriting "Bluberry" has a different data ID (t209) and is matched by name to be overwritten
+[X] ResCon overwrite through matched Data IDs, by same version and new Name
+    > Test: Submit Ex1VL, Overwrite with Ex1VLOa
+    > Contents "Walnut" and "Almond" are respectively renamed "Alnut" and "Walmond" and is matched by their unchanged data IDs to be overwritten
+[X] ResCon added, by same version and no matching ResCon in any version
+    > Test: Submit Ex1VLOa and Ex2VL, then overwrite with Ex1VL
+    > The "Gravel" in Ex1VL does not exist in Ex2VL or Ex1VLOa, thus is added when overwriting with Ex1VL.
+    > Test-: Submit Ex2VLOa, then submit Ex1VL
+    > The "Gravel" in Ex2VLOa is the same as that in Ex1VL, so when the "Gravel" from Ex1VL is submitted it is identified as a duplicate by content name and ID, not it's ConBase.
+[X] ResCon removed, by same version and missing instance
+    > Test: Submit Ex1VL, Overwrite with Ex1VLOa
+    > "Gravel" does not exist in Ex1VLOa and is removed as a result of overwriting
+[X] ResCon unedited, by same version and same instance
+    > Test: Submit Ex1VL, resubmit with Ex1VL
+    > Resubmitting the same VL means that no changes were made, thus no overwriting will occur.    
+[ ] ResCon unedited, by overwrite omission
+
+
+[X] ResCon Addit ovewrite through Related ID, by same version and new Data IDs
+    > Test: Submit Ex1VL, overwrite with Ex1VLOa
+    > The "Apple Sauce Block"'s additional contents's ID is changed from "AppleSauce_Chunks" to "AppleSauce" which result in an overwrite through matching related ID
+[X] ResCon Addit ovewrite through Related ID, by same version and new Optional Name
+    > Test: Submit Ex1VL, overwrite with Ex1VLOa
+    > The "Stripped Garlic Stem Dust" additional by name is changed to "Garlic Stem Dust" and the Data IDs remain unchanged, thus resulting in an overwrite by optional name
+[X] ResCon Addit overwrite, by replacement of an existing instance with a new instance
+    > Test: Submit Ex1VL, overwrite with Ex1VLOa
+    > The new "Garlic Stem" additional content is changed by the related ID, replacing the similar existing which has a different related ID
+[X] ResCon Addit added, by same version and no matching Addits in ResCon
+    > Test: Submit Ex1VLOa, overwrite with Ex1VL
+    > The additional content "Onion Shell" does not exist in Ex1VLOa and is therefore added when overwritten with Ex1VL as there are no matching additionals.
+[X] ResCon Addit removed, by same version and missing instance
+    > Test: Submit Ex1VL, overwrite with Ex1VLOa
+    > The additional content "Onion Shell" does not exist in Ex1VLOa and is therefore removed when it overwrites the existing instance from Ex1VL
+[X] ResCon Addit removed, by same version and mismatch of ResCon Data IDs
+    > Test: Submit Ex1VL and Ex2VL, overwrite with Ex1VLOb
+    > The additional content for "Grains Biome Backgrounds" is loosened by mismatch due to the data ID change from Ex1VLOb, "b11`" to "b111`"
+[X] ResCon Addit unedited, by same version and same instance
+    > Test: Submit Ex1VL, resubmit with Ex1VL
+    > Resubmitting the same VL means that no changes were made, thus for "Gravel", its additional contents have not changed and are not overwritten
+[ ] ResCon Addit unedited, by overwrite omission
+
+
+[X] ResCon Change overwrite through Related ID, by same version and new Internal Name
+    > Test: Submit Ex1VLOb, overwrite with Ex1VLOc
+    > Changed content "Stripped Garlic Clove Dust" has its name changed to "Garlic Dust" when overwritten with Ex1VLOc
+[X] ResCon Change overwrite through Related ID, by same version and new Change Description
+    > Test: Submit Ex1VLOb, overwrite with Ex1VLOc
+    > Changed content for "Asparagus" by "i109" has its description changed in Ex1VLOc, and thus is overwritten when the VL is submitted
+[X] ResCon Change added, by same version and no matching Changes in ResCon
+    > Test: Submit Ex1VLOb, overwrite with Ex1VLOc
+    > Content change for "Garlic Clove" by "d11" does not exist in Ex1VLOb, but is introduced when overwriting with Ex1VLOc
+[X] ResCon Change removed, by same version and missing instance
+    > Test: Submit Ex1VLOb, overwrite with Ex1VLOc
+    > "Mashed Potato" content change does not exist in Ex1VLOc and is therefore removed on overwrite
+[X] ResCon Change removed, by same version and mismatch of ResCon Data IDs
+    > Test: Submit Ex1VLOb, overwrite with Ex1VLOc
+    > The content change for "Spoiled Potato" by "i38" is disconnected as the base contents Data ID is changed from "i38" to "i382" on overwrite
+[X] ResCon Change unedited, by same version and same instance
+    > Test: Submit Ex1VLOb, resubmit Ex1VLOb
+    > Resubmitting the same VL means that no changes occur, therefore the content changes are not overwritten as they are the same
+[ ] ResCon Change unedited, by overwrite omission
+
+
+[ ] Loose Addit overwrite through Related ID, by same version and new Data IDs
+[ ] Loose Addit overwrite through Related ID, by same version and new Optional Name
+[ ] Loose Addit added, by same version and no matching Addits in ResCon
+[ ] Loose Addit removed, by same version and missing instance
+[ ] Loose Addit removed, by same version and mismatch of ResCon Data IDs
+[ ] Loose Addit unedited, by same version and same instance
+[ ] Loose Addit unedited, by overwrite omission
+
+
+[ ] Loose Change overwrite through Related ID, by same version and new Internal Name
+[ ] Loose Change overwrite through Related ID, by same version and new Change Description
+[ ] Loose Change added, by same version and no matching Changes in ResCon
+[ ] Loose Change removed, by same version and missing instance
+[ ] Loose Change removed, by same version and mismatch of ResCon Data IDs
+[ ] Loose Change unedited, by same version and same instance
+[ ] Loose Change unedited, by overwrite omission
+
+
+- - - - - - -
+
+[X] Legend overwrite through key, by same version and new definition
+    > Test: Submit Ex1VL, overwrite with Ex1VLOa
+    > The legend key "~" is given a new definition and overwrites the existing definition of the legend instance
+[X] Legend overwrite through key, by earlier version
+    > Test: Submit Ex2VL and Ex1VL
+    > The legend "` - LOTB" in Ex2VL is overwritten to a new definition and version when Ex1VL is submitted
+[X] Legend overwrite through key, by later version and new definition 
+    > Test: Submit Ex1VL and Ex2VL
+    > The legend of key "`" gains a second definition when Ex2VL is submited, therefore overwritten by addition of a new definition
+[X] Legend overwrite through key, with multi-definition legend, by same version and an existing definition other than the 1st 
+    > Test: Submit Ex1VL and Ex2VL, overwrite with Ex1VLOc
+    > The legend key "~" initial definition is "Range of Numbers", and an additional definition "Num Range" is introduced by Ex2VL... overwriting with Ex1VLOc has the definition "Num Range" become the initial definition, and thus the overwrite will essentially swap the placements of the two definitions
+[X] Legend added, by same version and no existing legend in any version 
+    > Test: Submit Ex1VLOb, overwrite with Ex1VL
+    > The legend "d - Dust" does not existing in Ex1VLOb, and thus is introduced on overwrite with Ex1VL which does contain this legend
+    > Test-: Submit Ex1VLOb and Ex2VL, overwrite with Ex1VL
+    > The legend "d - Dust" does not exist in Ex1VLOb but is added in Ex2VL, so on overwrite with Ex1VL the legend "d - Dust" is already recognized as existing and is simply overwritten with a newer version
+[X] Legend removed through key, by same version and missing instance
+    > Test: Submit Ex1VL, overwrite with Ex1VLOb
+    > The legend "d - Dust" does not exist in Ex1VLOb, and is removed as a result of overwriting
+[X] Legend unedited through key, by same version and definition
+    > Test: Submit Ex1VL, resubmit Ex1VL
+    > Resubmitting the same VL means that no change has occured, and thus no legend will be overwritten
+[X] Legend unedited through key, by later version and same definition
+    > Test: Submit Ex1VL and Ex2VL
+    > The legends that were already described in Ex1VL remain unchanged as the legends in Ex2VL are duplicates by key and definition
+[ ] Legend unedited, by overwrite omission
+
+
+- - - - - - -
+
+[X] Summary overwrite, by same version and new summary parts
+    > Test: Submit Ex1VL, overwrite with Ex1VLOb
+    > The summary parts of the new instance are altered resulting in an overwrite of the summary instance
+[X] Summary overwrite, by same version and new TTA number
+    > Test: Submit Ex2VL, overwrite with Ex2VLOa
+    > The new summary instance changes the TTA number, resulting in an overwrite of the summary instance
+[X] Summary unedited, by same version and same instance
+    > Test: Submit Ex1VL, resubmit Ex1VL
+    > The resubmitted summary will be the same as what already exists, thus no overwriting occurs
+[ ] Summary unedited, by overwrite omission
+
+
+- - - - - - -
+
+[ ] Overwrite process rejected due to emptied library Contents as a result
+[ ] Overwrite process rejected due to no Contents as a result, same version
+[ ] Overwrite process rejected due to emptied library Legends as a result
+[ ] Overwrite process rejected due to no Legends as a result, same version
+
+
+
+
+___________
+Ex# - Version Log Example and Number
+VL - Version Log
+VLO? - Version Log Overwrite and overwrite letter

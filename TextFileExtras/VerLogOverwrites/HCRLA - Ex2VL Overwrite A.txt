@@ -19,6 +19,8 @@ PURPOSE ::
 8 |Egg Shell Bucket - (i70; a3~4)
 9 |Egg Shell Harness - (i71; a5)
 10|Egg Shell Loafers - (i72; a6)
+-- The gravel has been added in a later version
+11|Gravel			-(i20; t116)
 
 [ADDITIONAL]
 -- > OneItemGlows (g0,g2`~g4`) - One Item (i1)		// We're gonna remove this loose additional. We'll also take one those glows and throw it elsewhere
@@ -27,8 +29,8 @@ PURPOSE ::
 -- > Grain View Controller (i242) - Grains Biome Backgrounds (b11`)	// this loose additional will just be altered
 > Granule Shape Shifter (i242) - (b11`) 
 
--- The summary itself may not changes, but changing the TTA num will still alter the summary instance
-[TTA : 25]
+-- [TTA : 28]		// The summary itself may not changes, but changing the TTA num will still alter the summary instance
+[TTA : 27]
 
 [UPDATED]
 -- > Mashed Potato (t32) - Redesigned to look more creamy.		// This loose update is just removed
@@ -55,6 +57,7 @@ a - Armor
 * - Content introduced in a previous version
 
 [SUMMARY]
+-- The summary will not speak of any Gravel that has slipped into this version's overwrite, for testing purposes...
 > Zero and Two Items, One Item glows, Leek, Asparagus (block, stem, wall)
 > Edited many vegetable sprites for clarity of desired texture
 > Grains Controller, DONUT, Egg Shell Armor

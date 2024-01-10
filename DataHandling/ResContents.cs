@@ -167,7 +167,7 @@ namespace HCResourceLibraryApp.DataHandling
                         if (ConAddits.HasElements())
                         {
                             for (int dx = 0; dx < ConAddits.Count && !isDupe; dx++)
-                                isDupe = ConAddits[dx].Equals(newCA);
+                                isDupe = ConAddits[dx].Equals(newCA, true);
                         }
                         else ConAddits = new List<ContentAdditionals>();
 
@@ -206,7 +206,7 @@ namespace HCResourceLibraryApp.DataHandling
                         if (ConChanges.HasElements())
                         {
                             for (int cx = 0; cx < ConChanges.Count && !isDupe; cx++)
-                                isDupe = ConChanges[cx].Equals(newCC);
+                                isDupe = ConChanges[cx].Equals(newCC, true);
                         }
                         else ConChanges = new List<ContentChanges>();
 
@@ -427,12 +427,17 @@ namespace HCResourceLibraryApp.DataHandling
                                         }
                                         else caInfo.SetOverwriteStatus();
                                     }
-                                    /// ELSE retain existing;
+                                    /// ELSE;
+                                    ///     IF existing connects to base: retain existing; ELSE remove existing;
                                     else
                                     {
-                                        caInfo.SetOverwriteStatus(false);
-                                        conAdditsNew.Add(ca);
-                                        nonMatchBackSetIx++;
+                                        if (ContainsDataID(ca.RelatedDataID, out _))
+                                        {
+                                            caInfo.SetOverwriteStatus(false);
+                                            conAdditsNew.Add(ca);
+                                            nonMatchBackSetIx++;
+                                        }
+                                        else caInfo.SetOverwriteStatus();
                                     }
 
                                     if (ca.VersionAdded.AsNumber <= verNum.AsNumber)
@@ -468,7 +473,10 @@ namespace HCResourceLibraryApp.DataHandling
                             if (ConAddits.HasElements())
                                 ConAddits.Clear();
                             else ConAddits = new List<ContentAdditionals>();
-                            ConAddits.AddRange(conAdditsNew.ToArray());
+                            //ConAddits.AddRange(conAdditsNew.ToArray());
+
+                            foreach (ContentAdditionals ca in conAdditsNew)
+                                StoreConAdditional(ca);
                         }
                     }
 
@@ -492,7 +500,7 @@ namespace HCResourceLibraryApp.DataHandling
                             }
                             if (rcNew.ConChanges.HasElements(ccx + 1 - nonMatchBacksetIx))
                             {
-                                ccNew = rcNew.ConChanges[ccx + nonMatchBacksetIx];
+                                ccNew = rcNew.ConChanges[ccx - nonMatchBacksetIx];
                                 ccNewStr = ccNew.ToString();
                             }
 
@@ -544,12 +552,17 @@ namespace HCResourceLibraryApp.DataHandling
                                         /// this conChanges instance is then... DELETED!
                                         else ccInfo.SetOverwriteStatus(true);
                                     }
-                                    /// ELSE retain existing;
+                                    /// ELSE;
+                                    ///     IF existing connects to base: retain existing; ELSE remove existing
                                     else
                                     {
-                                        ccInfo.SetOverwriteStatus(false);
-                                        conChangesNew.Add(cc);
-                                        nonMatchBacksetIx++;
+                                        if (ContainsDataID(cc.RelatedDataID, out _))
+                                        {
+                                            ccInfo.SetOverwriteStatus(false);
+                                            conChangesNew.Add(cc);
+                                            nonMatchBacksetIx++;
+                                        }
+                                        else ccInfo.SetOverwriteStatus();
                                     }
 
                                     if (cc.VersionChanged.AsNumber <= verNum.AsNumber)
@@ -584,7 +597,10 @@ namespace HCResourceLibraryApp.DataHandling
                             if (ConChanges.HasElements())
                                 ConChanges.Clear();
                             else ConChanges = new List<ContentChanges>();
-                            ConChanges.AddRange(conChangesNew.ToArray());
+                            //ConChanges.AddRange(conChangesNew.ToArray());
+
+                            foreach (ContentChanges cc in conChangesNew)
+                                StoreConChanges(cc);
                         }
                     }
 

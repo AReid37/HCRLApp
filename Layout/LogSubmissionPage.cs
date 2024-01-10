@@ -286,7 +286,9 @@ namespace HCResourceLibraryApp.Layout
                                     NewLine(3);
                                     Title("Content Integration Evaluation", subMenuUnderline, 0);
                                     Format($"{Ind14}Generating outcome of library integration. This may take a moment...", ForECol.Accent);
-                                    ResLibrary tangentLibrary = mainLibrary.CloneLibrary();
+                                    ResLibrary tangentLibrary = new ResLibrary();
+                                    if (mainLibrary.IsSetup())
+                                        tangentLibrary = mainLibrary.CloneLibrary();
                                     NewLine();
 
                                     if (tangentLibrary != null)
@@ -1170,6 +1172,12 @@ namespace HCResourceLibraryApp.Layout
                             overwriteCol = colIgn;
                         }
 
+                        /// removing '(RC)' from the front of ResContents strings
+                        if (overwriteReplaced.IsNotNEW())
+                            overwriteReplaced = overwriteReplaced.Replace("(RC)", "").Trim();
+                        if (overwriteResult.IsNotNEW())
+                            overwriteResult = overwriteResult.Replace("(RC)", "").Trim();
+
 
 
 
@@ -1189,23 +1197,19 @@ namespace HCResourceLibraryApp.Layout
                         if (!subSourceQ)
                             Format($"{Ind14}{rx + 1 - subSourceBacksetIx,-2}|", ForECol.Accent);
                         else Format($"\t");
-                        /// for wrapping of summary
-                        if (source.Contains(SourceOverwrite.Summary.ToString()))
-                            HoldWrapIndent(true); 
+                        HoldWrapIndent(true); 
                         /// information formatting
                         Format($"[{source}] ");
                         FormatLine($"{overwriteSym} {overwriteResult}", overwriteCol);
                         if (overwriteReplaced.IsNotNEW())
                             FormatLine($"{(subSourceQ ? $"\t{Ind14}" : Ind34)}{overwriteReplaced}", ForECol.Accent);
-                        /// for wrapping of summary
-                        if (source.Contains(SourceOverwrite.Summary.ToString()))
-                            HoldWrapIndent(false);
+                        HoldWrapIndent(false);
 
 
                         // DISPLAY legend
                         if (rx + 1 >= overwritingInfoDock.Length)
                         {
-                            NewLine(2);
+                            NewLine();
                             Title("Overwriting Legend");
                             /// overwriting display legend
                             //FormatLine($"Outcome Symbols :: '{symEql}' No change  |  '{symEdt}' Overwritten / Added  |  '{symRem}' Removed  |  '{symIgn}' Ignored", ForECol.Accent);
@@ -1215,7 +1219,31 @@ namespace HCResourceLibraryApp.Layout
                             FormatLine($"{Ind24}{{Discarded due to change}}");
 
                             /// content format legend
-                            /// ...to be considered versus changing the inputed existing/overwriting strings
+                            //NewLine();
+                            //FormatLine("Item Syntax");
+                            FormatLine("- - - - - - -", ForECol.Accent);
+                            string[,] itemSyntaxes = new string[6,2]
+                            {
+                                /// (RC) #0; One Item, 1.00, [1] adts, [2] upds
+                                {$"{SourceOverwrite.Content}", "#{ShelfNo}; {ContentName}, {VerAdded}, {NumOfAdditionals}, {NumOfUpdates}"},
+                                /// {VersionAdded}*{ContentName}*{RelatedDataIDs}
+                                {$"{SourceOverwrite.Content}:{SourceCategory.Bse}", "{VerAdded};{ContentName};{DataIDs,,}"},
+                                /// {VersionAddit}*{RelatedDataId}*{Opt.Name}*{DataID}***
+                                {$"{SourceOverwrite.Content}:{SourceCategory.Adt}", "{VerAdded};{RelatedDataID};{Name.Optional};{DataIDs,,}"},
+                                /// {VersionUpd}*{InternalName}*{RelatedDataID}*{ChangeDesc}***
+                                {$"{SourceOverwrite.Content}:{SourceCategory.Upd}", "{VerUpdated};{Name};{RelatedDataID};{ChangeDesc}"},
+                                /// {key}*{verIntro}*{keynames}
+                                {$"{SourceOverwrite.Legend}", "{Key};{VerAdded};{Definitions;;}"},
+                                /// {Version}*{tta}*{summaryParts}
+                                {$"{SourceOverwrite.Summary}", "{VerNum};{ContentTally};{SummaryParts;;}"},
+                            };
+                            for (int c = 0; c < itemSyntaxes.GetLength(0); c++)
+                            {
+                                //HoldNextListOrTable();
+                                //Table(Table2Division.KCSmall, itemSyntaxes[c, 0], ' ', itemSyntaxes[c, 1]);
+                                Format($"{itemSyntaxes[c, 0],-14}", ForECol.Normal);
+                                FormatLine($"| {itemSyntaxes[c, 1]}", ForECol.Accent);
+                            }
                         }
 
                         prevSource = rloi.source;
