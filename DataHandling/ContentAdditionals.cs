@@ -387,6 +387,7 @@ namespace HCResourceLibraryApp.DataHandling
                             {
                                 loosenedCa = Clone();
                                 parentRC.DisposeConAdditional(loosenedCa);
+								info.SetLooseContentStatus();
                             }
                     }
                 }

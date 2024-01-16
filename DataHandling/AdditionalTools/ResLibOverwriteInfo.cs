@@ -14,7 +14,7 @@ namespace HCResourceLibraryApp.DataHandling
         /// <summary>The final form of the content if a change has occured.</summary>
         public string contentResulting;
         bool? overwrittenQ;
-        public bool ignoreOverwriteQ;
+        public bool ignoreOverwriteQ, looseContentQ;
         public readonly SourceOverwrite source;
         public SourceCategory? subSource;
         // PROPS
@@ -42,10 +42,11 @@ namespace HCResourceLibraryApp.DataHandling
             contentResulting = null;
             overwrittenQ = null;
             ignoreOverwriteQ = false;
+            looseContentQ = false;
             source = sourceType;
             subSource = null;
         }
-
+        
 
         /// <returns>A boolean relaying whether a value for an existing or overwriting content has been provided and a overwritten status has been set.</returns>
         public bool IsSetup()
@@ -59,6 +60,12 @@ namespace HCResourceLibraryApp.DataHandling
         public void SetIgnoreOverwrite(bool overwriteDisableQ = true)
         {
             ignoreOverwriteQ = overwriteDisableQ;
+        }
+        /// <summary>Set a sub-source instance as being a loose content. Only applies for a source type of <see cref="SourceOverwrite.Content"/>.</summary>
+        public void SetLooseContentStatus(bool looseCon = true)
+        {
+            if (source == SourceOverwrite.Content)
+                looseContentQ = looseCon;
         }
         public void SetResult(string result)
         {
@@ -75,7 +82,7 @@ namespace HCResourceLibraryApp.DataHandling
         public override string ToString()
         {
             string rloiStr = "(OI) ";
-            /// (OI) {existing}|{overwriting}|{overwrittenQ}{ignoreOverwritten}[Ign/Ovr];{source}[-]{subSource?};
+            /// (OI) {existing}|{overwriting}|{overwrittenQ};{ignoreOverwritten}[Ign/Ovr];{source}[-]{subSource?};
             if (IsSetup())
             {
                 rloiStr += (contentExisting.IsNotNEW() ? contentExisting : "??") + "|";

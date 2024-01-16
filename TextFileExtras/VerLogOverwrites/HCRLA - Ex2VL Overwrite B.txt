@@ -1,7 +1,7 @@
 ﻿-- !open --
 ## <HIGH CONTRAST RESOURCE LIBRARY APP - Version Log Example Log #2 - Overwrite A> ##
 PURPOSE :: 
-	The 1st copy of Ex2 Version Log for testing of the overwriting process.
+	The 2nd copy of Ex2 Version Log for testing of the overwriting process.
 	Testing specifics: Loose additional / updates changes and data ID mismatching, legend definition addition, summary change by TTA
 -- !close --
 
@@ -19,31 +19,28 @@ PURPOSE ::
 8 |Egg Shell Bucket - (i70; a3~4)
 9 |Egg Shell Harness - (i71; a5)
 10|Egg Shell Loafers - (i72; a6)
--- The gravel has been added in a later version
-11|Gravel			-(i20; t116)
 
 [ADDITIONAL]
--- > OneItemGlows (g0,g2`~g4`) - One Item (i1)		// We're gonna remove this loose additional. We'll also take one those glows and throw it elsewhere
+-- > OneItemGlows (g0,g2`~g4`) - One Item (i1)		// Changing the Data IDs of this loose additional
+> OneItemGlows (g0,g3`,g4`) - One Item (i1)
 > ZeroItemGlow (g2) - (i0)
 > (Shr_Donut) - ShugharDounut (i324)
--- > Grain View Controller (i242) - Grains Biome Backgrounds (b11`)	// this loose additional will just be altered by name
-> Granule Shape Shifter (i242) - (b11`) 
+-- > Grain View Controller (i242) - Grains Biome Backgrounds (b11`)	// this loose additional will mismatch with its parent and be loosened
+> Grain View Controller (i242) - (b101) 
 
 -- [TTA : 28]		// The summary itself may not changes, but changing the TTA num will still alter the summary instance
-[TTA : 27]
+[TTA : 25]
 
 [UPDATED]
 -- > Mashed Potato (t32) - Redesigned to look more creamy.		// This loose update is just removed
 > Spoiled Potato (i38) - Recolored to look less appetizing.
 > (d11) - Brightened the shadows of the texture.
--- > Stripped Garlic Clove Dust (d12) - Brightened the shadows of the texture.		// Changing the internal name of this content changes
-> Dusts of Garlic (d12) - Brightened the shadows of the texture.
+> Stripped Garlic Clove Dust (d12) - Brightened the shadows of the texture.
 -- > (i109) - Added more sprigs to texture.		// Altered description of this loose update
 > (i109) - Removed some sprigs from texture for design clarity.
 > (t93) - Made tomato more delicious looking.
 > (i101) - Edited to match new tile's texture.
--- > (t95) - Made tomato more soggier looking.			// This loose update is also removed but by a changed related Data ID
-> (t959) - Made tomato more soggier looking.
+-- > (t95) - Made tomato more soggier looking.			// This loose update is also removed
 
 [LEGEND]
 i - Item

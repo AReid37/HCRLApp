@@ -84,6 +84,7 @@ namespace HCResourceLibraryApp.DataHandling
                 Dbug.StartLogging("ResLibrary.AddContent(prms RC[])");
                 Dbug.LogPart($"Recieved [{newContents.Length}] new ResCons for library; Refresh integration info dock? {keepLooseRCQ}");
 
+                rlaInfoDock = new List<ResLibAddInfo>();
                 if (!keepLooseRCQ)
                     rliInfoDock = new List<ResLibIntegrationInfo>();
 
@@ -359,27 +360,81 @@ namespace HCResourceLibraryApp.DataHandling
                         // just add
                         else
                         {
+                            ResLibAddInfo infoAdd = new(newRC.ToString(), SourceOverwrite.Content);
                             if (!IsDuplicateInLibrary(newRC))
                             {
                                 /// get shelf id
                                 newRC.ShelfID = GetNewShelfNum();
                                 shelfNums.Add(newRC.ShelfID);
+                                infoAdd.SetAddedObject(newRC.ToString());
 
                                 /// add to content library
                                 if (newRC.IsSetup())
                                 {
+                                    infoAdd.SetAddedOutcome();
                                     newShelfIdList.Add(newRC.ShelfID);
                                     Contents.Add(newRC);
                                     Dbug.Log($"Added :: {newRC}");
                                 }
-                                else Dbug.Log($"Rejected :: Unset RC; No ContentBaseGroup.");
+                                else
+                                {
+                                    infoAdd.SetAddedOutcome(false);
+                                    infoAdd.SetExtraInfo("Missing base content");
+                                    Dbug.Log($"Rejected :: Unset RC; No ContentBaseGroup.");
+                                }
                             }
-                            else Dbug.Log($"Rejected duplicate :: {newRC}");
+                            else
+                            {
+                                infoAdd.SetAddedOutcome(false, true);
+                                Dbug.Log($"Rejected duplicate :: {newRC}");
+                            }
+
+                            /// get info for conBase, conAddits, and conChanges
+                            if (infoAdd.IsSetup())
+                            {
+                                rlaInfoDock.Add(infoAdd);
+                                
+                                // ConBase
+                                if (newRC.ConBase != null)
+                                {
+                                    ResLibAddInfo infoAddCBG = new(newRC.ConBase.ToString(), SourceOverwrite.Content);
+                                    infoAddCBG.SetSubSourceCategory(SourceCategory.Bse);
+                                    infoAddCBG.SetAddedOutcome(infoAdd.addedQ);
+                                    if (infoAddCBG.IsSetup())
+                                        rlaInfoDock.Add(infoAddCBG);
+                                }
+
+                                // ConAddits
+                                if (newRC.ConAddits.HasElements())
+                                {
+                                    foreach (ContentAdditionals conAddit in newRC.ConAddits)
+                                    {
+                                        ResLibAddInfo infoAddCA = new(conAddit.ToString(), SourceOverwrite.Content);
+                                        infoAddCA.SetSubSourceCategory(SourceCategory.Adt);
+                                        infoAddCA.SetAddedOutcome(infoAdd.addedQ);
+                                        if (infoAddCA.IsSetup())
+                                            rlaInfoDock.Add(infoAddCA);
+                                    }
+                                }
+
+                                // ConChanges
+                                if (newRC.ConChanges.HasElements())
+                                {
+                                    foreach (ContentChanges conChange in newRC.ConChanges)
+                                    {
+                                        ResLibAddInfo infoAddCC = new(conChange.ToString(), SourceOverwrite.Content);
+                                        infoAddCC.SetSubSourceCategory(SourceCategory.Upd);
+                                        infoAddCC.SetAddedOutcome(infoAdd.addedQ);
+                                        if (infoAddCC.IsSetup())
+                                            rlaInfoDock.Add(infoAddCC);
+                                    }
+                                }
+                            }
                         }
                         addedContentsQ = true;
                     }
                 }
-                Dbug.NudgeIndent(false);
+                Dbug.NudgeIndent(false);                               
                 Dbug.EndLogging();
 
                 // static method
@@ -455,11 +510,14 @@ namespace HCResourceLibraryApp.DataHandling
                             }
                             else Legends = new List<LegendData>();
 
+                            ResLibAddInfo infoAdd = new(leg.ToString(), SourceOverwrite.Legend);
                             if (!isDupe)
                             {
+                                infoAdd.SetAddedOutcome();
                                 leg.AdoptIndex(Legends.Count);
                                 Legends.Add(leg);
                                 Dbug.Log($"Added Lgd :: {leg}");
+                                addedLegendQ = true;
                             }
                             else
                             {
@@ -473,14 +531,24 @@ namespace HCResourceLibraryApp.DataHandling
                                 else edited = dupedLegData.AddKeyDefinition(leg[0]);
 
                                 if (edited)
-                                    Dbug.Log($"Edited Lgd {(byOverwriteQ? "(ovr) " : "")}:: {dupedLegData}");
+                                {
+                                    infoAdd.SetAddedOutcome();
+                                    infoAdd.SetAddedObject(dupedLegData.ToString());
+                                    infoAdd.SetExtraInfo($"Edited existing with new: '{leg}'");
+                                    Dbug.Log($"Edited Lgd {(byOverwriteQ ? "(ovr) " : "")}:: {dupedLegData}");
+                                    addedLegendQ = true;
+                                }
                                 else
                                 {
                                     bool isPartial = leg.ToString() != dupedLegData.ToString();
+                                    infoAdd.SetAddedOutcome(false, true);
+                                    infoAdd.SetExtraInfo(isPartial ? $"Partial duplicate by definition" : "");
                                     Dbug.Log($"Rejected {(isPartial ? "partial " : "")}duplicate {(byOverwriteQ ? "(ovr) " : "")}:: {leg}");
                                 }
                             }
-                            addedLegendQ = true;
+
+                            if (infoAdd.IsSetup())
+                                rlaInfoDock.Add(infoAdd);
                         }
                 }
                 Dbug.EndLogging();
@@ -513,24 +581,34 @@ namespace HCResourceLibraryApp.DataHandling
                             }
                             else Summaries = new List<SummaryData>();
 
+                            ResLibAddInfo infoAdd = new(sum.ToString(), SourceOverwrite.Summary);
                             if (!isDupe)
                             {
                                 addedSummaryQ = true;
                                 sum.AdoptIndex(Summaries.Count);
                                 Summaries.Add(sum);
+                                infoAdd.SetAddedOutcome();
                                 Dbug.Log($"Added Smry :: {sum.ToStringShortened()}");
                             }
-                            else Dbug.Log($"Rejected duplicate :: {sum.ToStringShortened()}");
+                            else
+                            {
+                                infoAdd.SetAddedOutcome(false, true);
+                                Dbug.Log($"Rejected duplicate :: {sum.ToStringShortened()}");
+                            }
+
+                            if (infoAdd.IsSetup())
+                                rlaInfoDock.Add(infoAdd);
                         }
                 }
                 Dbug.EndLogging();
             }
             return addedSummaryQ;
         }        
-        public void Integrate(ResLibrary other, out ResLibIntegrationInfo[] resLibIntegrationInfoDock)
+        public void Integrate(ResLibrary other, out ResLibAddInfo[] resLibAddedInfoDock, out ResLibIntegrationInfo[] resLibIntegrationInfoDock)
         {
             Dbug.StartLogging("ResLibrary.Integrate()");
             resLibIntegrationInfoDock = null;
+            resLibAddedInfoDock = null;
             if (other != null)
             {
                 Dbug.LogPart("Other ResLibrary is instantiated; ");
@@ -548,6 +626,9 @@ namespace HCResourceLibraryApp.DataHandling
 
                     // add summary
                     AddSummary(other.Summaries.ToArray());
+
+                    if (rlaInfoDock.HasElements())
+                        resLibAddedInfoDock = rlaInfoDock.ToArray();
                 }
                 else Dbug.Log("Other ResLibrary is not setup; ");
             }
@@ -1078,6 +1159,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                     Dbug.LogPart("Overwriting Addit exists (no existing addit); Adding overwriting addit to loose queue");
                                                     ResLibOverwriteInfo info = new(null, caO.ToString());
                                                     info.SetSourceSubCategory(SourceCategory.Adt);
+                                                    info.SetLooseContentStatus();
 
                                                     queueLooseDataIDs.Add(caO.RelatedDataID);
                                                     queueLooseAddits.Add(caO);
@@ -1157,6 +1239,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                         Dbug.LogPart("Overwriting changes exists (no existing changes); Adding overwriting changes to loose queue");
                                                         ResLibOverwriteInfo info = new(null, ccO.ToString());
                                                         info.SetSourceSubCategory(SourceCategory.Upd);
+                                                        info.SetLooseContentStatus();
 
                                                         queueLooseDataIDs.Add(ccO.RelatedDataID);
                                                         queueLooseChanges.Add(ccO);
@@ -1405,7 +1488,7 @@ namespace HCResourceLibraryApp.DataHandling
                         if (rliInfoDock.HasElements())
                         {
                             looseIntegrationInfoDock = rliInfoDock.ToArray();
-                            Dbug.LogPart($"{rliInfoDock.ToArray()}");
+                            Dbug.LogPart($"{rliInfoDock.ToArray().Length}");
                         }
                         else Dbug.LogPart("0");
                         Dbug.Log("]); ");
@@ -2069,7 +2152,7 @@ namespace HCResourceLibraryApp.DataHandling
             bool prevDADbg = disableAddDbug;
             disableAddDbug = true;
 
-            Dbug.DeactivateNextLogSession();
+            //Dbug.DeactivateNextLogSession();
             Dbug.StartLogging("ResLibrary.CloneLibrary()");
             Dbug.Log($"Cloning current ResLibrary instance; Instance is setup? {IsSetup()} [#:{GetHashCode()}]; ");
             if (IsSetup())

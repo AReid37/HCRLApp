@@ -285,7 +285,6 @@
 					}
 					else info.SetOverwriteStatus(false);
 
-
                     /// check if loosened
                     if (parentRC != null)
                     {
@@ -294,6 +293,7 @@
                             {
                                 loosenedCc = Clone();
                                 parentRC.DisposeConChanges(loosenedCc);
+								info.SetLooseContentStatus();
                             }
                     }
                 }

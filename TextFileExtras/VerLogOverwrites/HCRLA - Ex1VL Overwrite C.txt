@@ -2,7 +2,7 @@
 ## <HIGH CONTRAST RESOURCE LIBRARY APP - Version Log Example Log #1 - Overwrite C> ##
 PURPOSE :: 
 	The 3rd copy of Ex1 Version Log for testing of the overwriting process.
-	Testing specifics: --
+	Testing specifics: Loosen content by data ID mismatching (from base content), self-updating contents, legend replacements
 -- !close --
 
 -- ========== ---
@@ -55,10 +55,12 @@ PURPOSE ::
 -- The two below have their order switched around, for specific testing alignment
 >: Garlic Dust (d12) - Brightened the shadows of the texture.
 >: (d11) - Brightened the shadows of the texture.
+-- >: (i109) - Added more sprigs to texture.		// A change to the description of this content changes
 >: (i109) - Added contrast to texture for depth and clarity between sprigs.
 >: Toma&00tiles (t93) - Made tomato more delicious looking.
->: (i101) - Edited to match new tile's texture.
--- Examples above source from Ex2 Version Log
+-- >: (i101) - Edited to match new tile's texture.		// This one is loosened due to related ID mismatching
+>: (i1018) - Edited to match new tile's texture.
+-- Examples above sourced from Ex2 Version Log
 
 [LEGEND]
 i - Item

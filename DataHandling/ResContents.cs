@@ -396,12 +396,12 @@ namespace HCResourceLibraryApp.DataHandling
                                         /// IF got overwriting instance: 
                                         ///     IF not same as existing addit:
                                         ///         IF can be connected to base: replace with overwriting; 
-                                        ///         ELSE 
-                                        ///             IF existing connects to base: retain existing; ELSE remove existing;
-                                        ///     ELSE retain existing;
+                                        ///         ELSE check existing connect to TRUE
+                                        ///     ELSE check existing connect to TRUE;
                                         /// ELSE remove existing
                                         if (caNew != null)
                                         {
+                                            bool checkExistingConnectQ = false;
                                             if (!ca.Equals(caNew))
                                             {
                                                 if (ContainsDataID(caNew.RelatedDataID, out _))
@@ -409,20 +409,24 @@ namespace HCResourceLibraryApp.DataHandling
                                                     conAdditsNew.Add(caNew.Clone());
                                                     caInfo.SetOverwriteStatus();
                                                 }
+                                                else checkExistingConnectQ = true;
+                                            }
+                                            else checkExistingConnectQ = true;
+
+                                            /// IF check existing connect: 
+                                            ///     IF existing connects to base: retain existing; ELSE remove existing
+                                            if (checkExistingConnectQ)
+                                            {
+                                                if (ContainsDataID(ca.RelatedDataID, out _))
+                                                {
+                                                    caInfo.SetOverwriteStatus(false);
+                                                    conAdditsNew.Add(ca);
+                                                }
                                                 else
                                                 {
-                                                    if (ContainsDataID(ca.RelatedDataID, out _))
-                                                    {
-                                                        caInfo.SetOverwriteStatus(false);
-                                                        conAdditsNew.Add(ca);
-                                                    }
-                                                    else caInfo.SetOverwriteStatus();
-                                                }                                                
-                                            }
-                                            else
-                                            {
-                                                caInfo.SetOverwriteStatus(false);
-                                                conAdditsNew.Add(ca);
+                                                    caInfo.SetOverwriteStatus();
+                                                    caInfo.SetLooseContentStatus();
+                                                }
                                             }
                                         }
                                         else caInfo.SetOverwriteStatus();
@@ -437,7 +441,11 @@ namespace HCResourceLibraryApp.DataHandling
                                             conAdditsNew.Add(ca);
                                             nonMatchBackSetIx++;
                                         }
-                                        else caInfo.SetOverwriteStatus();
+                                        else
+                                        {
+                                            caInfo.SetOverwriteStatus();
+                                            caInfo.SetLooseContentStatus();
+                                        }
                                     }
 
                                     if (ca.VersionAdded.AsNumber <= verNum.AsNumber)
@@ -519,12 +527,12 @@ namespace HCResourceLibraryApp.DataHandling
                                         /// IF got overwriting instance: 
                                         ///     IF not same as existing addit:
                                         ///         IF can be connected to base: replace with overwriting; 
-                                        ///         ELSE 
-                                        ///             IF existing connects to base: retain existing; ELSE remove existing;
-                                        ///     ELSE retain existing;
+                                        ///         ELSE check existing connect to TRUE;
+                                        ///     ELSE check existing connect to TRUE
                                         /// ELSE remove existing
                                         if (ccNew != null)
                                         {
+                                            bool checkExistingConnectQ = false;
                                             if (!cc.Equals(ccNew))
                                             {
                                                 if (ContainsDataID(ccNew.RelatedDataID, out _))
@@ -532,20 +540,24 @@ namespace HCResourceLibraryApp.DataHandling
                                                     conChangesNew.Add(ccNew.Clone());
                                                     ccInfo.SetOverwriteStatus();
                                                 }
+                                                else checkExistingConnectQ = true;
+                                            }
+                                            else checkExistingConnectQ = true;
+
+                                            /// IF check existing connect: 
+                                            ///     IF existing connects to base: retain existing; ELSE remove existing
+                                            if (checkExistingConnectQ)
+                                            {
+                                                if (ContainsDataID(cc.RelatedDataID, out _))
+                                                {
+                                                    conChangesNew.Add(cc);
+                                                    ccInfo.SetOverwriteStatus(false);
+                                                }
                                                 else
                                                 {
-                                                    if (ContainsDataID(cc.RelatedDataID, out _))
-                                                    {
-                                                        conChangesNew.Add(cc);
-                                                        ccInfo.SetOverwriteStatus(false);
-                                                    }
-                                                    else ccInfo.SetOverwriteStatus();
+                                                    ccInfo.SetOverwriteStatus();
+                                                    ccInfo.SetLooseContentStatus();
                                                 }
-                                            }
-                                            else
-                                            {
-                                                ccInfo.SetOverwriteStatus(false);
-                                                conChangesNew.Add(cc);
                                             }
                                         }
 
@@ -562,7 +574,11 @@ namespace HCResourceLibraryApp.DataHandling
                                             conChangesNew.Add(cc);
                                             nonMatchBacksetIx++;
                                         }
-                                        else ccInfo.SetOverwriteStatus();
+                                        else
+                                        {
+                                            ccInfo.SetOverwriteStatus();
+                                            ccInfo.SetLooseContentStatus();
+                                        }
                                     }
 
                                     if (cc.VersionChanged.AsNumber <= verNum.AsNumber)

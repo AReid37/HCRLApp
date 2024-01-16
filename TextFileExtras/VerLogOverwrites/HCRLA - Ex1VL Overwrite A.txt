@@ -2,7 +2,7 @@
 ## <HIGH CONTRAST RESOURCE LIBRARY APP - Version Log Example Log #1 - Overwrite A> ##
 PURPOSE :: 
 	The 1st copy of Ex1 Version Log for testing of the overwriting process.
-	Testing specifics: Same version, content name and ID changes, content additional changes, legend and summary replacements.
+	Testing specifics: Content name and ID changes, content additional changes, legend and summary replacements.
 -- !close --
 
 -- ========== ---

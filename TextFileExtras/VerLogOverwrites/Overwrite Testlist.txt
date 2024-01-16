@@ -48,6 +48,9 @@ TEST CASES
 [X] ResCon Addit removed, by same version and mismatch of ResCon Data IDs
     > Test: Submit Ex1VL and Ex2VL, overwrite with Ex1VLOb
     > The additional content for "Grains Biome Backgrounds" is loosened by mismatch due to the data ID change from Ex1VLOb, "b11`" to "b111`"
+    > Test+: Submit Ex1VL and Ex2VL, overwrite with Ex2VLOb
+    > The additional content "Grain View Controller" is loosened by mismatch of the related ID to parent, from "b11`" to "b101"
+        > More likely, the original additional content is though of as 'removed', and the new mismatching additional content is simply rejected
 [X] ResCon Addit unedited, by same version and same instance
     > Test: Submit Ex1VL, resubmit with Ex1VL
     > Resubmitting the same VL means that no changes were made, thus for "Gravel", its additional contents have not changed and are not overwritten
@@ -69,27 +72,60 @@ TEST CASES
 [X] ResCon Change removed, by same version and mismatch of ResCon Data IDs
     > Test: Submit Ex1VLOb, overwrite with Ex1VLOc
     > The content change for "Spoiled Potato" by "i38" is disconnected as the base contents Data ID is changed from "i38" to "i382" on overwrite
+    > Test+: Submit Ex1VLOb, overwrite with Ex1VLOc
+    > The content changes by ID "i101" has its related ID changed to "i1018", which loosens it from the parent content
+        > More likely, the original content changes is thought of as 'removed', and the new mismatching content changes is simply rejected
 [X] ResCon Change unedited, by same version and same instance
     > Test: Submit Ex1VLOb, resubmit Ex1VLOb
     > Resubmitting the same VL means that no changes occur, therefore the content changes are not overwritten as they are the same
 [ ] ResCon Change unedited, by overwrite omission
 
 
-[ ] Loose Addit overwrite through Related ID, by same version and new Data IDs
-[ ] Loose Addit overwrite through Related ID, by same version and new Optional Name
-[ ] Loose Addit added, by same version and no matching Addits in ResCon
-[ ] Loose Addit removed, by same version and missing instance
-[ ] Loose Addit removed, by same version and mismatch of ResCon Data IDs
-[ ] Loose Addit unedited, by same version and same instance
+[X] Loose Addit overwrite through Related ID, by same version and new Data IDs
+    > Test: Submit Ex1VL and Ex2VL, overwrite with Ex2VLOb
+    > Loose additional content "One Item Glows" has its Data IDs changed in Ex2VLOb and is overwritten due to this change
+[X] Loose Addit overwrite through Related ID, by same version and new Optional Name
+    > Test: Submit Ex1VL and Ex2VL, overwrite with Ex2VLOa
+    > The loose additional content "Grain View Controller" has its name changed to "Granule Shape Shifter" when overwriting with Ex2VLOa
+[X] Loose Addit added, by same version and no matching Addits in ResCon
+    > Test: Submit Ex1VL and Ex2VLOa, overwrite with Ex2VL
+    > The loose additional content "One Item Glows" exists in Ex2VL and will be added when overwriting Ex2VLOa which does not have this content
+[X] Loose Addit removed, by same version and missing instance
+    > Test: Submit Ex1VL and Ex2VL, overwrite with Ex2VLOa
+    > The loose additional content "One Item Glows" does not exist in Ex2VLOa, and thus is removed on overwriting
+[X] Loose Addit removed, by same version and mismatch of ResCon Data IDs
+    > Test: Submit Ex1VL and Ex2VL, overwrite with Ex2VLOb
+    > The additional content "Grain View Controller" has its related ID changed from "b11`" to "b101", therefore being loosened from its parent content on overwrite
+        > More likely, the original loose additional content is thought of as 'removed', and the new mismatching loose additional content is simply rejected 
+    > Test+: Submit Ex1VL and Ex2VL, overwrite with Ex1VLOb
+    > The additional content for "Grains Biome Backgrounds" is loosened by mismatch due to the data ID change from Ex1VLOb, "b11`" to "b111`"    
+[X] Loose Addit unedited, by same version and same instance
+    > Test: Submit Ex1VL and Ex2VL, resubmit Ex2VL
+    > Resubmission of Ex2VL means that there is no change between the loose additional, thus no overwriting takes place
 [ ] Loose Addit unedited, by overwrite omission
 
 
-[ ] Loose Change overwrite through Related ID, by same version and new Internal Name
-[ ] Loose Change overwrite through Related ID, by same version and new Change Description
-[ ] Loose Change added, by same version and no matching Changes in ResCon
-[ ] Loose Change removed, by same version and missing instance
-[ ] Loose Change removed, by same version and mismatch of ResCon Data IDs
-[ ] Loose Change unedited, by same version and same instance
+[X] Loose Change overwrite through Related ID, by same version and new Internal Name
+    > Test: Submit Ex1VL and Ex2VL, overwrite with Ex2VLOa
+    > The loose content change "Stripped Garlic Clove Dust" has its internal name overwritten to "Dusts of Garlic"
+[X] Loose Change overwrite through Related ID, by same version and new Change Description
+    > Test: Submit Ex1VL and Ex2VL, overwrite with Ex2VLOa
+    > The loose content changes by "i109" has its change description altered and thus is overwritten due to this change
+[X] Loose Change added, by same version and no matching Changes in ResCon
+    > Test: Submit Ex1VL and Ex2VLOa, overwrite with Ex2VL
+    > The loose content changes "Mashed Potato" does not exist in Ex2VLOa and thus is added when overwriting with Ex2VL
+[X] Loose Change removed, by same version and missing instance
+    > Test: Submit Ex1VL and Ex2VL, overwrite with Ex2VLOa
+    > The loose content changes "Mashed Potato" does not exist in Ex2VLOa and is removed on overwriting
+[X] Loose Change removed, by same version and mismatch of ResCon Data IDs
+    > Test: Submit Ex1VL and Ex2VL, overwrite with Ex2VLOa
+    > The loose content changes by "t95" has its related ID changed to "t959" on overwrite and thus is removed on overwrite
+        > More likely, the original loose content changes is thought of as 'removed', and the new mismatching loose content changes is simply rejected 
+    > Test+: Submit Ex1VL and Ex2VL, overwrite with Ex1VLOc
+    > The content change for "Spoiled Potato" by "i38" is disconnected as the base contents Data ID is changed from "i38" to "i382" on overwrite
+[X] Loose Change unedited, by same version and same instance
+    > Test: Submit Ex1VL and Ex2VL, resubmit Ex2VL
+    > Resubmiting Ex2VL means that no changes are made to the loose content changes, thus no overwriting takes place
 [ ] Loose Change unedited, by overwrite omission
 
 
@@ -140,10 +176,22 @@ TEST CASES
 
 - - - - - - -
 
-[ ] Overwrite process rejected due to emptied library Contents as a result
-[ ] Overwrite process rejected due to no Contents as a result, same version
-[ ] Overwrite process rejected due to emptied library Legends as a result
-[ ] Overwrite process rejected due to no Legends as a result, same version
+[X] Overwrite process rejected due to emptied library Contents as a result
+    > Test: ~Impossible~ (Submit empty log)
+    > Impossible to test due to previous algorithms handling the issue
+    > The log decoder will detect an empty "Added" section and throw an issue to the user before an overwrite can occur 
+[X] Overwrite process rejected due to no Contents as a result, same version
+    > Test: ~Impossible~ (Submit empty log)
+    > Impossible to test due to previous algorithms handling the issue
+    > The log decoder will detect an empty "Added" section and throw an issue to the user before an overwrite can occur
+[X] Overwrite process rejected due to emptied library Legends as a result
+    > Test: ~Impossible~ (Submit empty log)
+    > Impossible to test due to previous algorithms handling the issue
+    > The log decoder will detect an empty "Legend" section an throw and issue to the user before an overwrite can occur
+[X] Overwrite process rejected due to no Legends as a result, same version
+    > Test: ~Impossible~ (Submit empty log)
+    > Impossible to test due to previous algorithms handling the issue
+    > The log decoder will detect an empty "Legend" section an throw and issue to the user before an overwrite can occur
 
 
 

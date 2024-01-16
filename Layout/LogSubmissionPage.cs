@@ -93,6 +93,12 @@ namespace HCResourceLibraryApp.Layout
                         Title("Log Submission", subMenuUnderline, 2);
                         Important($"STAGE {stageNum}: {stageName}", subMenuUnderline);
                         HorizontalRule(minorChar, 1);
+                        if (stageNum > 1)
+                        {
+                            FormatLine($"Below sourced from :: \n{Ind14}{pathToVersionLog}", ForECol.Accent);
+                            NewLine();
+                        }
+
                         bool stagePass = false;
 
                         // 1 - provide file path
@@ -198,8 +204,8 @@ namespace HCResourceLibraryApp.Layout
                             {
                                 if (logLines.HasElements())
                                 {
-                                    FormatLine($"Below sourced from :: \n{Ind14}{pathToVersionLog}", ForECol.Accent);
-                                    NewLine();
+                                    //FormatLine($"Below sourced from :: \n{Ind14}{pathToVersionLog}", ForECol.Accent);
+                                    //NewLine();
 
                                     // display file info
                                     bool omitBlock = false;
@@ -239,7 +245,7 @@ namespace HCResourceLibraryApp.Layout
                         }
                         // 3 - processed log review (decoded)
                         else if (stageNum == 3)
-                        {                            
+                        {     
                             bool unallowStagePass = false;
                             if (!logDecoder.HasDecoded)
                             {
@@ -256,13 +262,6 @@ namespace HCResourceLibraryApp.Layout
                                 // ++ DECODED LOG DISPLAY ++ //
                                 DisplayLogInfo(logDecoder, expandedDisplayQ);
 
-                                ///// small section relaying how decoding went
-                                //if (expandedDisplayQ)
-                                //    DisplayLogInfo(logDecoder, false);
-                                ///// large section showing how decoding went
-                                //else DisplayLogInfo(logDecoder, true);
-
-
                                 NewLine(3);
                                 HorizontalRule(minorChar, 1);
                                 FormatLine("Plese review the contents retrieved from the log decoder above before proceeding.", ForECol.Highlight);
@@ -277,12 +276,7 @@ namespace HCResourceLibraryApp.Layout
                                 }
                                 else
                                 {
-                                    //NewLine(2);
-                                    //Title("Integrate new contents to library");
-                                    //Format($"Enter any key to proceed to content integration >> ", ForECol.Normal);
-                                    //input = StyledInput(null);
-
-                                    bool notNormalIntegrationQ = false;
+                                    bool notNormalIntegrationQ = false, overwriteNetChangeQ = false;
                                     NewLine(3);
                                     Title("Content Integration Evaluation", subMenuUnderline, 0);
                                     Format($"{Ind14}Generating outcome of library integration. This may take a moment...", ForECol.Accent);
@@ -292,7 +286,7 @@ namespace HCResourceLibraryApp.Layout
                                     NewLine();
 
                                     if (tangentLibrary != null)
-                                    {
+                                    { /// wrapping
                                         /// IF; integrate overwrite - evaluation
                                         if (logDecoder.OverwriteWarning)
                                         {
@@ -306,29 +300,42 @@ namespace HCResourceLibraryApp.Layout
                                                 Title("Overwriting Contents Outcome");
                                                 DisplayOverwritingInfo(resLibOverInfoDock);
 
+                                                /// report of loosened contents due to overwriting
                                                 if (looseIntegrationInfoDock.HasElements())
                                                 {
                                                     NewLine(2);
                                                     Title("Integrating Loosened Contents Outcome");
-                                                    DisplayIntegrationInfo(looseIntegrationInfoDock);
+                                                    DisplayLooseIntegrationInfo(looseIntegrationInfoDock);
                                                 }
                                                 NewLine(2);
+
+                                                overwriteNetChangeQ = !tangentLibrary.Equals(mainLibrary);
                                             }
                                         }
-                                        /// ELSE; intergrate loose - evaluation
+                                        /// ELSE; intergrate normal and loose - evaluation
                                         else
                                         {
-                                            tangentLibrary.Integrate(logDecoder.DecodedLibrary, out ResLibIntegrationInfo[] resLibIntInfoDock);
+                                            tangentLibrary.Integrate(logDecoder.DecodedLibrary, out ResLibAddInfo[] resLibAddInfoDock, out ResLibIntegrationInfo[] resLibIntInfoDock);
 
+
+                                            /// report of normal content integration
+                                            if (resLibAddInfoDock.HasElements())
+                                            {
+                                                NewLine();
+                                                Title("Integration Outcome");
+                                                DisplayIntegrationInfo(resLibAddInfoDock);
+                                                NewLine();
+                                            }
                                             /// report of connections for loose contents
                                             if (resLibIntInfoDock.HasElements())
                                             {
                                                 notNormalIntegrationQ = true;
                                                 NewLine();
                                                 Title("Loose Contents Connection Outcome");
-                                                DisplayIntegrationInfo(resLibIntInfoDock);
-                                                NewLine(2);
+                                                DisplayLooseIntegrationInfo(resLibIntInfoDock);
+                                                NewLine();
                                             }
+                                            NewLine();
                                         }
                                     }
 
@@ -337,7 +344,7 @@ namespace HCResourceLibraryApp.Layout
                                     if (notNormalIntegrationQ)
                                     {
                                         Format($"{Ind14}Evaluation complete. Note: ", ForECol.Accent);
-                                        FormatLine($"{(logDecoder.OverwriteWarning ? "Overwriting contents will require a restart." : "Integrating contents does not require a restart.")}", ForECol.Accent);
+                                        FormatLine($"{(logDecoder.OverwriteWarning ? "Overwriting contents may require a restart." : "Integrating contents does not require a restart.")}", ForECol.Accent);
                                         FormatLine($"{Ind14}The section above estimates the outcome of {(logDecoder.OverwriteWarning ? "overwrit" : "integrat")}ing the decoded contents.", ForECol.Warning);
                                         Confirmation($"{Ind14}Confirm {(logDecoder.OverwriteWarning ? "overwriting with" : "integration of")} decoded contents? ", true, out bool yesNo);
 
@@ -361,22 +368,23 @@ namespace HCResourceLibraryApp.Layout
                                             if (logDecoder.OverwriteWarning)
                                                 mainLibrary.Overwrite(logDecoder.DecodedLibrary, out _, out _);
                                             /// LOOSE CONTENT integration
-                                            else mainLibrary.Integrate(logDecoder.DecodedLibrary, out _);
+                                            else mainLibrary.Integrate(logDecoder.DecodedLibrary, out _, out _);
                                             exitSubmissionPage = true;
                                         }
 
                                         if (!unallowStagePass)
                                         {
-                                            ConfirmationResult(yesNo, $"{Ind24}", $"Contents {(logDecoder.OverwriteWarning ? "overwritten " : " integrated in")}to library.", $"Content {(logDecoder.OverwriteWarning ? "overwriting" : "integration")} cancelled.");
+                                            ConfirmationResult(yesNo, $"{Ind24}", $"Contents {(logDecoder.OverwriteWarning ? "overwritten " : "integrated in")}to library.", $"Content {(logDecoder.OverwriteWarning ? "overwriting" : "integration")} cancelled.");
 
                                             if (logDecoder.OverwriteWarning && yesNo)
                                             {
                                                 NewLine();
-                                                FormatLine($"{Ind24}The library has been overwritten and a program restart is required.", ForECol.Warning);
-                                                Format($"{Ind24}Proceed to restarting the program >> ");
+                                                FormatLine($"{Ind24}The library has been overwritten and {(overwriteNetChangeQ ? "a program restart is required" : "remains unchanged")}.", ForECol.Warning);
+                                                Format($"{Ind24}{(overwriteNetChangeQ ? "Proceed to restarting the program >> " : "A program restart is not required. Press [Enter] to continue >> ")}");
                                                 Pause();
 
-                                                Program.RequireRestart();
+                                                if (overwriteNetChangeQ)
+                                                    Program.RequireRestart();
                                             }
                                         }
                                     }
@@ -384,7 +392,7 @@ namespace HCResourceLibraryApp.Layout
                                     {
                                         FormatLine($"{Ind24}Evaluation complete. No additional steps required.");
 
-                                        mainLibrary.Integrate(logDecoder.DecodedLibrary, out _);
+                                        mainLibrary.Integrate(logDecoder.DecodedLibrary, out _, out _);
                                         Format($"{Ind24}Integrated new contents into library.", ForECol.Correction);
                                         Pause();
                                         exitSubmissionPage = true;
@@ -969,7 +977,136 @@ namespace HCResourceLibraryApp.Layout
                 }
             }
         }
-        static void DisplayIntegrationInfo(ResLibIntegrationInfo[] integrationInfoDock)
+        static void DisplayIntegrationInfo(ResLibAddInfo[] integrationInfoDock)
+        {
+            /** ADDED CONTENTS REPORT - Display Concept
+                What do I Have? 
+                    Within each ResLibAddInfo instance
+                    - the added object,
+                    - an added status (true/false),
+                    - a duplicate rejection status (true/false),
+                    - a source type and sub-source type,
+                    - extra information, 
+                    - loose content indicator (true/false),
+
+
+                Visualize: 
+                ........................................
+                Form:   ## [{Source}] {Result}: {Object} {'*' LooseIndicator}
+                            {Extra}
+
+                {##}     : Object number, increments from 1, applies to 3 main sources only
+                    - Accent FG Color
+                {Result} : Either 'Added' or 'Rejected'
+                    - Correction FG Color on 'Added', Incorrection FG Color on 'Rejected'
+                {Source} : The type of instance added 
+                    - Normal FG Color
+                {Object} : The content, legend, or summary that has been added or rejected
+                    - Highlight FG Color
+                {*}      : Determines the object as not yet being connected to a base content
+                    - Normal FG Color
+                {Extra}  : Displays additional information for adding an object. Includes duplicate message and other misc messages where available
+                    - Accent FG Color
+
+
+                Examples: 
+                .......................................
+                1  [Content] Added: 1.00;Lettuce; [1] adts
+                        [Content:Bse] Added: v1.00;Lettuce;i9,t16
+                        [Content:Adt] Added: v1.00;t16;LeafDust;d3
+                2  [Content] Rejected: 1.00;Urnger;
+                      Is Duplicate
+                3  [Legend] Rejected: 1.00;d;Particles
+                      Is Duplicate; partial duplicate                        
+
+             */
+
+            if (integrationInfoDock.HasElements())
+            {
+                SourceOverwrite prevSource = SourceOverwrite.Content;
+                int subSourceBacksetIx = 0, countPrints = 0;
+                for (int ax = 0; ax < integrationInfoDock.Length; ax++)
+                {
+                    ResLibAddInfo rlai = integrationInfoDock[ax];
+                    if (rlai.IsSetup())
+                    {                        
+                        ForECol colObj = ForECol.Highlight, colAdd = ForECol.Correction, colRej = ForECol.Incorrection, colExt = ForECol.Accent;
+                        string source, addedObject, extraCompile;
+
+                        /// determine source
+                        source = rlai.source.ToString();
+                        /// determine added object string
+                        if (rlai.addedObject.Contains("(RC)"))
+                            addedObject = rlai.addedObject.Replace("(RC)", "").Trim();
+                        else addedObject = rlai.addedObject;
+                        /// determine extra text
+                        extraCompile = rlai.dupeRejectionQ ? "Is Duplicate" : "";
+                        if (rlai.extraInfo.IsNotNEW())
+                            extraCompile += (extraCompile.IsNotNEW() ? "; " : "") + rlai.extraInfo;
+
+
+                        // DISPLAY content add info
+                        bool subSourceQ = rlai.subSource.HasValue;
+                        subSourceBacksetIx += subSourceQ ? 1 : 0;
+                        if (!subSourceQ)
+                        {
+                            /// separation between categories (sources) : content, legend, summary
+                            if (prevSource != rlai.source)
+                                NewLine();
+                            /// item number and indentation
+                            Format($"{Ind14}{ax + 1 - subSourceBacksetIx, -2} ", ForECol.Accent);
+                            HoldWrapIndent(true);
+                            /// information formating
+                            Format($"[{source}] ");
+                            Format((rlai.addedQ ? "Added" : "Rejected").ToUpper(), rlai.addedQ ? colAdd : colRej);
+                            Format(": ");
+                            FormatLine(addedObject, colObj);
+                            if (extraCompile.IsNotNEW())
+                                FormatLine($"{(subSourceQ ? $"\t{Ind14}" : "\t")}{extraCompile}", colExt);
+                            HoldWrapIndent(false);
+                        }                       
+
+
+                        // DISPLAY legend
+                        if (ax + 1 >= integrationInfoDock.Length)
+                        {
+                            NewLine();
+                            Title("Integration Legend");
+                            /// content add display legend
+                            FormatLine("[ContentSource] {Result}: {ContentObject}");
+                            FormatLine($"{Ind24}{{Extra Info}}");
+
+                            /// content format legend
+                            FormatLine("- - - - - - -", ForECol.Accent);
+                            string[,] itemSyntaxes = new string[3, 2]
+                            {
+                                /// (RC) #0; One Item, 1.00, [1] adts, [2] upds
+                                {$"{SourceOverwrite.Content}", "#{ShelfNo}; {ContentName}, {VerAdded}, {NumOfAdditionals}, {NumOfUpdates}"},
+                                /// {VersionAdded}*{ContentName}*{RelatedDataIDs}
+                                //{$"{SourceOverwrite.Content}:{SourceCategory.Bse}", "{VerAdded};{ContentName};{DataIDs,,}"},
+                                /// {VersionAddit}*{RelatedDataId}*{Opt.Name}*{DataID}***
+                                //{$"{SourceOverwrite.Content}:{SourceCategory.Adt}", "{VerAdded};{RelatedDataID};{Name.Optional};{DataIDs,,}"},
+                                /// {VersionUpd}*{InternalName}*{RelatedDataID}*{ChangeDesc}***
+                                //{$"{SourceOverwrite.Content}:{SourceCategory.Upd}", "{VerUpdated};{Name};{RelatedDataID};{ChangeDesc}"},
+                                /// {key}*{verIntro}*{keynames}
+                                {$"{SourceOverwrite.Legend}", "{Key};{VerAdded};{Definitions;;}"},
+                                /// {Version}*{tta}*{summaryParts}
+                                {$"{SourceOverwrite.Summary}", "{VerNum};{ContentTally};{SummaryParts;;}"},
+                            };
+                            for (int c = 0; c < itemSyntaxes.GetLength(0); c++)
+                            {
+                                Format($"{itemSyntaxes[c, 0],-14}", ForECol.Normal);
+                                FormatLine($"| {itemSyntaxes[c, 1]}", ForECol.Accent);
+                            }
+                        }
+
+                        prevSource = rlai.source;
+                        countPrints++;
+                    }
+                }
+            }
+        }
+        static void DisplayLooseIntegrationInfo(ResLibIntegrationInfo[] integrationInfoDock)
         {
             if (integrationInfoDock.HasElements())
             {
@@ -1019,7 +1156,8 @@ namespace HCResourceLibraryApp.Layout
                         's44; Improved brightness of...' to 'Bald Cap' by 's44'.
                     */
 
-                const int updtDescLim = 25, adtIDsLim = 15, adtNameLim = 20;
+                float factor = WSLL(4, 10) / 5f; /// Range [80%, 200%]
+                int updtDescLim = (int)(25 * factor), adtIDsLim = (int)(15 * factor), adtNameLim = (int)(20 * factor);
                 foreach (ResLibIntegrationInfo rlii in integrationInfoDock)
                 {
                     if (rlii.IsSetup())
@@ -1045,18 +1183,31 @@ namespace HCResourceLibraryApp.Layout
                                     'r356; Redesigned to fit bett...'.
                                 ## Connected updated content: 
                                     's44; Improved brightness of...' to 'Bald Cap' by 's44'.
+
+                            
+                            Ex3 'Compact Ex1 alt'
+                                ## Discarded additional: 'Ben's Buckle; BensBeltBuckle'.
+                                ## Connected additional: 'Flyer Trails; y33 y42' to 'Flyer' by 's45'.
+                                ## Discarded updated: 'r356; Redesigned to fit bett...'.
+                                ## Connected updated: 's44; Improved brightness of...' to 'Bald Cap' by 's44'.
                             
                          */
 
+                        bool compactFormQ = HSNL(0, 5) < 3 || WSLL(0, 5) >= 3;
                         bool isAdtq = rlii.infoType == RCFetchSource.ConAdditionals;
 
                         Format("## ", rlii.isConnectedQ ? ForECol.Correction : ForECol.Incorrection);
-                        FormatLine($"{(rlii.isConnectedQ ? "Connected" : "Discarded")} {(isAdtq ? "additional" : "updated")} content: ", ForECol.Normal);
+                        Format($"{(rlii.isConnectedQ ? "Connected" : "Discarded")} {(isAdtq ? "additional" : "updated")}{(compactFormQ ? "" : " content")}: ", ForECol.Normal);
+                        if (!compactFormQ)
+                        {
+                            NewLine();
+                            Format($"{Ind34}'", ForECol.Normal);
+                        }
+
                         
-                        Format($"{Ind34}'", ForECol.Normal);
                         if (isAdtq)
                             Format($"{(rlii.adtOptName.IsNE() ? "" : $"{rlii.adtOptName.Clamp(adtNameLim, "...")}; ")}{rlii.adtDataIDs.Clamp(adtIDsLim, "...")}", ForECol.Highlight);
-                        else Format($"{rlii.updDataID}; {rlii.updShortDesc.Clamp((rlii.isConnectedQ ? updtDescLim : updtDescLim * 2), "...")}", ForECol.Highlight);
+                        else Format($"{rlii.updDataID}; {rlii.updShortDesc.Clamp((!rlii.isConnectedQ && !compactFormQ ? (int)(updtDescLim * 1.25f) : updtDescLim), "...")}", ForECol.Highlight);
 
                         if (rlii.isConnectedQ)
                             Format($"' to '{rlii.connectionName}' by '{rlii.connectionDataID}", ForECol.Normal);                    
@@ -1097,7 +1248,7 @@ namespace HCResourceLibraryApp.Layout
                         = No changes - Highlight ForECol
                         + Overwritten / Added - Correction ForECol
                         - Removed - Incorrection ForECol
-                        * Ignored - Normal ForECol
+                        ~ Ignored - Normal ForECol
 
                     {Result} : The final result of this overwrite. If there has been an overwrite, the overwriting or resulting will be displayed. Otherwise, the existing or resulting.
                         - Colors reflect that of the Overwrite Symbol
@@ -1126,7 +1277,7 @@ namespace HCResourceLibraryApp.Layout
                     ResLibOverwriteInfo rloi = overwritingInfoDock[rx];
                     if (rloi.IsSetup())
                     {
-                        const string symEql = "=", symEdt = "+", symIgn = "*", symRem = "-";
+                        const string symEql = "=", symEdt = "+", symIgn = "~", symRem = "-", symLos = "*";
                         ForECol colEqual = ForECol.Highlight, colEdit = ForECol.Correction, colIgn = ForECol.Normal, colRem = ForECol.Incorrection;
                         string overwriteSym, source, overwriteResult, overwriteReplaced = "";
                         ForECol overwriteCol;
@@ -1200,7 +1351,10 @@ namespace HCResourceLibraryApp.Layout
                         HoldWrapIndent(true); 
                         /// information formatting
                         Format($"[{source}] ");
-                        FormatLine($"{overwriteSym} {overwriteResult}", overwriteCol);
+                        Format($"{overwriteSym} {overwriteResult}", overwriteCol);
+                        if (rloi.looseContentQ)
+                            Format($" {symLos}");
+                        NewLine();
                         if (overwriteReplaced.IsNotNEW())
                             FormatLine($"{(subSourceQ ? $"\t{Ind14}" : Ind34)}{overwriteReplaced}", ForECol.Accent);
                         HoldWrapIndent(false);
@@ -1215,7 +1369,7 @@ namespace HCResourceLibraryApp.Layout
                             //FormatLine($"Outcome Symbols :: '{symEql}' No change  |  '{symEdt}' Overwritten / Added  |  '{symRem}' Removed  |  '{symIgn}' Ignored", ForECol.Accent);
                             FormatLine($"Outcome Symbols :: '{symEql}' No change  |  '{symEdt}' Overwritten / Added  |  '{symRem}' Removed", ForECol.Accent);
                             Format("[ContentSource] ");
-                            FormatLine("{Outcome Symbol} Resulting Outcome");
+                            FormatLine($"{{Outcome Symbol}} Resulting Outcome {{'{symLos}' Loosened Content Indicator}}");
                             FormatLine($"{Ind24}{{Discarded due to change}}");
 
                             /// content format legend
@@ -1253,5 +1407,6 @@ namespace HCResourceLibraryApp.Layout
 
             }
         }
+        
     }
 }

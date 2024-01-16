@@ -2,7 +2,7 @@
 ## <HIGH CONTRAST RESOURCE LIBRARY APP - Version Log Example Log #1 - Overwrite B> ##
 PURPOSE :: 
 	The 2nd copy of Ex1 Version Log for testing of the overwriting process.
-	Testing specifics: --
+	Testing specifics: Content name or id change for additional turned added, self-updating contents, legend removal and replacement, summary change by parts
 -- !close --
 
 -- ========== ---
@@ -55,7 +55,7 @@ PURPOSE ::
 >: (i109) - Added more sprigs to texture.
 >: Toma&00tiles (t93) - Made tomato more delicious looking.
 >: (i101) - Edited to match new tile's texture.
--- Examples above source from Ex2 Version Log
+-- Examples above sourced from Ex2 Version Log
 
 [LEGEND]
 i - Item
