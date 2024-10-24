@@ -92,6 +92,27 @@ namespace HCResourceLibraryApp.DataHandling
     }
 
 
+    /// <summary>Icon selection for profiles</summary>
+    public enum ProfileIcon
+    {
+        /// <summary>#0 | Default Icon. Simple semi-circle base and circle to depict a person [o(].</summary>
+        StandardUserIcon, 
+
+        /// <summary></summary>
+        SwordIcon,
+        /// <summary></summary>
+        PickaxeIcon,
+        /// <summary></summary>
+        MusicNoteIcon,
+        /// <summary></summary>
+        MountainIcon,
+        /// <summary></summary>
+        DocumentFileIcon,
+        /// <summary></summary>
+        AbstractIcon
+    }
+
+
     /// <summary>Specifies where information derives from within a <see cref="ResContents"/> instance. </summary>
     /// <remarks>Primarly utilized for <see cref="ResContents.ContainsDataID(string, out RCFetchSource)"/> and overloads.</remarks>
     public enum RCFetchSource

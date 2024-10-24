@@ -173,8 +173,11 @@ namespace HCResourceLibraryApp.DataHandling
 
                         if (!isDupe && isOkay)
                         {
-                            if (ContentName != ResLibrary.LooseResConName) 
+                            if (ContentName != ResLibrary.LooseResConName)
+                            {
                                 newCA.AdoptIDs(ShelfID, ConAddits.Count);
+                                newCA.ContentName = ContentName;
+                            }
                             ConAddits.Add(newCA);
                             storedCAq = true;
                         }
@@ -731,6 +734,7 @@ namespace HCResourceLibraryApp.DataHandling
                             if (newCa.DecodeSecondGroup(conAdtInfo))
                             {
                                 newCa.AdoptIDs(ShelfID, ConAddits.Count);
+                                newCa.ContentName = ContentName;
                                 ConAddits.Add(newCa);
                             }
                         }

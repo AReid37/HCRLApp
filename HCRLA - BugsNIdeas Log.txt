@@ -50,9 +50,13 @@
 
 [X] 5# Using command 'add2' in formatter when only two lines place new line at bottom instead placing it before line 2.
 
-[ ] 6# ...
+[ ] 6# While submitting v1.43 version log, I noticed that some additional contents (that remained as such, not Additional -> Added contents) were not detected as being updated in the same version. While not a big deal, it would be nice to have this pointed out by the system anyway.
 
+[ ] 7# Not sure how to explain it, but self updating upon an additional content that does not become its own thing (Additional -> Added) seems to absolutely BREAK the log submission system. I wasn't luucky enough to realize this before I lost file reversion to fix the mess that made easily. PLS FIX ASAP! 
 
+[ ] 8# Generate Steam Log is still receiving no related name for additional contents. It keeps showing up as '/?'.
+
+[ ] 9# ...
 
 
 
@@ -79,7 +83,7 @@
 
 [.] 9# Reversion; Version Reversion, specific version removal is possible, however only if the version's contents is not referenced in future version (Either allowed or denied reversion thereafter; Generally useful only the case of overwriting a log version's info)
     
-    [ ] alt.9# Log Submission; If a Version Log is submitted containing version information that already exists within the library, the option to overwrite the pre-existing information may be available (must include an extensive report on the results of overwriting previous information) 
+    [X] alt.9# Log Submission; If a Version Log is submitted containing version information that already exists within the library, the option to overwrite the pre-existing information may be available (must include an extensive report on the results of overwriting previous information) 
 
 [X] 10# Using a certain syntax to substitute a keycode with symbols that are used for log decoding (example: using "&00" to sub for "-", or using "&04" to sub for "("). File encoding/decoding won't be affected and the data remains true to it's name as it bypasses the possible errors from log decoding.
 
@@ -115,4 +119,8 @@
 
 [X] 2# I think the library search page is pretty awesome at its job. If possible, I'd like to see a filter specifically for data ids. It can get pretty tough sorting through a thousand entries and having all the content names and stuff mixed in to the fray.
 
-[ ] 3# ...
+[ ] 3# Library Search idea. When a search result pops up, using displaying the first (expanded) data ID of the item could be really helpful and really cool. For example, the Dirt Block would show its first data ID like 'Item_0'.
+
+[ ] 4# The file reversion thing is cool but is there a way to save a specific, non-overwritten file that I can guarantee as a safe return place? That wouuld be hella cool if I could do that.
+
+[ ] 5# ...

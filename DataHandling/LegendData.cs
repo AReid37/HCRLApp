@@ -352,6 +352,7 @@ namespace HCResourceLibraryApp.DataHandling
                 {
                     if (Key == legNew.Key)
                     {
+                        LegendData prevSelf = CloneLegend();
                         if (VersionIntroduced.AsNumber >= legNew.VersionIntroduced.AsNumber)
                         {
                             /// This might have seemed easy, but after breaking it down, it's got a couple steps
@@ -380,7 +381,7 @@ namespace HCResourceLibraryApp.DataHandling
                                 }
                                 else _definitions[0] = legNew[0];                                
                             }
-                            info.SetOverwriteStatus();
+                            info.SetOverwriteStatus(!Equals(prevSelf));
                         }
                         else
                         {

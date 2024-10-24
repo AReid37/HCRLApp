@@ -15,6 +15,7 @@ namespace HCResourceLibraryApp.Layout
         static ResLibrary _resLibrary;
         static ContentValidator _contentValidator;
         static readonly char subMenuUnderline = '=';
+        static bool enterCivFilesTransferPageQ = false;
 
         public static void GetPreferencesReference(Preferences preferences)
         {
@@ -964,9 +965,14 @@ namespace HCResourceLibraryApp.Layout
                             }
                             else
                             {
-                                /// IF no input: exit page; ELSE check data and run content integrity
+                                /// IF no input: prompt to move contents 'and' exit page; 
+                                /// ELSE check data and run content integrity
                                 if (LastInput.IsNE())
+                                {
+
+
                                     endActiveMenuKey = true;
+                                }
                                 else
                                 {
                                     NewLine();
@@ -1083,7 +1089,7 @@ namespace HCResourceLibraryApp.Layout
                         else if (prepToRunCivq)
                         {
                             NewLine();
-                            Format($"{Ind24}Unable to collect and display CIV results.", ForECol.Incorrection);
+                            Format($"{Ind24}Unable to collect and display CIV results. Please try again.", ForECol.Incorrection);
                             Pause();
                         }
 

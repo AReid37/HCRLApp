@@ -347,6 +347,7 @@ namespace HCResourceLibraryApp.DataHandling
 			{
                 clone = new ContentAdditionals(VersionAdded, RelatedDataID, OptionalName, _dataIDs.ToArray());
 				clone.AdoptIDs(_relatedShelfID, _index);
+				clone.ContentName = ContentName;				
             }
 			return clone;
 		}

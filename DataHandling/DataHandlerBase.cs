@@ -11,7 +11,7 @@ namespace HCResourceLibraryApp.DataHandling
     {
         #region fields / props
         /// <summary>Separator character in file encoding/decoding.</summary>
-        internal const string Sep = "%"; // percentage symbol (seperator character; also dissallowed in HCAutoLogger)  [old seperator character --> * asterik (but is used in LEGEND...facepalm)]
+        internal const string Sep = "%"; // percentage symbol (seperator character; also dissallowed in HCAutoLogger)
         // public for Dbug.cs
         public static string FileDirectory = !Program.isDebugVersionQ? @"hcd\" : @"C:\Users\ntrc2\Pictures\High Contrast Textures\HCRLA\hcd-tests\"; 
         const string FileName = "hcrlaData.txt", BackupFileName = "hcrlaDataBackup.txt"; // change '.txt' to '.hcd' at end of development? Nn....NnnAahhh!
@@ -80,7 +80,7 @@ namespace HCResourceLibraryApp.DataHandling
                 }
                 ProgressBarUpdate(TaskNum / TaskCount);
 
-                // refresh file
+                // refresh file / create file if not existing
                 if (noIssues)
                 {
                     noIssues = RestartMainEncoding();

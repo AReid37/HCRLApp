@@ -12,8 +12,8 @@ namespace HCResourceLibraryApp
     public class Program
     {
         static readonly string consoleTitle = "High Contrast Resource Library App";
-        static readonly string developmentVersion = "[v1.3.1d]";
-        static readonly string lastPublishedVersion = "[v1.3.0]";
+        static readonly string developmentVersion = "[v1.3.2]";
+        static readonly string lastPublishedVersion = "[v1.3.1d]";
         /// <summary>If <c>true</c>, the application launches for debugging/development. Otherwise, the application launches for the published version.</summary>
         public static readonly bool isDebugVersionQ = true;
         static readonly bool verifyFormatUsageBase = false;
@@ -23,13 +23,15 @@ namespace HCResourceLibraryApp
         static string prevWhereAbouts;
         const string saveIcon = "▐▄▐▌"; //  1▐▀▀▄▄▌;    2▐▄▐▌;  3 ▐▄▄▌
         static bool _programRestartQ;
-        static DataHandlerBase dataHandler;
-        static Preferences preferences;
-        static LogDecoder logDecoder;
-        static ContentValidator contentValidator;
-        static ResLibrary resourceLibrary;
-        static SFormatterData formatterData;
-        static BugIdeaData bugIdeaData;
+        static ProfileHandler profileHandler;
+        /// to be discontinued...
+        static DataHandlerBase dataHandler_;
+        static Preferences preferences_;
+        static LogDecoder logDecoder_;
+        static ContentValidator contentValidator_;
+        static ResLibrary resourceLibrary_;
+        static SFormatterData formatterData_;
+        static BugIdeaData bugIdeaData_;
 
         // PUBLIC
         public static bool AllowProgramRestart { get => _programRestartQ; private set => _programRestartQ = value; }
@@ -49,34 +51,46 @@ namespace HCResourceLibraryApp
                 /// program function
                 Console.Title = consoleTitle + (isDebugVersionQ? $" {developmentVersion} (debug)" : $" {lastPublishedVersion}");
                 Tools.DisableWarnError = !isDebugVersionQ? DisableWE.All : DisableWE.None;
-                /// data
-                dataHandler = new DataHandlerBase();
-                preferences = new Preferences();
-                logDecoder = new LogDecoder();
-                contentValidator = new ContentValidator();
-                resourceLibrary = new ResLibrary();
-                formatterData = new SFormatterData();
-                bugIdeaData = new BugIdeaData();
+                /// data loading
+                profileHandler = new ProfileHandler();
+                profileHandler.FetchProfiles();
+
+                // this is where the profile is selected (determined by profile ID)
+                /// data loading (old)
+                dataHandler_ = new DataHandlerBase();
+                preferences_ = new Preferences();
+                logDecoder_ = new LogDecoder();
+                contentValidator_ = new ContentValidator();
+                resourceLibrary_ = new ResLibrary();
+                formatterData_ = new SFormatterData();
+                bugIdeaData_ = new BugIdeaData();
                 LoadData();
                 /// --v printing and pages
                 VerifyFormatUsage = verifyFormatUsageBase && isDebugVersionQ;          
-                contentValidator.GetResourceLibraryReference(resourceLibrary);
-                GetPreferencesReference(preferences);
+                contentValidator_.GetResourceLibraryReference(resourceLibrary_);
+                GetPreferencesReference(preferences_);
                 ApplyPreferences();
-                SettingsPage.GetPreferencesReference(preferences);
-                SettingsPage.GetResourceLibraryReference(resourceLibrary);
-                SettingsPage.GetContentValidatorReference(contentValidator);
-                LogLegendNSummaryPage.GetResourceLibraryReference(resourceLibrary);
+                SettingsPage.GetPreferencesReference(preferences_);
+                SettingsPage.GetResourceLibraryReference(resourceLibrary_);
+                SettingsPage.GetContentValidatorReference(contentValidator_);
+                LogLegendNSummaryPage.GetResourceLibraryReference(resourceLibrary_);
                 LibrarySearch.ClearCookies();
-                LibrarySearch.GetResourceLibraryReference(resourceLibrary);
+                LibrarySearch.GetResourceLibraryReference(resourceLibrary_);
                 GenSteamLogPage.ClearCookies();
-                GenSteamLogPage.GetResourceLibraryReference(resourceLibrary);
-                GenSteamLogPage.GetSteamFormatterReference(formatterData);
-                BugIdeaPage.GetBugIdeaDataReference(bugIdeaData);
+                GenSteamLogPage.GetResourceLibraryReference(resourceLibrary_);
+                GenSteamLogPage.GetSteamFormatterReference(formatterData_);
+                BugIdeaPage.GetBugIdeaDataReference(bugIdeaData_);
+                ProfilesPage.GetProfilesReference(profileHandler);
+                ProfilesPage.GetPreferencesReference(preferences_);
 
                 // testing site
                 if (isDebugVersionQ)
                     RunTests();
+
+
+                // Lvl.1a - if profile unselected or non-existing, choose or create profile (with/without existing data).
+                if (profileHandler.CurrProfileID == ProfileHandler.NoProfID)
+                    ProfilesPage.OpenPage();
 
 
                 // Lvl.1 - title page and main menu
@@ -93,6 +107,7 @@ namespace HCResourceLibraryApp
                     {
                         BugIdeaPage.OpenPage();
                         /// Main Menu
+                        /// ->  Profile Select
                         /// ->  Logs Submission
                         /// ->  Library Search
                         /// ->  Log Legend View     --> Log Legends and Summaries
@@ -110,29 +125,32 @@ namespace HCResourceLibraryApp
                             NewLine();
                         }
 
-                        bool isValidMMOpt = ListFormMenu(out string mainMenuOptKey, "Main Menu", null, $"{Ind24}Option >> ", "a~f", true,
-                            "Logs Submission, Library Search, Log Legend and Summaries, Generate Steam Log, Settings, Quit".Split(", "));
+                        bool isValidMMOpt = ListFormMenu(out string mainMenuOptKey, "Main Menu", null, $"{Ind24}Option >> ", "a~g", true,
+                            "Profile Select, Logs Submission, Library Search, Log Legend and Summaries, Generate Steam Log, Settings, Quit".Split(", "));
                         MenuMessageQueue(mainMenuOptKey == null, false, null);
 
                         if (isValidMMOpt)
                         {
                             // other options
-                            if (!mainMenuOptKey.Contains('f'))
+                            if (!mainMenuOptKey.Contains('g'))
                             {
+                                // profile selection page
+                                //if (mainMenuOptKey.Equals("a"))
+                                //    ;
                                 // logs submission page
-                                if (mainMenuOptKey.Equals("a"))
-                                    LogSubmissionPage.OpenPage(resourceLibrary);
+                                if (mainMenuOptKey.Equals("b"))
+                                    LogSubmissionPage.OpenPage(resourceLibrary_);
                                 // library search page
-                                else if (mainMenuOptKey.Equals("b"))
+                                else if (mainMenuOptKey.Equals("c"))
                                     LibrarySearch.OpenPage();
                                 // log legend and summaries view page
-                                else if (mainMenuOptKey.Equals("c"))
+                                else if (mainMenuOptKey.Equals("d"))
                                     LogLegendNSummaryPage.OpenPage();
                                 // generate steam log page
-                                else if (mainMenuOptKey.Equals("d"))
+                                else if (mainMenuOptKey.Equals("e"))
                                     GenSteamLogPage.OpenPage();
                                 // settings page
-                                else if (mainMenuOptKey.Equals("e"))
+                                else if (mainMenuOptKey.Equals("f"))
                                     SettingsPage.OpenPage();
 
                                 else
@@ -223,6 +241,14 @@ namespace HCResourceLibraryApp
 
             #endregion
             Dbug.EndLogging();
+
+
+            /// THE TO DO LIST    
+            /// - IMPLEMENT profile feature.
+            /// - DEBUG the overwriting system and check for possible errors
+            /// - FURTHER DEBUGGING and fixes from bug / idea submission system on published app
+            /// - CONSIDER crash-handling  (try-catch entire running code? submite final Dbug before closing)
+            /// - UPDGRADE the debugging system to thread-based multi-file logging [if crash-handling fails)
         }
 
 
@@ -255,7 +281,7 @@ namespace HCResourceLibraryApp
             NewLine(2);
             Format($"{saveIcon}\t", ForECol.Accent);
 
-            bool savedDataQ = dataHandler.SaveToFile(preferences, logDecoder, contentValidator, resourceLibrary, formatterData, bugIdeaData);            
+            bool savedDataQ = dataHandler_.SaveToFile(preferences_, logDecoder_, contentValidator_, resourceLibrary_, formatterData_, bugIdeaData_);            
             if (savedDataQ)
                 Format(discreteQ? "auto-save: S." : "Auto-saving data ... success.", discreteQ? ForECol.Accent : ForECol.Correction);
             else Format(discreteQ? "auto-save: F." : "Auto-saving data ... failed.", discreteQ ? ForECol.Accent : ForECol.Incorrection);
@@ -269,12 +295,12 @@ namespace HCResourceLibraryApp
             NewLine();
             FormatLine($"{Ind14}Loading Data...", ForECol.Accent);
 
-            bool outCome = dataHandler.LoadFromFile(preferences, logDecoder, contentValidator, resourceLibrary, formatterData, bugIdeaData);
+            bool outCome = dataHandler_.LoadFromFile(preferences_, logDecoder_, contentValidator_, resourceLibrary_, formatterData_, bugIdeaData_);
             Dbug.SingleLog("Program.LoadData()", $"Outcome of data loading :: {outCome};");
         }
         public static bool SaveReversion()
         {
-            return dataHandler.RevertSaveFile();
+            return dataHandler_.RevertSaveFile();
         }
         
         public static void ToggleFormatUsageVerification()
@@ -554,7 +580,7 @@ namespace HCResourceLibraryApp
                     TextLine("The results of this test are recorded through Dbug.cs. Nothing to preview here...", Color.DarkGray);
                     if (SetFileLocation(@"C:\Users\ntrc2\source\repos\HCResourceLibraryApp\TextFileExtras\HCRLA - Ex1 Version Log.txt"))
                         if (FileRead(null, out string[] testLogData))
-                            logDecoder.DecodeLogInfo(testLogData);
+                            logDecoder_.DecodeLogInfo(testLogData);
                 }
                 /// Log Submission Page
                 else if (testToRun == Tests.LogSubmissionPage_DisplayLogInfo_Ex1 || testToRun == Tests.LogSubmissionPage_DisplayLogInfo_Ex3 || testToRun == Tests.LogSubmissionPage_DisplayLogInfo_AllTester || testToRun == Tests.LogSubmissionPage_DisplayLogInfo_ErrorTester)
@@ -573,19 +599,19 @@ namespace HCResourceLibraryApp
 
                     if (locationSet)
                         if (FileRead(null, out string[] testLogData))
-                            if (logDecoder.DecodeLogInfo(testLogData))
+                            if (logDecoder_.DecodeLogInfo(testLogData))
                             {
                                 NewLine(1);
                                 Important("Regular post-decoding preview");
                                 HorizontalRule('.');
-                                LogSubmissionPage.DisplayLogInfo(logDecoder, false);
+                                LogSubmissionPage.DisplayLogInfo(logDecoder_, false);
                                 HorizontalRule('.');
                                 Pause();
 
                                 NewLine(10);
                                 Important("Informative post-decoding preview");
                                 HorizontalRule('.');
-                                LogSubmissionPage.DisplayLogInfo(logDecoder, true);
+                                LogSubmissionPage.DisplayLogInfo(logDecoder_, true);
                                 HorizontalRule('.');
                             }
                 }
@@ -632,9 +658,9 @@ namespace HCResourceLibraryApp
                     string aFolderPath = /*ContentValidator.FolderPathDisabledToken +*/ folderPaths[Extensions.Random(0, folderPaths.Length - 1)];
                     string aFileExtension = fileExtensions[Extensions.Random(0, fileExtensions.Length - 1)];
                     VerNum[] verRange = null;
-                    if (resourceLibrary.IsSetup())
+                    if (resourceLibrary_.IsSetup())
                     {
-                        if (resourceLibrary.GetVersionRange(out VerNum low, out VerNum high))
+                        if (resourceLibrary_.GetVersionRange(out VerNum low, out VerNum high))
                         {
                             if (low.Equals(high))
                             {
@@ -671,7 +697,7 @@ namespace HCResourceLibraryApp
                     NewLine();
 
 
-                    if (contentValidator.Validate(verRange, new string[1] { aFolderPath }, new string[1] { aFileExtension }))
+                    if (contentValidator_.Validate(verRange, new string[1] { aFolderPath }, new string[1] { aFileExtension }))
                     {
                         NewLine(2);
                         for (int vx = 0; vx < 3; vx++)
@@ -680,7 +706,7 @@ namespace HCResourceLibraryApp
 
                             Important($"CIV Results - {displayType} View");
                             HorizontalRule('-');
-                            SettingsPage.DisplayCivResults(contentValidator.CivInfoDock, displayType);
+                            SettingsPage.DisplayCivResults(contentValidator_.CivInfoDock, displayType);
                             HorizontalRule('-');
 
                             Pause();
