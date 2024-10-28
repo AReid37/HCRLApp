@@ -22,15 +22,10 @@ namespace HCResourceLibraryApp.Layout
          * - stc vd SubPage_ProfileEditor()
          */
 
-        static ProfileHandler _profilesRef;
         static Preferences _preferencesRef;
         static readonly char subMenuUnderline = '~';
 
 
-        public static void GetProfilesReference(ProfileHandler profiles)
-        {
-            _profilesRef = profiles;
-        }
         public static void GetPreferencesReference(Preferences preferences)
         {
             _preferencesRef = preferences;
@@ -48,21 +43,13 @@ namespace HCResourceLibraryApp.Layout
                 FormatLine($"{Ind24}... some description ...", ForECol.Accent);
                 NewLine(2);
 
-                /// if no profile exist and openned: Prompt to create profile (ProfEditor)
-                ///      ^ presumes that there is existing profile data (always true; whether default or user-generated)
-                /// if profile(s) and none selected: Prompt to select profile (ProfSelect)
-                /// if profile(s) and one selected: Default Menu (ProfSelect / ProfEditor)
-                bool anyProfilesDetectedQ = false, anyProfileSelectedQ = false;
-                if (_profilesRef != null)
-                {
-                    anyProfilesDetectedQ = _profilesRef.AllProfiles.HasElements();
-                    anyProfileSelectedQ = _profilesRef.CurrProfileID != ProfileHandler.NoProfID;
-                }
-                
+                bool anyProfilesDetectedQ = ProfileHandler.AllProfiles.HasElements();
+                bool anyProfileSelectedQ = ProfileHandler.CurrProfileID != ProfileHandler.NoProfID;
 
                 string profMenuKey = null;
                 bool validMenuKey = true;
-                // IF 
+                // IF profiles detected AND one is selected: Regular Menu;
+                // ELSE (IF no profiles: create profile; ELSE select profile)
                 if (anyProfilesDetectedQ && anyProfileSelectedQ)
                 {
                     validMenuKey = ListFormMenu(out profMenuKey, "Profile Select Menu", null, null, "a~c", true, $"Select Profile,Edit Profile,{exitPagePhrase}".Split(','));
@@ -107,12 +94,15 @@ namespace HCResourceLibraryApp.Layout
                 }
             }
             while (!exitProfilesPageMain && !Program.AllowProgramRestart);
+
+            // no auto-saving here??
         }
 
 
         // tbd
         static void SubPage_ProfileSelect()
         {
+            Program.LogState("Profile Select|Select");
             NewLine(4);
             Format($"-- Openned Profile Selection Page --");
             Pause();
@@ -121,9 +111,25 @@ namespace HCResourceLibraryApp.Layout
         // tbd
         static void SubPage_ProfileEditor()
         {
-            NewLine(4);
-            Format($"-- Openned Profile Editor Page --");
-            Pause();
+            bool exitProfEditorQ = false;
+            do
+            {
+                BugIdeaPage.OpenPage();
+
+                Program.LogState("Profile Select|Editor");
+                Clear();
+
+                // if no profiles detected
+
+                Title("Profile Editor", subMenuUnderline, 1);
+                Format($"-- Openned Profile Editor Page --");
+                Pause();
+
+
+
+                exitProfEditorQ = true; // temp
+            }
+            while (!exitProfEditorQ && !Program.AllowProgramRestart);
         }
 
 

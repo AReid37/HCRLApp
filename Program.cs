@@ -12,7 +12,7 @@ namespace HCResourceLibraryApp
     public class Program
     {
         static readonly string consoleTitle = "High Contrast Resource Library App";
-        static readonly string developmentVersion = "[v1.3.2]";
+        static readonly string developmentVersion = "[v1.3.2a]";
         static readonly string lastPublishedVersion = "[v1.3.1d]";
         /// <summary>If <c>true</c>, the application launches for debugging/development. Otherwise, the application launches for the published version.</summary>
         public static readonly bool isDebugVersionQ = true;
@@ -22,9 +22,8 @@ namespace HCResourceLibraryApp
         // PRIVATE \ PROTECTED
         static string prevWhereAbouts;
         const string saveIcon = "▐▄▐▌"; //  1▐▀▀▄▄▌;    2▐▄▐▌;  3 ▐▄▄▌
-        static bool _programRestartQ;
-        static ProfileHandler profileHandler;
-        /// to be discontinued...
+        static bool _programRestartQ, _externalProfileDetectedQ;
+        /// to be discontinued... not removed, discontinued...
         static DataHandlerBase dataHandler_;
         static Preferences preferences_;
         static LogDecoder logDecoder_;
@@ -52,11 +51,9 @@ namespace HCResourceLibraryApp
                 Console.Title = consoleTitle + (isDebugVersionQ? $" {developmentVersion} (debug)" : $" {lastPublishedVersion}");
                 Tools.DisableWarnError = !isDebugVersionQ? DisableWE.All : DisableWE.None;
                 /// data loading
-                profileHandler = new ProfileHandler();
-                profileHandler.FetchProfiles();
-
-                // this is where the profile is selected (determined by profile ID)
-                /// data loading (old)
+                ProfileHandler.Initialize();
+                ProfileHandler.FetchProfiles();
+                #region data loading (old)
                 dataHandler_ = new DataHandlerBase();
                 preferences_ = new Preferences();
                 logDecoder_ = new LogDecoder();
@@ -64,7 +61,10 @@ namespace HCResourceLibraryApp
                 resourceLibrary_ = new ResLibrary();
                 formatterData_ = new SFormatterData();
                 bugIdeaData_ = new BugIdeaData();
-                LoadData();
+                // the initial load is handled by ProfileHandler.FetchProfiles() [-> SwitchProfiles() -> LoadProfile()] when profile ID is valid
+                if (ProfileHandler.CurrProfileID == ProfileHandler.NoProfID)
+                    LoadData();  
+                #endregion                
                 /// --v printing and pages
                 VerifyFormatUsage = verifyFormatUsageBase && isDebugVersionQ;          
                 contentValidator_.GetResourceLibraryReference(resourceLibrary_);
@@ -80,7 +80,6 @@ namespace HCResourceLibraryApp
                 GenSteamLogPage.GetResourceLibraryReference(resourceLibrary_);
                 GenSteamLogPage.GetSteamFormatterReference(formatterData_);
                 BugIdeaPage.GetBugIdeaDataReference(bugIdeaData_);
-                ProfilesPage.GetProfilesReference(profileHandler);
                 ProfilesPage.GetPreferencesReference(preferences_);
 
                 // testing site
@@ -89,7 +88,7 @@ namespace HCResourceLibraryApp
 
 
                 // Lvl.1a - if profile unselected or non-existing, choose or create profile (with/without existing data).
-                if (profileHandler.CurrProfileID == ProfileHandler.NoProfID)
+                if (ProfileHandler.CurrProfileID == ProfileHandler.NoProfID)
                     ProfilesPage.OpenPage();
 
 
@@ -135,10 +134,10 @@ namespace HCResourceLibraryApp
                             if (!mainMenuOptKey.Contains('g'))
                             {
                                 // profile selection page
-                                //if (mainMenuOptKey.Equals("a"))
-                                //    ;
+                                if (mainMenuOptKey.Equals("a"))
+                                    ProfilesPage.OpenPage();
                                 // logs submission page
-                                if (mainMenuOptKey.Equals("b"))
+                                else if (mainMenuOptKey.Equals("b"))
                                     LogSubmissionPage.OpenPage(resourceLibrary_);
                                 // library search page
                                 else if (mainMenuOptKey.Equals("c"))
@@ -281,7 +280,8 @@ namespace HCResourceLibraryApp
             NewLine(2);
             Format($"{saveIcon}\t", ForECol.Accent);
 
-            bool savedDataQ = dataHandler_.SaveToFile(preferences_, logDecoder_, contentValidator_, resourceLibrary_, formatterData_, bugIdeaData_);            
+            //bool savedDataQ = dataHandler_.SaveToFile(preferences_, logDecoder_, contentValidator_, resourceLibrary_, formatterData_, bugIdeaData_);            
+            bool savedDataQ = ProfileHandler.SaveProfile();            
             if (savedDataQ)
                 Format(discreteQ? "auto-save: S." : "Auto-saving data ... success.", discreteQ? ForECol.Accent : ForECol.Correction);
             else Format(discreteQ? "auto-save: F." : "Auto-saving data ... failed.", discreteQ ? ForECol.Accent : ForECol.Incorrection);
@@ -295,7 +295,8 @@ namespace HCResourceLibraryApp
             NewLine();
             FormatLine($"{Ind14}Loading Data...", ForECol.Accent);
 
-            bool outCome = dataHandler_.LoadFromFile(preferences_, logDecoder_, contentValidator_, resourceLibrary_, formatterData_, bugIdeaData_);
+            //bool outCome = dataHandler_.LoadFromFile(preferences_, logDecoder_, contentValidator_, resourceLibrary_, formatterData_, bugIdeaData_);
+            bool outCome = ProfileHandler.LoadProfile();
             Dbug.SingleLog("Program.LoadData()", $"Outcome of data loading :: {outCome};");
         }
         public static bool SaveReversion()

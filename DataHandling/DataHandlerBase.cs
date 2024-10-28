@@ -6,21 +6,23 @@ using static HCResourceLibraryApp.Layout.PageBase;
 
 namespace HCResourceLibraryApp.DataHandling
 {
-    ///<summary>Sets down a few guidelines for data-handling classes and serves as a controller to file interactions.</summary>
+    ///<summary>Sets down a few guidelines for data-handling classes and serves as a semi-static controller to file interactions.</summary>
     public class DataHandlerBase
     {
         #region fields / props
         /// <summary>Separator character in file encoding/decoding.</summary>
         internal const string Sep = "%"; // percentage symbol (seperator character; also dissallowed in HCAutoLogger)
         // public for Dbug.cs
-        public static string FileDirectory = !Program.isDebugVersionQ? @"hcd\" : @"C:\Users\ntrc2\Pictures\High Contrast Textures\HCRLA\hcd-tests\"; 
+        public static string FileDirectory = !Program.isDebugVersionQ? @"hcd\" : @"C:\Users\ntrc2\Pictures\High Contrast Textures\HCRLA\hcd-tests\";
         const string FileName = "hcrlaData.txt", BackupFileName = "hcrlaDataBackup.txt"; // change '.txt' to '.hcd' at end of development? Nn....NnnAahhh!
         const string SessionKeyTag = "skt";
         const int sessionKeyLength = 5;
         // OG = @"hcd\hcrlaData.txt"
         // DBG = @"C:\Users\ntrc2\Pictures\High Contrast Textures\HCRLA\hcd-tests\hcrlaData.txt"
-        protected static string FileLocation = FileDirectory + FileName;
-        protected static string BackupFileLocation = FileDirectory + BackupFileName;
+        private static string ProfileDirectory;
+        private static string FileLocation = FileDirectory + ProfileDirectory + FileName;
+        private static string BackupFileLocation = FileDirectory + ProfileDirectory + BackupFileName;
+
         protected string commonFileTag;
 
         static bool _reversionAvailableQ;
@@ -276,7 +278,23 @@ namespace HCResourceLibraryApp.DataHandling
                 }
             }
             return revertedQ;
-        }        
+        }
+        /// <summary>For profiles; obtains the profile ID and inserts into file saving destination. If <c>null</c>, will use the outdated parent folder 'hcd'.</summary>
+        public static void SetProfileDirectory(string profileID)
+        {
+            string fullProfDir = null;
+
+            if (profileID.IsNotEW())
+            {
+                // IF profile id is null or 'NoProfileID': set profile directory to 'null';
+                // ELSE set profile directory as profile ID
+                if (profileID == null || profileID == ProfileHandler.NoProfID)
+                    fullProfDir = null;
+                else fullProfDir = $"profile_{profileID}\\";   /// profile_02352     profile_57299
+            }
+
+            ProfileDirectory = fullProfDir;
+        }
         /// <summary>Clears information from main file.</summary>
         private bool RestartMainEncoding()
         {
@@ -318,6 +336,7 @@ namespace HCResourceLibraryApp.DataHandling
             Dbug.SingleLog("DataBaseHandler.GetSaveSessionKey()", $"FYI -- {sessionKey}");
             return sessionKey;
         }
+
 
         // same as "Save to File"
         protected virtual bool EncodeToSharedFile()
