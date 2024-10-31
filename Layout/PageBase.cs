@@ -674,6 +674,7 @@ namespace HCResourceLibraryApp.Layout
                 FileChooserPage.SetInitialCursorPos();
 
             string input = Input(placeholder, _preferencesRef.Input);
+            Wait(0.1f); // this may help with the accidental skips...
 
             /// queue bug / idea page
             if (input == openBugIdeaPagePhrase && !IsEnterBugIdeaPageQueued())
@@ -769,7 +770,7 @@ namespace HCResourceLibraryApp.Layout
                 _incorrectionMessage = null;
             else _incorrectionMessage = message;
         }
-        /// <summary>Triggers a queued incorection message for input validation. Also include a Pause().</summary>
+        /// <summary>Triggers a queued incorrection message for input validation. Also includes a Pause().</summary>
         /// <param name="pretext">Precedes the incorrection message once given a value.</param>
         /// <param name="postText">Follows the incorrection message once given a value.</param>
         public static void IncorrectionMessageTrigger(string pretext, string postText)

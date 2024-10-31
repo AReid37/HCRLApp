@@ -13,15 +13,15 @@ namespace HCResourceLibraryApp.DataHandling
         /// <summary>Separator character in file encoding/decoding.</summary>
         internal const string Sep = "%"; // percentage symbol (seperator character; also dissallowed in HCAutoLogger)
         // public for Dbug.cs
-        public static string FileDirectory = !Program.isDebugVersionQ? @"hcd\" : @"C:\Users\ntrc2\Pictures\High Contrast Textures\HCRLA\hcd-tests\";
+        public static string AppDirectory = !Program.isDebugVersionQ? @"hcd\" : @"C:\Users\ntrc2\Pictures\High Contrast Textures\HCRLA\hcd-tests\";
         const string FileName = "hcrlaData.txt", BackupFileName = "hcrlaDataBackup.txt"; // change '.txt' to '.hcd' at end of development? Nn....NnnAahhh!
         const string SessionKeyTag = "skt";
         const int sessionKeyLength = 5;
         // OG = @"hcd\hcrlaData.txt"
         // DBG = @"C:\Users\ntrc2\Pictures\High Contrast Textures\HCRLA\hcd-tests\hcrlaData.txt"
         private static string ProfileDirectory;
-        private static string FileLocation = FileDirectory + ProfileDirectory + FileName;
-        private static string BackupFileLocation = FileDirectory + ProfileDirectory + BackupFileName;
+        private static string FileLocation = AppDirectory + ProfileDirectory + FileName;
+        private static string BackupFileLocation = AppDirectory + ProfileDirectory + BackupFileName;
 
         protected string commonFileTag;
 
@@ -293,7 +293,10 @@ namespace HCResourceLibraryApp.DataHandling
                 else fullProfDir = $"profile_{profileID}\\";   /// profile_02352     profile_57299
             }
 
+            /// the static fields CANNOT be treated as properties
             ProfileDirectory = fullProfDir;
+            FileLocation = AppDirectory + ProfileDirectory + FileName;
+            BackupFileLocation = AppDirectory + ProfileDirectory + BackupFileName;
         }
         /// <summary>Clears information from main file.</summary>
         private bool RestartMainEncoding()

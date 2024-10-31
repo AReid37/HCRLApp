@@ -12,7 +12,7 @@ namespace HCResourceLibraryApp
     public class Program
     {
         static readonly string consoleTitle = "High Contrast Resource Library App";
-        static readonly string developmentVersion = "[v1.3.2a]";
+        static readonly string developmentVersion = "[v1.3.2b]";
         static readonly string lastPublishedVersion = "[v1.3.1d]";
         /// <summary>If <c>true</c>, the application launches for debugging/development. Otherwise, the application launches for the published version.</summary>
         public static readonly bool isDebugVersionQ = true;
@@ -21,9 +21,9 @@ namespace HCResourceLibraryApp
         #region fields / props
         // PRIVATE \ PROTECTED
         static string prevWhereAbouts;
-        const string saveIcon = "▐▄▐▌"; //  1▐▀▀▄▄▌;    2▐▄▐▌;  3 ▐▄▄▌
-        static bool _programRestartQ, _externalProfileDetectedQ;
-        /// to be discontinued... not removed, discontinued...
+        const string saveIcon = "▐▄▐▌";
+        static bool _programRestartQ;
+        /// discontinued, repurposed...
         static DataHandlerBase dataHandler_;
         static Preferences preferences_;
         static LogDecoder logDecoder_;
@@ -31,12 +31,78 @@ namespace HCResourceLibraryApp
         static ResLibrary resourceLibrary_;
         static SFormatterData formatterData_;
         static BugIdeaData bugIdeaData_;
+        /// crash handling data
+        static Exception crashExInfo;
 
         // PUBLIC
         public static bool AllowProgramRestart { get => _programRestartQ; private set => _programRestartQ = value; }
         #endregion
      
+
         static void Main()
+        {
+            try
+            {
+                MainProgram();
+            }
+            catch (Exception anyEx)
+            {
+                crashExInfo = anyEx;
+            }
+            finally
+            {
+                LogState("CRASH HANDLER EXIT");
+                Wait(0.5f);
+
+                /// crash notice
+                NewLine(2);
+                HorizontalRule(cLS);
+                Title("CRASH HANDLER", '!', 2);
+                FormatLine($"{Ind34}The Program Unexpectedly Crashed. Exiting Program.", ForECol.Warning);                
+                FormatLine($"{Ind34}Flushing residual Debug Logs", ForECol.Accent);
+                Dbug.EndLogging(); // to end nested  or  normal
+                Dbug.EndLogging(); // to end normal 
+                FormatLine($"{Ind34}Saving your data.", ForECol.Accent);
+                SaveData(true);
+                NewLine();
+
+                Wait(0.5f);
+
+
+                /// crash info
+                HorizontalRule('-');
+                Dbug.StartLogging("Crash Handler Info");
+                Title("Exception Information");
+
+                FormatLine("Message");
+                FormatLine($"{Ind24}{crashExInfo.Message}", ForECol.Highlight);
+                Dbug.Log($"MESSAGE  //  {crashExInfo.Message}");
+
+                FormatLine("Source");
+                FormatLine($"{Ind24}{crashExInfo.Source}", ForECol.Highlight);
+                Dbug.Log($"SOURCE  //  {crashExInfo.Source}");
+
+                FormatLine("Target Site");
+                FormatLine($"{Ind24}{crashExInfo.TargetSite}", ForECol.Highlight);
+                Dbug.Log($"TARGET SITE  //  {crashExInfo.TargetSite}");
+
+                FormatLine("Stack Trace");
+                FormatLine($"{Ind24}{crashExInfo.StackTrace}", ForECol.Highlight);
+                Dbug.Log($"STACK TRACE  //  ");
+                Dbug.NudgeIndent(true);
+                Dbug.Log($"{crashExInfo.StackTrace}");
+                Dbug.NudgeIndent(false);
+
+                HorizontalRule('-', 2);
+                Dbug.EndLogging();
+
+                Format("Press [Enter] to close program >> ");
+                Pause();
+
+                /// should have it restart honestly, oh well...
+            }
+        }
+        static void MainProgram()
         {
             // Lvl.0 - program launch
             bool restartProgram;
@@ -48,25 +114,31 @@ namespace HCResourceLibraryApp
 
                 // setup                
                 /// program function
-                Console.Title = consoleTitle + (isDebugVersionQ? $" {developmentVersion} (debug)" : $" {lastPublishedVersion}");
-                Tools.DisableWarnError = !isDebugVersionQ? DisableWE.All : DisableWE.None;
+                Console.Title = consoleTitle + (isDebugVersionQ ? $" {developmentVersion} (debug)" : $" {lastPublishedVersion}");
+                Tools.DisableWarnError = !isDebugVersionQ ? DisableWE.All : DisableWE.None;
+                VerifyFormatUsage = verifyFormatUsageBase && isDebugVersionQ;
                 /// data loading
                 ProfileHandler.Initialize();
-                ProfileHandler.FetchProfiles();
-                #region data loading (old)
-                dataHandler_ = new DataHandlerBase();
-                preferences_ = new Preferences();
-                logDecoder_ = new LogDecoder();
-                contentValidator_ = new ContentValidator();
-                resourceLibrary_ = new ResLibrary();
-                formatterData_ = new SFormatterData();
-                bugIdeaData_ = new BugIdeaData();
-                // the initial load is handled by ProfileHandler.FetchProfiles() [-> SwitchProfiles() -> LoadProfile()] when profile ID is valid
+                ProfileHandler.FetchProfiles(); // the initial load is handled by ProfileHandler.FetchProfiles() [..Switch() -> ..Load()] when profile ID is valid
                 if (ProfileHandler.CurrProfileID == ProfileHandler.NoProfID)
-                    LoadData();  
-                #endregion                
-                /// --v printing and pages
-                VerifyFormatUsage = verifyFormatUsageBase && isDebugVersionQ;          
+                    LoadData();
+                #region data loading (old)
+                //dataHandler_ = new DataHandlerBase();
+                //preferences_ = new Preferences();
+                //logDecoder_ = new LogDecoder();
+                //contentValidator_ = new ContentValidator();
+                //resourceLibrary_ = new ResLibrary();
+                //formatterData_ = new SFormatterData();
+                //bugIdeaData_ = new BugIdeaData();
+                #endregion
+                dataHandler_ = ProfileHandler.dataHandler;
+                preferences_ = ProfileHandler.preferences;
+                logDecoder_ = ProfileHandler.logDecoder;
+                contentValidator_ = ProfileHandler.contentValidator;
+                resourceLibrary_ = ProfileHandler.resourceLibrary;
+                formatterData_ = ProfileHandler.formatterData;
+                bugIdeaData_ = ProfileHandler.bugIdeaData;                
+                /// --v printing and pages                
                 contentValidator_.GetResourceLibraryReference(resourceLibrary_);
                 GetPreferencesReference(preferences_);
                 ApplyPreferences();
@@ -97,7 +169,7 @@ namespace HCResourceLibraryApp
                 HomePage.OpenPage();
                 Format($"{Ind24}Press [Enter] to continue >> ", ForECol.Normal);
                 StyledInput("__");
-                
+
                 /// main menu
                 if (!LastInput.IsNotNE())
                 {
@@ -125,7 +197,7 @@ namespace HCResourceLibraryApp
                         }
 
                         bool isValidMMOpt = ListFormMenu(out string mainMenuOptKey, "Main Menu", null, $"{Ind24}Option >> ", "a~g", true,
-                            "Profile Select, Logs Submission, Library Search, Log Legend and Summaries, Generate Steam Log, Settings, Quit".Split(", "));
+                            "Profiles Page, Logs Submission, Library Search, Log Legend and Summaries, Generate Steam Log, Settings, Quit".Split(", "));
                         MenuMessageQueue(mainMenuOptKey == null, false, null);
 
                         if (isValidMMOpt)
@@ -133,7 +205,7 @@ namespace HCResourceLibraryApp
                             // other options
                             if (!mainMenuOptKey.Contains('g'))
                             {
-                                // profile selection page
+                                // profiles page
                                 if (mainMenuOptKey.Equals("a"))
                                     ProfilesPage.OpenPage();
                                 // logs submission page
@@ -322,6 +394,7 @@ namespace HCResourceLibraryApp
                 }
             }            
         }
+
 
 
         // TESTING STUFF

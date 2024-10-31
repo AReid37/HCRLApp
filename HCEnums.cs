@@ -111,6 +111,16 @@ namespace HCResourceLibraryApp.DataHandling
         /// <summary></summary>
         AbstractIcon
     }
+    /// <summary>Varying size specifics of printing the profile icon.</summary>
+    public enum ProfileIconSize
+    {
+        /// <summary>Shrinks the profile icon to a 4x4 square print that vaguely resembles the profile icon.</summary>
+        Mini, 
+        /// <summary>The profile icon displayed at a normal size: 8x8 square.</summary>
+        Normal,
+        /// <summary>The profile icon at double the size: 16x16. The individual pixels become 2x2, no additional details are rendered for enlarged profile icon.</summary>
+        Doubled
+    }
 
 
     /// <summary>Specifies where information derives from within a <see cref="ResContents"/> instance. </summary>

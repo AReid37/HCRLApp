@@ -59,10 +59,14 @@ namespace HCResourceLibraryApp.DataHandling
         static string _currProfileID, _currProfileName, _currProfDescription, _currProfStyleKey, _prevCurrProfileID, _prevCurrProfileName, _prevCurrDescription, _prevCurrProfStyleKey;
         static ProfileIcon _currProfIcon, _prevCurrProfIcon;
         static List<ProfileInfo> _allProfiles, _prevAllProfiles;
-        static bool _initializedQ;
-        
+        static bool _initializedQ, _externalProfileDetectedQ;
+
 
         // PUBLIC
+        public const int ProfileNameMinimum = profNameMin;
+        public const int ProfileNameLimit = profNameLim;
+        public const int ProfileDescriptionLimit = profDescLim;
+
         /// <summary>A 5-digit unique number that specifies the currently active profile.</summary>
         public static string CurrProfileID
         {
@@ -140,7 +144,8 @@ namespace HCResourceLibraryApp.DataHandling
                 return remainder;
             }
         }
-        
+        public static bool ExternalProfileDetectedQ { get => _externalProfileDetectedQ; }
+
 
         public static DataHandlerBase dataHandler;
         public static Preferences preferences;
@@ -213,61 +218,7 @@ namespace HCResourceLibraryApp.DataHandling
             AdoptDataHandlers(dataHandlers);
             SetPreviousSelf();
         }
-        public static void AdoptDataHandlers(params DataHandlerBase[] dataHandlers)
-        {
-            dataHandler = new DataHandlerBase();
-            preferences = new Preferences();
-            logDecoder = new LogDecoder();
-            contentValidator = new ContentValidator();
-            resourceLibrary = new ResLibrary();
-            formatterData = new SFormatterData();
-            bugIdeaData = new BugIdeaData();
-
-            if (dataHandlers.HasElements(7))
-            {
-                // Each DataHandler (general) is checked to not be null and be setup, otherwise the related field remains empty.
-                for (int dx = 0; dx < 7; dx++)
-                {
-                    DataHandlerBase generalDataHandler = dataHandlers[dx];
-                    if (generalDataHandler != null)
-                    {
-                        if (generalDataHandler.IsSetup())
-                        {
-                            switch (dx)
-                            {
-                                case 0:
-                                    dataHandler = generalDataHandler;
-                                    break;
-
-                                case 1:
-                                    preferences = (Preferences)generalDataHandler;
-                                    break;
-
-                                case 2:
-                                    logDecoder = (LogDecoder)generalDataHandler;
-                                    break;
-
-                                case 3:
-                                    contentValidator = (ContentValidator)generalDataHandler;
-                                    break;
-
-                                case 4:
-                                    resourceLibrary = (ResLibrary)generalDataHandler;
-                                    break;
-
-                                case 5:
-                                    formatterData = (SFormatterData)generalDataHandler;
-                                    break;
-
-                                case 6:
-                                    bugIdeaData = (BugIdeaData)generalDataHandler;
-                                    break;
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        
 
 
         /// <summary>
@@ -339,10 +290,13 @@ namespace HCResourceLibraryApp.DataHandling
         ///     Changes the current profile by searching through profiles list by ID, initializing profile variables with current profiles, and loading related library data.
         /// </summary>
         /// <param name="profileID"></param>
-        public static void SwitchProfile(string profileID)
+        /// <param name="retainProfileDataQ">If <c>true</c>, will disable profile loading after switching (retains data handler information for copying to new profile).</param>
+        public static void SwitchProfile(string profileID, bool retainProfileDataQ = false)
         {
             if (IsInitialized())
             {
+                // for disabling profile loading after switching (retains dataHandler info)
+
                 // find the profile with matching ID
                 ProfileInfo profileToActivate = new();
                 if (AllProfiles.HasElements() && profileID.IsNotNEW())
@@ -365,7 +319,8 @@ namespace HCResourceLibraryApp.DataHandling
                     CurrProfileDescription = profileToActivate.profileDescription;
 
                     DataHandlerBase.SetProfileDirectory(profileToActivate.profileID);
-                    LoadProfile();
+                    if (!retainProfileDataQ)
+                        LoadProfile();
                 }
             }            
         }
@@ -373,9 +328,10 @@ namespace HCResourceLibraryApp.DataHandling
         ///     Adds a new profile to the list of profiles while under the limit of <see cref="RemainingProfileSpacesLeft"/>.
         /// </summary>
         /// <param name="newProfileInfo"><c>Not require to have a Profile ID</c>. A profile ID will be generated during creation.</param>
+        /// <param name="allowDuplication">If <c>true</c>, will create a new profile that copies the currently active profile's library specific information.</param>
         /// <returns>A boolean representing the success of creating and adding the new profile to the list of profiles.</returns>
         /// <remarks>Used in combination after <see cref="AdoptDataHandlers(DataHandlerBase[])"/> to integrate an external profile from previous versions of the application.</remarks>
-        public static bool CreateProfile(ProfileInfo newProfileInfo)
+        public static bool CreateProfile(ProfileInfo newProfileInfo, bool allowDuplication = false)
         {
             bool createdProfQ = false;
             if (IsInitialized() && RemainingProfileSpacesLeft > 0)
@@ -386,8 +342,10 @@ namespace HCResourceLibraryApp.DataHandling
                     createdProfQ = true;
                     AllProfiles.Add(newProfileInfo);
 
-                    // perhaps this one should just be done outside this method
-                    //SaveProfile();
+                    if (!allowDuplication)
+                        AdoptDataHandlers();
+
+                    SwitchProfile(newProfileInfo.profileID, true);
                 }
             }
             return createdProfQ;
@@ -406,6 +364,7 @@ namespace HCResourceLibraryApp.DataHandling
             bool deletedProfQ = false;
             // tbd...
 
+            /// cannot delete if there is only 1 profile (sucks to suck, there's no going back)
             return deletedProfQ;
         }
         /// <summary>
@@ -417,8 +376,13 @@ namespace HCResourceLibraryApp.DataHandling
             bool noIssues = false;
             if (IsInitialized())
             {
+                AdoptDataHandlers();
                 // the FetchProfiles() method already handles getting info from the profile file.
                 noIssues = dataHandler.LoadFromFile(preferences, logDecoder, contentValidator, resourceLibrary, formatterData, bugIdeaData);
+
+                // checks for 1st time profile system use and success of loading data (indicates external profile specific info / pre-profile)
+                if (CurrProfileID == NoProfID && noIssues)
+                    _externalProfileDetectedQ = true;
             }
             return noIssues;
         }
@@ -481,7 +445,32 @@ namespace HCResourceLibraryApp.DataHandling
             }
             return noIssues;
         }
-
+        /// <returns> A <see cref="ProfileInfo"/> instance with no profile id, a random profile name, default icon <see cref="ProfileIcon.StandardUserIcon"/> of style <see cref="profStyleKeyDefault"/> and no description.
+        /// </returns>
+        public static ProfileInfo GetDefaultProfile()
+        {
+            return new ProfileInfo(NoProfID, $"Profile{Random(0, 99),3}", ProfileIcon.StandardUserIcon, profStyleKeyDefault, null);
+        }
+        /// <returns> A <see cref="ProfileInfo"/> instance within <see cref="AllProfiles"/> that has a matches with <see cref="CurrProfileID"/>, thus the current profile info.
+        /// <br></br>Instance will return <c>false</c> on <see cref="ProfileInfo.IsSetupQ()"/> when a profile cannot be found (no current profile).
+        /// </returns>
+        public static ProfileInfo GetCurrentProfile()
+        {
+            ProfileInfo currProf = new();
+            if (AllProfiles.HasElements())
+            {
+                for (int px = 0; px < AllProfiles.Count && !currProf.IsSetupQ(); px++)
+                {
+                    ProfileInfo thisProfInfo = AllProfiles[px];
+                    if (thisProfInfo.IsSetupQ())
+                    {
+                        if (thisProfInfo.profileID == CurrProfileID)
+                            currProf = thisProfInfo;
+                    }
+                }
+            }
+            return currProf;
+        }
 
 
 
@@ -490,6 +479,68 @@ namespace HCResourceLibraryApp.DataHandling
         {
             return _initializedQ;
         }
+        /// <summary>Clears all data handler instances if <c>null</c>, otherwise data handlers are assigned to the <paramref name="dataHandlers"/> provided.</summary>
+        /// <param name="dataHandlers">
+        ///     The index of the DataHandlers should be arranged in the following order:<br></br>
+        ///     <see cref="DataHandlerBase"/>, <see cref="Preferences"/>, <see cref="LogDecoder"/>, <see cref="ContentValidator"/>, <see cref="ResLibrary"/>, <see cref="SFormatterData"/>, <see cref="BugIdeaData"/>. <br></br>
+        ///     All are required; there must be a total of 7 data handlers.
+        /// </param>
+        static void AdoptDataHandlers(params DataHandlerBase[] dataHandlers)
+        {
+            dataHandler = new DataHandlerBase();
+            preferences = new Preferences();
+            logDecoder = new LogDecoder();
+            contentValidator = new ContentValidator();
+            resourceLibrary = new ResLibrary();
+            formatterData = new SFormatterData();
+            bugIdeaData = new BugIdeaData();
+
+            if (dataHandlers.HasElements(7))
+            {
+                // Each DataHandler (general) is checked to not be null and be setup, otherwise the related field remains empty.
+                for (int dx = 0; dx < 7; dx++)
+                {
+                    DataHandlerBase generalDataHandler = dataHandlers[dx];
+                    if (generalDataHandler != null)
+                    {
+                        if (generalDataHandler.IsSetup())
+                        {
+                            switch (dx)
+                            {
+                                case 0:
+                                    dataHandler = generalDataHandler;
+                                    break;
+
+                                case 1:
+                                    preferences = (Preferences)generalDataHandler;
+                                    break;
+
+                                case 2:
+                                    logDecoder = (LogDecoder)generalDataHandler;
+                                    break;
+
+                                case 3:
+                                    contentValidator = (ContentValidator)generalDataHandler;
+                                    break;
+
+                                case 4:
+                                    resourceLibrary = (ResLibrary)generalDataHandler;
+                                    break;
+
+                                case 5:
+                                    formatterData = (SFormatterData)generalDataHandler;
+                                    break;
+
+                                case 6:
+                                    bugIdeaData = (BugIdeaData)generalDataHandler;
+                                    break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         static string ProfileID()
         {
             /// profile ID; A 5-digit unique number for an active profile instance.
@@ -515,13 +566,13 @@ namespace HCResourceLibraryApp.DataHandling
             {
                 int idNum = Random(0, 99999);
                 string pID = idNum.ToString();
-                pID = pID.PadLeft(5).Replace(" ", "0");
+                pID = pID.PadLeft(profIDLim).Replace(" ", "0");
                 return pID;
             }
         }
         static void SetPreviousSelf()
         {
-            _prevCurrProfileID = _currProfileID; // realistically, this never changes...
+            _prevCurrProfileID = _currProfileID; // realistically, this never changes for a profile instance...
             _prevCurrProfileName = _currProfileName;
             _prevCurrProfIcon = _currProfIcon;
             _prevCurrProfStyleKey = _currProfStyleKey;

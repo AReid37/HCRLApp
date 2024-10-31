@@ -243,7 +243,7 @@ namespace HCResourceLibraryApp.DataHandling
                 }
                 else Dbug.Log("!Failed to set printing file location; ");
 
-                Dbug.Log($"Resetting to previous file location; Confirmed? {Base.SetFileLocation(FileDirectory, prevFileName)}");
+                Dbug.Log($"Resetting to previous file location; Confirmed? {Base.SetFileLocation(AppDirectory, prevFileName)}");
                 Dbug.EndLogging();
             }
             return printedInfoQ;

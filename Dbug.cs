@@ -25,7 +25,7 @@ namespace HCResourceLibraryApp
         static List<string> logSessionFlush = new List<string>();
         const string DbugLogTag = "Dbg| ", NestedLogTag = ">|  ", StartNestedTag = "``\n", EndNestedTag = "`\n";
         const string FileName = "hcrla-dbugFlush.txt";
-        static string FileSaveLocation = DataHandlerBase.FileDirectory + FileName;
+        static string FileSaveLocation = DataHandlerBase.AppDirectory + FileName;
 
         public static void StartLogging()
         {            
