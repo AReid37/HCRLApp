@@ -12,7 +12,7 @@ namespace HCResourceLibraryApp
     public class Program
     {
         static readonly string consoleTitle = "High Contrast Resource Library App";
-        static readonly string developmentVersion = "[v1.3.2b]";
+        static readonly string developmentVersion = "[v1.3.2c]";
         static readonly string lastPublishedVersion = "[v1.3.1d]";
         /// <summary>If <c>true</c>, the application launches for debugging/development. Otherwise, the application launches for the published version.</summary>
         public static readonly bool isDebugVersionQ = true;
@@ -51,53 +51,56 @@ namespace HCResourceLibraryApp
             }
             finally
             {
-                LogState("CRASH HANDLER EXIT");
-                Wait(0.5f);
+                if (crashExInfo != null)
+                {
+                    LogState("CRASH HANDLER EXIT");
+                    Wait(0.5f);
 
-                /// crash notice
-                NewLine(2);
-                HorizontalRule(cLS);
-                Title("CRASH HANDLER", '!', 2);
-                FormatLine($"{Ind34}The Program Unexpectedly Crashed. Exiting Program.", ForECol.Warning);                
-                FormatLine($"{Ind34}Flushing residual Debug Logs", ForECol.Accent);
-                Dbug.EndLogging(); // to end nested  or  normal
-                Dbug.EndLogging(); // to end normal 
-                FormatLine($"{Ind34}Saving your data.", ForECol.Accent);
-                SaveData(true);
-                NewLine();
+                    /// crash notice
+                    NewLine(2);
+                    HorizontalRule(cLS);
+                    Title("CRASH HANDLER", '!', 2);
+                    FormatLine($"{Ind34}The Program Unexpectedly Crashed. Exiting Program.", ForECol.Warning);
+                    FormatLine($"{Ind34}Flushing residual Debug Logs", ForECol.Accent);
+                    Dbug.EndLogging(); // to end nested  or  normal
+                    Dbug.EndLogging(); // to end normal 
+                    FormatLine($"{Ind34}Saving your data.", ForECol.Accent);
+                    SaveData(true);
+                    NewLine();
 
-                Wait(0.5f);
+                    Wait(0.5f);
 
 
-                /// crash info
-                HorizontalRule('-');
-                Dbug.StartLogging("Crash Handler Info");
-                Title("Exception Information");
+                    /// crash info
+                    HorizontalRule('-');
+                    Dbug.StartLogging("Crash Handler Info");
+                    Title("Exception Information");
 
-                FormatLine("Message");
-                FormatLine($"{Ind24}{crashExInfo.Message}", ForECol.Highlight);
-                Dbug.Log($"MESSAGE  //  {crashExInfo.Message}");
+                    FormatLine("Message");
+                    FormatLine($"{Ind24}{crashExInfo.Message}", ForECol.Highlight);
+                    Dbug.Log($"MESSAGE  //  {crashExInfo.Message}");
 
-                FormatLine("Source");
-                FormatLine($"{Ind24}{crashExInfo.Source}", ForECol.Highlight);
-                Dbug.Log($"SOURCE  //  {crashExInfo.Source}");
+                    FormatLine("Source");
+                    FormatLine($"{Ind24}{crashExInfo.Source}", ForECol.Highlight);
+                    Dbug.Log($"SOURCE  //  {crashExInfo.Source}");
 
-                FormatLine("Target Site");
-                FormatLine($"{Ind24}{crashExInfo.TargetSite}", ForECol.Highlight);
-                Dbug.Log($"TARGET SITE  //  {crashExInfo.TargetSite}");
+                    FormatLine("Target Site");
+                    FormatLine($"{Ind24}{crashExInfo.TargetSite}", ForECol.Highlight);
+                    Dbug.Log($"TARGET SITE  //  {crashExInfo.TargetSite}");
 
-                FormatLine("Stack Trace");
-                FormatLine($"{Ind24}{crashExInfo.StackTrace}", ForECol.Highlight);
-                Dbug.Log($"STACK TRACE  //  ");
-                Dbug.NudgeIndent(true);
-                Dbug.Log($"{crashExInfo.StackTrace}");
-                Dbug.NudgeIndent(false);
+                    FormatLine("Stack Trace");
+                    FormatLine($"{Ind24}{crashExInfo.StackTrace}", ForECol.Highlight);
+                    Dbug.Log($"STACK TRACE  //  ");
+                    Dbug.NudgeIndent(true);
+                    Dbug.Log($"{crashExInfo.StackTrace}");
+                    Dbug.NudgeIndent(false);
 
-                HorizontalRule('-', 2);
-                Dbug.EndLogging();
+                    HorizontalRule('-', 2);
+                    Dbug.EndLogging();
 
-                Format("Press [Enter] to close program >> ");
-                Pause();
+                    Format("Press [Enter] to close program >> ");
+                    Pause();
+                }
 
                 /// should have it restart honestly, oh well...
             }
@@ -190,11 +193,10 @@ namespace HCResourceLibraryApp
                         LogState("Main Menu");
                         Clear();
 
-                        if (Extensions.Random(0, 5) < 2)
-                        {
-                            FormatLine($"{Ind14}Report bugs or suggest ideas by entering the phrase '{openBugIdeaPagePhrase}' in any input.", ForECol.Accent);
-                            NewLine();
-                        }
+                        // reminder and profile display
+                        BugIdeaSubmissionReminder();
+                        DisplayCurrentProfile();
+                        
 
                         bool isValidMMOpt = ListFormMenu(out string mainMenuOptKey, "Main Menu", null, $"{Ind24}Option >> ", "a~g", true,
                             "Profiles Page, Logs Submission, Library Search, Log Legend and Summaries, Generate Steam Log, Settings, Quit".Split(", "));
@@ -394,6 +396,22 @@ namespace HCResourceLibraryApp
                 }
             }            
         }
+        public static void BugIdeaSubmissionReminder()
+        {
+            if (Extensions.Random(0, 5) < 2)
+            {
+                FormatLine($"{Ind14}Report bugs or suggest ideas by entering the phrase '{openBugIdeaPagePhrase}' in any input.", ForECol.Accent);
+                if (HSNL(1, 5) >= 2)
+                    NewLine();
+            }
+        }
+        public static void DisplayCurrentProfile()
+        {
+            FormatLine("-- Current User Profile --".ToUpper(), ForECol.Accent);
+            ProfilesPage.DisplayProfileInfo(ProfileHandler.GetCurrentProfile(), ProfileIconSize.Mini, ProfileDisplayStyle.NameAndID);
+            NewLine(2);
+        }
+
 
 
 
@@ -1235,7 +1253,7 @@ namespace HCResourceLibraryApp
                 /// Misc Room
                 else if (testToRun == Tests.MiscRoom)
                 {
-                    char miscKey = 'g';
+                    char miscKey = 'h';
                     string miscTestName = "<None>";
                     switch (miscKey)
                     {
@@ -1265,6 +1283,10 @@ namespace HCResourceLibraryApp
 
                         case 'g':
                             miscTestName = "Nested Instance Cloning";
+                            break;
+
+                        case 'h':
+                            miscTestName = "Profile Displays";
                             break;
                     }
 
@@ -1820,6 +1842,92 @@ namespace HCResourceLibraryApp
 
                         // PAUSE HERE
                         /// Regarding cloning, the ResContents, LegendData, and SummaryData classes should adapt a new method for proper cloning which will be utilized when adding to library.
+                    }
+                    #endregion
+
+                    #region miscH: profilespage: profiledisplays
+                    if (miscKey == 'h')
+                    {
+                        hasDebugQ = false;
+                        TextLine("These test are for verifying the proper display of profile icons and profile information.");
+                        Text("[Enter] to start >> ");
+                        Pause();
+
+                        // generating various profiles
+                        ProfileInfo[] profiles = new ProfileInfo[7]
+                        {
+                            new ProfileInfo($"{Extensions.Random(0, 99999), -5 :00000}", "Basic", ProfileIcon.StandardUserIcon, "602", null),
+                            new ProfileInfo($"{Extensions.Random(0, 99999), -5 :00000}", "Fighter", ProfileIcon.SwordIcon, "573", "I fight not think!"),
+                            new ProfileInfo($"{Extensions.Random(0, 99999), -5 :00000}", "Miner", ProfileIcon.PickaxeIcon, "024", "I rock and stone"),                            
+                            new ProfileInfo($"{Extensions.Random(0, 99999), -5 :00000}", "Explorer", ProfileIcon.MountainIcon, "876", "What a beautiful view!"),
+                            new ProfileInfo($"{Extensions.Random(0, 99999), -5 :00000}", "Producer", ProfileIcon.MusicNoteIcon, "345", "So outta tune"),
+                            new ProfileInfo($"{Extensions.Random(0, 99999), -5 :00000}", "Agent", ProfileIcon.DocumentFileIcon, "003", "I'm busy.."),
+                            new ProfileInfo($"{Extensions.Random(0, 99999), -5 :00000}", "Crazy", ProfileIcon.AbstractIcon, "017", "&2@# I tell ya what I don't wanna hear your stupid lemon rant I-a had enough of that citrus crap now get out eerghaah!!")
+
+                             //new ProfileInfo($"{Extensions.Random(0, 99999), -5 :00000}", "Crazy", ProfileIcon.AbstractIcon, "017", "&2@# I tell ya what I don't wanna hear your stupid lemon rant I-a had enough of that citrus crap now get out eerghaah!!".Replace(" ","_"))
+                            /// Character limit 120 (desc)
+                            /// [    .    :    .    |    .    :    .    |    .    :    .    |    .    :    .    |    .    :    .    |    .    :    .    |]
+                            /// [&2@# I tell ya what I don't wanna hear your stupid lemon rant I-a had enough of that citrus crap now get out eerghaah!!]
+                        };
+
+                        // printing various profiles
+                        int profCount = 0, skipToProfNo = 0;
+                        foreach (ProfileInfo prof in profiles)
+                        {
+                            profCount++;
+                            if (profCount >= skipToProfNo)
+                            {
+                                if (prof.IsSetupQ())
+                                {
+                                    NewLine(2);
+                                    Title($"Profile #{profCount}", '-', 2);
+
+                                    /// profile information display
+                                    Important("Profile Mini (little/some/all details)");
+                                    ProfilesPage.DisplayProfileInfo(prof, ProfileIconSize.Mini, ProfileDisplayStyle.NameAndID);
+                                    ProfilesPage.DisplayProfileInfo(prof, ProfileIconSize.Mini, ProfileDisplayStyle.NoStyleInfo);
+                                    ProfilesPage.DisplayProfileInfo(prof, ProfileIconSize.Mini);
+                                    Text("[Enter]", Color.DarkGray);
+                                    Pause();
+
+                                    NewLine(2);
+                                    Important("Profile Normal (little/some/all details)");
+                                    ProfilesPage.DisplayProfileInfo(prof, ProfileIconSize.Normal, ProfileDisplayStyle.NameAndID);
+                                    ProfilesPage.DisplayProfileInfo(prof, ProfileIconSize.Normal, ProfileDisplayStyle.NoStyleInfo);
+                                    ProfilesPage.DisplayProfileInfo(prof, ProfileIconSize.Normal);
+                                    Text("[Enter]", Color.DarkGray);
+                                    Pause();
+
+                                    NewLine(2);
+                                    Important("Profile Doubled (little/some/all details)");
+                                    ProfilesPage.DisplayProfileInfo(prof, ProfileIconSize.Doubled, ProfileDisplayStyle.NameAndID);
+                                    if (profCount % 2 == 1)
+                                        ProfilesPage.DisplayProfileInfo(prof, ProfileIconSize.Doubled, ProfileDisplayStyle.NoStyleInfo);
+                                    ProfilesPage.DisplayProfileInfo(prof, ProfileIconSize.Doubled);
+
+
+                                    /// TEMPORARY -- profile icon display sizes
+                                    //Important("Profile Icon Displays");
+                                    //ProfilesPage.PrintProfileIcon(prof, ProfileIconSize.Mini);
+                                    //NewLine(2);
+                                    //ProfilesPage.PrintProfileIcon(prof, ProfileIconSize.Normal);
+                                    //NewLine(2);
+                                    //ProfilesPage.PrintProfileIcon(prof, ProfileIconSize.Doubled);
+                                }
+
+                                NewLine();
+                                TextLine("- - - - -", Color.DarkGray);
+                                if (profCount == profiles.Length)
+                                    Text("[Enter] to exit testing");
+                                else
+                                {
+                                    Text("[Enter] to view next profile...");
+                                    Pause();
+                                    Wait(0.2f);
+                                }
+                            }
+                        }
+
                     }
                     #endregion
                 }

@@ -2236,6 +2236,11 @@ namespace HCResourceLibraryApp.DataHandling
                                                 if (splitLegKyDef[0].IsNotNEW() && splitLegKyDef[1].IsNotNEW())
                                                 {
                                                     splitLegKyDef[0] = splitLegKyDef[0].Trim();
+                                                    if (splitLegKyDef[0].Contains(" "))
+                                                    {
+                                                        splitLegKyDef[0] = splitLegKyDef[0].Replace(" ", "").Trim();
+                                                        Dbug.LogPart("Removed space in key; ");
+                                                    }
                                                     splitLegKyDef[1] = splitLegKyDef[1].Trim();
                                                     Dbug.LogPart($"Trimmed data; ");
 
@@ -2243,6 +2248,20 @@ namespace HCResourceLibraryApp.DataHandling
                                                     LegendData newLegData = new(splitLegKyDef[0], logVersion, splitLegKyDef[1]);
                                                     Dbug.Log($"Generated new {nameof(LegendData)} :: {newLegData.ToString()}; ");
                                                     decodeInfo.NoteResult($"Generated {nameof(LegendData)} :: {newLegData.ToString()}");
+                                                    if (splitLegKyDef[1].Contains(" "))
+                                                    {
+                                                        /// this warns for a data ID legend key with a legend containing spaces (to check spacing)
+                                                        bool warnSpaceInDataIDKeyDefinitionQ = false;
+                                                        foreach (char keyChar in splitLegKyDef[0])
+                                                        {
+                                                            if (Extensions.CharScore(keyChar) > 10)
+                                                                warnSpaceInDataIDKeyDefinitionQ = true;
+                                                        }
+
+                                                        if (warnSpaceInDataIDKeyDefinitionQ)
+                                                            decodeInfo.NoteIssue("Legend definition should not have spaces if representing a data ID");
+                                                    }
+
 
                                                     if (legendDatas.HasElements())
                                                     {

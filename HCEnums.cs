@@ -98,17 +98,17 @@ namespace HCResourceLibraryApp.DataHandling
         /// <summary>#0 | Default Icon. Simple semi-circle base and circle to depict a person [o(].</summary>
         StandardUserIcon, 
 
-        /// <summary></summary>
+        /// <summary>#1 | Simple sword design.</summary>
         SwordIcon,
-        /// <summary></summary>
-        PickaxeIcon,
-        /// <summary></summary>
-        MusicNoteIcon,
-        /// <summary></summary>
+        /// <summary>#2 | Simple pickaxe design.</summary>
+        PickaxeIcon,        
+        /// <summary>#3 | Simple moutain and clouds design.</summary>
         MountainIcon,
-        /// <summary></summary>
+        /// <summary>#4 | Musical eigth and quarter note design.</summary>
+        MusicNoteIcon,
+        /// <summary>#5 | Simple document file design.</summary>
         DocumentFileIcon,
-        /// <summary></summary>
+        /// <summary>#6 | Design of something that cannot be described easily.</summary>
         AbstractIcon
     }
     /// <summary>Varying size specifics of printing the profile icon.</summary>
@@ -120,6 +120,16 @@ namespace HCResourceLibraryApp.DataHandling
         Normal,
         /// <summary>The profile icon at double the size: 16x16. The individual pixels become 2x2, no additional details are rendered for enlarged profile icon.</summary>
         Doubled
+    }
+    /// <summary>Specifies how to display the details of the profile.</summary>
+    public enum ProfileDisplayStyle
+    {
+        /// <summary>Horizontal display of: profile name, profile id.</summary>
+        NameAndID, 
+        /// <summary>Horizontal display of: profile name, profile id, profile description.</summary>
+        NoStyleInfo,
+        /// <summary>Horizontal display of: profile name, profile id, profile icon style name, profile icon style colors, profile description.</summary>
+        Full,
     }
 
 

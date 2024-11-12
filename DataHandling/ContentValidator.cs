@@ -547,6 +547,7 @@ namespace HCResourceLibraryApp.DataHandling
                     foreach (string fileExt in fileTypeExts)
                         Dbug.LogPart($" {fileExt}");
                     Dbug.Log("; ");
+                    Dbug.Log("NOTE :: VALIDATED SYMBOLS :: ! (unmodified validation)   //   * (Replaced '_' with ' ')   //   ** (Removed ' ');");
 
                     const int allValidatedNum = 0;
                     int countInvalidated = allValidatedNum;
@@ -596,6 +597,16 @@ namespace HCResourceLibraryApp.DataHandling
                                                 string relativePath = fileToCheck.FullName.Clamp(relativePathDist, relativePathClampSuffix, fileToCheck.Name, false);
                                                 filePath = relativePath;
                                                 Dbug.LogPart($"VALIDATED*  Found file '{conToVal.DataID.Replace("_", " ")}{fileExt}' at following relative path :: {relativePath}");
+                                            }
+                                            else
+                                            {
+                                                foundThisContentQ = fileToCheck.Name == $"{conToVal.DataID.Replace(" ", "")}{fileExt}";
+                                                if (foundThisContentQ)
+                                                {
+                                                    string relativePath = fileToCheck.FullName.Clamp(relativePathDist, relativePathClampSuffix, fileToCheck.Name, false);
+                                                    filePath = relativePath;
+                                                    Dbug.LogPart($"VALIDATED**  Found file '{conToVal.DataID.Replace(" ", "")}{fileExt}' at following relative path :: {relativePath}");
+                                                }
                                             }
                                         }
                                     }

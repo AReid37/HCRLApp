@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using HCResourceLibraryApp.Layout;
 using ConsoleFormat;
 using static ConsoleFormat.Minimal;
 using static ConsoleFormat.Base;
@@ -505,28 +506,6 @@ namespace HCResourceLibraryApp.Layout
                     }
                 }
                 return inkToUse;
-            }
-        }
-                    
-
-        // NESTED STRUCT
-        public struct HPInk
-        {
-            public int id;
-            public Color inkCol;
-            public Dither? inkPattern;
-
-            public HPInk(int colID, Color inkColor)
-            {
-                id = colID;
-                inkCol = inkColor;
-                inkPattern = null;
-            }
-            public HPInk(int colID, Color inkColor, Dither? pattern)
-            {
-                id = colID;
-                inkCol = inkColor;
-                inkPattern = pattern;
             }
         }
     }
