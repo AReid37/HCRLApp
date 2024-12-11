@@ -98,6 +98,40 @@ namespace HCResourceLibraryApp.DataHandling
         {
             return profileID.IsNotNEW() && profileName.IsNotNEW() && profileStyleKey.IsNotNEW() && profileDescription.IsNotEW();
         }
+        public bool AreEquals(ProfileInfo other)
+        {
+            bool areEquals = IsSetupQ() == other.IsSetupQ();
+            if (areEquals)
+            {
+                for (int px = 0; px < 5 && areEquals; px++)
+                {
+                    switch (px)
+                    {
+                        case 0:
+                            areEquals = profileID == other.profileID;
+                            break;
+
+                        case 1:
+                            areEquals = profileName == other.profileName;
+                            break;
+
+                        case 2:
+                            areEquals = profileIcon == other.profileIcon;
+                            break;
+
+                        case 3:
+                            areEquals = profileStyleKey == other.profileStyleKey;
+                            break;
+
+                        case 4:
+                            areEquals = profileDescription == other.profileDescription;
+                            break;
+                    }
+                }
+            }
+
+            return areEquals;
+        }
         public override string ToString()
         {
             return $"PI:{EncodeProfileInfo().Clamp(80, "...")}".Replace(DataHandlerBase.Sep, ";");

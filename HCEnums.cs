@@ -176,6 +176,16 @@ namespace HCResourceLibraryApp.DataHandling
 
 namespace HCResourceLibraryApp.Layout
 {
+    public enum CivDisplayType
+    {
+        /// <summary>List every data ID, no sequential groups (no ranges). Color coding dependent on validation or invalidation.</summary>
+        Expanded,
+        /// <summary>List every data ID, sequential groups allowed only for validated groups. Color coding dependent on validation or invalidation.</summary>
+        Compact,
+        /// <summary>List only invalidated data IDs, no sequential groups (no ranges).</summary>
+        Focused
+    }
+
     /// <summary>For determining the type of item to recieve, whether file or folder.</summary>
     /// <remarks>Utilized primarily for <see cref="FileChooserPage"/>.</remarks>
     public enum FileChooserType
@@ -202,5 +212,4 @@ namespace HCResourceLibraryApp.Layout
         Heading2,
         InputColor
     }
-
 }

@@ -56,7 +56,7 @@ namespace HCResourceLibraryApp.DataHandling
         public const string NoProfID = "-1000";
         /// <summary>A file that stores information on the existing profile folders and which one was most recently active.</summary>
         static string ProfilesFile = !Program.isDebugVersionQ ? @"hcd\profiles.txt" : @"C:\Users\ntrc2\Pictures\High Contrast Textures\HCRLA\hcd-tests\profiles.txt";
-        static string _currProfileID, _currProfileName, _currProfDescription, _currProfStyleKey, _prevCurrProfileID, _prevCurrProfileName, _prevCurrDescription, _prevCurrProfStyleKey;
+        static string _currProfileID, _currProfileName, _currProfDescription, _currProfStyleKey, _prevCurrProfileID, _prevCurrProfileName, _prevCurrProfDescription, _prevCurrProfStyleKey;
         static ProfileIcon _currProfIcon, _prevCurrProfIcon;
         static List<ProfileInfo> _allProfiles, _prevAllProfiles;
         static bool _initializedQ, _externalProfileDetectedQ;
@@ -80,7 +80,11 @@ namespace HCResourceLibraryApp.DataHandling
             private set
             {
                 if (value.IsNotNEW())
+                {
+                    if (_currProfileID.IsNotNEW())
+                        _prevCurrProfileID = _currProfileID;
                     _currProfileID = value;
+                }
             }
         }
         /// <summary>The name of the currently active profile.</summary>
@@ -103,15 +107,25 @@ namespace HCResourceLibraryApp.DataHandling
         public static ProfileIcon CurrProfileIcon
         {
             get => _currProfIcon;
-            set => _currProfIcon = value;
+            set => _currProfIcon = value; /// previous assigned with SetPreviousSelf()
         }
         /// <summary>
         /// A 3-digit string that determines the order of the colors to use for profile icon colors. Ranges from 0~8 representing <see cref="ForECol"/> as color options.
         /// </summary>
         public static string CurrProfileStyleKey
         {
-            get => _currProfStyleKey;
-            set => _currProfStyleKey = value;
+            get
+            {
+                string currProfStyleKey = profStyleKeyDefault;
+                if (_currProfStyleKey.IsNotNEW())
+                    currProfStyleKey = _currProfStyleKey;
+                return currProfStyleKey;
+            }
+            set
+            {
+                if (value.IsNotEW())
+                    _currProfStyleKey = value; /// previous assigned with SetPreviousSelf()
+            }
         }
         /// <summary>A short description of the purpose of the profile, user generated.</summary>
         public static string CurrProfileDescription
@@ -119,8 +133,9 @@ namespace HCResourceLibraryApp.DataHandling
             get => _currProfDescription;
             set
             {
-                if (value.IsNotEW())
-                    _currProfDescription = value;
+                if (value.IsNotNEW())
+                    _currProfDescription = value; /// previous assigned with SetPreviousSelf()
+                else _currProfDescription = null;
             }
         }
         /// <summary>
@@ -129,7 +144,7 @@ namespace HCResourceLibraryApp.DataHandling
         public static List<ProfileInfo> AllProfiles
         {
             get => _allProfiles;
-            set => _allProfiles = value;
+            set => _allProfiles = value; /// previous assigned with SetPreviousSelf()
         }
         /// <summary>
         ///     A number that determines how many more profiles may be created by the difference of <see cref="profCountLim"/> and the count of <see cref="AllProfiles"/>
@@ -295,8 +310,6 @@ namespace HCResourceLibraryApp.DataHandling
         {
             if (IsInitialized())
             {
-                // for disabling profile loading after switching (retains dataHandler info)
-
                 // find the profile with matching ID
                 ProfileInfo profileToActivate = new();
                 if (AllProfiles.HasElements() && profileID.IsNotNEW())
@@ -317,7 +330,9 @@ namespace HCResourceLibraryApp.DataHandling
                     CurrProfileIcon = profileToActivate.profileIcon;
                     CurrProfileStyleKey = profileToActivate.profileStyleKey;
                     CurrProfileDescription = profileToActivate.profileDescription;
+                    SetPreviousSelf();
 
+                    // for disabling profile loading after switching (retains dataHandler info)
                     DataHandlerBase.SetProfileDirectory(profileToActivate.profileID);
                     if (!retainProfileDataQ)
                         LoadProfile();
@@ -345,21 +360,41 @@ namespace HCResourceLibraryApp.DataHandling
                     if (!allowDuplication)
                         AdoptDataHandlers();
 
-                    SwitchProfile(newProfileInfo.profileID, true);
+                    SwitchProfile(newProfileInfo.profileID, allowDuplication);
                 }
             }
             return createdProfQ;
         }
-        // tbd... on curr prof
+        /// <summary>
+        ///     Updates the information of the current profile. Applies changes to every profile value except Profile ID.
+        /// </summary>
+        /// <param name="profileChangesInfo">The changes of the current profile.</param>
+        /// <returns>A boolean reperesenting the success of updating the current profile's info.</returns>
         public static bool UpdateProfile(ProfileInfo profileChangesInfo)
         {
             bool updatedProfQ = false;
-            // tbd...
+            if (IsInitialized() && profileChangesInfo.IsSetupQ())
+            {
+                if (CurrProfileID == profileChangesInfo.profileID)
+                {
+                    SetPreviousSelf();
 
+                    CurrProfileName = profileChangesInfo.profileName;
+                    CurrProfileIcon = profileChangesInfo.profileIcon;
+                    CurrProfileStyleKey = profileChangesInfo.profileStyleKey;
+                    CurrProfileDescription = profileChangesInfo.profileDescription;
+
+                    GetCurrentProfile(out int profIndex);
+                    if (profIndex.IsWithin(0, AllProfiles.Count))
+                        AllProfiles[profIndex] = profileChangesInfo;
+
+                    updatedProfQ = true;
+                }
+            }
             return updatedProfQ;
         }
         // tbd...  on curr prof
-        public static bool DeleteProfile(string profileID)
+        public static bool DeleteProfile()
         {
             bool deletedProfQ = false;
             // tbd...
@@ -451,12 +486,14 @@ namespace HCResourceLibraryApp.DataHandling
         {
             return new ProfileInfo(NoProfID, $"Profile{Random(0, 99),3}", ProfileIcon.StandardUserIcon, profStyleKeyDefault, null);
         }
+        /// <param name="indexOfCurr">Returns a value representing the index at which the current profile can be found within profiles list. Is lesser than <c>0</c> if no profiles are found.</param>
         /// <returns> A <see cref="ProfileInfo"/> instance within <see cref="AllProfiles"/> that has a matches with <see cref="CurrProfileID"/>, thus the current profile info.
         /// <br></br>Instance will return <c>false</c> on <see cref="ProfileInfo.IsSetupQ()"/> when a profile cannot be found (no current profile).
         /// </returns>
-        public static ProfileInfo GetCurrentProfile()
+        public static ProfileInfo GetCurrentProfile(out int indexOfCurr)
         {
             ProfileInfo currProf = new();
+            indexOfCurr = -1;
             if (AllProfiles.HasElements())
             {
                 for (int px = 0; px < AllProfiles.Count && !currProf.IsSetupQ(); px++)
@@ -465,13 +502,66 @@ namespace HCResourceLibraryApp.DataHandling
                     if (thisProfInfo.IsSetupQ())
                     {
                         if (thisProfInfo.profileID == CurrProfileID)
+                        {
                             currProf = thisProfInfo;
+                            indexOfCurr = px;
+                        }
                     }
                 }
             }
             return currProf;
         }
+        /// <summary>
+        ///     Compares the current profile against its previous self to detect any changes, then compares all profiles against a previous save to detect any changes.
+        /// </summary>
+        /// <returns>A boolean representing the difference of two current profile states and comparison against all available profiles.</returns>
+        public static bool ChangesMade()
+        {
+            bool changesMadeQ = false;
+            if (IsInitialized())
+            {
+                for (int px = 0; px < 6 && !changesMadeQ; px++)
+                {
+                    switch (px)
+                    {
+                        case 0: // basically always false
+                            changesMadeQ = _currProfileID != _prevCurrProfileID;
+                            break;
 
+                        case 1:
+                            changesMadeQ = _currProfileName != _prevCurrProfileName;
+                            break;
+
+                        case 2:
+                            changesMadeQ = _currProfIcon != _prevCurrProfIcon;
+                            break;
+
+                        case 3:
+                            changesMadeQ = _currProfStyleKey != _prevCurrProfStyleKey;
+                            break;
+
+                        case 4:
+                            changesMadeQ = _currProfDescription != _prevCurrProfDescription;
+                            break;
+
+                        case 5:
+                            changesMadeQ = _allProfiles.HasElements() != _prevAllProfiles.HasElements();
+                            if (_allProfiles.HasElements() && !changesMadeQ)
+                            {
+                                changesMadeQ = _allProfiles.Count != _prevAllProfiles.Count;
+                                if (!changesMadeQ)
+                                {
+                                    for (int apx = 0; apx < _allProfiles.Count && !changesMadeQ; apx++)
+                                        changesMadeQ = !_allProfiles[apx].AreEquals(_prevAllProfiles[apx]);
+                                }
+                            }
+                            break;
+                    }
+
+                }
+            }
+            return changesMadeQ;
+        }
 
 
         // PRIVATE METHODS //
@@ -540,6 +630,8 @@ namespace HCResourceLibraryApp.DataHandling
                 }
             }
         }
+        
+
 
         static string ProfileID()
         {
@@ -576,7 +668,7 @@ namespace HCResourceLibraryApp.DataHandling
             _prevCurrProfileName = _currProfileName;
             _prevCurrProfIcon = _currProfIcon;
             _prevCurrProfStyleKey = _currProfStyleKey;
-            _prevCurrDescription = _currProfDescription;
+            _prevCurrProfDescription = _currProfDescription;
 
             if (_prevAllProfiles.HasElements())
                 _prevAllProfiles.Clear();

@@ -12,7 +12,7 @@ namespace HCResourceLibraryApp
     public class Program
     {
         static readonly string consoleTitle = "High Contrast Resource Library App";
-        static readonly string developmentVersion = "[v1.3.2c]";
+        static readonly string developmentVersion = "[v1.3.2d]";
         static readonly string lastPublishedVersion = "[v1.3.1d]";
         /// <summary>If <c>true</c>, the application launches for debugging/development. Otherwise, the application launches for the published version.</summary>
         public static readonly bool isDebugVersionQ = true;
@@ -408,7 +408,7 @@ namespace HCResourceLibraryApp
         public static void DisplayCurrentProfile()
         {
             FormatLine("-- Current User Profile --".ToUpper(), ForECol.Accent);
-            ProfilesPage.DisplayProfileInfo(ProfileHandler.GetCurrentProfile(), ProfileIconSize.Mini, ProfileDisplayStyle.NameAndID);
+            ProfilesPage.DisplayProfileInfo(ProfileHandler.GetCurrentProfile(out _), ProfileIconSize.Mini, ProfileDisplayStyle.NameAndID);
             NewLine(2);
         }
 
@@ -794,7 +794,7 @@ namespace HCResourceLibraryApp
                         NewLine(2);
                         for (int vx = 0; vx < 3; vx++)
                         {
-                            SettingsPage.CivDisplayType displayType = (SettingsPage.CivDisplayType)vx;
+                            CivDisplayType displayType = (CivDisplayType)vx;
 
                             Important($"CIV Results - {displayType} View");
                             HorizontalRule('-');

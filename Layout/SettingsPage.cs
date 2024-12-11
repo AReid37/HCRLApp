@@ -396,64 +396,6 @@ namespace HCResourceLibraryApp.Layout
                             }
                             endActiveMenuKey = true;
                         }
-
-
-                        // colors visual method
-                        static void ShowPrefsColors(Preferences prefs)
-                        {
-                            /// get colors
-                            Color[,] prefCols = new Color[3, 3]
-                            {
-                                { prefs.Normal, prefs.Highlight, prefs.Accent },
-                                { prefs.Correction, prefs.Incorrection, prefs.Warning },
-                                { prefs.Heading1, prefs.Heading2, prefs.Input }
-                            };
-
-                            /// print table of colors
-                            for (int fecIx = 0; fecIx < 3; fecIx++)
-                            {
-                                HoldNextListOrTable();
-                                const char div = '%', tableDiv = ' ', exChar = cDS; // exChar meaning "example (representational) character"
-                                switch (fecIx)
-                                {
-                                    // normal, highlight, accent
-                                    case 0:
-                                        Table(Table3Division.Even, $"1{div} Normal", tableDiv, $"2{div} Highlight", $"3{div} Accent");
-                                        break;
-
-                                    // correction, incorrection, warning
-                                    case 1:
-                                        Table(Table3Division.Even, $"4{div} Correction", tableDiv, $"5{div} Incorrection", $"6{div} Warning");
-                                        break;
-
-                                    // heading 1, heading 2, input
-                                    case 2:
-                                        Table(Table3Division.Even, $"7{div} Heading 1", tableDiv, $"8{div} Heading 2", $"9{div} Input");
-                                        break;
-                                }
-
-                                if (LatestTablePrintText.IsNotNEW())
-                                    if (LatestTablePrintText.Contains(div.ToString()))
-                                    {
-                                        string[] tableDatas = LatestTablePrintText.Split(div);
-                                        if (tableDatas.HasElements())
-                                            if (tableDatas.Length >= 4)
-                                            {
-                                                // this might be messy
-                                                for (int partIx = 0; partIx < 4; partIx++)
-                                                {
-                                                    string tableData = tableDatas[partIx].Replace("\n", "");
-                                                    if (partIx + 1 < 4)
-                                                    {
-                                                        Format($"{tableData}|", ForECol.Normal);
-                                                        Text(exChar.ToString(), prefCols[fecIx, partIx]);
-                                                    }
-                                                    else FormatLine(tableData, ForECol.Normal);
-                                                }
-                                            }
-                                    }
-                            }
-                        }
                     }
 
                     // end auto-return
@@ -1922,14 +1864,60 @@ namespace HCResourceLibraryApp.Layout
             else Dbug.Log("Received no ConValInfos data to create a display; ");
             Dbug.EndLogging();
         }
-        public enum CivDisplayType
+        public static void ShowPrefsColors(Preferences prefs)
         {
-            /// <summary>List every data ID, no sequential groups (no ranges). Color coding dependent on validation or invalidation.</summary>
-            Expanded,
-            /// <summary>List every data ID, sequential groups allowed only for validated groups. Color coding dependent on validation or invalidation.</summary>
-            Compact,
-            /// <summary>List only invalidated data IDs, no sequential groups (no ranges).</summary>
-            Focused
+            /// get colors
+            Color[,] prefCols = new Color[3, 3]
+            {
+                { prefs.Normal, prefs.Highlight, prefs.Accent },
+                { prefs.Correction, prefs.Incorrection, prefs.Warning },
+                { prefs.Heading1, prefs.Heading2, prefs.Input }
+            };
+
+            /// print table of colors
+            for (int fecIx = 0; fecIx < 3; fecIx++)
+            {
+                HoldNextListOrTable();
+                const char div = '%', tableDiv = ' ', exChar = cDS; // exChar meaning "example (representational) character"
+                switch (fecIx)
+                {
+                    // normal, highlight, accent
+                    case 0:
+                        Table(Table3Division.Even, $"1{div} Normal", tableDiv, $"2{div} Highlight", $"3{div} Accent");
+                        break;
+
+                    // correction, incorrection, warning
+                    case 1:
+                        Table(Table3Division.Even, $"4{div} Correction", tableDiv, $"5{div} Incorrection", $"6{div} Warning");
+                        break;
+
+                    // heading 1, heading 2, input
+                    case 2:
+                        Table(Table3Division.Even, $"7{div} Heading 1", tableDiv, $"8{div} Heading 2", $"9{div} Input");
+                        break;
+                }
+
+                if (LatestTablePrintText.IsNotNEW())
+                    if (LatestTablePrintText.Contains(div.ToString()))
+                    {
+                        string[] tableDatas = LatestTablePrintText.Split(div);
+                        if (tableDatas.HasElements())
+                            if (tableDatas.Length >= 4)
+                            {
+                                // this might be messy
+                                for (int partIx = 0; partIx < 4; partIx++)
+                                {
+                                    string tableData = tableDatas[partIx].Replace("\n", "");
+                                    if (partIx + 1 < 4)
+                                    {
+                                        Format($"{tableData}|", ForECol.Normal);
+                                        Text(exChar.ToString(), prefCols[fecIx, partIx]);
+                                    }
+                                    else FormatLine(tableData, ForECol.Normal);
+                                }
+                            }
+                    }
+            }
         }
 
         static string[] MiscDataIDGrouping(string dataIDList, string groupSplitKey, bool condenseQ, string invalidatedTag = null, char splitChar = ' ', bool sortIDs = true, bool separateFromLetterRangeQ = true)
@@ -1984,6 +1972,6 @@ namespace HCResourceLibraryApp.Layout
                 }
             }
             return miscGroupedAndSortedIDs;
-        }
+        }              
     }
 }

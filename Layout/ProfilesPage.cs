@@ -5,8 +5,6 @@ using ConsoleFormat;
 using static ConsoleFormat.Base;
 using static ConsoleFormat.Minimal;
 using System.Collections.Generic;
-using System.IO;
-using System.Threading;
 
 namespace HCResourceLibraryApp.Layout
 {
@@ -96,7 +94,9 @@ namespace HCResourceLibraryApp.Layout
             }
             while (!exitProfilesPageMain && !Program.AllowProgramRestart);
 
-            // no auto-saving here??
+            // auto-saving alas
+            if (ProfileHandler.ChangesMade())
+                Program.SaveData(true);
         }
 
 
@@ -112,18 +112,25 @@ namespace HCResourceLibraryApp.Layout
         // tbd
         static void SubPage_ProfileEditor()
         {
-            const int profNameMin = ProfileHandler.ProfileNameMinimum, profNameMax = ProfileHandler.ProfileNameLimit;
+            const int profNameMin = ProfileHandler.ProfileNameMinimum, profNameMax = ProfileHandler.ProfileNameLimit, profDescMax = ProfileHandler.ProfileDescriptionLimit;
+            const string invalidChar = DataHandlerBase.Sep;
             bool exitProfEditorQ = false, anyProfilesDetected, skipExternalProfNoticeQ = false;
             bool anyProfilesCreatedOrDeletedQ = false; // program restart initiator
             string activeMenuKey = null;
+            string prevDescTooLong = null;
+            int cursorTopPrev = 0;
             ProfileInfo currProfile = new(), prevCurrProfile = new();
             
             anyProfilesDetected = ProfileHandler.AllProfiles.HasElements();
             if (anyProfilesDetected)
             {
-                currProfile = ProfileHandler.GetCurrentProfile();
+                currProfile = ProfileHandler.GetCurrentProfile(out _);
                 prevCurrProfile = currProfile;
             }
+
+            /// for prof editing
+            ProfileDisplayStyle previewStyle = ProfileDisplayStyle.NameAndID;
+            ProfileIconSize previewSize = ProfileIconSize.Mini;
 
 
             do
@@ -135,13 +142,13 @@ namespace HCResourceLibraryApp.Layout
                 Clear();
 
 
-                string[] profEditMenuOpts = { "Create Profile", "Edit Profile", $"{exitSubPagePhrase} [Enter]" };
+                string[] profEditMenuOpts = { "Create Profile", "Edit Profile", "Delete Profile", $"{exitSubPagePhrase} [Enter]" };
                 bool validKey = false, quitMenuQ = false;
                 string profEditKey = null;
                 if (activeMenuKey.IsNE())
                 {
-                    validKey = ListFormMenu(out profEditKey, "Profile Editor Menu", subMenuUnderline, null, "a/b", true, profEditMenuOpts);
-                    quitMenuQ = LastInput.IsNE() || profEditKey == "c";
+                    validKey = ListFormMenu(out profEditKey, "Profile Editor Menu", subMenuUnderline, null, "a~c", true, profEditMenuOpts);
+                    quitMenuQ = LastInput.IsNE() || profEditKey == "d";
                     MenuMessageQueue(!validKey && !quitMenuQ, false, null);
                 }
                
@@ -156,9 +163,10 @@ namespace HCResourceLibraryApp.Layout
                         profEditKey = activeMenuKey;
 
 
-                    string titleText = "Profile " + (profEditKey.Equals("a") ? "Creation" : "Editor");
+                    string titleText = "Profile " + (profEditKey.Equals("a") ? "Creation" : (profEditKey.Equals("b") ? "Editor" : "Deletion"));
                     Clear();
                     Title(titleText, subMenuUnderline, 1);
+
 
                     // create profile -- simply, register new profile.
                     if (profEditKey.Equals("a"))
@@ -210,7 +218,7 @@ namespace HCResourceLibraryApp.Layout
                                 NewLine(2);
                                 Title("Profile Name", subMenuUnderline);
                                 FormatLine($"{Ind14}Default profile name generated: {newProfInfo.profileName}.", ForECol.Highlight);
-                                FormatLine($"{Ind14}Please provide a profile name. Minimum of {profNameMin} characters, maximum of {profNameMax} characters. May not include '{DataHandlerBase.Sep}' character.");
+                                FormatLine($"{Ind14}Please provide a profile name. Minimum of {profNameMin} characters, maximum of {profNameMax} characters. May not include '{invalidChar}' character.");
                                 Format($"{Ind14}Profile Name >> ");
                                 profileName = StyledInput("|   .    :    .    :    .    |");
                                 bool validProfileNameQ = false;
@@ -229,13 +237,13 @@ namespace HCResourceLibraryApp.Layout
 
                                     else if (profileName.IsNotNEW())
                                     {
-                                        if (!profileName.Contains(DataHandlerBase.Sep))
+                                        if (!profileName.Contains(invalidChar))
                                         {
                                             if (profileName.Length.IsWithin(profNameMin, profNameMax))
                                                 validProfileNameQ = true;
                                             else IncorrectionMessageQueue($"Profile name must be between {profNameMin} and {profNameMax} characters in length");
                                         }
-                                        else IncorrectionMessageQueue($"Profile name may not contain '{DataHandlerBase.Sep}' character");
+                                        else IncorrectionMessageQueue($"Profile name may not contain '{invalidChar}' character");
                                     }
                                 }
                                 else IncorrectionMessageQueue("A value must be provided for new profile name");
@@ -320,7 +328,8 @@ namespace HCResourceLibraryApp.Layout
                         }
                     }
 
-                    // edit profile -- all editing, new and old, and deletion
+
+                    // edit profile -- all editing, new and old
                     if (profEditKey.Equals("b"))
                     {
                         Program.LogState("Profiles Page|Editor|Edit");
@@ -329,23 +338,457 @@ namespace HCResourceLibraryApp.Layout
                         if (anyProfilesDetected)
                         {
                             FormatLine($"{Ind14}Select one of the options below to begin customizing this profile.");
+                            FormatLine($"{Ind14}Note :: The profile ID (5-digit number) is unchangeable.");
                             NewLine();
 
-                            // small profile display here
-                            // ---
+                            // profile display here
+                            Title("Current Profile");
+                            DisplayProfileInfo(currProfile, previewSize, previewStyle);
+                            NewLine(2);
 
-                            // menu and stuff
-                            // - change profile display style (tiny, normal, double)
-                            // - profile name -- profile icon type -- profile icon colors -- profile description
-                            // - confirm profile changes
+                            /// menu and stuff
+                            /// - change profile display style (tiny, normal) ['double' excluded]
+                            /// - profile name -- profile icon type -- profile icon colors -- profile description
+                            /// - confirm profile changes
+                            string[] profEditsOpts = new string[] { "Preview As", "Profile Name", "Profile Icon", "Profile Colors", "Profile Description", "Confirm Changes" };
+                            bool validOption = TableFormMenu(out short editOptNum, "Profile Editing Options", subMenuUnderline, false, $"{Ind24}Select an option >> ", "1~6", 3, profEditsOpts);
 
-                            Pause();
+                            if (validOption)
+                            {
+                                /// little header for each option
+                                NewLine(4);
+                                Important(profEditsOpts[editOptNum - 1], subMenuUnderline);
+
+
+                                // preview style
+                                if (editOptNum == 1)
+                                {
+                                    string currPreviewStyle = previewStyle == ProfileDisplayStyle.Full ? "All Info" : "Name and ID";
+                                    currPreviewStyle += ", " + (previewSize == ProfileIconSize.Mini ? "Mini" : "Normal");
+
+                                    FormatLine("Choose how to preview the profile currently being edited.");
+                                    Highlight(true, $"Current preview style: {currPreviewStyle}.", currPreviewStyle);
+                                    NewLine();
+                                    FormatLine($"{Ind14}NOTE :: These will also affect the display of icon style selection. The most common display setting used throughout the app is 'Name and ID, Mini'.", ForECol.Accent);
+                                    NewLine();
+
+                                    bool validPreviewOptQ = ListFormMenu(out string prvwKey, "Preview Style", subMenuUnderline, $"{Ind14}Select >> ", null, true, "All Info, Normal", "All Info, Mini", "Name and ID, Normal", "Name and ID, Mini");
+
+                                    if (validPreviewOptQ)
+                                    {
+                                        switch (prvwKey)
+                                        {
+                                            case "a": // all/norm
+                                                previewStyle = ProfileDisplayStyle.Full;
+                                                previewSize = ProfileIconSize.Normal;
+                                                break;
+
+                                            case "b": // all/mini
+                                                previewStyle = ProfileDisplayStyle.Full;
+                                                previewSize = ProfileIconSize.Mini;
+                                                break;
+
+                                            case "c": // lil/norm
+                                                previewStyle = ProfileDisplayStyle.NameAndID;
+                                                previewSize = ProfileIconSize.Normal;
+                                                break;
+
+                                            case "d": // lil/mini
+                                                previewStyle = ProfileDisplayStyle.NameAndID;
+                                                previewSize = ProfileIconSize.Mini;
+                                                break;
+                                        }
+                                    }
+                                }
+
+                                // profile name
+                                if (editOptNum == 2)
+                                {
+                                    /// profile name -- character range [3 ~ 30], may not include: [%]
+                                    FormatLine("Provide a new name for current profile.");
+                                    FormatLine($"Minimum of {profNameMin} characters, maximum of {profNameMax} characters. May not include '{invalidChar}' character.");
+                                    NewLine();
+
+                                    Highlight(true, $"{Ind14}Current Profile Name >> {currProfile.profileName}.", currProfile.profileName);
+                                    Format($"{Ind14}New Profile Name >> ");
+
+                                    bool validProfileNameQ = false;
+                                    string newProfName = StyledInput("|__ .    :    .    :    .    |");
+
+                                    // parse name
+                                    if (newProfName.IsNotNEW())
+                                    {
+                                        if (!newProfName.Contains(invalidChar))
+                                        {
+                                            if (newProfName.Length.IsWithin(profNameMin, profNameMax))
+                                                validProfileNameQ = true;
+                                            else
+                                            {
+                                                if (newProfName.Length > profNameMax)
+                                                    IncorrectionMessageQueue($"Name is too long (Maximum of '{profNameMax}' characters)");
+                                                else IncorrectionMessageQueue($"Name is too short (Minimum of '{profNameMin}' characters)");
+                                            }
+                                        }
+                                        else IncorrectionMessageQueue($"Name may not contain '{invalidChar}' character");
+                                    }
+                                    else if (newProfName.IsEW())
+                                        IncorrectionMessageQueue("A name for the profile is required");
+
+                                    if (!validProfileNameQ)
+                                        IncorrectionMessageTrigger($"{Ind24}[X] ", ".");
+
+
+                                    // confirm name
+                                    if (validProfileNameQ)
+                                    {
+                                        Confirmation($"{Ind14}Confirm new profile name? ", false, out bool yesNo);
+                                        if (yesNo)
+                                            currProfile.profileName = newProfName;
+                                        ConfirmationResult(yesNo, $"{Ind24}", $"Profile name changed to '{newProfName}'.", "Profile name will not be changed.");
+                                    }
+                                }
+
+                                // profile icon
+                                if (editOptNum == 3)
+                                {
+                                    string currProfIcon = LogDecoder.FixContentName(currProfile.profileIcon.ToString(), false);
+                                    FormatLine("Choose an icon for your profile. The available icons are previewed below with the current profiles color scheme and the preview size.");
+                                    Highlight(true, $"Current profile icon and display size: {currProfIcon}, {previewSize}.", currProfIcon, previewSize.ToString());
+                                    NewLine();
+
+                                    // save table menu space and confirmation
+                                    GetCursorPosition();
+                                    NewLine(8);
+
+                                    // showcase icons here
+                                    ProfileIcon[] profIcons = Enum.GetValues<ProfileIcon>();
+                                    List<ProfileIcon> profIconOpts = new();
+                                    List<string> profIconNames = new();
+                                    if (profIcons.HasElements())
+                                    {
+                                        foreach (ProfileIcon profIcon in profIcons)
+                                        {
+                                            if (profIcon != currProfile.profileIcon)
+                                            {
+                                                string profIconName = LogDecoder.FixContentName(profIcon.ToString(), false);
+                                                profIconNames.Add(profIconName.Replace("Icon", "").Trim());
+                                                profIconOpts.Add(profIcon);
+                                                ProfileInfo profIconShowcase = new("00000", profIconName, profIcon, currProfile.profileStyleKey, null);
+
+                                                // display
+                                                NewLine();
+                                                FormatLine(profIconShowcase.profileName);
+                                                PrintProfileIcon(profIconShowcase, previewSize);
+                                            }
+                                        }
+                                    }
+
+                                    // table menu
+                                    SetCursorPosition();
+                                    bool validIconQ = TableFormMenu(out short iconNum, "Profile Icons", subMenuUnderline, false, $"{Ind14}Select profile icon >> ", $"1~{profIconNames.Count}", 3, profIconNames.ToArray());
+
+
+                                    // confirmation
+                                    if (validIconQ)
+                                    {
+                                        ProfileIcon selectedIcon = profIconOpts[iconNum - 1];
+                                        NewLine();
+                                        Confirmation($"{Ind14}Confirm '{profIconNames[iconNum - 1]}' as new profile icon? ", false, out bool yesNo);
+
+                                        if (yesNo)
+                                            currProfile.profileIcon = selectedIcon;
+                                        ConfirmationResult(yesNo, $"{Ind14}Profile icon ", "has been changed.", "remains unchanged.");
+                                    }
+                                }
+
+                                // profile color scheme
+                                if (editOptNum == 4)
+                                {
+                                    // setup
+                                    ForECol[] profColors = Enum.GetValues<ForECol>();
+                                    string[] menuPromptsNOpts = new string[4]
+                                    {
+                                        $"{Ind14}First color option (yellow) >> ",
+                                        $"{Ind14}Second color option (red) >> ",
+                                        $"{Ind14}Third color option (blue) >> ",
+                                        "0~9"
+                                    };
+                                    string[] menuValidOpts = "1,2,3,4,5,6,7,8,9".Split(',');
+
+
+                                    // prompts and intro
+                                    FormatLine("Choose the colors and order of the profile's icon based on preference colors.");
+                                    Highlight(true, $"Current profile icon colors and order: {GetIconStyleColors(currProfile.profileStyleKey)}.", GetIconStyleColors(currProfile.profileStyleKey, 1), GetIconStyleColors(currProfile.profileStyleKey, 2), GetIconStyleColors(currProfile.profileStyleKey, 3));
+                                    NewLine();
+
+                                    FormatLine($"NOTE :: Yellow squares are first in color order and blue squares are last.", ForECol.Warning);
+                                    PrintProfileIcon(currProfile, previewSize, true);
+                                    NewLine();
+
+
+                                    // color menu reference print
+                                    Title("Color Options", subMenuUnderline, 1);
+                                    FormatLine("Use the table of colors below to choose the three icon colors.", ForECol.Accent);
+                                    SettingsPage.ShowPrefsColors(_preferencesRef);
+                                    NewLine();
+
+                                    // -- CONFIRMATION CHAIN --
+                                    string iconStyleKeyBuild = "";
+                                    short fColNum;
+                                    bool validColorOpt1, validColorOpt2 = false, validColorOpt3 = false;
+
+                                    // confirm 1
+                                    Format(menuPromptsNOpts[0]);
+                                    validColorOpt1 = MenuOptions(StyledInput(menuPromptsNOpts[3]), out fColNum, menuValidOpts);
+                                    if (validColorOpt1)
+                                    {
+                                        ForECol firstCol = (ForECol)fColNum;
+                                        iconStyleKeyBuild += fColNum.ToString();
+                                        Highlight(true, $"{Ind14}First order color selected: '{firstCol}'.", firstCol.ToString());
+                                        NewLine();
+                                    }
+
+                                    // confirm 2
+                                    if (validColorOpt1)
+                                    {
+                                        Format(menuPromptsNOpts[1]);
+                                        validColorOpt2 = MenuOptions(StyledInput(menuPromptsNOpts[3]), out fColNum, menuValidOpts);
+                                        if (validColorOpt2)
+                                        {
+                                            ForECol secondCol = (ForECol)fColNum;
+                                            iconStyleKeyBuild += fColNum.ToString();
+                                            Highlight(true, $"{Ind14}Second order color selected: '{secondCol}'.", secondCol.ToString());
+                                            NewLine();
+                                        }
+                                    }
+
+                                    // confirm 3
+                                    if (validColorOpt2)
+                                    {
+                                        Format(menuPromptsNOpts[2]);
+                                        validColorOpt3 = MenuOptions(StyledInput(menuPromptsNOpts[3]), out fColNum, menuValidOpts);
+                                        if (validColorOpt3)
+                                        {
+                                            ForECol thirdCol = (ForECol)fColNum;
+                                            iconStyleKeyBuild += fColNum.ToString();
+                                            Highlight(true, $"{Ind14}Third order color selected: '{thirdCol}'.", thirdCol.ToString());
+                                            NewLine();
+                                        }
+                                    }
+
+                                    // final confirmation
+                                    bool colsConfirmedQ = false;
+                                    if (validColorOpt1 && validColorOpt2 && validColorOpt3)
+                                    {
+                                        NewLine();
+                                        Title("Confirm Final Colors");
+                                        Highlight(true, $"{Ind14}The new icon style colors in order: {GetIconStyleColors(iconStyleKeyBuild, 0)}", GetIconStyleColors(iconStyleKeyBuild, 1), GetIconStyleColors(iconStyleKeyBuild, 2), GetIconStyleColors(iconStyleKeyBuild, 3));
+                                        Confirmation($"{Ind14}Confirm the selection and order of icon colors? ", false, out colsConfirmedQ);
+                                    }
+
+                                    // commit changes / confirmation-cancellation message
+                                    if (colsConfirmedQ)
+                                    {
+                                        currProfile.profileStyleKey = iconStyleKeyBuild;
+                                    }
+                                    ConfirmationResult(colsConfirmedQ, $"{Ind24}", "Profile style colors have been changed.", "Profile style colors cancelled.");
+                                }
+
+                                // profile description
+                                if (editOptNum == 5)
+                                {
+                                    /// profile description -- character range [0 ~ 120], may not include: [%]
+                                    FormatLine("Provide a short description for the current profile.");
+                                    FormatLine($"Maximum of {profDescMax} characters. May not include '{invalidChar}' character.");
+                                    NewLine();
+
+                                    Format($"Current Profile Descripiton >> ");
+                                    if (currProfile.profileDescription.IsNotNEW())
+                                    {
+                                        Format($"\"");
+                                        Format($"{currProfile.profileDescription}", ForECol.Highlight);
+                                        Format("\"");
+                                    }
+                                    else Format($"n/a", ForECol.Accent);
+                                    NewLine();
+
+                                    // prompt
+                                    int cursorTopInput = 0;
+                                    Format($"New Profile Description >> ");
+                                    if (prevDescTooLong.IsNotNEW())
+                                    {
+                                        GetCursorPosition();
+                                        Format(prevDescTooLong.Clamp(profDescMax), ForECol.Accent);
+                                        SetCursorPosition();
+                                    }
+
+                                    // input
+                                    bool validProfDescQ = false;
+                                    string newProfDesc = StyledInput(null);
+
+                                    // fix placements
+                                    cursorTopInput = Console.CursorTop;
+                                    int cursorTopFinal = cursorTopInput >= cursorTopPrev ? cursorTopInput : cursorTopPrev;
+                                    SetCursorPosition(cursorTopFinal, 0);
+                                    if (prevDescTooLong.IsNotNEW())
+                                    {
+                                        prevDescTooLong = null;
+                                        cursorTopPrev = 0;
+                                    }
+
+                                    // parse description
+                                    if (newProfDesc.IsNotNEW())
+                                    {
+                                        if (!newProfDesc.Contains(invalidChar))
+                                        {
+                                            if (newProfDesc.Length.IsWithin(1, profDescMax))
+                                                validProfDescQ = true;
+                                            else IncorrectionMessageQueue($"Description is too long (Maximum of '{profDescMax}' characters)");
+                                        }
+                                        else IncorrectionMessageQueue($"Description may not include '{invalidChar}' character");
+                                    }
+                                    else
+                                    {
+                                        if (newProfDesc.IsNE())
+                                        {
+                                            newProfDesc = null;
+                                            validProfDescQ = true;
+                                        }
+                                        else IncorrectionMessageQueue("A profile description is required");
+                                    }
+
+                                    if (!validProfDescQ)
+                                    {
+                                        prevDescTooLong = newProfDesc;
+                                        cursorTopPrev = Console.CursorTop - 1;
+                                        IncorrectionMessageTrigger($"{Ind14}[X] ", ".");
+                                    }
+
+
+                                    // confirm description
+                                    if (validProfDescQ)
+                                    {
+                                        bool profDescChangedQ = false;
+                                        if (newProfDesc != currProfile.profileDescription)
+                                        {
+                                            NewLine();
+                                            FormatLine($"{Ind14}The new profile descripiton is: ");
+                                            if (newProfDesc.IsNotNEW())
+                                            {
+                                                Format($"{Ind14}\"");
+                                                Format($"{newProfDesc}", ForECol.Highlight);
+                                                FormatLine("\"");
+                                            }
+                                            else FormatLine($"{Ind14}n/a", ForECol.Accent);
+                                            NewLine();
+
+                                            Confirmation($"{Ind14}Confirm changes to the profile description? ", false, out profDescChangedQ);
+                                        }
+
+                                        if (profDescChangedQ)
+                                            currProfile.profileDescription = newProfDesc;
+                                        ConfirmationResult(profDescChangedQ, $"{Ind24}Profile description ", "has been updated.", "has not been changed.");
+                                    }
+                                }
+
+
+                                // confirm changes
+                                if (editOptNum == 6)
+                                {
+                                    /// no change; exit -- change; confirmation, exit
+                                    if (!currProfile.Equals(prevCurrProfile))
+                                    {
+                                        ProfileIconSize confirmProfIconSize = ProfileIconSize.Mini;
+                                        ProfileDisplayStyle confirmProfDispStyle = ProfileDisplayStyle.Full;
+
+                                        // display old and new profiles
+                                        //FormatLine("Confirm the changes made to the current profile.");
+                                        //NewLine();
+
+                                        FormatLine("Before Changes", ForECol.Heading2);
+                                        DisplayProfileInfo(prevCurrProfile, confirmProfIconSize, confirmProfDispStyle);
+                                        NewLine();
+
+                                        FormatLine("After Changes", ForECol.Heading2);
+                                        DisplayProfileInfo(currProfile, confirmProfIconSize, confirmProfDispStyle);
+                                        NewLine();
+
+
+                                        // confirmation : save \ discard changes
+                                        FormatLine($"{Ind14}The changes made for the current profile are displayed above.");
+                                        Confirmation($"{Ind14}Confirm the current profile's changes? ", true, out bool yesNo);
+
+                                        if (yesNo)
+                                        {
+                                            bool updatedQ = ProfileHandler.UpdateProfile(currProfile);                                            
+                                            if (updatedQ)
+                                                prevCurrProfile = currProfile;
+
+                                            ConfirmationResult(updatedQ, $"{Ind24}The current profile ", "has been updated.", "could not be updated.");
+                                            endActiveMenuKeyQ = true;
+                                        }
+                                        else
+                                        {
+                                            Confirmation($"{Ind24}Discard changes to current profile? ", true, out bool discardYesNo);
+                                            if (discardYesNo)
+                                            {
+                                                currProfile = prevCurrProfile; // ProfileHandler.GetCurrentProfile();
+                                                endActiveMenuKeyQ = true;
+                                            }
+                                            ConfirmationResult(!discardYesNo, $"{Ind24}Changes to current profile ", "remain to be edited.", "will be discarded.");
+                                        }
+                                    }
+                                    else
+                                    {
+                                        Format("No changes were made to the current profile.");
+                                        Pause();
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                if (currProfile.AreEquals(prevCurrProfile))
+                                    endActiveMenuKeyQ = true;
+                                else
+                                {
+                                    NewLine();
+                                    Format($"{Ind14}There are unsaved profile changes. Confirm the changes to exit.", ForECol.Warning);
+                                    Pause();
+                                }
+                            }
                         }
                         else
                         {
                             Format($"{Ind24}There are no profiles to edit. Please create a profile to access this page.", ForECol.Warning);
                             Pause();
+
+                            endActiveMenuKeyQ = true;
                         }
+
+                        // TEMP //
+                        //Pause();
+                        //endActiveMenuKeyQ = true;
+                    }
+
+
+                    // delete profile -- destroy profile wip
+                    if (profEditKey.Equals("c"))
+                    {
+                        Program.LogState("Profiles Page|Editor|Delete");
+                        FormatLine("-- WIP --");
+                        NewLine();
+
+                        if (ProfileHandler.AllProfiles.Count > 1)
+                        {
+                            Format("Proceed to delete a profile");
+                        }
+                        else
+                        {
+                            Format("At least one profile must exist");
+                        }
+
+                        /// temp
+                        Pause();
                         endActiveMenuKeyQ = true;
                     }
 
@@ -933,13 +1376,13 @@ namespace HCResourceLibraryApp.Layout
                 SetCursorPosition();
             }
         }
-        public static void PrintProfileIcon(ProfileInfo profileInfo, ProfileIconSize profIconSize = ProfileIconSize.Normal)
+        public static void PrintProfileIcon(ProfileInfo profileInfo, ProfileIconSize profIconSize = ProfileIconSize.Normal, bool useHeatMapQ = false)
         {            
             if (profileInfo.IsSetupQ())
             {
                 // +++ PREPARATIONS +++
                 const int normalIconStartIx = 4;
-                bool useBasicColorsQ = false;
+                bool useBasicColorsQ = false || useHeatMapQ;
                 string[] iconStyleSheet = null;
                 HPInk[] inkList;
 
@@ -1227,6 +1670,38 @@ namespace HCResourceLibraryApp.Layout
 
                 }
             }
+        }
+
+        // PRIVATE TOOL METHODS
+        /// <summary>Takes the 3-character icon style key of a profile and provides the named values of the colors.</summary>
+        /// <param name="atOrder">If <c>0</c>, will have all colors returned and comma separated, otherwise one of the three in order. Clamped [0, 3].</param>
+        /// <returns>Either a comma separated list of all the <see cref="ForECol"/>s in style key, or one of the three based on value of <paramref name="atOrder"/>.</returns>
+        static string GetIconStyleColors(string profIconStyleKey, int atOrder = 0)
+        { 
+            atOrder = atOrder.Clamp(0, 3);
+            string iconColors = " ";
+
+            if (profIconStyleKey.IsNotNEW())
+                if (profIconStyleKey.Length == 3)
+                {
+                    int orderNum = 1;
+                    foreach (char fc in profIconStyleKey)
+                    {
+                        if (int.TryParse(fc.ToString(), out int fColIx))
+                        {
+                            ForECol fCol = (ForECol)fColIx;
+
+                            if (atOrder == 0)
+                                iconColors += $"{fCol} ";
+                            else if (atOrder == orderNum)
+                                iconColors += fCol.ToString();
+                        }
+                        orderNum++;
+                    }
+
+                    iconColors = iconColors.Trim().Replace(" ", ", ");
+                }
+            return iconColors;
         }
     }
 }
