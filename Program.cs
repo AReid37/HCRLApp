@@ -12,7 +12,7 @@ namespace HCResourceLibraryApp
     public class Program
     {
         static readonly string consoleTitle = "High Contrast Resource Library App";
-        static readonly string developmentVersion = "[v1.3.2d]";
+        static readonly string developmentVersion = "[v1.3.2e]";
         static readonly string lastPublishedVersion = "[v1.3.1d]";
         /// <summary>If <c>true</c>, the application launches for debugging/development. Otherwise, the application launches for the published version.</summary>
         public static readonly bool isDebugVersionQ = true;
@@ -162,16 +162,19 @@ namespace HCResourceLibraryApp
                     RunTests();
 
 
-                // Lvl.1a - if profile unselected or non-existing, choose or create profile (with/without existing data).
+                // Lvl.1a - IF profile unselected or non-existing, choose or create profile (with/without existing data)
                 if (ProfileHandler.CurrProfileID == ProfileHandler.NoProfID)
                     ProfilesPage.OpenPage();
 
 
                 // Lvl.1 - title page and main menu
                 /// home page               
-                HomePage.OpenPage();
-                Format($"{Ind24}Press [Enter] to continue >> ", ForECol.Normal);
-                StyledInput("__");
+                if (!AllowProgramRestart)
+                { /// this specifically for 1st profile selection
+                    HomePage.OpenPage();
+                    Format($"{Ind24}Press [Enter] to continue >> ", ForECol.Normal);
+                    StyledInput("__");
+                }
 
                 /// main menu
                 if (!LastInput.IsNotNE())
@@ -408,7 +411,10 @@ namespace HCResourceLibraryApp
         public static void DisplayCurrentProfile()
         {
             FormatLine("-- Current User Profile --".ToUpper(), ForECol.Accent);
-            ProfilesPage.DisplayProfileInfo(ProfileHandler.GetCurrentProfile(out _), ProfileIconSize.Mini, ProfileDisplayStyle.NameAndID);
+            ProfileInfo currentProfile = ProfileHandler.GetCurrentProfile(out _);
+            if (currentProfile.IsSetupQ())
+                ProfilesPage.DisplayProfileInfo(currentProfile, ProfileIconSize.Mini, ProfileDisplayStyle.NameAndID);
+            else FormatLine($"{Ind14}~ No active profile ~", ForECol.Accent);
             NewLine(2);
         }
 

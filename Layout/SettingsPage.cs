@@ -41,6 +41,7 @@ namespace HCResourceLibraryApp.Layout
                 Title("Application Settings", cTHB, 1);
                 FormatLine($"{Ind24}Facilitates customization of visual preferences, and has additional tools for content verification and save state reversions.", ForECol.Accent);
                 NewLine(2);
+                Program.DisplayCurrentProfile();
 
                 bool validMenuKey = ListFormMenu(out string setMenuKey, "Settings Menu", null, null, "a~d", true, $"Preferences,Content Integrity,Reversion,{exitPagePhrase}".Split(','));
                 MenuMessageQueue(!validMenuKey, false, null);

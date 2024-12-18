@@ -39,8 +39,11 @@ namespace HCResourceLibraryApp.Layout
                 Program.LogState("Profiles Page");
                 Clear();
                 Title("Profiles Page", cTHB, 1);
-                FormatLine($"{Ind24}... some description ...", ForECol.Accent);
-                NewLine(2);
+                FormatLine($"{Ind24}This page allow for all things pertaining to profiles: creating, editing, switching, deleting.", ForECol.Accent);
+                NewLine(HSNL(1,2));
+                Program.DisplayCurrentProfile();
+
+
 
                 bool anyProfilesDetectedQ = ProfileHandler.AllProfiles.HasElements();
                 bool anyProfileSelectedQ = ProfileHandler.CurrProfileID != ProfileHandler.NoProfID;
@@ -94,27 +97,169 @@ namespace HCResourceLibraryApp.Layout
             }
             while (!exitProfilesPageMain && !Program.AllowProgramRestart);
 
-            // auto-saving alas
-            if (ProfileHandler.ChangesMade())
+            // auto-saving alas   
+            if (ProfileHandler.ChangesMade() || ProfileHandler.ProfileSwitchQueuedQ)
                 Program.SaveData(true);
         }
 
 
-        // tbd
         static void SubPage_ProfileSelect()
         {
-            Program.LogState("Profiles Page|Select");
-            NewLine(4);
-            Format($"-- Openned Profile Selection Page --");
-            Pause();
+            bool exitProfSelectorQ = false;
+            ProfileInfo currProfile = new();
+            ProfileInfo[] otherProfiles = Array.Empty<ProfileInfo>();
+            ProfileIconSize currProfDispSize = ProfileIconSize.Mini, otherProfDispSize = (ProfileIconSize)HSNL(0, 4).Clamp(1, 2);
+            ProfileDisplayStyle currProfDispStyle = ProfileDisplayStyle.NameAndID, otherProfDispStyle = ProfileDisplayStyle.NoStyleInfo;
+            int otherProfIndex = 0, otherProfMaxIndex = 0;
+            const string nextProf = ">", prevProf = "<";
 
+            bool anyProfilesDetectedQ = ProfileHandler.AllProfiles.HasElements(); 
+            bool availableProfilesToSwitchToQ = false, currentProfileExistsQ = false, allowProfileBrowsingQ = false, unsavedChangesOnCurrProfQ = false;
+            if (anyProfilesDetectedQ)
+            {
+                unsavedChangesOnCurrProfQ = ProfileHandler.ChangesMade();
+                currProfile = ProfileHandler.GetCurrentProfile(out _);
+                currentProfileExistsQ = currProfile.IsSetupQ();
+                availableProfilesToSwitchToQ = ProfileHandler.AllProfiles.HasElements(2) || !currentProfileExistsQ;
+
+                if (availableProfilesToSwitchToQ)
+                {
+                    List<ProfileInfo> switchableProfiles = new();
+                    foreach (ProfileInfo otherProfile in ProfileHandler.AllProfiles)
+                    {
+                        if (otherProfile.profileID != currProfile.profileID)
+                            switchableProfiles.Add(otherProfile);
+                    }
+
+                    if (switchableProfiles.HasElements())
+                    {
+                        otherProfiles = switchableProfiles.ToArray();
+                        allowProfileBrowsingQ = otherProfiles.HasElements(2);
+                        otherProfMaxIndex = otherProfiles.Length - 1;
+                    }
+                }
+            }
+
+            do
+            {
+                BugIdeaPage.OpenPage();
+                
+                Program.LogState("Profiles Page|Select");
+                Clear();
+                Title("Profile Selection", subMenuUnderline, 1);
+                FormatLine($"{Ind14}Select a profile. {(!currentProfileExistsQ ? "" : "Switching profiles will require a restart.")}");
+                NewLine(HSNL(1, 2));
+
+                // display current profile (if exists)
+                if (currentProfileExistsQ)
+                {
+                    FormatLine("Current Profile".ToUpper());
+                    DisplayProfileInfo(currProfile, currProfDispSize, currProfDispStyle);
+                }
+                else FormatLine($"{Ind14}No Profile Currently In Use", ForECol.Accent);
+                HorizontalRule('-', 2);
+
+
+                // SWITCH PROFILES HERE
+                /// if other profiles available AND no unsaved changes on current
+                if (availableProfilesToSwitchToQ && !unsavedChangesOnCurrProfQ)
+                {
+                    // display 1 other profile that can be switched to
+                    /// fetch
+                    ProfileInfo otherProf = new();
+                    if (otherProfIndex.IsWithin(0, otherProfiles.Length - 1))
+                        otherProf = otherProfiles[otherProfIndex];
+                    /// display
+                    FormatLine($"{Ind14}Profile No.{otherProfIndex + 1}", ForECol.Accent);
+                    if (otherProf.IsSetupQ())
+                        DisplayProfileInfo(otherProf, otherProfDispSize, otherProfDispStyle);
+                    else FormatLine($"{Ind24}Profile could not be displayed.", ForECol.Incorrection);
+                    NewLine(HSNL(1,2));
+
+
+                    // the rest of this couldn't run if the above somehow failed
+                    if (otherProf.IsSetupQ())
+                    {
+                        // prompts
+                        /// if 2 or more other profiles, enable browsing profiles
+                        if (allowProfileBrowsingQ)
+                            FormatLine($"{Ind14}Use [{prevProf}] to view previous profile. Use [{nextProf}] to view next profile.");
+                        /// [<] for prev profile, [>] for next profile, [any key] to select profile, [enter] to exit page
+                        FormatLine($"{Ind14}Enter any key to select this profile. Press [Enter] to exit page.");
+                        Format($"{Ind24}{(allowProfileBrowsingQ ? "Browse or select a" : "Select this")} profile >> ");
+                        string input = StyledInput(allowProfileBrowsingQ ? $"{prevProf} t {nextProf}" : null);
+
+
+                        // input parsing
+                        bool selectedProfToSwitchToQ = false;
+                        if (input.IsNotNEW())
+                        {
+                            /// it just wraps between all available profiles
+                            if (allowProfileBrowsingQ && (input.Equals(prevProf) || input.Equals(nextProf)))
+                            {
+                                if (input.Equals(prevProf))
+                                    otherProfIndex = otherProfIndex > 0 ? otherProfIndex - 1 : otherProfMaxIndex;
+                                else otherProfIndex = otherProfIndex < otherProfMaxIndex ? otherProfIndex + 1 : 0;
+                            }
+                            else selectedProfToSwitchToQ = true;
+                        }
+                        else exitProfSelectorQ = true;
+
+
+                        // confirmation before switch to prof (restart is always required)
+                        if (selectedProfToSwitchToQ)
+                        {
+                            NewLine();
+                            Highlight(true, $"{Ind24}The profile '{otherProf.profileName}' has been selected for switching.", $"'{otherProf.profileName}'");
+                            Confirmation($"{Ind24}Confirm this switch to selected profile? ", false, out bool yesNo);
+
+                            ConfirmationResult(yesNo, $"{Ind34}", "Will switch to selected profile.", "Profile switching cancelled.");
+                            if (yesNo)
+                            {
+                                /// only save profile ID, actual switch after another save.
+                                ProfileHandler.QueueSwitchProfile(otherProf.profileID);
+                                Format($"{Ind34}A restart is required.", ForECol.Warning);
+                                Pause();
+
+                                Program.RequireRestart();
+                                exitProfSelectorQ = true;
+                            }
+                        }
+                    }
+
+                }
+
+                // no other profiles to switch to
+                else
+                {
+                    if (unsavedChangesOnCurrProfQ)
+                    {
+                        FormatLine($"{Ind14}There are unsaved profile edits made to the current profile.", ForECol.Warning);
+                        Format($"{Ind14}To proceeed, save these changes by exiting to the Main Menu.");
+
+                        if (availableProfilesToSwitchToQ)
+                        {
+                            Pause();
+                            exitProfSelectorQ = true;
+                        }
+                        else NewLine(2);
+                    }
+                    
+                    if (!availableProfilesToSwitchToQ)
+                    {
+                        Format($"{Ind14}There are no other profiles available to select and switch.", ForECol.Highlight);
+                        Pause();
+                        exitProfSelectorQ = true;
+                    }
+                }
+            }
+            while (!exitProfSelectorQ && !Program.AllowProgramRestart);
         }
-        // tbd
         static void SubPage_ProfileEditor()
         {
             const int profNameMin = ProfileHandler.ProfileNameMinimum, profNameMax = ProfileHandler.ProfileNameLimit, profDescMax = ProfileHandler.ProfileDescriptionLimit;
             const string invalidChar = DataHandlerBase.Sep;
-            bool exitProfEditorQ = false, anyProfilesDetected, skipExternalProfNoticeQ = false;
+            bool exitProfEditorQ = false, anyProfilesDetected, skipExternalProfNoticeQ = false, unsavedChangesDetectedQ = false;
             bool anyProfilesCreatedOrDeletedQ = false; // program restart initiator
             string activeMenuKey = null;
             string prevDescTooLong = null;
@@ -124,6 +269,7 @@ namespace HCResourceLibraryApp.Layout
             anyProfilesDetected = ProfileHandler.AllProfiles.HasElements();
             if (anyProfilesDetected)
             {
+                unsavedChangesDetectedQ = ProfileHandler.ChangesMade();
                 currProfile = ProfileHandler.GetCurrentProfile(out _);
                 prevCurrProfile = currProfile;
             }
@@ -147,6 +293,7 @@ namespace HCResourceLibraryApp.Layout
                 string profEditKey = null;
                 if (activeMenuKey.IsNE())
                 {
+                    Program.DisplayCurrentProfile();
                     validKey = ListFormMenu(out profEditKey, "Profile Editor Menu", subMenuUnderline, null, "a~c", true, profEditMenuOpts);
                     quitMenuQ = LastInput.IsNE() || profEditKey == "d";
                     MenuMessageQueue(!validKey && !quitMenuQ, false, null);
@@ -178,8 +325,8 @@ namespace HCResourceLibraryApp.Layout
                         NewLine();
 
 
-                        // profile space available
-                        if (ProfileHandler.RemainingProfileSpacesLeft > 0)
+                        // profile space available / no unsaved changes detected
+                        if (ProfileHandler.RemainingProfileSpacesLeft > 0 && !unsavedChangesDetectedQ)
                         {
                             // force create if no profile, else give option to create before gettin' into it
                             bool createProfQ = true;
@@ -316,12 +463,20 @@ namespace HCResourceLibraryApp.Layout
                             }
                         }
 
-                        // no profile space available
+                        // no profile space available / unsaved changes detected
                         else
                         {
-                            int profMaxNum = ProfileHandler.AllProfiles.Count;
-                            FormatLine($"{Ind24}There are no more profile spaces available.", ForECol.Warning);
-                            Format($"{Ind24}The maximum number of profiles ({profMaxNum}) has been reached. To create a new profile, an existing profile must be deleted.");
+                            if (!unsavedChangesDetectedQ)
+                            {
+                                int profMaxNum = ProfileHandler.AllProfiles.Count;
+                                FormatLine($"{Ind24}There are no more profile spaces available.", ForECol.Warning);
+                                Format($"{Ind24}The maximum number of profiles ({profMaxNum}) has been reached. To create a new profile, an existing profile must be deleted.");
+                            }
+                            else
+                            {
+                                FormatLine($"{Ind14}There are unsaved profile edits made to the current profile.", ForECol.Warning);
+                                Format($"{Ind14}To proceeed, save these changes by exiting to the Main Menu.");
+                            }
                             Pause();
 
                             endActiveMenuKeyQ = true;
@@ -742,6 +897,7 @@ namespace HCResourceLibraryApp.Layout
                                     {
                                         Format("No changes were made to the current profile.");
                                         Pause();
+                                        endActiveMenuKeyQ = true;
                                     }
                                 }
                             }
@@ -771,24 +927,74 @@ namespace HCResourceLibraryApp.Layout
                     }
 
 
-                    // delete profile -- destroy profile wip
+                    // delete profile -- destroy profile
                     if (profEditKey.Equals("c"))
                     {
                         Program.LogState("Profiles Page|Editor|Delete");
-                        FormatLine("-- WIP --");
+                        FormatLine("The current profile may be deleted.");
+                        FormatLine("Deleting a profile is an irreversible action and cannot be undone. Will require a restart.", ForECol.Warning);
                         NewLine();
 
                         if (ProfileHandler.AllProfiles.Count > 1)
                         {
-                            Format("Proceed to delete a profile");
+                            bool confirmDelete1, confirmDelete2 = false, confirmDelete3 = false;
+
+                            // display
+                            Wait(0.3f);
+                            FormatLine("Current Profile".ToUpper(), ForECol.Accent);
+                            DisplayProfileInfo(currProfile);
+                            NewLine();
+
+                            // confirmation 1
+                            FormatLine("The profile to be deleted (current profile) is displayed above.");
+                            Format("Press [Enter] to proceed to deleting this profile >> ");
+                            confirmDelete1 = StyledInput(null).IsNE();
+
+
+                            // confirmation 2
+                            if (confirmDelete1)
+                            {
+                                NewLine();
+                                Highlight(true, $"{Ind14}The profile '{currProfile.profileName}' is about to be deleted.", $"'{currProfile.profileName}'");
+                                Confirmation($"{Ind14}Confirm the deletion of this profile? ", true, out confirmDelete2);
+                            }
+
+                            // confirmation 3
+                            if (confirmDelete2)
+                            {
+                                NewLine();
+                                Highlight(true, $"{Ind14}Once profile '{currProfile.profileName}' is deleted, it is unrecoverable.", $"'{currProfile.profileName}'");
+                                Confirmation($"{Ind14}Absolutely certain of deletion? ", true, out confirmDelete3);
+                            }
+
+                            // IF confirm all deletes: delete profile;
+                            // ELSE abandon deletion (any stage of confirmation);
+                            if (confirmDelete1 && confirmDelete2 && confirmDelete3)
+                            {
+                                string deletedProfName = currProfile.profileName, deletedProfID = currProfile.profileID;
+                                bool profileDeletedQ = ProfileHandler.DeleteProfile();
+                                if (profileDeletedQ)
+                                {
+                                    currProfile = new ProfileInfo();
+                                    FormatLine($"{Ind24}Profile '{deletedProfName}' ({deletedProfID}) has been deleted.", ForECol.Correction);
+                                    FormatLine($"{Ind24}Proceeding to program restart...");
+                                    anyProfilesCreatedOrDeletedQ = true;
+                                }
+                                else FormatLine($"{Ind24}Profile '{deletedProfName}' could not be deleted.", ForECol.Incorrection);
+                                Pause();
+                            }
+                            else
+                            {
+                                FormatLine($"{Ind24}Deletion of profile '{currProfile.profileName}' has been cancelled.", ForECol.Warning);
+                                Pause();
+                            }
                         }
                         else
                         {
-                            Format("At least one profile must exist");
+                            FormatLine("There are not enough profiles to delete a profile.", ForECol.Warning);
+                            Format("At least one profile must exist.");
+                            Pause();
                         }
-
-                        /// temp
-                        Pause();
                         endActiveMenuKeyQ = true;
                     }
 
@@ -1560,26 +1766,48 @@ namespace HCResourceLibraryApp.Layout
                     iconStyleSheet = allIconStyleSheets[styleIndex];
 
                 // getting ink colors from profile
-                int fec1 = 0, fec2 = 0, fec3 = 0;
-                for (int fix = 0; fix < profileInfo.profileStyleKey.Length; fix++)
+                /// IF curr prof: get colors from style key; ELSE get colors from console colors CSV;
+                Color color1 = Color.Black, color2 = Color.Black, color3 = Color.Black;
+                if (ProfileHandler.CurrProfileID == profileInfo.profileID || profileInfo.consoleColorsCSV.IsNEW())
                 {
-                    char fColorIx = profileInfo.profileStyleKey[fix];
-                    if (int.TryParse(fColorIx.ToString(), out int fColIx))
+                    int fec1 = 0, fec2 = 0, fec3 = 0;
+                    for (int fix = 0; fix < profileInfo.profileStyleKey.Length; fix++)
                     {
-                        switch (fix)
+                        char fColorIx = profileInfo.profileStyleKey[fix];
+                        if (int.TryParse(fColorIx.ToString(), out int fColIx))
                         {
-                            case 0: fec1 = fColIx; break;
-                            case 1: fec2 = fColIx; break;
-                            case 2: fec3 = fColIx; break;
-                            default: break;
+                            switch (fix)
+                            {
+                                case 0: fec1 = fColIx; break;
+                                case 1: fec2 = fColIx; break;
+                                case 2: fec3 = fColIx; break;
+                                default: break;
+                            }
                         }
+                    }
+
+                    ForECol fcol1 = (ForECol)fec1;
+                    ForECol fcol2 = (ForECol)fec2;
+                    ForECol fcol3 = (ForECol)fec3;
+
+                    /// setting (ink) colors to forECol
+                    color1 = GetPrefsForeColor(fcol1);
+                    color2 = GetPrefsForeColor(fcol2);
+                    color3 = GetPrefsForeColor(fcol3);
+
+                }
+                else
+                {
+                    Color[] profColors = profileInfo.ParseConsoleColorsFromSave();
+                    if (profColors.HasElements(3))
+                    {
+                        /// setting (ink) colors to forECol
+                        color1 = profColors[0];
+                        color2 = profColors[1];
+                        color3 = profColors[2];
                     }
                 }
 
-                // setting (ink) colors to forECol
-                ForECol color1 = (ForECol)fec1;
-                ForECol color2 = (ForECol)fec2;
-                ForECol color3 = (ForECol)fec3;
 
                 // loading ink for use
                 /// INKING IDS
@@ -1589,12 +1817,12 @@ namespace HCResourceLibraryApp.Layout
                 /// 4 - 3rd color, heavy    5 - 3rd color, light
                 inkList = new HPInk[6]
                 {
-                    new HPInk(0, GetPrefsForeColor(color1), Dither.Dark),
-                    new HPInk(0, GetPrefsForeColor(color1), Dither.Light),
-                    new HPInk(0, GetPrefsForeColor(color2), Dither.Dark),
-                    new HPInk(0, GetPrefsForeColor(color2), Dither.Light),
-                    new HPInk(0, GetPrefsForeColor(color3), Dither.Dark),
-                    new HPInk(0, GetPrefsForeColor(color3), Dither.Light),
+                    new HPInk(0, color1, Dither.Dark),
+                    new HPInk(0, color1, Dither.Light),
+                    new HPInk(0, color2, Dither.Dark),
+                    new HPInk(0, color2, Dither.Light),
+                    new HPInk(0, color3, Dither.Dark),
+                    new HPInk(0, color3, Dither.Light),
                 };
                 if (useBasicColorsQ)
                 {

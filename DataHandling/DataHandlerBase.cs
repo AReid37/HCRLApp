@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using ConsoleFormat;
 using HCResourceLibraryApp.Layout;
 using static HCResourceLibraryApp.Layout.PageBase;
@@ -25,7 +26,7 @@ namespace HCResourceLibraryApp.DataHandling
 
         protected string commonFileTag;
 
-        static bool _reversionAvailableQ;
+        static bool _reversionAvailableQ, _profDirWasSetQ;
         public static bool AvailableReversion
         {
             get => _reversionAvailableQ;
@@ -290,7 +291,12 @@ namespace HCResourceLibraryApp.DataHandling
                 // ELSE set profile directory as profile ID
                 if (profileID == null || profileID == ProfileHandler.NoProfID)
                     fullProfDir = null;
-                else fullProfDir = $"profile_{profileID}\\";   /// profile_02352     profile_57299
+                else
+                {
+                    fullProfDir = $"profile_{profileID}\\";
+                    _profDirWasSetQ = true;
+                }/// profile_02352     profile_57299
+
             }
 
             /// the static fields CANNOT be treated as properties
@@ -298,6 +304,37 @@ namespace HCResourceLibraryApp.DataHandling
             FileLocation = AppDirectory + ProfileDirectory + FileName;
             BackupFileLocation = AppDirectory + ProfileDirectory + BackupFileName;
         }
+        public static void DestroyProfileDirectory()
+        {
+            if (_profDirWasSetQ)
+            {
+                /// get directory
+                DirectoryInfo currProfDirectory = new(AppDirectory + ProfileDirectory);
+
+                /// destroy files and directory
+                if (currProfDirectory != null)
+                {
+                    if (currProfDirectory.Exists)
+                    {
+                        currProfDirectory.Delete(true);
+                        _profDirWasSetQ = false;
+                    }
+
+                    //{
+                    //    while (currProfDirectory.GetFiles().HasElements())
+                    //    {
+                    //        FileInfo[] dirFiles = currProfDirectory.GetFiles();
+                    //        if (dirFiles.HasElements())
+                    //        {
+                    //            foreach (FileInfo file in dirFiles)
+                    //                file.Delete();
+                    //        }
+                    //    }
+                    //}
+                }
+            }
+        }
+
         /// <summary>Clears information from main file.</summary>
         private bool RestartMainEncoding()
         {

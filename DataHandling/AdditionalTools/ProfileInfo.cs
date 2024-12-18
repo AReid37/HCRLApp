@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using ConsoleFormat;
 using HCResourceLibraryApp.Layout;
 
 namespace HCResourceLibraryApp.DataHandling
@@ -12,6 +13,8 @@ namespace HCResourceLibraryApp.DataHandling
         /// <summary>Profile short description. Limit of <see cref="ProfileHandler.profDescLim"/>. May be null.</summary>
         public string profileDescription;
         public ProfileIcon profileIcon;
+        /// <summary>Stores three comma-separated values of <see cref="Color"/> parallel to that of <see cref="profileStyleKey"/>. Used for displaying accurate profile colors despite different preferences of active profiles.</summary>
+        public string consoleColorsCSV;
 
 
         /// <summary>Creates a profile information instance.</summary>
@@ -32,24 +35,28 @@ namespace HCResourceLibraryApp.DataHandling
                 profileIcon = profIcon;
                 profileStyleKey = profStyleKey;
                 profileDescription = profDesc;
-            }            
+            }
+
+            consoleColorsCSV = null;
         }
 
 
-        public string EncodeProfileInfo()
+        public readonly string EncodeProfileInfo()
         {
-            // Syntax: {profID}%{profName}%{profIcon}%{profStyleKey}%{profDesc}
+            // Syntax: {profID}%{profName}%{profIcon}%{profStyleKey}%{profDesc}%{consoleCols}
             //         - profDesc, may be null
+            //         - consoleCols, might be null
             string encodeString = "";
             const string sep = DataHandlerBase.Sep;
             if (IsSetupQ())
-                encodeString = $"{profileID}{sep}{profileName}{sep}{profileIcon}{sep}{profileStyleKey}{sep}{profileDescription}";
+                encodeString = $"{profileID}{sep}{profileName}{sep}{profileIcon}{sep}{profileStyleKey}{sep}{profileDescription}{sep}{consoleColorsCSV}";
             return encodeString;
         }
         public bool DecodeProfileInfo(string profileInfoString)
         {
-            // Syntax: {profID}%{profName}%{profIcon}%{profStyleKey}%{profDesc}
+            // Syntax: {profID}%{profName}%{profIcon}%{profStyleKey}%{profDesc}%{consoleCols}
             //         - profDesc, may be null
+            //         - consoleCols, might be null
             bool decodedInfoQ = false;
             if (profileInfoString.IsNotNEW())
             {
@@ -83,6 +90,12 @@ namespace HCResourceLibraryApp.DataHandling
                                 if (profInfoPiece.IsNotEW())
                                     profileDescription = profInfoPiece;
                                 break;
+
+                            // prof console cols
+                            case 5:
+                                if (profInfoPiece.IsNotNEW())
+                                    consoleColorsCSV = profInfoPiece;
+                                break;
                         }
                     }
                 }
@@ -92,13 +105,71 @@ namespace HCResourceLibraryApp.DataHandling
 
             return decodedInfoQ;
         }
+
+
+        /// <summary>Use just before saving profile information.</summary>
+        /// <remarks>Primarily for cross-compatibility purposes.</remarks>
+        public void AddConsoleColorsToSave(Preferences _currProfPrefRef)
+        {
+            if (IsSetupQ() && _currProfPrefRef != null)
+            {
+                if (_currProfPrefRef.IsSetup() && profileStyleKey.IsNotNEW())
+                {
+                    for (int pskx = 0; pskx < profileStyleKey.Length; pskx++)
+                    {
+                        int prefColIndex;
+                        string profileStyleKeyPiece = profileStyleKey[pskx].ToString();
+                        if (int.TryParse(profileStyleKeyPiece, out prefColIndex))
+                        {
+                            Color consoleCol = _currProfPrefRef[prefColIndex];
+
+                            if (pskx == 0)
+                                consoleColorsCSV = consoleCol.ToString();
+                            else consoleColorsCSV += $",{consoleCol}";
+                        }
+                    }
+
+                }
+            }
+        }
+        /// <summary>Fetches the three (3) <see cref="Color"/> values saved in <see cref="consoleColorsCSV"/> for accurate color display of inactive profiles.</summary>
+        /// <returns>The appropriate <see cref="Color"/>s of the given profile. Is empty if all color(s) cannot be parsed.</returns>
+        public readonly Color[] ParseConsoleColorsFromSave()
+        {
+            List<Color> profColors = new();
+            if (IsSetupQ())
+            {
+                if (consoleColorsCSV.IsNotNEW())
+                {
+                    string[] colorNames = consoleColorsCSV.Split(',');
+                    if (colorNames.HasElements(3))
+                    {
+                        foreach (string colorName in colorNames)
+                        {
+                            if (!profColors.HasElements(3))
+                            {
+                                Color profCol = (Color)Enum.Parse(typeof(Color), colorName);
+                                profColors.Add(profCol);
+                            }
+                        }
+
+                        if (!profColors.HasElements(3))
+                            profColors.Clear();
+                    }
+                }
+            }
+
+            return profColors.ToArray();
+        }
+
+
         /// <summary>Has this instance of <see cref="ProfileInfo"/> been initialized with the appropriate information?</summary>
         /// <returns>A boolean stating whether the profile ID, profile name, and profile description has been given values. Description may be null.</returns>
         public readonly bool IsSetupQ()
         {
             return profileID.IsNotNEW() && profileName.IsNotNEW() && profileStyleKey.IsNotNEW() && profileDescription.IsNotEW();
         }
-        public bool AreEquals(ProfileInfo other)
+        public readonly bool AreEquals(ProfileInfo other)
         {
             bool areEquals = IsSetupQ() == other.IsSetupQ();
             if (areEquals)
@@ -126,12 +197,21 @@ namespace HCResourceLibraryApp.DataHandling
                         case 4:
                             areEquals = profileDescription == other.profileDescription;
                             break;
+
+                        /// i don't actually think this should be apart of the comparison.. should it? 
+                        /// Well, it should match the profile style key. And so if the profile style key changes, so does it.
+                        /// Also, how would I be able to tell the difference when the true colors are stored versus non existent?
+                        /// Conclusively, i think this is not necessary. When the profile is active, is will use the correct colors. When the profile is saved and inactive, this will store that information. It is ignored while active, and is the same as style key when inactive. 
+                        //case 5:
+                        //    areEquals = consoleColorsCSV == other.consoleColorsCSV;
+                        //    break;
                     }
                 }
             }
 
             return areEquals;
         }
+        
         public override string ToString()
         {
             return $"PI:{EncodeProfileInfo().Clamp(80, "...")}".Replace(DataHandlerBase.Sep, ";");

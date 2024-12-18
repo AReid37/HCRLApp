@@ -8,7 +8,7 @@ namespace HCResourceLibraryApp.DataHandling
     {
         #region props / fields
         Preferences previousSelf;
-        const Color defNormal = Color.Gray, defHighlight = Color.Yellow, defAccent = Color.DarkGray, defCorrection = Color.Green, defIncorrection = Color.Red, defWarning = Color.Yellow, defHeading1 = Color.White, defHeading2 = Color.Gray, defInput = Color.Yellow;
+        const Color defNormal = Color.Gray, defHighlight = Color.Yellow, defAccent = Color.DarkGray, defCorrection = Color.Green, defIncorrection = Color.Red, defWarning = Color.Yellow, defHeading1 = Color.White, defHeading2 = Color.Gray, defInput = Color.Blue;
         const DimHeight defHeightScale = DimHeight.Normal;
         const DimWidth defWidthScale = DimWidth.Normal;
         Color _normal, _highlight, _accent, _correction, _incorrection, _warning, _heading1, _heading2, _input;
@@ -432,6 +432,11 @@ namespace HCResourceLibraryApp.DataHandling
 
             trueHeight = (int)(maxHeight * height.GetScaleFactorH());
             trueWidth = (int)(maxWidth * width.GetScaleFactorW());
+        }
+
+        public override bool IsSetup()
+        {
+            return true;
         }
 
     }

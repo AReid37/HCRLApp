@@ -41,7 +41,7 @@ namespace HCResourceLibraryApp.Layout
                 Program.LogState("Library Search");
                 Clear();
                 Title($"Library Search", cTHB, 0);
-                FormatLine($"{Ind24}Allows browsing, searching, and viewing of the library's shelves", ForECol.Accent);
+                FormatLine($"{Ind24}Allows browsing, searching, and viewing of the library's shelves.", ForECol.Accent);
                 //FormatLine($"{Ind24}WIP .. At the moment, allows browsing and viewing the library's shelves");
                 //NewLine(2);
 

@@ -79,6 +79,7 @@ namespace HCResourceLibraryApp.Layout
                 Title("Generate Steam Log", cTHB, 1);
                 FormatLine($"{Ind24}Facilitates generation of a version log using Steam's formatting rules.", ForECol.Accent);
                 NewLine();
+                Program.DisplayCurrentProfile();
 
                 #region preview parameters
                 Title("--- Parameters Review ---");

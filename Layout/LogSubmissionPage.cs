@@ -22,9 +22,11 @@ namespace HCResourceLibraryApp.Layout
                 
                 Program.LogState("Log Submission");
                 Clear();
+
                 Title("Version Log Submission", cTHB, 1);
                 FormatLine($"{Ind24}Facilitates the submission of a version log to store content information regarding the resource pack.", ForECol.Accent);
                 NewLine(2);
+                Program.DisplayCurrentProfile();
 
                 bool validMenuKey = TableFormMenu(out short resNum, "Log Submission Menu", null, false, $"{Ind24}Selection >> ", "1/2", 2, $"Submit a Version Log,{exitPagePhrase}".Split(','));
                 MenuMessageQueue(!validMenuKey, false, null);
