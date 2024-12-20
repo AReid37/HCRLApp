@@ -319,18 +319,6 @@ namespace HCResourceLibraryApp.DataHandling
                         currProfDirectory.Delete(true);
                         _profDirWasSetQ = false;
                     }
-
-                    //{
-                    //    while (currProfDirectory.GetFiles().HasElements())
-                    //    {
-                    //        FileInfo[] dirFiles = currProfDirectory.GetFiles();
-                    //        if (dirFiles.HasElements())
-                    //        {
-                    //            foreach (FileInfo file in dirFiles)
-                    //                file.Delete();
-                    //        }
-                    //    }
-                    //}
                 }
             }
         }

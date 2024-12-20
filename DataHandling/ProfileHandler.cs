@@ -56,7 +56,7 @@ namespace HCResourceLibraryApp.DataHandling
         public const string NoProfID = "-1000";
         /// <summary>A file that stores information on the existing profile folders and which one was most recently active.</summary>
         static string ProfilesFile = !Program.isDebugVersionQ ? @"hcd\profiles.txt" : @"C:\Users\ntrc2\Pictures\High Contrast Textures\HCRLA\hcd-tests\profiles.txt";
-        static string _currProfileID, _currProfileName, _currProfDescription, _currProfStyleKey, _prevCurrProfileID, _prevCurrProfileName, _prevCurrProfDescription, _prevCurrProfStyleKey, _queuedProfileToSwitch;
+        static string _currProfileID, _currProfileName, _currProfDescription, _currProfStyleKey, _prevCurrProfileID, _prevCurrProfileName, _prevCurrProfDescription, _prevCurrProfStyleKey, _queuedProfileToSwitch, _deletedProfileID;
         static ProfileIcon _currProfIcon, _prevCurrProfIcon;
         static List<ProfileInfo> _allProfiles, _prevAllProfiles;
         static bool _initializedQ, _externalProfileDetectedQ;
@@ -164,6 +164,9 @@ namespace HCResourceLibraryApp.DataHandling
         }
         public static bool ExternalProfileDetectedQ { get => _externalProfileDetectedQ; }
         public static bool ProfileSwitchQueuedQ { get => _queuedProfileToSwitch.IsNotNEW(); }
+        
+        /// private property (no trespassing lol)
+        static bool CurrProfileIsDeletedQ { get => _deletedProfileID == _currProfileID; }
 
 
         public static DataHandlerBase dataHandler;
@@ -212,29 +215,6 @@ namespace HCResourceLibraryApp.DataHandling
 
             _initializedQ = true;
             AdoptDataHandlers();
-            SetPreviousSelf();
-        }
-        /// <summary>
-        ///     OUTDATED; TO BE DELETED AFTER NEXT COMMIT
-        ///     Initializes a ProfileHandler instance with data handlers with already existing information. Profile integration from previous versions.
-        /// </summary>
-        /// <param name="dataHandlers">
-        ///     The index of the DataHandlers should be arranged in the following order:<br></br>
-        ///     <see cref="DataHandlerBase"/>, <see cref="Preferences"/>, <see cref="LogDecoder"/>, <see cref="ContentValidator"/>, <see cref="ResLibrary"/>, <see cref="SFormatterData"/>, <see cref="BugIdeaData"/>. <br></br>
-        ///     All are required; there must be a total of 7 data handlers.
-        /// </param>
-        public static void Initialize(params DataHandlerBase[] dataHandlers)
-        {
-            // initialize
-            CurrProfileID = ProfileID();
-            CurrProfileName = $"Profile{CurrProfileID}";
-            CurrProfileIcon = ProfileIcon.StandardUserIcon;
-            CurrProfileStyleKey = profStyleKeyDefault;
-            CurrProfileDescription = null;
-            AllProfiles = new List<ProfileInfo>();
-
-            _initializedQ = true;
-            AdoptDataHandlers(dataHandlers);
             SetPreviousSelf();
         }
         
@@ -389,7 +369,7 @@ namespace HCResourceLibraryApp.DataHandling
             }            
         }
         /// <summary>Assists in switching to another profile after the initial auto-load on application startup (in-app profile switching assist).</summary>
-        /// <remarks>Use before saving to override the active profile save (replaced current profile ID).</remarks>
+        /// <remarks>Use before saving to override the active profile save (replaces current profile ID).</remarks>
         public static void QueueSwitchProfile(string profileID)
         {
             _queuedProfileToSwitch = profileID;
@@ -467,7 +447,11 @@ namespace HCResourceLibraryApp.DataHandling
                     {
                         if (pfx != profIndex)
                             _tempAllProfiles.Add(profToDel);
-                        else deletedProfQ = true;
+                        else
+                        {
+                            deletedProfQ = true;
+                            _deletedProfileID = profToDel.profileID;
+                        }
                     }
                 }
 
@@ -477,9 +461,6 @@ namespace HCResourceLibraryApp.DataHandling
 
                 // delete profile directory
                 DataHandlerBase.DestroyProfileDirectory();
-
-                // initialize (reset) profile handler ... even though the restart will do this anyway
-                Initialize();
             }
             return deletedProfQ;
         }
@@ -586,12 +567,24 @@ namespace HCResourceLibraryApp.DataHandling
                 else Dbug.Log("No data to save (no profiles found); ");
 
                 // 2. Regular Library Save
-                if (noIssues)
+                if (noIssues && CurrProfileID != NoProfID)
                 {
-                    Dbug.Log("Proceeding to save current profile information; ");
-                    noIssues = dataHandler.SaveToFile(preferences, logDecoder, contentValidator, resourceLibrary, formatterData, bugIdeaData);
+                    Dbug.LogPart("Proceeding to save current profile information");
+                    if (!CurrProfileIsDeletedQ)
+                    {
+                        noIssues = dataHandler.SaveToFile(preferences, logDecoder, contentValidator, resourceLibrary, formatterData, bugIdeaData);
+                        if (!noIssues)
+                            Dbug.LogPart("; Failed to save current profile's information");
+                    }
+                    else Dbug.LogPart("; Current profile has been deleted (skipped)");
+                    Dbug.Log("; ");
                 }
-                else Dbug.Log("Could not proceed to save current profile's information; ");
+                else
+                {
+                    if (!noIssues)
+                        Dbug.Log("Could not proceed to save current profile's information; ");
+                    else Dbug.Log("No profile information to save (no current profile); ");
+                }
             }
             else Dbug.Log("Cannot save any data; Profile Handler is not initialized; ");
             Dbug.EndLogging();

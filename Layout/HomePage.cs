@@ -11,13 +11,14 @@ namespace HCResourceLibraryApp.Layout
     internal static class HomePage
     {
         static ForECol primaryCol = ForECol.Heading1, secondaryCol = ForECol.Normal, tertiaryCol = ForECol.Accent;
-        const int rigStyleSheetIndex = -1; // set to -1 for no rigging
+        const int rigStyleSheetIndex = 6; // set to -1 for no rigging
+        const bool rigDefaultCols = true; // set to 'true' to use RGB instead of defaults (H1,Nor,Acc)
 
         public static void OpenPage()
         {
             Program.LogState("Title Page");
             bool riggedStyleIndexQ = rigStyleSheetIndex != -1;
-            bool colorsAsRGBq = riggedStyleIndexQ && true;
+            bool colorsAsRGBq = riggedStyleIndexQ && rigDefaultCols;
             const int inkCount = 12;
             const string _10thInkKey = "-", _11thInkKey = ".";
             /// INKING IDS
@@ -241,58 +242,122 @@ namespace HCResourceLibraryApp.Layout
                     " ",
                     HSNL(0, 10) < 2 ? null :
                     "3 333 3     3 333 3 3     3 333",
-                },                
+                },   
+
+                /// 6: 'HCRLA' acronym design similar to Terraria logo with a layered surface background
+                new string[]
+                {
+                    "..", 
+                    "--", 
+                    "99", 
+                    "             7                     7      ",
+                    "  7  .3    3 33  3 33 3   3.       33 3   ",
+                    "  32 3223 322223.3222223 3222   3 322223  ",
+                    " 32 22  232   2232     222  23 7332    2  ",
+                    " 200  1022 0000 2200001  200 2 322 00012  ",
+                    " 210  00  100001  100001  10 222  1000002 ",
+                    "2200  00  01  00  00  00  10      00  01 2",
+                    "2 001000  00      011100  00      010011 2",
+                    "2 000001  00      11100   01      000111 2",
+                    "2 00  01  10  11  11 000  000     10  11 2",
+                    "2 01  11  000001  11  10  001111  00  11 2",
+                    " 200  11   1000   11  00 2 11111  01  112 ",
+                    " 22  2   22    22   22  2 2     2   222 2 ",
+                    "  222 222 22222  222 222   22222 2222  22 ",
+                    "  ",
+                    "55",
+                    "66",
+                    "77",
+                    "  ",
+                    "  ",
+                    "  ",
+                    "  ",
+                },
 
                 /// INKING IDS CONDENSED
                 ///     0~3 (Primary Color) {title} [0 Full, 1 Dark, 2 Medium, 3 Light]
                 ///     4~7 (Secondary Col) {sbttl} [4 Full, 5 Dark, 6 Medium, 7 Light]
                 ///     8~11 (Tertiary Col) {touch} [8 Full, 9 Dark, - Medium, . Light]
 
-                /** ***** STYLE NO.5 - INKING HISTORY *****
-                ------------
-                Ch1: 'HC' with borders and glow
-                    "                           ",
-                    "               ........    ",
-                    "   7777       .00000009.   ",
-                    "   75007 777  .00000009.   ",
-                    "   7500775007 .0099999-.   ",
-                    "   7500775007 .009.....    ",
-                    "   7500775007 .009.        ",
-                    "   7500775007 .009.        ",
-                    "   7500555007 .009.        ",
-                    "   7500000007 .009.        ",
-                    "   7500775007 .009.        ",
-                    "   7500775007 .009         ",
-                    "   7500775007 .009.....    ",
-                    "   7500775007 .00000009.   ",
-                    "   7500775007 .00000009.   ",
-                    "   7555775007 .9999999-.   ",
-                    "    777 76557  ........    ",
-                    "         777               ",
-                    "                           ",
+                /** ***** STYLE NO.6 - INKING HISTORY *****
+                ----------
+                Ch4: 
+
+                
+                
+                
+                
+                
+                ----------
+                Ch3: Added flowers and grass on border tops
+                    "             7                     7      ",
+                    "  7  .3    3 33  3 33 3   3.       33 3   ",
+                    "  32 3223 322223.3222223 3222   3 322223  ",
+                    " 32 22  232   2232     222  23 7332    2  ",
+                    " 200  1022 0000 2200001  200 2 322 00012  ",
+                    " 210  00  100001  100001  10 222  1000002 ",
+                    "2200  00  01  00  00  00  10      00  01 2",
+                    "2 001000  00      011100  00      010011 2",
+                    "2 000001  00      11100   01      000111 2",
+                    "2 00  01  10  11  11 000  000     10  11 2",
+                    "2 01  11  000001  11  10  001111  00  11 2",
+                    " 200  11   1000   11  00 2 11111  01  112 ",
+                    " 22  2   22    22   22  2 2     2   222 2 ",
+                    "  222 222 22222  222 222   22222 2222  22 ",
+                
+                
+                
+
+                
+                ----------
+                Ch2: Letters are spotted and bordered
+                    "   2  22   2222  222222   222      2222   ",
+                    "  2 22  2 2   22 2     222  2     2    2  ",
+                    " 200  1022 0000 2200001  200 2  22 00012  ",
+                    " 210  00  100001  100001  10 222  1000002 ",
+                    "2200  00  01  00  00  00  10      00  01 2",
+                    "2 001000  00      011100  00      010011 2",
+                    "2 000001  00      11100   01      000111 2",
+                    "2 00  01  10  11  11 000  000     10  11 2",
+                    "2 01  11  000001  11  10  001111  00  11 2",
+                    " 200  11   1000   11  00 2 11111  01  112 ",
+                    " 22  2   22    22   22  2 2     2   222 2 ",
+                    "  222 222 22222  222 222   22222 2222  22 ",
 
 
-                ------------
-                Ch0: 'HC' with borders                 
-                    "                   ",
-                    "           00000009",
-                    "500        00000009",
-                    "500  500   0099999-",
-                    "500  500   009     ",
-                    "500  500   009     ",
-                    "50055500   009     ",
-                    "50000000   009     ",
-                    "500  500   009     ",
-                    "500  500   009     ",
-                    "500  500   00000009",
-                    "500  500   00000009",
-                    "555  500   9999999-",
-                    "     655           ",
-                    "                   ",
+                
+                
+                
+                ----------
+                Ch1: Settled 'HCRLA' font design
+                    "  00  00   0000   00000   00       0000   ",
+                    "  00  00  000000  000000  00      000000  ",
+                    "  00  00  00  00  00  00  00      00  00  ",
+                    "  000000  00      000000  00      000000  ",
+                    "  000000  00      00000   00      000000  ",
+                    "  00  00  00  00  00 000  000     00  00  ",
+                    "  00  00  000000  00  00  000000  00  00  ",
+                    "  00  00   0000   00  00   00000  00  00  ",
+                
+                
+                
+                ----------
+                Ch0: First try
+                    "  ",
+                    "  00     200   ",
+                    " 200      01   ",
+                    "  01      00   ",
+                    "  102    201   ",
+                    "  1000100100   ",
+                    "  0010010001   ",
+                    "  103    200   ",
+                    "  01      10   ",
+                    "  00      01   ",
+                    "  10      00   ",
+                    "  ",
 
-                 *********************/
+                ******************* */
 
-                /// 6: 'HCRLA' acronym design similar to Terraria logo with a layered surface background
 
                 /// 7: simple acronym design within a layered cave perspective
                 /// NOTE :: up to 7 designs maximum
@@ -329,7 +394,7 @@ namespace HCResourceLibraryApp.Layout
                 FormatLine("Hello, High Contrast Resource Library App!", ForECol.Normal);
                 Clear();
 
-                // prestyle prints
+                // pre-style prints
                 switch (styleIx)
                 {
                     case 0:
@@ -356,6 +421,10 @@ namespace HCResourceLibraryApp.Layout
 
                     case 5:
                         HSNLPrint(0, 3);
+                        break;
+
+                    case 6:
+                        Title(" WORK IN PROGRESS ", cLS);
                         break;
 
                     default: break;

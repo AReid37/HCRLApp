@@ -977,15 +977,15 @@ namespace HCResourceLibraryApp.Layout
                                 {
                                     currProfile = new ProfileInfo();
                                     FormatLine($"{Ind24}Profile '{deletedProfName}' ({deletedProfID}) has been deleted.", ForECol.Correction);
-                                    FormatLine($"{Ind24}Proceeding to program restart...");
+                                    Format($"{Ind24}Proceeding to program restart...");
                                     anyProfilesCreatedOrDeletedQ = true;
                                 }
-                                else FormatLine($"{Ind24}Profile '{deletedProfName}' could not be deleted.", ForECol.Incorrection);
+                                else Format($"{Ind24}Profile '{deletedProfName}' could not be deleted.", ForECol.Incorrection);
                                 Pause();
                             }
                             else
                             {
-                                FormatLine($"{Ind24}Deletion of profile '{currProfile.profileName}' has been cancelled.", ForECol.Warning);
+                                Format($"{Ind24}Deletion of profile '{currProfile.profileName}' has been cancelled.", ForECol.Warning);
                                 Pause();
                             }
                         }

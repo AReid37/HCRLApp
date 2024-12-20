@@ -197,14 +197,6 @@ namespace HCResourceLibraryApp.DataHandling
                         case 4:
                             areEquals = profileDescription == other.profileDescription;
                             break;
-
-                        /// i don't actually think this should be apart of the comparison.. should it? 
-                        /// Well, it should match the profile style key. And so if the profile style key changes, so does it.
-                        /// Also, how would I be able to tell the difference when the true colors are stored versus non existent?
-                        /// Conclusively, i think this is not necessary. When the profile is active, is will use the correct colors. When the profile is saved and inactive, this will store that information. It is ignored while active, and is the same as style key when inactive. 
-                        //case 5:
-                        //    areEquals = consoleColorsCSV == other.consoleColorsCSV;
-                        //    break;
                     }
                 }
             }
