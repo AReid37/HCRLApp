@@ -121,7 +121,7 @@ namespace HCResourceLibraryApp.DataHandling
 			{
 				if (value.IsNotNEW())
 					_fetchedContentName = value;
-				else _fetchedContentName = null;
+				//else _fetchedContentName = null;
 			}
 		}
 		public int CountIDs
