@@ -93,7 +93,7 @@ namespace HCResourceLibraryApp.Layout
                             if (matchingLegDat != null)
                             {
                                 sortedLegendData[kix] = matchingLegDat;
-                                //Dbug.SingleLog("--", $"Sorted @ix{kix} --> {matchingLegDat}");
+                                //Dbg.SingleLog("--", $"Sorted @ix{kix} --> {matchingLegDat}");
                             }
                         }
 
@@ -347,8 +347,8 @@ namespace HCResourceLibraryApp.Layout
             if (verNum.HasValue())
             {
                 // Fetch contents in specified verison
-                Dbug.DeactivateNextLogSession();
-                Dbug.StartLogging("LogLegendNSummaryPage:DisplayVersionDetails()");
+                Dbg.StartLogging("LogLegendNSummaryPage:DisplayVersionDetails()", out int llspx);
+                Dbg.ToggleThreadOutputOmission(llspx);
                 ResLibrary verLogDetails = new();
                 List<string> allDataIDs = new();
                 for (int rdx = 0; rdx < 3; rdx++)
@@ -503,7 +503,7 @@ namespace HCResourceLibraryApp.Layout
                             break;
                     }
                 }
-                Dbug.EndLogging();
+                Dbg.EndLogging(llspx);
 
 
                 // display contents of specified version

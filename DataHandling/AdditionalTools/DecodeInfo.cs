@@ -41,12 +41,12 @@
         /// <summary>Also partly logs ' &lt;!di&gt; ' when an issue has been noted.</summary>
         /// <param name="message">A period ('.') will be added at the end of this message.</param>
         /// <remarks>The noted issue may not be overwritten.</remarks>
-        public void NoteIssue(string message)
+        public void NoteIssue(int threadIx, string message)
         {
             if (message.IsNotNE() && decodeIssue.IsNE())
             {
                 decodeIssue = message;
-                Dbug.LogPart(" <!di> ");
+                Dbg.LogPart(threadIx, " <!di> ");
             }
         }
         /// <param name="result">A period ('.') will be added at the end of this message.</param>

@@ -176,18 +176,18 @@ namespace HCResourceLibraryApp.DataHandling
 
         protected override bool EncodeToSharedFile()
         {
-            Dbug.IgnoreNextLogSession();
-            Dbug.StartLogging("Preferences.EncodeToSharedFile()");
+            Dbg.StartLogging("Preferences.EncodeToSharedFile()", out int px);
+            Dbg.ToggleThreadOutputOmission(px);
             List<string> prefDataLines = new List<string>();
 
             // compile the data
             /// color
             prefDataLines.Add($"{Normal.Encode()} {Highlight.Encode()} {Accent.Encode()} {Correction.Encode()} {Incorrection.Encode()} {Warning.Encode()} {Heading1.Encode()} {Heading2.Encode()} {Input.Encode()}".Replace(" ", Sep));
-            Dbug.Log($"L1 Enc  //  tag [{commonFileTag}]  //  {prefDataLines[0]}");
+            Dbg.Log(px, $"L1 Enc  //  tag [{commonFileTag}]  //  {prefDataLines[0]}");
             /// dimensions
             prefDataLines.Add($"{HeightScale}{Sep}{WidthScale}");
-            Dbug.Log($"L2 Enc  //  tag [{commonFileTag}]  //  {prefDataLines[1]}");
-            Dbug.EndLogging();
+            Dbg.Log(px, $"L2 Enc  //  tag [{commonFileTag}]  //  {prefDataLines[1]}");
+            Dbg.EndLogging(px);
 
             // set previous self to current self
             previousSelf = (Preferences)this.MemberwiseClone();
@@ -197,24 +197,24 @@ namespace HCResourceLibraryApp.DataHandling
         }
         protected override bool DecodeFromSharedFile()
         {
-            Dbug.IgnoreNextLogSession();
-            Dbug.StartLogging("Preferences.DecodeFromSharedFile()");
+            Dbg.StartLogging("Preferences.DecodeFromSharedFile()", out int px);
+            Dbg.ToggleThreadOutputOmission(px);
             bool decodedPrefsDataQ = Base.FileRead(commonFileTag, out string[] prefsDataLines);
 
-            Dbug.Log($"Fetching file data (using tag '{commonFileTag}')  //  Successfully read from file? {decodedPrefsDataQ};  {nameof(prefsDataLines)} has elements? {prefsDataLines.HasElements()}");
+            Dbg.Log(px, $"Fetching file data (using tag '{commonFileTag}')  //  Successfully read from file? {decodedPrefsDataQ};  {nameof(prefsDataLines)} has elements? {prefsDataLines.HasElements()}");
             if (decodedPrefsDataQ && prefsDataLines.HasElements())
             {
                 for (int line = 0; line < prefsDataLines.Length && decodedPrefsDataQ; line++)
                 {
                     string dataLine = prefsDataLines[line];
-                    Dbug.Log($"Decoding  L{line + 1}| {dataLine}");
-                    Dbug.NudgeIndent(true);
+                    Dbg.Log(px, $"Decoding  L{line + 1}| {dataLine}");
+                    Dbg.NudgeIndent(px, true);
 
                     switch (line)
                     {
                         // color
                         case 0:
-                            Dbug.LogPart(">> Decoding Color -->  ");
+                            Dbg.LogPart(px, ">> Decoding Color -->  ");
                             string[] colorsText = dataLine.Split(Sep);
                             if (colorsText.HasElements())
                             {
@@ -237,7 +237,7 @@ namespace HCResourceLibraryApp.DataHandling
                                         _ => null
                                     };
 
-                                    Dbug.Log($"Parsed color for '{foreColName}'? {parsedColor} [got '{foreColor}']");
+                                    Dbg.Log(px, $"Parsed color for '{foreColName}'? {parsedColor} [got '{foreColor}']");
                                     if (parsedColor)
                                     {
                                         switch (ctIx)
@@ -282,19 +282,19 @@ namespace HCResourceLibraryApp.DataHandling
                                     decodedPrefsDataQ = parsedColor;
                                 }
                             }
-                            Dbug.Log("<< End Decoding Color");
+                            Dbg.Log(px, "<< End Decoding Color");
                             break;
 
                         // dimensions
                         case 1:
-                            Dbug.Log(">> Decoding Window Dims -->  ");
+                            Dbg.Log(px, ">> Decoding Window Dims -->  ");
                             string[] dimsText = dataLine.Split(Sep);
                             if (dimsText.HasElements())
                             {
                                 for (int dimIx = 0; dimIx < dimsText.Length; dimIx++)
                                 {
                                     string dimText = dimsText[dimIx];
-                                    Dbug.Log($"Parsing for '{(dimIx == 0 ? "Height" : "Width")} Scale' -->  Recieved value '{dimText}'");
+                                    Dbg.Log(px, $"Parsing for '{(dimIx == 0 ? "Height" : "Width")} Scale' -->  Recieved value '{dimText}'");
 
                                     if (dimText.IsNotNEW())
                                     {
@@ -311,7 +311,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                     if (parseHeight)
                                                         HeightScale = dimsH[dh];
 
-                                                    Dbug.LogPart($"-> '{dimsH[dh]}'? [{(parseHeight ? "T": "f")}];  ");
+                                                    Dbg.LogPart(px, $"-> '{dimsH[dh]}'? [{(parseHeight ? "T": "f")}];  ");
                                                 }
                                             }
                                         }
@@ -328,26 +328,26 @@ namespace HCResourceLibraryApp.DataHandling
                                                     if (parsedWidth)
                                                         WidthScale = dimsW[dw];
 
-                                                    Dbug.LogPart($"-> '{dimsW[dw]}'? [{(parsedWidth ? "T" : "f")}];  ");
+                                                    Dbg.LogPart(px, $"-> '{dimsW[dw]}'? [{(parsedWidth ? "T" : "f")}];  ");
                                                 }
                                             }
                                         }
                                     }
-                                    Dbug.Log($" .. End parsing for '{(dimIx == 0 ? "Height" : "Width")} Scale'");
+                                    Dbg.Log(px, $" .. End parsing for '{(dimIx == 0 ? "Height" : "Width")} Scale'");
                                 }
                             }
-                            Dbug.Log("<< End Decoding Window Dims");
+                            Dbg.Log(px, "<< End Decoding Window Dims");
                             break;
                     }
-                    Dbug.NudgeIndent(false);
+                    Dbg.NudgeIndent(px, false);
                 }
 
                 // decodeFromSharedFile --> previousSelf must become a new MemberwiseClone from decoded data
                 previousSelf = (Preferences)this.MemberwiseClone();
-                Dbug.Log($"Cloned preferences data to 'previousSelf'; Confirmed to be the same? {!ChangesMade()}");
+                Dbg.Log(px, $"Cloned preferences data to 'previousSelf'; Confirmed to be the same? {!ChangesMade()}");
             }
-            Dbug.Log($"End decoding for Preferences -- successful decoding? {decodedPrefsDataQ}");
-            Dbug.EndLogging();
+            Dbg.Log(px, $"End decoding for Preferences -- successful decoding? {decodedPrefsDataQ}");
+            Dbg.EndLogging(px);
             return decodedPrefsDataQ;
         }
 

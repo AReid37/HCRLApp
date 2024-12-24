@@ -54,7 +54,7 @@ namespace HCResourceLibraryApp.DataHandling
         public SFormatterLibRef(ResLibrary verLogDetails)
         {
             
-            Dbug.StartLogging("SFormatterLibRef()");
+            Dbg.StartLogging("SFormatterLibRef()", out int sfx);
             // initialize
             _isSetupQ = false;
             _version = null;
@@ -65,15 +65,15 @@ namespace HCResourceLibraryApp.DataHandling
             _updated = new List<string>();
             _legend = new List<string>();
             _summary = new List<string>();
-            Dbug.LogPart("Initialized instance values; ");
+            Dbg.LogPart(sfx, "Initialized instance values; ");
 
             // packaging
             if (verLogDetails != null)
             {
                 if (verLogDetails.IsSetup())
                 {
-                    Dbug.Log($"Recieved version log details; Proceeding to packaging; ");
-                    Dbug.NudgeIndent(true);
+                    Dbg.Log(sfx, $"Recieved version log details; Proceeding to packaging; ");
+                    Dbg.NudgeIndent(sfx, true);
 
                     /// version
                     if (verLogDetails.GetVersionRange(out VerNum lowVer, out VerNum highVer))
@@ -81,15 +81,15 @@ namespace HCResourceLibraryApp.DataHandling
                         if (lowVer.Equals(highVer))
                         {
                             _version = lowVer.ToStringNums();
-                            Dbug.Log($"Assigned value to 'Version' :: {_version}; ");
+                            Dbg.Log(sfx, $"Assigned value to 'Version' :: {_version}; ");
                         }
                     }
 
                     /// added, additional, updated
                     if (verLogDetails.Contents.HasElements())
                     { // wrapping
-                        Dbug.Log($"Setting values for 'Added', 'Additional' and 'Updated' collections [ids uncondensed]; ");
-                        Dbug.NudgeIndent(true);
+                        Dbg.Log(sfx, $"Setting values for 'Added', 'Additional' and 'Updated' collections [ids uncondensed]; ");
+                        Dbg.NudgeIndent(sfx, true);
                         foreach (ResContents resCon in verLogDetails.Contents)
                         {
                             /// Added Props -- ids, name
@@ -103,7 +103,7 @@ namespace HCResourceLibraryApp.DataHandling
                                 //string addedValue = $"{Extensions.CreateNumericDataIDRanges(resCon.ConBase.DataIDString.Split(' '))}";
                                 //addedValue += $"{PropSep}{resCon.ContentName}";
                                 _added.Add(addedValue);
-                                Dbug.Log($"New entry to 'Added' :: {addedValue}   [ids/name]");
+                                Dbg.Log(sfx, $"New entry to 'Added' :: {addedValue}   [ids/name]");
                             }
 
                             if (resCon.ConAddits.HasElements())
@@ -114,7 +114,7 @@ namespace HCResourceLibraryApp.DataHandling
                                     //additValue += $"{PropSep}{rca.OptionalName}{PropSep}{rca.RelatedDataID}{PropSep}";
                                     additValue += isLooseQ ? rca.ContentName : resCon.ContentName;
                                     _addit.Add(additValue);
-                                    Dbug.Log($"New entry to 'Additional' :: {additValue}   [ids/optName/relid/relName]");
+                                    Dbg.Log(sfx, $"New entry to 'Additional' :: {additValue}   [ids/optName/relid/relName]");
                                 }
 
                             if (resCon.ConChanges.HasElements())
@@ -123,33 +123,33 @@ namespace HCResourceLibraryApp.DataHandling
                                     string contentName = resCon.ContentName == ResLibrary.LooseResConName || rcc.InternalName.IsNotNEW() ? rcc.InternalName : resCon.ContentName;
                                     string updtValue = $"{rcc.RelatedDataID}{PropSep}{contentName}{PropSep}{rcc.ChangeDesc}";
                                     _updated.Add(updtValue);
-                                    Dbug.Log($"New entry to 'Updated' :: {updtValue}   [relID/relName/changeDesc]");
+                                    Dbg.Log(sfx, $"New entry to 'Updated' :: {updtValue}   [relID/relName/changeDesc]");
                                 }
                         }
-                        Dbug.NudgeIndent(false);
+                        Dbg.NudgeIndent(sfx, false);
 
                         _countAdded = _added.Count;
                         _countAddit = _addit.Count;
                         _countUpdated = _updated.Count;
-                        Dbug.Log($"Assigned values to :: 'AddedCount' [{_countAdded}]  --  'AdditCount' [{_countAddit}]  --  'UpdatedCount' [{_countUpdated}]; ");
+                        Dbg.Log(sfx, $"Assigned values to :: 'AddedCount' [{_countAdded}]  --  'AdditCount' [{_countAddit}]  --  'UpdatedCount' [{_countUpdated}]; ");
                     }
 
                     /// legend
                     if (verLogDetails.Legends.HasElements())
                     {
-                        /// Legen Props -- key, definition, keyNum
-                        Dbug.Log($"Setting values for 'Legend' collection; ");
-                        Dbug.NudgeIndent(true);
+                        /// Legend Props -- key, definition, keyNum
+                        Dbg.Log(sfx, $"Setting values for 'Legend' collection; ");
+                        Dbg.NudgeIndent(sfx, true);
                         foreach (LegendData legData in verLogDetails.Legends)
                         {
                             string legValue = $"{legData.Key}{PropSep}{legData[0]}";
                             _legend.Add(legValue);
-                            Dbug.Log($"New entry :: {legValue}   [key/definition]");
+                            Dbg.Log(sfx, $"New entry :: {legValue}   [key/definition]");
                         }
-                        Dbug.NudgeIndent(false);
+                        Dbg.NudgeIndent(sfx, false);
 
                         _countLegend = _legend.Count;
-                        Dbug.Log($"Assigned value to 'LegendCount' :: {_countLegend}; ");
+                        Dbg.Log(sfx, $"Assigned value to 'LegendCount' :: {_countLegend}; ");
                     }
 
                     /// tta, summary
@@ -159,28 +159,28 @@ namespace HCResourceLibraryApp.DataHandling
                         SummaryData sumData = verLogDetails.Summaries[0];
                         
                         _tta = sumData.TTANum.ToString();
-                        Dbug.Log($"Assigned value to 'TTA' :: {_tta}; ");
+                        Dbg.Log(sfx, $"Assigned value to 'TTA' :: {_tta}; ");
 
-                        Dbug.Log($"Setting values for 'Summary' collection; ");
-                        Dbug.NudgeIndent(true);
+                        Dbg.Log(sfx, $"Setting values for 'Summary' collection; ");
+                        Dbg.NudgeIndent(sfx, true);
                         foreach (string sumPart in sumData.SummaryParts)
                         {
                             _summary.Add(sumPart);
-                            Dbug.Log($"New entry :: {sumPart}   [sumPart]");
+                            Dbg.Log(sfx, $"New entry :: {sumPart}   [sumPart]");
                         }
-                        Dbug.NudgeIndent(false);
+                        Dbg.NudgeIndent(sfx, false);
 
                         _countSummary = _summary.Count;
-                        Dbug.Log($"Assigned value to 'SummaryCount' :: {_countSummary}; ");
+                        Dbg.Log(sfx, $"Assigned value to 'SummaryCount' :: {_countSummary}; ");
                     }
                    
-                    Dbug.NudgeIndent(false);
+                    Dbg.NudgeIndent(sfx, false);
                     _isSetupQ = true;
                 }
-                else Dbug.Log($"Version log details were incomplete (!IsSetup()); ");
+                else Dbg.Log(sfx, $"Version log details were incomplete (!IsSetup()); ");
             }
-            else Dbug.Log("No version log details were recieved (null); ");
-            Dbug.EndLogging();
+            else Dbg.Log(sfx, "No version log details were recieved (null); ");
+            Dbg.EndLogging(sfx);
         }
 
         // METHODS
@@ -188,7 +188,7 @@ namespace HCResourceLibraryApp.DataHandling
         /// <param name="section">Specifies a collection based on sections as determined by log decoder sectioning.</param>
         /// <param name="entryNum">The one-based entry number of the collection to retrieve a property from. This value is clamped within collection's range.</param>
         /// <param name="prop">The property to retrieve from a collection at <paramref name="entryNum"/></param>
-        /// <returns>A string value of the property from given an <paramref name="entryNum"/> in a given <paramref name="section"/>.</returns>
+        /// <returns>A string value of the property from a given <paramref name="entryNum"/> in a given <paramref name="section"/>.</returns>
         public string GetPropertyValue(DecodedSection section, int entryNum, LibRefProp prop)
         {
             /// Added Props -- ids, name
@@ -299,7 +299,7 @@ namespace HCResourceLibraryApp.DataHandling
 
             dbgStr += $";  --> Returned value :: ";
             dbgStr += (propValue.IsNE() ? (propValue == null ? "<null>" : "<empty>") : propValue) + "; ";
-            //Dbug.SingleLog("SFormatterLibRef.GetPropertyValue()", dbgStr);
+            //Dbg.SingleLog("SFormatterLibRef.GetPropertyValue()", dbgStr);
 
             if (propValue.IsNE())
                 propValue = ValIsNE;

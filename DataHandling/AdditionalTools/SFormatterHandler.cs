@@ -36,8 +36,8 @@ namespace HCResourceLibraryApp.DataHandling
         // METHODS
         public static void ColorCode(string fLine, bool useNativeQ = false, bool newLineQ = false, bool isErrorMsg = false)
         {
-            Dbug.DeactivateNextLogSession();
-            Dbug.StartLogging("SFormatterHandler.ColorCode()");
+            Dbg.StartLogging("SFormatterHandler.ColorCode()", out int cx);
+            Dbg.ToggleThreadOutputOmission(cx);
             Color colComment = useNativeQ ? Color.DarkGray : GetPrefsForeColor(ForECol.Accent);
             Color colEscape = useNativeQ ? Color.Gray : GetPrefsForeColor(ForECol.Accent);
             Color colOperator = useNativeQ ? Color.DarkGray : GetPrefsForeColor(ForECol.Accent);
@@ -86,7 +86,7 @@ namespace HCResourceLibraryApp.DataHandling
                     const string sComment = "//", sEsc1 = "&00;", sEsc2 = "&01;", sKeyw_if = "if", sKeyw_repeat = "repeat", sKeyw_else = "else", sKeyw_jump = "jump", sKeyw_next = "next";
                     const char cPlain = '"', cEscStart = '&', cEscEnd = ';', cOpEqual = '=', cOpUnequal = '!', cOpGreat = '>', cOpLess = '<', cRefSteam = '$', cRefLibOpen = '{', cRefLibClose = '}', cRepKey = '#';
 
-                    Dbug.Log($"Recieved '{fLine}'; Numbering types; ");
+                    Dbg.Log(cx, $"Recieved '{fLine}'; Numbering types; ");
                     /// numbering
                     // TYPE NUMBERS (in order of precedence) :: code[0]     comment[1]     plaint[2]     escape[3]     reference[4]     keyword[5]     operator[6]
                     string numberedCopy = "", fBatched;
@@ -97,22 +97,22 @@ namespace HCResourceLibraryApp.DataHandling
                     bool isCommentQ = false, nPlainTQ = false, nEscQ = false, nKeyWordQ = false, nRefQ = false, isLibRefQ = false, keywRepeatExistsQ = false;
                     bool enableMethodPartLogging = true;
 
-                    Dbug.Log($"LEGEND :: Hit 1st Non-space '>>' (Just  '>|'); InPlaintTextBlock 'pl'; InEscapeBlock 'esc'; InKeywordBlock 'kw'; Operator 'op'; Reference (Library 'rfl', Steam 'rfs'); ");
-                    Dbug.NudgeIndent(true);
+                    Dbg.Log(cx, $"LEGEND :: Hit 1st Non-space '>>' (Just  '>|'); InPlaintTextBlock 'pl'; InEscapeBlock 'esc'; InKeywordBlock 'kw'; Operator 'op'; Reference (Library 'rfl', Steam 'rfs'); ");
+                    Dbg.NudgeIndent(cx, true);
                     for (int fx = 0; fx < fLine.Length; fx++)
                     {
                         char fChar = fLine[fx]; //fx < fLine.Length ? fLine[fx]     : '\0';
                         bool isSpaceChar = fChar == ' ', isEndQ = fx + 1 >= fLine.Length;
-                        Dbug.LogPart($"prevChar = '{(prevFChar.IsNotNull() ? prevFChar : "")}'  char = '{(fChar.IsNotNull() ? fChar : "")}' | ");
+                        Dbg.LogPart(cx, $"prevChar = '{(prevFChar.IsNotNull() ? prevFChar : "")}'  char = '{(fChar.IsNotNull() ? fChar : "")}' | ");
 
                         if (!hit1stNonSpaceQ)
                         {
                             hit1stNonSpaceQ = !isSpaceChar;
                             if (hit1stNonSpaceQ)
                                 justHitNonSpaceQ = true;
-                            Dbug.LogPart($"{(hit1stNonSpaceQ ? ">|" : "")} ");
+                            Dbg.LogPart(cx, $"{(hit1stNonSpaceQ ? ">|" : "")} ");
                         }
-                        else Dbug.LogPart($">> ");
+                        else Dbg.LogPart(cx, $">> ");
 
                         /// IF found first non-space char: identify types; ELSE default type as 'code[0]'
                         if (hit1stNonSpaceQ)
@@ -120,11 +120,11 @@ namespace HCResourceLibraryApp.DataHandling
                             /// comment[1]
                             if (fChar == '/' && justHitNonSpaceQ)
                             {
-                                Dbug.LogPart(" comment --> ");
+                                Dbg.LogPart(cx, " comment --> ");
                                 if (GetStringFromChars(fx, 2) == sComment)
                                 {
                                     isCommentQ = true;
-                                    Dbug.LogPart("is comment line. No other types can be identified; ");
+                                    Dbg.LogPart(cx, "is comment line. No other types can be identified; ");
                                 }
                             }
                             if (isCommentQ)
@@ -139,12 +139,12 @@ namespace HCResourceLibraryApp.DataHandling
                                 if (fChar == cOpEqual || fChar == cOpGreat || fChar == cOpLess)
                                 {
                                     typeNum = 6;
-                                    Dbug.LogPart($"op; ");
+                                    Dbg.LogPart(cx, $"op; ");
                                 }
                                 if (fChar == cOpUnequal && GetStringFromChars(fx, 2) == $"{cOpUnequal}{cOpEqual}")
                                 {
                                     typeNum = 6;
-                                    Dbug.LogPart($"op; ");
+                                    Dbg.LogPart(cx, $"op; ");
                                 }
 
                                 /// keywords[5]                                
@@ -152,7 +152,7 @@ namespace HCResourceLibraryApp.DataHandling
                                 {   /// they used to be only identified up front, but anywhere they still are (perhaps not agreeing with syntax though)
                                     if (!justHitNonSpaceQ && enableMethodPartLogging)
                                         enableMethodPartLogging = false;
-                                    else Dbug.LogPart("Keyword (x5) --> ");
+                                    else Dbg.LogPart(cx, "Keyword (x5) --> ");
 
                                     string theKeyword = "";
                                     /// IF ...: keyword 'if'; ELSE IF ...: keyword 'else'; ELSE IF ...: keyword 'repeat'; 
@@ -177,7 +177,7 @@ namespace HCResourceLibraryApp.DataHandling
                                     {
                                         nKeyWordQ = true;
                                         ixKeyWordEnd = fx + theKeyword.Length;
-                                        //Dbug.LogPart($"ID'd keyword '{nKeyWord}' (ends @ix{ixKeyWordEnd}); ");
+                                        //Dbg.LogPart(cx, $"ID'd keyword '{nKeyWord}' (ends @ix{ixKeyWordEnd}); ");
                                     }
                                 }
                                 if (nKeyWordQ)
@@ -186,7 +186,7 @@ namespace HCResourceLibraryApp.DataHandling
                                     if (nKeyWordQ)
                                     {
                                         typeNum = 5;
-                                        Dbug.LogPart($"kw; ");
+                                        Dbg.LogPart(cx, $"kw; ");
                                     }
                                 }
 
@@ -194,7 +194,7 @@ namespace HCResourceLibraryApp.DataHandling
                                 if (nRefQ)
                                 {
                                     typeNum = 4;
-                                    Dbug.LogPart($"{(isLibRefQ ? "rfl" : "rfs")}; ");
+                                    Dbg.LogPart(cx, $"{(isLibRefQ ? "rfl" : "rfs")}; ");
                                 }
                                 if (!nRefQ)
                                 {
@@ -204,14 +204,14 @@ namespace HCResourceLibraryApp.DataHandling
                                         isLibRefQ = true;
                                         nRefQ = true;
                                         typeNum = 4;
-                                        Dbug.LogPart("rfl; ");
+                                        Dbg.LogPart(cx, "rfl; ");
                                     }
                                     /// steam references
                                     else if (fChar == cRefSteam)
                                     {
                                         nRefQ = true;
                                         typeNum = 4;
-                                        Dbug.LogPart("rfs; ");
+                                        Dbg.LogPart(cx, "rfs; ");
                                     }
                                 }
                                 else if (nRefQ)
@@ -231,13 +231,13 @@ namespace HCResourceLibraryApp.DataHandling
                                 if (nPlainTQ)
                                 {
                                     typeNum = 2;
-                                    Dbug.LogPart("pl; ");
+                                    Dbg.LogPart(cx, "pl; ");
                                 }
                                 if (fChar == cPlain)
                                 {
                                     if (!nPlainTQ)
                                     {
-                                        Dbug.LogPart("pl; ");
+                                        Dbg.LogPart(cx, "pl; ");
                                         typeNum = 2;
                                     }
                                     nPlainTQ = !nPlainTQ;
@@ -254,7 +254,7 @@ namespace HCResourceLibraryApp.DataHandling
 
                                     if (nEscQ)
                                     {
-                                        Dbug.LogPart("esc; ");
+                                        Dbg.LogPart(cx, "esc; ");
                                         typeNum = 3;
                                     }
 
@@ -267,7 +267,7 @@ namespace HCResourceLibraryApp.DataHandling
                                 {
                                     if (keywRepeatExistsQ || !nPlainTQ)
                                     {
-                                        Dbug.LogPart("op (repKey); ");
+                                        Dbg.LogPart(cx, "op (repKey); ");
                                         typeNum = 6;
                                     }
                                 }
@@ -278,7 +278,7 @@ namespace HCResourceLibraryApp.DataHandling
                         numberedCopy += typeNum.ToString();
                         if (isEndQ || prevTypeNum != typeNum)
                         {
-                            Dbug.LogPart($"Batch (in type #{prevTypeNum}) -> ");
+                            Dbg.LogPart(cx, $"Batch (in type #{prevTypeNum}) -> ");
                             fBatched = GetStringFromChars(ixLastBatched, fx - ixLastBatched);
                             ixLastBatched = fx;
 
@@ -291,7 +291,7 @@ namespace HCResourceLibraryApp.DataHandling
                                 {
                                     fBatched = fChar.ToString();
                                     batchTypeNum = typeNum;
-                                    Dbug.LogPart($"Mini-batch (in type #{batchTypeNum}) -> '{fBatched}'");
+                                    Dbg.LogPart(cx, $"Mini-batch (in type #{batchTypeNum}) -> '{fBatched}'");
                                 }
 
                                 Color batchColor = batchTypeNum switch
@@ -309,7 +309,7 @@ namespace HCResourceLibraryApp.DataHandling
                             }
 
                         }
-                        Dbug.Log($"  |  typeNum = {typeNum}; ");
+                        Dbg.Log(cx, $"  |  typeNum = {typeNum}; ");
 
                         // just before end of loop
                         prevFChar = fChar;
@@ -325,12 +325,12 @@ namespace HCResourceLibraryApp.DataHandling
                             for (int gx = startIndex; gx < (startIndex + length) && gx < fLine.Length; gx++)
                                 getStr += fLine[gx];
                             if (enableMethodPartLogging)
-                                Dbug.LogPart($"GetStr(@{startIndex},{length})[ret:'{getStr}']; ");
+                                Dbg.LogPart(cx, $"GetStr(@{startIndex},{length})[ret:'{getStr}']; ");
                             return getStr;
                         }
                     }
-                    Dbug.NudgeIndent(false);
-                    Dbug.Log($"Final number copy :: {numberedCopy}; ");
+                    Dbg.NudgeIndent(cx, false);
+                    Dbg.Log(cx, $"Final number copy :: {numberedCopy}; ");
 
                     // for now
                     //Format(numberedCopy);
@@ -341,7 +341,7 @@ namespace HCResourceLibraryApp.DataHandling
                 Format(fLine, colErr, newLineQ);
             }
             Program.ToggleFormatUsageVerification();
-            Dbug.EndLogging();
+            Dbg.EndLogging(cx);
         }
         public static void CheckSyntax(string[] lineData)
         {
@@ -4091,7 +4091,7 @@ namespace HCResourceLibraryApp.DataHandling
 
         public static void TestSyntaxCheckTools()
         {
-            Dbug.StartLogging("Testing Check Syntax Tools");
+            Dbg.StartLogging("Testing Check Syntax Tools", out int tscx);
             for (int x = 0; x < 6; x++)
             {
                 string toolName = x switch
@@ -4168,84 +4168,84 @@ namespace HCResourceLibraryApp.DataHandling
                 };
 
 
-                Dbug.Log($"Testing :: {toolName}");
-                Dbug.NudgeIndent(true);
+                Dbg.Log(tscx, $"Testing :: {toolName}");
+                Dbg.NudgeIndent(tscx, true);
                 foreach (string test in tests)
                 {
-                    Dbug.LogPart($"Input: '{test}'    //    Output: ");
+                    Dbg.LogPart(tscx, $"Input: '{test}'    //    Output: ");
                     switch (x)
                     {
                         case 0:
-                            Dbug.LogPart($"'{RemovePlainText(test)}'  |  ");
-                            Dbug.LogPart($"[invert] '{RemovePlainText(test, true)}'");
+                            Dbg.LogPart(tscx, $"'{RemovePlainText(test)}'  |  ");
+                            Dbg.LogPart(tscx, $"[invert] '{RemovePlainText(test, true)}'");
                             break;
 
                         case 1:
-                            Dbug.LogPart($"[c,k,in] '{test.SnippetText("c", "k", Snip.Inc)}'  |  ");
-                            Dbug.LogPart($"[c,k,ex] '{test.SnippetText("c", "k")}'  |  ");
-                            Dbug.LogPart($"[c,k,in,aftr] '{test.SnippetText("c", "k", Snip.Inc, Snip.EndAft)}'  |  ");
-                            Dbug.Log($"[c,k,ex,aftr] '{test.SnippetText("c", "k", Snip.EndAft)}' ...");
-                            Dbug.LogPart($"                                 ... ");
-                            Dbug.LogPart($"[c,c,in,aftr] '{test.SnippetText("c", "c", Snip.Inc, Snip.EndAft)}'  |  ");
-                            Dbug.LogPart($"[c,c,in] '{test.SnippetText("c", "c", Snip.Inc)}'  |  ");
-                            Dbug.LogPart($"[c,k,in,2nd] '{test.SnippetText("c", "k", Snip.Inc, Snip.End2nd)}'  |  ");
-                            Dbug.LogPart($"[c,k,ex,2nd] '{test.SnippetText("c", "k", Snip.End2nd)}'  |  ");
-                            Dbug.LogPart($"[c,k,in,aftr,last] '{test.SnippetText("c", "k", Snip.All)}'");
+                            Dbg.LogPart(tscx, $"[c,k,in] '{test.SnippetText("c", "k", Snip.Inc)}'  |  ");
+                            Dbg.LogPart(tscx, $"[c,k,ex] '{test.SnippetText("c", "k")}'  |  ");
+                            Dbg.LogPart(tscx, $"[c,k,in,aftr] '{test.SnippetText("c", "k", Snip.Inc, Snip.EndAft)}'  |  ");
+                            Dbg.Log(tscx, $"[c,k,ex,aftr] '{test.SnippetText("c", "k", Snip.EndAft)}' ...");
+                            Dbg.LogPart(tscx, $"                                 ... ");
+                            Dbg.LogPart(tscx, $"[c,c,in,aftr] '{test.SnippetText("c", "c", Snip.Inc, Snip.EndAft)}'  |  ");
+                            Dbg.LogPart(tscx, $"[c,c,in] '{test.SnippetText("c", "c", Snip.Inc)}'  |  ");
+                            Dbg.LogPart(tscx, $"[c,k,in,2nd] '{test.SnippetText("c", "k", Snip.Inc, Snip.End2nd)}'  |  ");
+                            Dbg.LogPart(tscx, $"[c,k,ex,2nd] '{test.SnippetText("c", "k", Snip.End2nd)}'  |  ");
+                            Dbg.LogPart(tscx, $"[c,k,in,aftr,last] '{test.SnippetText("c", "k", Snip.All)}'");
                             break;
 
                         case 2:
-                            Dbug.LogPart($"'{SquishSpaces(test)}'");
+                            Dbg.LogPart(tscx, $"'{SquishSpaces(test)}'");
                             break;
 
                         case 3:
-                            Dbug.LogPart($"[.,1st] '{test.RemovePlainTextAfter('.')}'  |  ");
-                            Dbug.LogPart($"[.,2nd] '{test.RemovePlainTextAfter('.', true)}'  |  ");
-                            Dbug.LogPart($"[.,1st,noAft] '{test.RemovePlainTextAfter('.', false, true)}'  |  ");
-                            Dbug.LogPart($"[.,2nd,noAft] '{test.RemovePlainTextAfter('.', true, true)}'");
+                            Dbg.LogPart(tscx, $"[.,1st] '{test.RemovePlainTextAfter('.')}'  |  ");
+                            Dbg.LogPart(tscx, $"[.,2nd] '{test.RemovePlainTextAfter('.', true)}'  |  ");
+                            Dbg.LogPart(tscx, $"[.,1st,noAft] '{test.RemovePlainTextAfter('.', false, true)}'  |  ");
+                            Dbg.LogPart(tscx, $"[.,2nd,noAft] '{test.RemovePlainTextAfter('.', true, true)}'");
                             break;
 
                         case 4:
                             string[] lBrEndFalse = test.LineBreak('/');
                             if (lBrEndFalse.HasElements())
                             {
-                                Dbug.LogPart("--> [/,brStrt,ignC] ");
+                                Dbg.LogPart(tscx, "--> [/,brStrt,ignC] ");
                                 foreach (string lbref in lBrEndFalse)
-                                    Dbug.LogPart($" '{lbref}' ");
+                                    Dbg.LogPart(tscx, $" '{lbref}' ");
                             }
-                            else Dbug.LogPart("--> No output");
+                            else Dbg.LogPart(tscx, "--> No output");
 
-                            Dbug.LogPart("   |   ");
+                            Dbg.LogPart(tscx, "   |   ");
                             string[] lBrEndTrue = test.LineBreak('/', true);
                             if (lBrEndTrue.HasElements())
                             {
-                                Dbug.LogPart("--> [/,brEnd,ignoreC] ");
+                                Dbg.LogPart(tscx, "--> [/,brEnd,ignoreC] ");
                                 foreach (string lbret in lBrEndTrue)
-                                    Dbug.LogPart($" '{lbret}' ");
+                                    Dbg.LogPart(tscx, $" '{lbret}' ");
                             }
-                            else Dbug.LogPart("--> No output");
+                            else Dbg.LogPart(tscx, "--> No output");
 
-                            Dbug.LogPart("   |   ");
+                            Dbg.LogPart(tscx, "   |   ");
                             string[] lBrInPlain = test.LineBreak('/', true, false);
                             if (lBrInPlain.HasElements())
                             {
-                                Dbug.LogPart("--> [/,brEnd,inC] ");
+                                Dbg.LogPart(tscx, "--> [/,brEnd,inC] ");
                                 foreach (string lbret in lBrInPlain)
-                                    Dbug.LogPart($" '{lbret}' ");
+                                    Dbg.LogPart(tscx, $" '{lbret}' ");
                             }
-                            else Dbug.LogPart("--> No output");
+                            else Dbg.LogPart(tscx, "--> No output");
                             break;
 
                         case 5:
-                            Dbug.LogPart($"[a,caseSen] '{test.RemoveFromPlainText('a')}'  |  ");
-                            Dbug.LogPart($"[a,caseIns] '{test.RemoveFromPlainText('a', false)}'  |  ");
-                            Dbug.LogPart($"[a,caseIns,*] '{test.RemoveFromPlainText('a', false, '*')}'");
+                            Dbg.LogPart(tscx, $"[a,caseSen] '{test.RemoveFromPlainText('a')}'  |  ");
+                            Dbg.LogPart(tscx, $"[a,caseIns] '{test.RemoveFromPlainText('a', false)}'  |  ");
+                            Dbg.LogPart(tscx, $"[a,caseIns,*] '{test.RemoveFromPlainText('a', false, '*')}'");
                             break;
                     }
-                    Dbug.Log("; ");
+                    Dbg.Log(tscx, "; ");
                 }
-                Dbug.NudgeIndent(false);
+                Dbg.NudgeIndent(tscx, false);
             }
-            Dbug.EndLogging();
+            Dbg.EndLogging(tscx);
         }
         #endregion
     }

@@ -214,8 +214,8 @@ namespace HCResourceLibraryApp.Layout
                         if (selectedVerNum.HasValue())
                         {
                             // gather version information
-                            Dbug.DeactivateNextLogSession();
-                            Dbug.StartLogging("GenSteamLogPage:SubPage_LogVersion()");
+                            Dbg.StartLogging("GenSteamLogPage:SubPage_LogVersion()", out int gslpx);
+                            Dbg.ToggleThreadOutputOmission(gslpx);
                             ResLibrary verLogDetails = new();
                             List<string> allDataIDs = new();
                             for (int rdx = 0; rdx < 3; rdx++)
@@ -373,7 +373,7 @@ namespace HCResourceLibraryApp.Layout
                                         break;
                                 }
                             }
-                            Dbug.EndLogging();
+                            Dbg.EndLogging(gslpx);
 
                             // display ver details
                             NewLine(5);
@@ -917,9 +917,9 @@ namespace HCResourceLibraryApp.Layout
             int lineToEdit = noLineToEdit, lineToEditSpan = HSNL(3, 7).Clamp(0, 5), countCycles = 0, historySpan = HSNL(1, 5).Clamp(1, 3);
 
             Program.LogState($"Generate Steam Log|Steam Formatter|Formatting Editor {formatterLanguageVersion}");
-            Dbug.StartLogging();
-            Dbug.Log($"RECORDING :: Formatting Editor Actions and processes -- FProfile#1? {isUsingFormatterNo1Q}");
-            Dbug.NudgeIndent(true);
+            Dbg.StartLogging("GenSteamLogPage.FormattingEditor()", out int gslpx);
+            Dbg.Log(gslpx, $"RECORDING :: Formatting Editor Actions and processes -- FProfile#1? {isUsingFormatterNo1Q}");
+            Dbg.NudgeIndent(gslpx, true);
 
             List<SFormatterHistory> _editorHistory;
             int historyActionNumber;
@@ -932,7 +932,7 @@ namespace HCResourceLibraryApp.Layout
                 {
                     historyActionNumber1 = historyActionInitial;
                     _editorHistory1.Add(new SFormatterHistory("Opened Formatter", "--", "--"));
-                    Dbug.Log($"Added 'open formatter' history to history list; Initialized history action number; ");
+                    Dbg.Log(gslpx, $"Added 'open formatter' history to history list; Initialized history action number; ");
                 }
 
                 _editorHistory = _editorHistory1;
@@ -947,7 +947,7 @@ namespace HCResourceLibraryApp.Layout
                 {
                     historyActionNumber2 = historyActionInitial;
                     _editorHistory2.Add(new SFormatterHistory("Opened Formatter", "--", "--"));
-                    Dbug.Log($"Added 'open formatter' history to history list; Initialized history action number; ");
+                    Dbg.Log(gslpx, $"Added 'open formatter' history to history list; Initialized history action number; ");
                 }
 
                 _editorHistory = _editorHistory2;
@@ -957,8 +957,8 @@ namespace HCResourceLibraryApp.Layout
             // THE EDITOR
             do
             {
-                Dbug.Log($"## Start Cycle {countCycles + 1};");
-                Dbug.NudgeIndent(true);
+                Dbg.Log(gslpx, $"## Start Cycle {countCycles + 1};");
+                Dbg.NudgeIndent(gslpx, true);
                 if (_formatterData != null)
                     formatterIsSetupQ = _formatterData.IsSetup();
 
@@ -1174,7 +1174,7 @@ namespace HCResourceLibraryApp.Layout
                                 /// formatting syntax help
                                 if (editInput.Equals(editorHelpPhrase))
                                 {
-                                    Dbug.Log("Editing Area; Formatting Language Syntax Help openned; ");
+                                    Dbg.Log(gslpx, "Editing Area; Formatting Language Syntax Help openned; ");
                                     Clear();
                                     Title("Formatting Language Syntax", subMenuUnderline, 2);
 
@@ -1396,8 +1396,8 @@ namespace HCResourceLibraryApp.Layout
                                     /// appender functions
                                     if (editInput.Contains(editorCmdAppender))
                                     {
-                                        Dbug.Log($"Appender used in editing area; Received input :: {editInput}");
-                                        Dbug.LogPart("  >|");
+                                        Dbg.Log(gslpx, $"Appender used in editing area; Received input :: {editInput}");
+                                        Dbg.LogPart(gslpx, "  >|");
 
                                         bool oneAppenderOnLineQ = editInput.CountOccuringCharacter(editorCmdAppender[0]) == editorCmdAppender.Length;
                                         string newEditInput = null, newEdit = "";
@@ -1407,16 +1407,16 @@ namespace HCResourceLibraryApp.Layout
                                         if (editInput.StartsWith(editorCmdAppender) && oneAppenderOnLineQ)
                                         {
                                             newEdit = editInput.Substring(editorCmdAppender.Length);
-                                            Dbug.LogPart("Append After; ");
+                                            Dbg.LogPart(gslpx, "Append After; ");
                                             if (newEdit.IsNotNE())
                                             {
                                                 newEditInput = lineInfo + newEdit;
                                                 appenderHistNamePart = "Append";
-                                                Dbug.LogPart($"Resulting Edit :: '{lineInfo}' + '{newEdit}'");
+                                                Dbg.LogPart(gslpx, $"Resulting Edit :: '{lineInfo}' + '{newEdit}'");
                                             }
                                             else
                                             {
-                                                Dbug.LogPart("No new edit to append");
+                                                Dbg.LogPart(gslpx, "No new edit to append");
                                                 IncorrectionMessageQueue("There is no new edit to append to line");
                                             }
                                         }
@@ -1424,23 +1424,23 @@ namespace HCResourceLibraryApp.Layout
                                         else if (editInput.EndsWith(editorCmdAppender) && oneAppenderOnLineQ)
                                         {
                                             newEdit = editInput.Substring(0, editInput.Length - editorCmdAppender.Length);
-                                            Dbug.LogPart("Insert Before; ");
+                                            Dbg.LogPart(gslpx, "Insert Before; ");
                                             if (newEdit.IsNotNE())
                                             {
                                                 newEditInput = newEdit + lineInfo;
                                                 appenderHistNamePart = "Insert Before";
-                                                Dbug.LogPart($"Resulting Edit :: '{newEdit}' + '{lineInfo}'");
+                                                Dbg.LogPart(gslpx, $"Resulting Edit :: '{newEdit}' + '{lineInfo}'");
                                             }
                                             else
                                             {
-                                                Dbug.LogPart("No new edit to insert");
+                                                Dbg.LogPart(gslpx, "No new edit to insert");
                                                 IncorrectionMessageQueue("There is no new edit to insert before line");
                                             }
                                         }
                                         /// replace occurence
                                         else if (oneAppenderOnLineQ)
                                         {
-                                            Dbug.LogPart("$Replace occurence within; ");
+                                            Dbg.LogPart(gslpx, "$Replace occurence within; ");
                                             string[] editParts = editInput.Split(editorCmdAppender);
                                             if (editParts.HasElements(2))
                                             {
@@ -1449,31 +1449,31 @@ namespace HCResourceLibraryApp.Layout
 
                                                 if (word1.IsNotNE() && newEdit.IsNotNE())
                                                 {
-                                                    Dbug.LogPart($"Replacing any '{word1}' with '{newEdit}'");
+                                                    Dbg.LogPart(gslpx, $"Replacing any '{word1}' with '{newEdit}'");
 
                                                     if (lineInfo.Contains(word1) && word1 != newEdit)
                                                     {
                                                         newEditInput = lineInfo.Replace(word1, newEdit);
                                                         appenderHistNamePart = "Replace";
-                                                        Dbug.LogPart($"Resulting Edit :: '{lineInfo.Replace(word1, $"[{newEdit}]")}'");
+                                                        Dbg.LogPart(gslpx, $"Resulting Edit :: '{lineInfo.Replace(word1, $"[{newEdit}]")}'");
                                                     }
                                                     else
                                                     {
                                                         if (word1 == newEdit)
                                                         {
-                                                            Dbug.LogPart("Unnecessary replacement (word equals new edit)");
+                                                            Dbg.LogPart(gslpx, "Unnecessary replacement (word equals new edit)");
                                                             IncorrectionMessageQueue("Word to replace and new edit are the same");
                                                         }
                                                         else
                                                         {
-                                                            Dbug.LogPart($"Could not find placement '{word1}' within line");
+                                                            Dbg.LogPart(gslpx, $"Could not find placement '{word1}' within line");
                                                             IncorrectionMessageQueue($"Could not find word '{word1}' within line");
                                                         }
                                                     }
                                                 }
                                                 else
                                                 {
-                                                    Dbug.LogPart("Could not proceed to replace word with new edit");
+                                                    Dbg.LogPart(gslpx, "Could not proceed to replace word with new edit");
                                                     if (word1.IsNotNE())
                                                         IncorrectionMessageQueue("There is no new edit to insert within line");
                                                     else IncorrectionMessageQueue("Missing identifiable word to replace with new edit");
@@ -1483,7 +1483,7 @@ namespace HCResourceLibraryApp.Layout
                                         /// insert between
                                         else if (editInput.CountOccuringCharacter(editorCmdAppender[0]) == 2 * editorCmdAppender.Length)
                                         {
-                                            Dbug.LogPart($"Insert within; ");
+                                            Dbg.LogPart(gslpx, $"Insert within; ");
                                             string[] editParts = editInput.Split(editorCmdAppender);
                                             if (editParts.HasElements(3))
                                             {
@@ -1492,7 +1492,7 @@ namespace HCResourceLibraryApp.Layout
 
                                                 if (word1.IsNotNE() && word2.IsNotNE() && newEdit.IsNotNE())
                                                 {
-                                                    Dbug.LogPart($"Parting words: after '{word1}' and before '{word2}'; ");
+                                                    Dbg.LogPart(gslpx, $"Parting words: after '{word1}' and before '{word2}'; ");
                                                     string[] lineParts = lineInfo.Split(word1 + word2);
                                                     if (lineParts.HasElements(2))
                                                     {
@@ -1501,11 +1501,11 @@ namespace HCResourceLibraryApp.Layout
 
                                                         newEditInput = lineParts[0] + newEdit + lineParts[1];
                                                         appenderHistNamePart = "Insert Within";
-                                                        Dbug.LogPart($"Resulting Edit :: '{lineParts[0]}' + '{newEdit}' + '{lineParts[1]}'");
+                                                        Dbg.LogPart(gslpx, $"Resulting Edit :: '{lineParts[0]}' + '{newEdit}' + '{lineParts[1]}'");
                                                     }
                                                     else
                                                     {
-                                                        Dbug.LogPart($"Could not find placement '{word1 + word2}' within line");
+                                                        Dbg.LogPart(gslpx, $"Could not find placement '{word1 + word2}' within line");
                                                         IncorrectionMessageQueue($"Could not find phrase '{word1 + word2}' within line");
                                                     }
                                                 }
@@ -1513,27 +1513,27 @@ namespace HCResourceLibraryApp.Layout
                                                 {
                                                     if (newEdit.IsNotNE())
                                                     {
-                                                        Dbug.LogPart("No parting words to identify placement within line");
+                                                        Dbg.LogPart(gslpx, "No parting words to identify placement within line");
                                                         if (word1.IsNE())
                                                             IncorrectionMessageQueue("Missing identifiable word to place new edit 'after'");
                                                         else IncorrectionMessageQueue("Missing identifiable word to place new edit 'before'");
                                                     }
                                                     else
                                                     {
-                                                        Dbug.LogPart("No new edit to insert between parting words");
+                                                        Dbg.LogPart(gslpx, "No new edit to insert between parting words");
                                                         IncorrectionMessageQueue("There is no new edit to insert within line");
                                                     }
                                                 }
                                             }
-                                            else Dbug.LogPart("Parting words and new edit could not be fetched");
+                                            else Dbg.LogPart(gslpx, "Parting words and new edit could not be fetched");
                                         }
                                         /// what? what! do what!?
                                         else
                                         {
-                                            Dbug.LogPart("Uncertain appender usage");
+                                            Dbg.LogPart(gslpx, "Uncertain appender usage");
                                             IncorrectionMessageQueue($"Uncertain appender usage (plain text may not contain '{editorCmdAppender}')");
                                         }
-                                        Dbug.Log("; ");
+                                        Dbg.Log(gslpx, "; ");
 
                                         /// giving user feedback for appender usage
                                         IncorrectionMessageTrigger($"{Ind24}Appender Issue: ", ".");
@@ -1645,14 +1645,14 @@ namespace HCResourceLibraryApp.Layout
                 }
                 if (editorInput.IsNotNEW())
                 {
-                    Dbug.LogPart($"Editor Bar recieved input :: {editorInput}");
+                    Dbg.LogPart(gslpx, $"Editor Bar recieved input :: {editorInput}");
 
                     // editor help
                     string editorInputRaw = editorInput;
                     editorInput = editorInput.ToLower();
                     if (editorInput.Equals(editorHelpPhrase))
                     {
-                        Dbug.LogPart(" // Editor commands help openned");
+                        Dbg.LogPart(gslpx, " // Editor commands help openned");
                         NewLine(3);
                         Important("Editor Commands");
                         
@@ -1689,7 +1689,7 @@ namespace HCResourceLibraryApp.Layout
                             : (_formatterData.LineData2.HasElements()? _formatterData.LineData2.Count : 0);
                         const int lineMinimum = 1;
                         bool hasLinesQ = lineCount > 0, hasTooManyLinesQ = lineCount >= lineMaximum;
-                        Dbug.LogPart($" // FYI; lineCount = {lineCount}; lineLimit = {lineMaximum}; // ");
+                        Dbg.LogPart(gslpx, $" // FYI; lineCount = {lineCount}; lineLimit = {lineMaximum}; // ");
 
                         /// rename command?
                         if (editorInputRaw.ToLower().StartsWith(editorCmdRename))
@@ -1908,14 +1908,14 @@ namespace HCResourceLibraryApp.Layout
                             if (yesNo)
                                 exitFormatEditorQ = true;
 
-                            Dbug.LogPart($" // Exiting editor? {exitFormatEditorQ}");
+                            Dbg.LogPart(gslpx, $" // Exiting editor? {exitFormatEditorQ}");
                         }
 
                         IncorrectionMessageTrigger($"{Ind24}Command syntax issue: ", null);
                         IncorrectionMessageQueue(null);
                     }
 
-                    Dbug.Log("; ");
+                    Dbg.Log(gslpx, "; ");
                 }
 
                 // Editor Command Execution
@@ -1942,13 +1942,13 @@ namespace HCResourceLibraryApp.Layout
                             wasHistoryActionQ = true;
                         }
 
-                        Dbug.Log($"H@ix{countHistoryCmdActions} --> Recieved command prompt :: {commandPrompt.Replace("\n", histNLRep)};  //  FYI: lineCount = {lineCount}; historyCmdActsCount = {historyCommandPrompts.Count}; histCmdIndex = {historyIndex}; ");
-                        Dbug.LogPart("  >|");
+                        Dbg.Log(gslpx, $"H@ix{countHistoryCmdActions} --> Recieved command prompt :: {commandPrompt.Replace("\n", histNLRep)};  //  FYI: lineCount = {lineCount}; historyCmdActsCount = {historyCommandPrompts.Count}; histCmdIndex = {historyIndex}; ");
+                        Dbg.LogPart(gslpx, "  >|");
 
                         /// rename command
                         if (commandPrompt.StartsWith(editorCmdRename))
                         {
-                            Dbug.LogPart("Rename Cmd --> ");
+                            Dbg.LogPart(gslpx, "Rename Cmd --> ");
                             string subsName = commandPrompt.Substring(editorCmdRename.Length).Trim();
 
                             if (subsName.IsNotNE())
@@ -1962,10 +1962,10 @@ namespace HCResourceLibraryApp.Layout
                                     if (_formatterData.Name2 == subsName)
                                     {
                                         _formatterData.Name1 = subsName + " 2";
-                                        Dbug.LogPart($"Name already taken, adding ' 2'; ");
+                                        Dbg.LogPart(gslpx, $"Name already taken, adding ' 2'; ");
                                     }
                                     else _formatterData.Name1 = subsName;
-                                    Dbug.LogPart($"Renamed FProf1 :: {_formatterData.Name1}");
+                                    Dbg.LogPart(gslpx, $"Renamed FProf1 :: {_formatterData.Name1}");
 
                                 }
                                 else
@@ -1973,10 +1973,10 @@ namespace HCResourceLibraryApp.Layout
                                     if (_formatterData.Name1 == subsName)
                                     {
                                         _formatterData.Name2 = subsName + " 2";
-                                        Dbug.LogPart($"Name already taken, adding ' 2'; ");
+                                        Dbg.LogPart(gslpx, $"Name already taken, adding ' 2'; ");
                                     }
                                     else _formatterData.Name2 = subsName;
-                                    Dbug.LogPart($"Renamed FProf2 :: {_formatterData.Name2}");
+                                    Dbg.LogPart(gslpx, $"Renamed FProf2 :: {_formatterData.Name2}");
                                 }
                             }
                             else
@@ -1986,57 +1986,57 @@ namespace HCResourceLibraryApp.Layout
                                     if (isUsingFormatterNo1Q)
                                     {
                                         _formatterData.Name1 = null;
-                                        Dbug.Log($"Unnamed FProf1 :: {_formatterData.Name1}");
+                                        Dbg.Log(gslpx, $"Unnamed FProf1 :: {_formatterData.Name1}");
                                     }
                                     else
                                     {
                                         _formatterData.Name2 = null;
-                                        Dbug.Log($"Unnamed FProf2 :: {_formatterData.Name2}");
+                                        Dbg.Log(gslpx, $"Unnamed FProf2 :: {_formatterData.Name2}");
                                     }
                                 }   
-                                else Dbug.LogPart("name??");
+                                else Dbg.LogPart(gslpx, "name??");
                             }
                         }
                         /// add command
                         else if (commandPrompt.StartsWith(editorCmdAdd))
                         {
-                            Dbug.LogPart("Add Cmd --> ");
+                            Dbg.LogPart(gslpx, "Add Cmd --> ");
                             string reEditLine = null;
                             if (commandPrompt.Contains("\n") && wasHistoryActionQ)
                             {
-                                Dbug.LogPart("Re-edit action :: ");
+                                Dbg.LogPart(gslpx, "Re-edit action :: ");
                                 string[] reEditParts = commandPrompt.Split("\n");
                                 if (int.TryParse(reEditParts[0].Replace(editorCmdAdd, ""), out int reEditLineNum))
                                 {
                                     commandPrompt = editorCmdAdd + reEditLineNum.ToString();
-                                    Dbug.LogPart($"Rebuilt command prompt :: {commandPrompt} ");
+                                    Dbg.LogPart(gslpx, $"Rebuilt command prompt :: {commandPrompt} ");
                                     if (reEditParts[1].IsNotNE())
                                     {
                                         reEditLine = reEditParts[1];
-                                        Dbug.LogPart($" -- Re-edit phrase :: {reEditLine} // ");
+                                        Dbg.LogPart(gslpx, $" -- Re-edit phrase :: {reEditLine} // ");
                                     }
-                                    else Dbug.LogPart(" -- No re-edit phrase required // ");
+                                    else Dbg.LogPart(gslpx, " -- No re-edit phrase required // ");
                                 }
                                 else
                                 {
                                     commandPrompt = editorCmdAdd;
-                                    Dbug.LogPart($"Rebuilt command prompt :: {commandPrompt}");
+                                    Dbg.LogPart(gslpx, $"Rebuilt command prompt :: {commandPrompt}");
                                     
                                     if (reEditParts[1].IsNotNE())
                                     {
-                                        Dbug.LogPart($" -- Re-edit phrase :: {reEditLine} // ");
+                                        Dbg.LogPart(gslpx, $" -- Re-edit phrase :: {reEditLine} // ");
                                         reEditLine = reEditParts[1];
                                     }
-                                    else Dbug.LogPart(" -- No re-edit phrase required // ");
+                                    else Dbg.LogPart(gslpx, " -- No re-edit phrase required // ");
                                 }
-                                Dbug.Log("; ");
-                                Dbug.LogPart("Add Cmd 2 --> ");
+                                Dbg.Log(gslpx, "; ");
+                                Dbg.LogPart(gslpx, "Add Cmd 2 --> ");
                             }
 
                             if (int.TryParse(commandPrompt.Replace(editorCmdAdd, ""), out int insLineNum))
                             {
                                 _formatterData.AddLine(insLineNum, reEditLine);
-                                Dbug.LogPart($"Insert new before line #{insLineNum}");
+                                Dbg.LogPart(gslpx, $"Insert new before line #{insLineNum}");
                                 histName = $"Insert Before Line {insLineNum}";
                                 histRedo = commandPrompt;
                                 histUndo = $"{editorCmdDelete}{insLineNum}";
@@ -2048,26 +2048,26 @@ namespace HCResourceLibraryApp.Layout
                                 histUndo = $"{editorCmdDelete}{lineCount + 1}";
 
                                 _formatterData.AddLine(null, reEditLine);
-                                Dbug.LogPart($"Add new line at end");
+                                Dbg.LogPart(gslpx, $"Add new line at end");
                             }
                             if (wasHistoryActionQ && reEditLine.IsNotNE())
-                                Dbug.LogPart(" .. Re-edited the added line");
+                                Dbg.LogPart(gslpx, " .. Re-edited the added line");
                         }
                         /// edit command
                         else if (commandPrompt.StartsWith(editorCmdEdit))
                         {
-                            Dbug.LogPart("Edit Cmd --> ");
+                            Dbg.LogPart(gslpx, "Edit Cmd --> ");
                             if (commandPrompt.Contains("\n"))
                             {
-                                Dbug.LogPart(wasHistoryActionQ? "From History Action :: " : "From Editing Area :: ");
+                                Dbg.LogPart(gslpx, wasHistoryActionQ? "From History Action :: " : "From Editing Area :: ");
                                 string[] editParts = commandPrompt.Split("\n");
                                 if (int.TryParse(editParts[0].Replace(editorCmdEdit, ""), out int editLineNum))
                                 {
-                                    Dbug.LogPart($"line #{editLineNum} ");
+                                    Dbg.LogPart(gslpx, $"line #{editLineNum} ");
                                     if (editParts[1].IsNotNEW())
                                     {
                                         _formatterData.EditLine(editLineNum, editParts[1].Trim(), out string prevEdit);
-                                        Dbug.LogPart($"edit :: {editParts[1].Trim()}");
+                                        Dbg.LogPart(gslpx, $"edit :: {editParts[1].Trim()}");
 
                                         histName = $"Edited Line {editLineNum}";
                                         if (appenderHistNamePart.IsNotNE())
@@ -2075,16 +2075,16 @@ namespace HCResourceLibraryApp.Layout
                                         histRedo = commandPrompt;
                                         histUndo = $"{editorCmdEdit}{editLineNum}\n{prevEdit}";
                                     }
-                                    else Dbug.LogPart("unedited (null or empty argument)");
+                                    else Dbg.LogPart(gslpx, "unedited (null or empty argument)");
                                 }
-                                else Dbug.LogPart("line #??");
+                                else Dbg.LogPart(gslpx, "line #??");
                             }
                             else
                             {
-                                Dbug.LogPart("To Editing Area ->|");
+                                Dbg.LogPart(gslpx, "To Editing Area ->|");
                                 if (int.TryParse(commandPrompt.Replace(editorCmdEdit, ""), out int editLineNum))
                                 {
-                                    Dbug.LogPart($" Edit Line #{editLineNum}");
+                                    Dbg.LogPart(gslpx, $" Edit Line #{editLineNum}");
                                     lineToEdit = editLineNum;
                                 }
 
@@ -2093,43 +2093,43 @@ namespace HCResourceLibraryApp.Layout
                         /// copy command
                         else if (commandPrompt.StartsWith(editorCmdCopy))
                         {
-                            Dbug.LogPart("Copy Cmd --> ");
+                            Dbg.LogPart(gslpx, "Copy Cmd --> ");
                             string[] copyParts = commandPrompt.Replace(editorCmdCopy, "").Split(',');
                             if (int.TryParse(copyParts[0], out int copyFrom) && int.TryParse(copyParts[1], out int copyTo))
                             {
                                 string copyData = _formatterData.GetLine(copyFrom);
                                 _formatterData.EditLine(copyTo, copyData, out string prevEdit);
-                                Dbug.LogPart($"Copied from line #{copyFrom} ('{copyData}') to line #{copyTo} (replaces '{prevEdit}')");
+                                Dbg.LogPart(gslpx, $"Copied from line #{copyFrom} ('{copyData}') to line #{copyTo} (replaces '{prevEdit}')");
 
                                 histName = $"Copied Line {copyFrom} to Line {copyTo}";
                                 histRedo = commandPrompt;
                                 histUndo = $"{editorCmdEdit}{copyTo}\n{prevEdit}";
                             }
-                            else Dbug.LogPart("line numbers??");
+                            else Dbg.LogPart(gslpx, "line numbers??");
                         }
                         /// deleted command
                         else if (commandPrompt.StartsWith(editorCmdDelete))
                         {
-                            Dbug.LogPart("Delete Cmd --> ");
+                            Dbg.LogPart(gslpx, "Delete Cmd --> ");
                             if (int.TryParse(commandPrompt.Replace(editorCmdDelete, ""), out int delLineNum))
                             {
                                 _formatterData.DeleteLine(delLineNum, out string deletedLine);
-                                Dbug.LogPart($"Delete at line #{delLineNum}");
+                                Dbg.LogPart(gslpx, $"Delete at line #{delLineNum}");
 
                                 histName = $"Delete Line {delLineNum}";
                                 histRedo = commandPrompt;
                                 histUndo = $"{editorCmdAdd}{(delLineNum == lineCount ? "" : delLineNum)}{(deletedLine.IsNE()? "" : $"\n{deletedLine}")}";
                             }
-                            else Dbug.LogPart("line #??");
+                            else Dbg.LogPart(gslpx, "line #??");
                         }
                         /// group command
                         else if (commandPrompt.StartsWith(editorCmdGroup))
                         {
-                            Dbug.LogPart("Group Cmd --> ");
+                            Dbg.LogPart(gslpx, "Group Cmd --> ");
                             /// IF ..: 1st & 3rd (create/remove) functions; ELSE 2nd function (toggle expansion)
                             if (commandPrompt.CountOccuringCharacter(',') == 2)
                             {
-                                Dbug.LogPart("Create or Remove Group :: ");
+                                Dbg.LogPart(gslpx, "Create or Remove Group :: ");
                                 string[] groupParts = commandPrompt.Substring(editorCmdGroup.Length).Split(',');
                                 string groupName = groupParts[2];
                                 if (int.TryParse(groupParts[0], out int lineStart) && int.TryParse(groupParts[1], out int lineEnd) && groupName.IsNotNEW())
@@ -2139,29 +2139,29 @@ namespace HCResourceLibraryApp.Layout
                                         _formatterData.DeleteGroup(groupName, out SfdGroupInfo deletedGroup);
                                         if (deletedGroup != null)
                                         {
-                                            Dbug.LogPart($"Removed group named '{groupName}'");
+                                            Dbg.LogPart(gslpx, $"Removed group named '{groupName}'");
 
                                             histName = $"Removed Group '{groupName}'";
                                             histRedo = commandPrompt;
                                             histUndo = $"{editorCmdGroup}{deletedGroup.startLineNum},{deletedGroup.endLineNum},{groupName}";
                                         }
-                                        else Dbug.LogPart($"No group to remove (DNE)");
+                                        else Dbg.LogPart(gslpx, $"No group to remove (DNE)");
                                     }
                                     else
                                     {
                                         _formatterData.CreateGroup(groupName, lineStart, lineEnd);
-                                        Dbug.LogPart($"Created group named '{groupName}' ranging from lines {lineStart} to {lineEnd}");
+                                        Dbg.LogPart(gslpx, $"Created group named '{groupName}' ranging from lines {lineStart} to {lineEnd}");
 
                                         histName = $"Created Group '{groupName}'";
                                         histRedo = commandPrompt;
                                         histUndo = $"{editorCmdGroup}0,0,{groupName}";
                                     }                                    
                                 }
-                                else Dbug.LogPart("line #?? group name??");
+                                else Dbg.LogPart(gslpx, "line #?? group name??");
                             }
                             else
                             {
-                                Dbug.LogPart("Toggle Expansion :: ");
+                                Dbg.LogPart(gslpx, "Toggle Expansion :: ");
                                 string groupName = commandPrompt.Substring(editorCmdGroup.Length);
                                 if (groupName.IsNotNEW())
                                 {
@@ -2172,55 +2172,55 @@ namespace HCResourceLibraryApp.Layout
                                     if (expansionState.HasValue)
                                         action = expansionState.Value ? "Expanded" : "Collapsed";
 
-                                    Dbug.LogPart($"{action} group named '{groupName}'");
+                                    Dbg.LogPart(gslpx, $"{action} group named '{groupName}'");
                                     histName = $"{action} Group '{groupName}'";
                                     histRedo = commandPrompt;
                                     histUndo = commandPrompt;
                                 }
-                                else Dbug.LogPart("group name??");   
+                                else Dbg.LogPart(gslpx, "group name??");   
                             }
                         }
                         /// undo \ redo commands
                         else
                         {
                             isHistoryActionQ = true;
-                            Dbug.LogPart("History Cmd --> ");
+                            Dbg.LogPart(gslpx, "History Cmd --> ");
 
                             if (commandPrompt.Equals(editorCmdUndo))
                             {
-                                Dbug.LogPart("Undo :: ");
+                                Dbg.LogPart(gslpx, "Undo :: ");
                                 int currIx = historyActionNumber - 1;
                                 if (currIx.IsWithin(0, _editorHistory.Count - 1))
                                 {
-                                    Dbug.LogPart($"Fetched history #{historyActionNumber} [@ix-{currIx}]; ");
+                                    Dbg.LogPart(gslpx, $"Fetched history #{historyActionNumber} [@ix-{currIx}]; ");
                                     SFormatterHistory currHistory = _editorHistory[currIx];
                                     commandPrompt = currHistory.undoneCommand;
                                     historyActionNumber++;
                                 }
-                                else Dbug.LogPart("'Undo' action failed (not in history list?!)");
+                                else Dbg.LogPart(gslpx, "'Undo' action failed (not in history list?!)");
                                 //isHistoryActionQ = false;
                             }
                             else
                             {
-                                Dbug.LogPart("Redo :: ");
+                                Dbg.LogPart(gslpx, "Redo :: ");
                                 int redoIx = historyActionNumber - 2;
                                 if (redoIx.IsWithin(0, _editorHistory.Count - 1))
                                 {
-                                    Dbug.LogPart($"Fetched history #{historyActionNumber - 1} [@ix-{redoIx}]; ");
+                                    Dbg.LogPart(gslpx, $"Fetched history #{historyActionNumber - 1} [@ix-{redoIx}]; ");
                                     SFormatterHistory redoHistory = _editorHistory[redoIx];
                                     commandPrompt = redoHistory.redoneCommand;
                                     historyActionNumber--;
                                 }
-                                else Dbug.LogPart("'Redo' action failed (not in history list?!)");
+                                else Dbg.LogPart(gslpx, "'Redo' action failed (not in history list?!)");
                                 //isHistoryActionQ = false;
                             }
-                            Dbug.LogPart($"Loaded command prompt :: {commandPrompt.Replace("\n",histNLRep)}");
+                            Dbg.LogPart(gslpx, $"Loaded command prompt :: {commandPrompt.Replace("\n",histNLRep)}");
 
                             historyActionNumber = historyActionNumber.Clamp(historyActionInitial, historyLimit);
                             showHistoryQ = true;                            
                         }
 
-                        Dbug.Log("; ");
+                        Dbg.Log(gslpx, "; ");
 
                         if (isHistoryActionQ)
                         {
@@ -2240,7 +2240,7 @@ namespace HCResourceLibraryApp.Layout
                                 historyCommandPrompts.Add(commandPrompt);
                             }
 
-                            Dbug.Log($"Executing '{countHistoryCmdActions}' history action(s)  //  FYI: histActNum = {historyActionNumber}; histLim = {historyLimit}; editorHistCount = {_editorHistory.Count}; ");
+                            Dbg.Log(gslpx, $"Executing '{countHistoryCmdActions}' history action(s)  //  FYI: histActNum = {historyActionNumber}; histLim = {historyLimit}; editorHistCount = {_editorHistory.Count}; ");
                         }
 
 
@@ -2248,20 +2248,20 @@ namespace HCResourceLibraryApp.Layout
                         SFormatterHistory history = new(histName, histRedo, histUndo);
                         if (history.IsSetup() && !wasHistoryActionQ)
                         {
-                            Dbug.LogPart($"Recieved history instance --> {history} // ");
+                            Dbg.LogPart(gslpx, $"Recieved history instance --> {history} // ");
                             /// add new history before lastest history instance, remove old histories where necessary
                             if (historyActionNumber == historyActionInitial)
                             {
-                                Dbug.LogPart("No history actions called; ");
+                                Dbg.LogPart(gslpx, "No history actions called; ");
                                 if (_editorHistory.Count >= historyLimit)
                                 {
-                                    Dbug.LogPart($"Removing oldest history, inserting new history");
+                                    Dbg.LogPart(gslpx, $"Removing oldest history, inserting new history");
                                     _editorHistory.Insert(0, history);
                                     _editorHistory.RemoveAt(historyLimit);
                                 }
                                 else
                                 {
-                                    Dbug.LogPart($"Inserting new history");
+                                    Dbg.LogPart(gslpx, $"Inserting new history");
                                     if (_editorHistory.HasElements())
                                         _editorHistory.Insert(0, history);
                                     else _editorHistory.Add(history);
@@ -2270,13 +2270,13 @@ namespace HCResourceLibraryApp.Layout
                             /// remove a series of undone history and insert new history instance
                             else
                             {
-                                Dbug.LogPart($"History actions were called; ");
+                                Dbg.LogPart(gslpx, $"History actions were called; ");
                                 _editorHistory.RemoveRange(0, historyActionNumber - 1);
-                                Dbug.LogPart($"Removed '{historyActionNumber - 1}' histories, index range [0 -> {historyActionNumber - 2}]; ");
+                                Dbg.LogPart(gslpx, $"Removed '{historyActionNumber - 1}' histories, index range [0 -> {historyActionNumber - 2}]; ");
 
                                 _editorHistory.Insert(0, history);
                                 historyActionNumber = historyActionInitial;
-                                Dbug.LogPart("Inserted new history instance @ix0");
+                                Dbg.LogPart(gslpx, "Inserted new history instance @ix0");
 
 
 
@@ -2516,10 +2516,10 @@ namespace HCResourceLibraryApp.Layout
                                  ***/
                                 if ((historyActionNumber - 2).IsWithin(0, _editorHistory.Count - 1) && false)
                                 {
-                                    Dbug.LogPart($"History actions were called; ");
+                                    Dbg.LogPart(gslpx, $"History actions were called; ");
 
                                     SFormatterHistory nextHistory = _editorHistory[historyActionNumber - 2];
-                                    Dbug.Log($"Fetched history #{historyActionNumber - 1} [next]");
+                                    Dbg.Log(gslpx, $"Fetched history #{historyActionNumber - 1} [next]");
 
                                     string newHistName, newHistUndo, newHistRedo;
                                     /// new history name
@@ -2545,60 +2545,60 @@ namespace HCResourceLibraryApp.Layout
                                         newHistRedo = $"{nextHistory.redoneCommand}{multiHistKey}{histRedo}";
                                     }
 
-                                    Dbug.Log($" + Generated new history name :: {newHistName.Replace("\n", histNLRep)}");
-                                    Dbug.Log($" + Generated new history undo :: {newHistUndo.Replace("\n", histNLRep)}");
-                                    Dbug.Log($" + Generated new history redo :: {newHistRedo.Replace("\n", histNLRep)}");
+                                    Dbg.Log(gslpx, $" + Generated new history name :: {newHistName.Replace("\n", histNLRep)}");
+                                    Dbg.Log(gslpx, $" + Generated new history undo :: {newHistUndo.Replace("\n", histNLRep)}");
+                                    Dbg.Log(gslpx, $" + Generated new history redo :: {newHistRedo.Replace("\n", histNLRep)}");
 
                                     history = new SFormatterHistory(newHistName, newHistRedo, newHistUndo);
-                                    Dbug.LogPart("New history instance compiled with details above; ");
+                                    Dbg.LogPart(gslpx, "New history instance compiled with details above; ");
 
                                     _editorHistory.RemoveRange(0, historyActionNumber - 1);
-                                    Dbug.LogPart($"Removed '{historyActionNumber - 1}' histories, index range [0 -> {historyActionNumber - 2}]; ");
+                                    Dbg.LogPart(gslpx, $"Removed '{historyActionNumber - 1}' histories, index range [0 -> {historyActionNumber - 2}]; ");
 
                                     _editorHistory.Insert(0, history);
                                     historyActionNumber = historyActionInitial;
-                                    Dbug.LogPart("Inserted new history instance @ix0");
+                                    Dbg.LogPart(gslpx, "Inserted new history instance @ix0");
                                 }
                                 #region old_code
-                                //Dbug.LogPart($"History actions were called; ");
+                                //Dbg.LogPart(gslpx, $"History actions were called; ");
                                 //if ((historyActionNumber - 2).IsWithin(0, _editorHistory.Count - 1))
                                 //{
                                 //    SFormatterHistory nextRedoHist = _editorHistory[historyActionNumber - 2];
-                                //    Dbug.Log("; ");
-                                //    Dbug.LogPart($"Fetched history #{historyActionNumber - 1}; replacing new history 'undo' with history #{historyActionNumber - 1}'s 'undo'; ");
+                                //    Dbg.Log(gslpx, "; ");
+                                //    Dbg.LogPart(gslpx, $"Fetched history #{historyActionNumber - 1}; replacing new history 'undo' with history #{historyActionNumber - 1}'s 'undo'; ");
 
                                 //    string histNewName = nextRedoHist.actionName != histName ? $"{nextRedoHist.actionName} / {histName}" : histName;
                                 //    history = new SFormatterHistory(histNewName, histRedo, nextRedoHist.undoneCommand);
-                                //    Dbug.Log($"New history instance :: {history}");
+                                //    Dbg.Log(gslpx, $"New history instance :: {history}");
                                 //}
 
                                 //_editorHistory.RemoveRange(0, historyActionNumber - 1);
-                                //Dbug.LogPart($"Removed '{historyActionNumber - 1}' histories, index range [0 -> {historyActionNumber - 2}]; ");
+                                //Dbg.LogPart(gslpx, $"Removed '{historyActionNumber - 1}' histories, index range [0 -> {historyActionNumber - 2}]; ");
 
                                 //_editorHistory.Insert(0, history);
-                                //Dbug.LogPart($"Inserted new history");
+                                //Dbg.LogPart(gslpx, $"Inserted new history");
                                 //historyActionNumber = historyActionInitial;
                                 #endregion
                             }
-                            Dbug.Log("; ");
+                            Dbg.Log(gslpx, "; ");
                         }
 
                     } while (isHistoryActionQ || countHistoryCmdActions > 0);
                 }
 
                 countCycles++;
-                Dbug.NudgeIndent(false);
+                Dbg.NudgeIndent(gslpx, false);
             }
             while (!exitFormatEditorQ);
 
-            Dbug.NudgeIndent(false);
+            Dbg.NudgeIndent(gslpx, false);
             if (isUsingFormatterNo1Q)
                 historyActionNumber1 = historyActionNumber;
             else historyActionNumber2 = historyActionNumber;
-            Dbug.Log($"Saved history action number '{historyActionNumber}' (editor history counts '{_editorHistory.Count}') to formatter profile #{(isUsingFormatterNo1Q? 1 : 2)}");
+            Dbg.Log(gslpx, $"Saved history action number '{historyActionNumber}' (editor history counts '{_editorHistory.Count}') to formatter profile #{(isUsingFormatterNo1Q? 1 : 2)}");
             
-            Dbug.Log($"RECORDING END");
-            Dbug.EndLogging();
+            Dbg.Log(gslpx, $"RECORDING END");
+            Dbg.EndLogging(gslpx);
         }
         /// <summary>The formatter parser; where the satisfaction of creating a steam log is realized.</summary>
         static string[] FormattingParser(string[] formatterLines, SFormatterLibRef libRef)
@@ -2606,8 +2606,8 @@ namespace HCResourceLibraryApp.Layout
             List<string> finalLines = new();
             if (formatterLines.HasElements() && libRef.IsSetup())
             {
-                Dbug.StartLogging("GenSteamLogPage.FormattingParser()");
-                Dbug.LogPart($"Received '{formatterLines.Length}' formatting lines; library reference is setup; ");
+                Dbg.StartLogging("GenSteamLogPage.FormattingParser()", out int gslpx);
+                Dbg.LogPart(gslpx, $"Received '{formatterLines.Length}' formatting lines; library reference is setup; ");
 
                 ProgressBarInitialize(true, false, 24, 2);
                 ProgressBarUpdate(0);
@@ -2620,7 +2620,7 @@ namespace HCResourceLibraryApp.Layout
                     if (!formatterLines[lx0].TrimStart().StartsWith("//"))
                         lastParsableLineNum = lx0 + 1;
                 }
-                Dbug.Log($"Fetched last parsable line (line {lastParsableLineNum}); Proceeding to parsing; ");
+                Dbg.Log(gslpx, $"Fetched last parsable line (line {lastParsableLineNum}); Proceeding to parsing; ");
 
                 int skipLinesNum = 0;
                 bool? prevIfCondition = null;
@@ -2648,23 +2648,23 @@ namespace HCResourceLibraryApp.Layout
                     bool lineIsSkipped = skipLinesNum > 0, lineIsComment = line.TrimStart().StartsWith("//");
 
                     /// line info
-                    Dbug.LogPart($"LINE {lineNum}  ::  {line}; ");
-                    Dbug.Log($" [{(lineIsSkipped ? $"skip'{skipLinesNum}" : "")}.{(lineIsComment ? "comment" : "")}.{(heldListOrTable.IsNE() ? "" : $"held'{(heldListOrTable.Contains("list") ? "L" : "T")}")}]; ");
+                    Dbg.LogPart(gslpx, $"LINE {lineNum}  ::  {line}; ");
+                    Dbg.Log(gslpx, $" [{(lineIsSkipped ? $"skip'{skipLinesNum}" : "")}.{(lineIsComment ? "comment" : "")}.{(heldListOrTable.IsNE() ? "" : $"held'{(heldListOrTable.Contains("list") ? "L" : "T")}")}]; ");
 
                     if (skipLinesNum > 0)
                         skipLinesNum--;
 
-                    Dbug.NudgeIndent(true);
+                    Dbg.NudgeIndent(gslpx, true);
                     if (!lineIsComment && !lineIsSkipped)
                     {
                         List<string> lineOutcomes = new();
 
                         // KEYWORD CONTROLS EXECUTIONS
-                        Dbug.NudgeIndent(true);
+                        Dbg.NudgeIndent(gslpx, true);
                         if (line.StartsWith("if") || line.StartsWith("else") || line.StartsWith("repeat"))
                         {
                             /// identify and get keyword block(s), separate from rest of line
-                            Dbug.LogPart("Keyword Controls identified; Keyword Blocks --> ");
+                            Dbg.LogPart(gslpx, "Keyword Controls identified; Keyword Blocks --> ");
                             string snipFullControl = line.RemoveFromPlainText(';').SnippetText(line[0].ToString(), ";", Snip.Inc, Snip.EndLast);
                             string remainingLine = line.Substring(snipFullControl.Length);
                             string[] keyControls = new string[3];
@@ -2679,13 +2679,13 @@ namespace HCResourceLibraryApp.Layout
 
                             foreach (string keyCon in keyControls)
                                 if (keyCon.IsNotNE())
-                                    Dbug.LogPart($"[{keyCon}]");
-                            Dbug.LogPart($"; Remaining Line [{remainingLine}]");
-                            Dbug.Log("; ");
+                                    Dbg.LogPart(gslpx, $"[{keyCon}]");
+                            Dbg.LogPart(gslpx, $"; Remaining Line [{remainingLine}]");
+                            Dbg.Log(gslpx, "; ");
 
 
                             /// execute control keywords
-                            Dbug.NudgeIndent(true);
+                            Dbg.NudgeIndent(gslpx, true);
                             bool? currentBoolCondition = null;
                             bool isJumpedQ = false, isNextedQ = false;
                             int repeatCount = 0;
@@ -2699,7 +2699,7 @@ namespace HCResourceLibraryApp.Layout
                                 if (keyConBlock.IsNotNEW())
                                 {
                                     keyConBlock = ReplaceLibRefs(keyConBlock.Trim());
-                                    Dbug.LogPart($"Executing Block {kbx + 1} [{keyConBlock}] -->  ");
+                                    Dbg.LogPart(gslpx, $"Executing Block {kbx + 1} [{keyConBlock}] -->  ");
 
                                     /// if {value1} =/!= {value2}
                                     ///     pos: 1st 2nd
@@ -2746,38 +2746,38 @@ namespace HCResourceLibraryApp.Layout
                                         else val2 = argParts[1].Trim();
 
                                         bool conditionIf = ResultIfComparison(val1, op, val2);
-                                        Dbug.LogPart($"Comparison [{val1} / {op} / {val2}]; Result [");
+                                        Dbg.LogPart(gslpx, $"Comparison [{val1} / {op} / {val2}]; Result [");
 
                                         if (isFirstControlBlockQ)
                                         {
                                             currentBoolCondition = conditionIf;
-                                            Dbug.LogPart(conditionIf.ToString());
+                                            Dbg.LogPart(gslpx, conditionIf.ToString());
                                         }
                                         else
                                         {                                            
                                             if (currentBoolCondition.HasValue)
                                             {
-                                                Dbug.LogPart($"{conditionIf} && {currentBoolCondition.Value} -> {currentBoolCondition.Value && conditionIf}");
+                                                Dbg.LogPart(gslpx, $"{conditionIf} && {currentBoolCondition.Value} -> {currentBoolCondition.Value && conditionIf}");
                                                 currentBoolCondition = conditionIf && currentBoolCondition.Value;
                                             }
                                             else
                                             {
                                                 if (repeatCount > 0)
                                                 {
-                                                    Dbug.LogPart("DELAYED! to Repeat");
+                                                    Dbg.LogPart(gslpx, "DELAYED! to Repeat");
                                                     repeatIfVal1 = val1;
                                                     repeatIfVal2 = val2;
                                                     repeatIfOp = op;
                                                 }
                                                 else
                                                 {
-                                                    Dbug.LogPart(" ???? ");
+                                                    Dbg.LogPart(gslpx, " ???? ");
                                                     //currentBoolCondition = conditionIf;
-                                                    //Dbug.LogPart(conditionIf.ToString());
+                                                    //Dbg.LogPart(gslpx, conditionIf.ToString());
                                                 }
                                             }
                                         }
-                                        Dbug.LogPart("] ");
+                                        Dbg.LogPart(gslpx, "] ");
                                     }
 
                                     /// else;
@@ -2787,7 +2787,7 @@ namespace HCResourceLibraryApp.Layout
                                         if (prevIfCondition.HasValue)
                                         {
                                             currentBoolCondition = !prevIfCondition.Value;
-                                            Dbug.LogPart($"Prev Condition [{prevIfCondition.Value}]; Result [{currentBoolCondition.Value}]");
+                                            Dbg.LogPart(gslpx, $"Prev Condition [{prevIfCondition.Value}]; Result [{currentBoolCondition.Value}]");
                                         }
                                     }
 
@@ -2798,18 +2798,18 @@ namespace HCResourceLibraryApp.Layout
                                         string argsRepeat = keyConBlock.SnippetText("repeat", ";");
                                         if (argsRepeat.Contains('"'))
                                         {
-                                            Dbug.LogPart("From Lib Ref");
+                                            Dbg.LogPart(gslpx, "From Lib Ref");
                                             argsRepeat = argsRepeat.Replace('\"', ' ');
                                         }
-                                        else Dbug.LogPart("From Pure Number");
-                                        Dbug.LogPart("; Result ");
+                                        else Dbg.LogPart(gslpx, "From Pure Number");
+                                        Dbg.LogPart(gslpx, "; Result ");
 
                                         if (int.TryParse(argsRepeat, out int repeatNum))
                                         {
                                             repeatCount = repeatNum;
-                                            Dbug.LogPart($"[{repeatNum}]");
+                                            Dbg.LogPart(gslpx, $"[{repeatNum}]");
                                         }
-                                        else Dbug.LogPart("[??]");
+                                        else Dbg.LogPart(gslpx, "[??]");
                                     }
 
                                     /// jump #;
@@ -2818,25 +2818,25 @@ namespace HCResourceLibraryApp.Layout
                                     if (keyConBlock.StartsWith("jump") && !isFirstControlBlockQ)
                                     {
                                         string argsJump = keyConBlock.SnippetText("jump", ";");
-                                        Dbug.LogPart("From Pure Number; Result ");
+                                        Dbg.LogPart(gslpx, "From Pure Number; Result ");
                                         if (int.TryParse(argsJump, out int jumpLine))
                                         {
                                             int lineJumpCount = jumpLine - lineNum - 1;
-                                            Dbug.LogPart($"[{jumpLine}] --> 1st{(!isFirstControlBlockQ ? " & 2nd" : "")} Condition ");
+                                            Dbg.LogPart(gslpx, $"[{jumpLine}] --> 1st{(!isFirstControlBlockQ ? " & 2nd" : "")} Condition ");
                                             if (currentBoolCondition.HasValue)
                                             {
-                                                Dbug.LogPart($"[{currentBoolCondition.Value}] Result: ");
+                                                Dbg.LogPart(gslpx, $"[{currentBoolCondition.Value}] Result: ");
                                                 if (currentBoolCondition.Value)
                                                 {
                                                     skipLinesNum = lineJumpCount;
-                                                    Dbug.LogPart($" Skip '{skipLinesNum}' line(s)");
+                                                    Dbg.LogPart(gslpx, $" Skip '{skipLinesNum}' line(s)");
                                                     isJumpedQ = true;
                                                 }
-                                                else Dbug.LogPart(" No lines will be skipped");
+                                                else Dbg.LogPart(gslpx, " No lines will be skipped");
                                             }
-                                            else Dbug.LogPart("[??]");
+                                            else Dbg.LogPart(gslpx, "[??]");
                                         }
-                                        else Dbug.LogPart("[??]");
+                                        else Dbg.LogPart(gslpx, "[??]");
                                     }
 
                                     /// next;
@@ -2847,50 +2847,50 @@ namespace HCResourceLibraryApp.Layout
                                         remainingLine = "";
                                         if (currentBoolCondition.HasValue)
                                         {
-                                            Dbug.LogPart($"1st Condition [{currentBoolCondition.Value}]; Result: ");
+                                            Dbg.LogPart(gslpx, $"1st Condition [{currentBoolCondition.Value}]; Result: ");
                                             if (currentBoolCondition.Value)
                                             {
-                                                Dbug.LogPart("Utilize next line, then --> ");
+                                                Dbg.LogPart(gslpx, "Utilize next line, then --> ");
                                                 isNextedQ = true;
                                             }
-                                            Dbug.LogPart("Skip next line");
+                                            Dbg.LogPart(gslpx, "Skip next line");
                                         }
                                         else
                                         {
-                                            Dbug.LogPart("Result: Utilize next line and then skip it");
+                                            Dbg.LogPart(gslpx, "Result: Utilize next line and then skip it");
                                             isNextedQ = true;
                                         }
                                         skipLinesNum = frontPedalCount;
-                                        Dbug.LogPart($" (Skip '{skipLinesNum}' lines)");
+                                        Dbg.LogPart(gslpx, $" (Skip '{skipLinesNum}' lines)");
                                     }
 
-                                    Dbug.Log("; ");
+                                    Dbg.Log(gslpx, "; ");
                                 }
 
                                 /// final edit choices here
                                 if (isLastControlBlockQ)
                                 {
                                     /// conditions and remaining line
-                                    Dbug.LogPart($"Conditional Outcome [");
+                                    Dbg.LogPart(gslpx, $"Conditional Outcome [");
                                     if (currentBoolCondition.HasValue)
                                     {
-                                        Dbug.LogPart(currentBoolCondition.Value ? "Use Remaining" : "Exempt Remaining");
+                                        Dbg.LogPart(gslpx, currentBoolCondition.Value ? "Use Remaining" : "Exempt Remaining");
                                         if (!currentBoolCondition.Value)
                                             remainingLine = "";
                                     }
-                                    else Dbug.LogPart("N/a");
+                                    else Dbg.LogPart(gslpx, "N/a");
                                     if (isJumpedQ)
                                         remainingLine = "";
                                     if (isNextedQ)
                                         remainingLine = nextLine;
-                                    Dbug.Log($"]; Jump'ed? [{isJumpedQ}]; Next'ed? [{isNextedQ}]; Final Remaining Line [{remainingLine}]");
+                                    Dbg.Log(gslpx, $"]; Jump'ed? [{isJumpedQ}]; Next'ed? [{isNextedQ}]; Final Remaining Line [{remainingLine}]");
 
                                     /// repeat execute
                                     if (remainingLine.IsNotNEW())
                                     {
                                         if (repeatCount > 0)
                                         {
-                                            Dbug.LogPart($"Execution Delayed --> Repeat remaining line '{repeatCount}' times");
+                                            Dbg.LogPart(gslpx, $"Execution Delayed --> Repeat remaining line '{repeatCount}' times");
 
                                             int countRepeatsUnPrinted = 0;
                                             for (int rx = 1; rx <= repeatCount; rx++)
@@ -2910,8 +2910,8 @@ namespace HCResourceLibraryApp.Layout
                                             }
 
                                             if (repeatIfOp.IsNotNEW())
-                                                Dbug.LogPart($"; With Condition [IF {repeatIfVal1} {repeatIfOp} {repeatIfVal2}] --> Exempted '{countRepeatsUnPrinted}' lines");
-                                            Dbug.Log("; ");
+                                                Dbg.LogPart(gslpx, $"; With Condition [IF {repeatIfVal1} {repeatIfOp} {repeatIfVal2}] --> Exempted '{countRepeatsUnPrinted}' lines");
+                                            Dbg.Log(gslpx, "; ");
 
                                             repeatIfOp = "";
                                             repeatIfVal1 = "";
@@ -2921,7 +2921,7 @@ namespace HCResourceLibraryApp.Layout
                                     }
                                 }
                             }
-                            Dbug.NudgeIndent(false);
+                            Dbg.NudgeIndent(gslpx, false);
 
                             prevIfCondition = currentBoolCondition;
 
@@ -2966,7 +2966,7 @@ namespace HCResourceLibraryApp.Layout
                             prevIfCondition = null;
                             lineOutcomes.Add(line);
                         }
-                        Dbug.NudgeIndent(false);
+                        Dbg.NudgeIndent(gslpx, false);
 
                         if (lastParsableLineNum <= lineNum + skipLinesNum && !lineOutcomes.HasElements())
                             lineOutcomes.Add("\" \"");
@@ -2975,7 +2975,7 @@ namespace HCResourceLibraryApp.Layout
                         if (lineOutcomes.HasElements())
                         {
                             // Steam Format References
-                            Dbug.NudgeIndent(true);
+                            Dbg.NudgeIndent(gslpx, true);
                             bool searchForSteamRefs = line.RemovePlainText().Contains("$");
                             if (!searchForSteamRefs)
                             {
@@ -2987,7 +2987,7 @@ namespace HCResourceLibraryApp.Layout
                             if (searchForSteamRefs)
                             {
                                 List<string> newLineOutcomes = new();
-                                Dbug.Log("Searching for Steam Format References in lines; ");
+                                Dbg.Log(gslpx, "Searching for Steam Format References in lines; ");
 
                                 if (lineOutcomes.HasElements())
                                 {
@@ -2995,10 +2995,10 @@ namespace HCResourceLibraryApp.Layout
                                     {
                                         string keyLine = ReplaceLibRefs(lineOutcomes[sfx]);
                                         string keyLineNum = $"{lineNum}.{sfx + 1}";
-                                        Dbug.LogPart($"N-LINE {keyLineNum}  ::  {keyLine}{(keyLine.RemovePlainText(true).IsEW() && keyLine.RemovePlainText().IsEW() ? " <lastExecutableLine_substitute>" : "")}; ");
-                                        Dbug.Log($"[{(heldListOrTable.IsNE() ? "" : $"held'{(heldListOrTable.Contains("list") ? "L" : "T")}")}]; ");
+                                        Dbg.LogPart(gslpx, $"N-LINE {keyLineNum}  ::  {keyLine}{(keyLine.RemovePlainText(true).IsEW() && keyLine.RemovePlainText().IsEW() ? " <lastExecutableLine_substitute>" : "")}; ");
+                                        Dbg.Log(gslpx, $"[{(heldListOrTable.IsNE() ? "" : $"held'{(heldListOrTable.Contains("list") ? "L" : "T")}")}]; ");
 
-                                        Dbug.NudgeIndent(true);
+                                        Dbg.NudgeIndent(gslpx, true);
                                         bool isLastLineQ = lastParsableLineNum <= lineNum + skipLinesNum && sfx == lineOutcomes.Count - 1;
                                         string[] steamFormatLines = ReplaceSteamRefs(keyLine, out heldListOrTable, isLastLineQ, heldListOrTable);
                                         if (steamFormatLines.HasElements())
@@ -3007,23 +3007,23 @@ namespace HCResourceLibraryApp.Layout
                                             foreach (string sfLine in steamFormatLines)
                                             {
                                                 countLine++;
-                                                Dbug.Log($"PART {countLine, -2}  ::  {sfLine.Replace("\n", nlRep)}; ");
+                                                Dbg.Log(gslpx, $"PART {countLine, -2}  ::  {sfLine.Replace("\n", nlRep)}; ");
                                                 newLineOutcomes.Add(sfLine);
                                             }
                                         }
-                                        else Dbug.Log(" ??? ");
-                                        Dbug.NudgeIndent(false);
+                                        else Dbg.Log(gslpx, " ??? ");
+                                        Dbg.NudgeIndent(gslpx, false);
                                     }
                                 }
-                                else Dbug.Log("No lines received post-keywords lines; ");
+                                else Dbg.Log(gslpx, "No lines received post-keywords lines; ");
 
                                 if (newLineOutcomes.HasElements())
                                 {
                                     lineOutcomes = newLineOutcomes;
-                                    Dbug.Log("Updated Line Outcomes to Steam Format edits; ");
+                                    Dbg.Log(gslpx, "Updated Line Outcomes to Steam Format edits; ");
                                 }
                             }
-                            Dbug.NudgeIndent(false);
+                            Dbg.NudgeIndent(gslpx, false);
 
 
                             
@@ -3036,20 +3036,20 @@ namespace HCResourceLibraryApp.Layout
                                 if (subLine.IsNotNEW())
                                 {
                                     string subLineNum = $"{lineNum} {IntToAlphabet(flx % 26)}{(flx / 26 == 0 ? "" : (flx / 26) + 1)}";
-                                    Dbug.Log($"FINAL LINE {subLineNum}  ::  {subLine.Replace("\n", nlRep)}; ");
+                                    Dbg.Log(gslpx, $"FINAL LINE {subLineNum}  ::  {subLine.Replace("\n", nlRep)}; ");
 
                                     finalLines.Add(subLine);
                                 }
                             }
                         }
-                        Dbug.Log("- - -");
+                        Dbg.Log(gslpx, "- - -");
                     }
-                    Dbug.NudgeIndent(false);
+                    Dbg.NudgeIndent(gslpx, false);
 
                     TaskNum++;
                     ProgressBarUpdate(TaskNum / TaskCount, true);
                 }
-                Dbug.EndLogging();
+                Dbg.EndLogging(gslpx);
                 ProgressBarUpdate(1, true);
 
 

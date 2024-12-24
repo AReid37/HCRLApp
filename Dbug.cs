@@ -6,6 +6,7 @@ using static ConsoleFormat.Base;
 namespace HCResourceLibraryApp
 {
     /// <summary>
+    ///     DISCONTINUED  --  OBSOLETE <br></br>
     ///     An intermediary, more focused version of the Debug Logger to Output.
     /// </summary>
     public static class Dbug

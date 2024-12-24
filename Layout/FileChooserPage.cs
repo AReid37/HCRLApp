@@ -50,7 +50,7 @@ namespace HCResourceLibraryApp.Layout
             bool exitFileChooserPageQ = false;
             if (IsEnterFileChooserPageQueued())
             {
-                Dbug.StartLogging("FileChooserPage.OpenPage()");
+                Dbg.StartLogging("FileChooserPage.OpenPage()", out int fcpx);
 
                 SelectedItem = null;
                 HSNLPrint(2, 4);
@@ -74,13 +74,13 @@ namespace HCResourceLibraryApp.Layout
                 }
 
 
-                Dbug.Log($"Prepared File Browsing Info; Starting Directory :: [{currDirectory}], Exists? {dirExistsQ}; ");
-                Dbug.Log($"Proceeding to browsing;   //   target [{ItemType}], iniCursorPos (Top,Left) [{iniCurTop}, {iniCurLeft}], maxItems/page [{maxFilesPerPage}], maxNameLen [{maxNameLength}];");
+                Dbg.Log(fcpx, $"Prepared File Browsing Info; Starting Directory :: [{currDirectory}], Exists? {dirExistsQ}; ");
+                Dbg.Log(fcpx, $"Proceeding to browsing;   //   target [{ItemType}], iniCursorPos (Top,Left) [{iniCurTop}, {iniCurLeft}], maxItems/page [{maxFilesPerPage}], maxNameLen [{maxNameLength}];");
                 int dbgCycleCount = 0;
                 do
                 {
                     dbgCycleCount++;
-                    Dbug.LogPart($"Cycle #{dbgCycleCount}  //  ");
+                    Dbg.LogPart(fcpx, $"Cycle #{dbgCycleCount}  //  ");
                     /// destroyPerLine; used to track character distance on each line so that they may be 'destroyed' perfectly, per end of cycle
                     List<int> destroyPerLine = new();
 
@@ -98,7 +98,7 @@ namespace HCResourceLibraryApp.Layout
                     /// fetch directory information
                     if (currDir.Exists)
                     {
-                        Dbug.LogPart($"Using Dir [{currDir.FullName}] -- ");
+                        Dbg.LogPart(fcpx, $"Using Dir [{currDir.FullName}] -- ");
                         directoryName = currDir.FullName;
                         if (currDir.Parent != null)
                         {
@@ -153,10 +153,10 @@ namespace HCResourceLibraryApp.Layout
                             currDirItemsIsDirQ.Add(false);
                         }
 
-                        Dbug.LogPart($"Dir Exists, fetched [{subDirs.Length}] sub-dirs and [{dirFiles.Length}] files, has parent dir? [{hasParentDirQ}]");
+                        Dbg.LogPart(fcpx, $"Dir Exists, fetched [{subDirs.Length}] sub-dirs and [{dirFiles.Length}] files, has parent dir? [{hasParentDirQ}]");
                     }
-                    Dbug.Log("; ");
-                    Dbug.NudgeIndent(true);
+                    Dbg.Log(fcpx, "; ");
+                    Dbg.NudgeIndent(fcpx, true);
 
 
                     /// display directory information and menu
@@ -174,7 +174,7 @@ namespace HCResourceLibraryApp.Layout
                         {
                             int totalPages = (currDirItems.Count / maxFilesPerPage) + (currDirItems.Count % maxFilesPerPage != 0 ? 1 : 0);
                             int dxIni = 0 + (pageIndex * maxFilesPerPage);
-                            Dbug.Log($"Directory Name [{currDir.Name}], total Pages [{totalPages}], page Num [{pageIndex + 1}], initial index [{dxIni}]; ");
+                            Dbg.Log(fcpx, $"Directory Name [{currDir.Name}], total Pages [{totalPages}], page Num [{pageIndex + 1}], initial index [{dxIni}]; ");
                             FormatLine($"Page {pageIndex + 1} of {totalPages}.", ForECol.Accent);
                             NoteDestroyLen(true);
 
@@ -200,20 +200,20 @@ namespace HCResourceLibraryApp.Layout
                                     isValidOptQ = true;
 
                                 /// print number and lable of each item whether file or folder
-                                Dbug.LogPart($" > Item @{dx}  ::  ");
+                                Dbg.LogPart(fcpx, $" > Item @{dx}  ::  ");
                                 if (!isErrorMsgQ)
                                 {
-                                    Dbug.LogPart($"#[{itemNum}], name [{itemName}], isDirQ [{isDirQ}], validQ [{isValidOptQ}], fullName [{itemFullName}]");
+                                    Dbg.LogPart(fcpx, $"#[{itemNum}], name [{itemName}], isDirQ [{isDirQ}], validQ [{isValidOptQ}], fullName [{itemFullName}]");
                                     Format($"{Ind24}{itemNum,-2} ", isValidOptQ ? ForECol.Normal : ForECol.Accent);
                                     Format($"{(isDirQ ? dirKey : fileKey)} ", ForECol.Accent);
                                     Format($"{itemName}{(isDirQ ? @"\" : "")}", ForECol.Highlight);                                    
-                                    Dbug.Log("; ");
+                                    Dbg.Log(fcpx, "; ");
                                 }
                                 else
                                 {
                                     Format($"{Ind24}-- ", ForECol.Accent);
                                     Format(itemFullName, ForECol.Incorrection);
-                                    Dbug.Log($"Error message recieved :: [{itemFullName}]; ");
+                                    Dbg.Log(fcpx, $"Error message recieved :: [{itemFullName}]; ");
                                     itemNum = -1;
                                 }
                                 NoteDestroyLen();
@@ -225,7 +225,7 @@ namespace HCResourceLibraryApp.Layout
                         }
                         else
                         {
-                            Dbug.Log("Current directory is empty, completely empty; ");
+                            Dbg.Log(fcpx, "Current directory is empty, completely empty; ");
                             Format("This Directory Is Empty. Browsing cancelled.", ForECol.Incorrection);
                             NoteDestroyLen();
                             Pause();
@@ -234,7 +234,7 @@ namespace HCResourceLibraryApp.Layout
                     }
                     else
                     {
-                        Dbug.Log("Could not fetch information on current directory; ");
+                        Dbg.Log(fcpx, "Could not fetch information on current directory; ");
                         Format("Failed to obtain information on current directory. Browsing cancelled.", ForECol.Incorrection);
                         NoteDestroyLen();
                         Pause();
@@ -270,10 +270,10 @@ namespace HCResourceLibraryApp.Layout
                             if ((ItemType == FileChooserType.Folders || ItemType == FileChooserType.All) && isDirQ)
                                 isValidTypeQ = true;
 
-                            Dbug.Log($"Selected item @{itemIndex}  ::  isDir [{isDirQ}], name [{itemName}], fullName [{itemFullName}]; ");
+                            Dbg.Log(fcpx, $"Selected item @{itemIndex}  ::  isDir [{isDirQ}], name [{itemName}], fullName [{itemFullName}]; ");
                             if (isValidTypeQ)
                             {
-                                Dbug.LogPart("Item is VALID; ");
+                                Dbg.LogPart(fcpx, "Item is VALID; ");
                                 NewLine();
                                 NoteDestroyLen();
 
@@ -288,56 +288,56 @@ namespace HCResourceLibraryApp.Layout
                                 NoteDestroyLen(true);
                                 NoteDestroyLen(true);
 
-                                Dbug.LogPart($"Item confirmed? [{yesNo}]");
+                                Dbg.LogPart(fcpx, $"Item confirmed? [{yesNo}]");
                                 if (yesNo)
                                 {
                                     SelectedItem = itemFullName;
                                     exitFileChooserPageQ = true;
-                                    Dbug.LogPart("; Exiting File Chooser page, an item was selected");
+                                    Dbg.LogPart(fcpx, "; Exiting File Chooser page, an item was selected");
                                 }
                                 else if (isDirQ)
                                     isValidTypeQ = false; /// enter given dir on decline
-                                Dbug.Log("; ");
+                                Dbg.Log(fcpx, "; ");
                             }
                             
                             if (!isValidTypeQ)
                             {
-                                Dbug.LogPart($"Item invalidated; ");
+                                Dbg.LogPart(fcpx, $"Item invalidated; ");
                                 if (isDirQ)
                                 {
                                     currDirectory = itemFullName;
                                     pageIndex = pageIndexMin;
-                                    Dbug.LogPart("Item is a directory; Page will be refreshed with items from selected directory; ");
+                                    Dbg.LogPart(fcpx, "Item is a directory; Page will be refreshed with items from selected directory; ");
                                 }
                             }
                         }
                         else
                         {
-                            Dbug.LogPart("Invalid option (NaN); ");
+                            Dbg.LogPart(fcpx, "Invalid option (NaN); ");
                             if (input == nextPage || input == prevPage)
                             {
-                                Dbug.LogPart("Navigating pages: ");
+                                Dbg.LogPart(fcpx, "Navigating pages: ");
                                 if (maxPageIndex > pageIndexMin)
                                 {
                                     if (input == nextPage && pageIndex < maxPageIndex)
                                     {
                                         pageIndex += 1;
-                                        Dbug.LogPart(" to next");
+                                        Dbg.LogPart(fcpx, " to next");
                                     }
                                     if (input == prevPage && pageIndex > pageIndexMin)
                                     {
                                         pageIndex -= 1;
-                                        Dbug.LogPart(" to previous");
+                                        Dbg.LogPart(fcpx, " to previous");
                                     }
                                 }
-                                else Dbug.Log(" no pages to navigate");
+                                else Dbg.Log(fcpx, " no pages to navigate");
                             }
                             else if (input.IsNE())
                             {
                                 exitFileChooserPageQ = true;
-                                Dbug.LogPart("Exiting file chooser page");
+                                Dbg.LogPart(fcpx, "Exiting file chooser page");
                             }
-                            Dbug.Log("; ");
+                            Dbg.Log(fcpx, "; ");
                         }
                     }
 
@@ -347,13 +347,13 @@ namespace HCResourceLibraryApp.Layout
                     SetCursorPosition();
                     if (destroyPerLine.HasElements())
                     {
-                        Dbug.LogPart("- Destroying previous prints ::");
+                        Dbg.LogPart(fcpx, "- Destroying previous prints ::");
 
                         int bufferWidth = Console.BufferWidth;
                         const char desChar = ' '; // DBG'cLS'   OG' '
                         foreach (int destLen in destroyPerLine)
                         {
-                            Dbug.LogPart($" {destLen}");
+                            Dbg.LogPart(fcpx, $" {destLen}");
                             string destroyStr = desChar.ToString();
                             for (int dsx = 0; dsx < destLen - 1; dsx++)
                                 destroyStr += desChar.ToString();
@@ -362,13 +362,13 @@ namespace HCResourceLibraryApp.Layout
                             if (destLen < bufferWidth)
                                 NewLine();
                         }
-                        Dbug.Log("; ");
+                        Dbg.Log(fcpx, "; ");
                     }
                     Wait(0.1f);
                     //Pause();
                     #endregion
 
-                    Dbug.NudgeIndent(false);
+                    Dbg.NudgeIndent(fcpx, false);
 
 
 
@@ -380,7 +380,7 @@ namespace HCResourceLibraryApp.Layout
                             charDist = Console.BufferWidth;
                         else charDist = Console.CursorLeft;
                         destroyPerLine.Add(charDist);
-                        //Dbug.LogPart($"NDL({charDist}); ");
+                        //Dbg.LogPart(fcpx, $"NDL({charDist}); ");
                     }
                 }
                 while (!exitFileChooserPageQ);
@@ -389,17 +389,17 @@ namespace HCResourceLibraryApp.Layout
                 SetCursorPosition(iniCurTop, iniCurLeft);
                 Wait(0.1f);
 
-                Dbug.LogPart("Returned cursor to original position");
+                Dbg.LogPart(fcpx, "Returned cursor to original position");
                 if (SelectedItem.IsNotNEW())
                 {
-                    Dbug.LogPart("; Printing final item path (as input)");
+                    Dbg.LogPart(fcpx, "; Printing final item path (as input)");
                     TextLine(SelectedItem, GetPrefsForeColor(ForECol.InputColor));
                     //FormatLine(SelectedItem, ForECol.InputColor);
                 }
                 else NewLine();
-                Dbug.Log("; ");
+                Dbg.Log(fcpx, "; ");
 
-                Dbug.EndLogging();
+                Dbg.EndLogging(fcpx);
                 UnqueueEnterFileChooserPage();                
             }
         }

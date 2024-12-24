@@ -5,7 +5,7 @@ using static ConsoleFormat.Base;
 
 namespace HCResourceLibraryApp
 {
-    /// <summary>A revision of the <see cref="Dbug"/> class to supercede its shortcomings. An upgraded, focused version the <see cref="Dbug"/> class.</summary>
+    /// <summary>An upgraded version of the formerly used <see cref="Dbug"/> class. Uses multi-thread-like functionality to allow uninterrupted logging from any session threads.</summary>
     public static class Dbg
     {
         /** THE REVISION PLAN **\
@@ -63,6 +63,7 @@ namespace HCResourceLibraryApp
          *          
          *          
          *          - Added another thread element, 'outputOmission': logs aren't printed to output, but will still be printed to file.
+         *          - Added another thread element, 'interruptedQ': relays whethers a thread is being interrupted (with notice from openning threads)
          *          
         \** ****************** */
 
@@ -73,21 +74,26 @@ namespace HCResourceLibraryApp
 
         // threading and misc info
         static List<DbgThread> Threads;
+        static List<string> ThreadSpamsKeywordList;
         static Stopwatch _runtimeWatch;
         static bool _firstFlushHandledQ, _finalFlushHandledQ;
 
         internal const int indentFactor = 4;
-        const int noIndex = -1;
-        const string _keyName = "{tnm}", _keyTime = "{rtn}", _keyLog = "{dlg}", _keyActiveC = "{cat}";
-        const string _keyLineStartHeaderDiv = ":", _keyLineNoticeHeaderDive = ". . . . .";
-        /// <summary>Needs: <see cref="_keyName"/>.</summary>
-        static readonly string _keyLineStartLog = $"#### {_keyName} {_keyTime} ####";                       // [hdr]    #### {name} {time} ####
-        /// <summary>Needs: <see cref="_keyName"/>.</summary>
-        static readonly string _keyLineEndLog = $"## END {_keyName} {_keyTime} ##\n";                       //          ## END {name} {time} ## \n
+        const int noIndex = -1, spamThreadKeywordMinimum = 4;
+        const string _keyName = "{tnm}", _keyTime = "{rtn}", _keyLog = "{dlg}", _keyActiveC = "{cat}", _keyThreadCount = "{thc}", _keyThrdNumSym = "'";
+        const string _keyLineStartHeaderDiv = ":", _keyLineNoticeHeaderDiv = ". . . . .";
+        // [hdr]    #### {name} '{onCount} {time} ####
+        /// <summary>Needs: <see cref="_keyName"/>, <see cref="_keyThreadCount"/>.</summary>
+        static readonly string _keyLineStartLog = $"#### {_keyName} {_keyThrdNumSym}{_keyThreadCount} {_keyTime} ####";
+        //          ## END {name} '{onCount} {time} ## \n
+        /// <summary>Needs: <see cref="_keyName"/>, <see cref="_keyThreadCount"/>.</summary>
+        static readonly string _keyLineEndLog = $"## END {_keyName} {_keyThrdNumSym}{_keyThreadCount} {_keyTime} ##\n";
+        //          ## SNG {name} {time}  //  {log} ##
         /// <summary>Needs: <see cref="_keyName"/> and <see cref="_keyLog"/>.</summary>
-        static readonly string _keyLineSingleLog = $"## SNG {_keyName} {_keyTime}  //  {_keyLog} ##";       //          ## SNG {name} {time}  //  {log} ##
-        /// <summary>Needs: <see cref="_keyName"/>.</summary>
-        static readonly string _keyLineNoticeLog = $"## OPN {_keyName} {_keyTime} [{_keyActiveC}] ##\n";    // [hdr]    ## OPN {name} {time} [{count}] ## \n
+        static readonly string _keyLineSingleLog = $"## SNG {_keyName} {_keyTime}  //  {_keyLog} ##";
+        // [hdr]    ## OPN {name} '{onCount} {time} [{count}opn] ##     [ftr]
+        /// <summary>Needs: <see cref="_keyName"/>, <see cref="_keyThreadCount"/>.</summary>
+        static readonly string _keyLineNoticeLog = $"## OPN {_keyName} {_keyThrdNumSym}{_keyThreadCount} {_keyTime} [{_keyActiveC}opn] ##";  
         #endregion
 
 
@@ -99,6 +105,7 @@ namespace HCResourceLibraryApp
         public static void Initialize()
         {
             Threads = new List<DbgThread>();
+            ThreadSpamsKeywordList = new List<string>();
             _runtimeWatch = new Stopwatch();
             _runtimeWatch.Start();
         }
@@ -124,7 +131,10 @@ namespace HCResourceLibraryApp
                                 thread.AddToLog($"** THIS THREAD HAS BEEN FORCED TO END **");
                                 EndLogging(thread.Index);
                             }
-                            Log(tx, $"> Index [{thread.Index}], Times Active [{thread.Count}]  // Name :: {thread.Name}");
+                            LogPart(tx, $"> Index [{thread.Index}], Times Active [{thread.Count}]  // Name :: {thread.Name}");
+                            if (IsMarkedAsSpam(thread.Index))
+                                LogPart(tx, "   ---   {MARKED_AS_SPAM}");
+                            Log(tx, "; ");
                         }
                     }
                 }
@@ -163,7 +173,7 @@ namespace HCResourceLibraryApp
                         currThread.IsActiveQ = true;
 
                         /// add thread header
-                        string headerDiv = "", headerText = GenerateKeyLine(_keyLineStartLog, currThread.Name.ToUpper());
+                        string headerDiv = "", headerText = GenerateKeyLine(_keyLineStartLog, currThread.Name.ToUpper(), null, currThread.Count);
                         for (int hx = -1; hx < headerText.Length / _keyLineStartHeaderDiv.Length; hx++)
                             headerDiv += _keyLineStartHeaderDiv;
                         currThread.AddToLog($"\n{headerDiv}");
@@ -176,10 +186,17 @@ namespace HCResourceLibraryApp
                         {
                             foreach (DbgThread activeThread in activeThreads)
                             {
-                                if (activeThread.Name != currThread.Name)
+                                if (activeThread.Name != currThread.Name && !IsMarkedAsSpam(currThread.Index))
                                 {
-                                    activeThread.AddToLog(_keyLineNoticeHeaderDive); /// separted, so other thread indents are maintained
-                                    activeThread.AddToLog(GenerateKeyLine(_keyLineNoticeLog, currThread.Name));
+                                    /// interruption opens on other logs that are active
+                                    if (!activeThread.IsInterruptedQ)
+                                    {
+                                        /// separted, so other thread indents are maintained
+                                        activeThread.AddToLog("\t");
+                                        activeThread.AddToLog(_keyLineNoticeHeaderDiv);
+                                        activeThread.IsInterruptedQ = true;
+                                    }
+                                    activeThread.AddToLog(GenerateKeyLine(_keyLineNoticeLog, currThread.Name, null, currThread.Count));
                                 }
                             }
                         }
@@ -201,10 +218,16 @@ namespace HCResourceLibraryApp
                 {
                     if (currThread.IsActiveQ)
                     {
-                        currThread.Indent = 0;
+                        /// interuption closes when the active session ends
+                        if (currThread.IsInterruptedQ)
+                        {
+                            currThread.AddToLog(_keyLineNoticeHeaderDiv);
+                            currThread.IsInterruptedQ = false;
+                        }
                         if (currThread.Partial.IsNotNEW())
-                            currThread.AddToLog(".");
-                        currThread.AddToLog(GenerateKeyLine(_keyLineEndLog, currThread.Name));
+                            currThread.AddToLog(".");                        
+                        currThread.Indent = 0;
+                        currThread.AddToLog(GenerateKeyLine(_keyLineEndLog, currThread.Name, null, currThread.Count));
                         PrintAndSaveThread(threadIx);
                         ResetThread(threadIx);
                     }
@@ -222,7 +245,15 @@ namespace HCResourceLibraryApp
             if (currThread is not null && log.IsNotNEW())
             {
                 if (currThread.IsActiveQ)
+                {
+                    /// interuption closes on a full log when active
+                    if (currThread.IsInterruptedQ)
+                    {
+                        currThread.AddToLog(_keyLineNoticeHeaderDiv + "\n");
+                        currThread.IsInterruptedQ = false;
+                    }
                     currThread.AddToLog(log);
+                }
             }
         }
         /// <summary>
@@ -245,7 +276,8 @@ namespace HCResourceLibraryApp
         /// <remarks>Has fail-safes in the rare event that the thread is already active.</remarks>
         /// <param name="name">The name of the session thread to singularly log.</param>
         /// <param name="log">Required. The singular log line.</param>
-        public static void SingleLog(string name, string log)
+        /// <param name="omitFromOutputQ">If <c>true</c>, will not print the single log to the output (still prints to save file).</param>
+        public static void SingleLog(string name, string log, bool omitFromOutputQ = false)
         {
             if (name.IsNotNEW() && log.IsNotNEW())
             {
@@ -259,6 +291,7 @@ namespace HCResourceLibraryApp
                     /// all this happens whether thread active or not, though it shouldn't be if this is happening
                     // begin
                     currThread.AddToLog(GenerateKeyLine(_keyLineSingleLog, currThread.Name, log));
+                    currThread.OmitFromOutputQ = omitFromOutputQ;
 
                     /// fail-safe in the unpredictable event that the thread is active during this action
                     if (!currThread.IsActiveQ)
@@ -292,6 +325,7 @@ namespace HCResourceLibraryApp
         ///     Finds a thread instance to toggle its omission from the debug ouput prints.
         /// </summary>
         /// <param name="threadIx">Index of thread to toggle output omission.</param>
+        /// <remarks>Use after the threads has started logging. Is reset at the end of logging.<br></br>The thread still prints to file. </remarks>
         public static void ToggleThreadOutputOmission(int threadIx)
         {
             DbgThread currThread = FindThread(threadIx);
@@ -299,6 +333,26 @@ namespace HCResourceLibraryApp
             {
                 if (currThread.IsSetup())
                     currThread.OmitFromOutputQ = !currThread.OmitFromOutputQ;
+            }
+        }
+        /// <summary>
+        ///     Recieves a list of keywords, each of which will be used case-insensitively to find matches within the name of a thread.
+        ///     <br></br>If the thread's name contains any keywords in the list, it will be identified as a 'spam thread'.
+        ///     <br></br>If a thread is seen as a 'spam thread' then it is not printed to output, not saved to file, does not trigger notice in other ongoing threads, and is uncounted from active threads.
+        /// </summary>
+        /// <param name="threadNames">The keywords to match and disable spammy threads. Each must be at least <see cref="spamThreadKeywordMinimum"/> (4) characters in length.</param>
+        /// <remarks>Use just after <see cref="Initialize"/> if it is known which threads to ignore. Being specific means more entries, but less accidental omissions.</remarks>
+        public static void SetThreadsKeywordSpamList(params string[] threadNames)
+        {
+            const int spamThreadMinKeyword = spamThreadKeywordMinimum;
+            if (threadNames.HasElements() && ThreadSpamsKeywordList is not null)
+            {
+                foreach (string threadName in threadNames)
+                {
+                    if (threadName.IsNotNEW())
+                        if (threadName.Length >= spamThreadMinKeyword)
+                            ThreadSpamsKeywordList.Add(threadName);
+                }
             }
         }
 
@@ -376,8 +430,9 @@ namespace HCResourceLibraryApp
         /// <summary>
         ///     Searches within the list of <see cref="Threads"/> to find any <see cref="DbgThread"/> that is actively logging a session.
         /// </summary>
+        /// <param name="ignoreSpamThreads">If <c>true</c>, will not fetch threads that have been marked as 'spam thread'.</param>
         /// <returns>An array of all <see cref="DbgThread"/> found to be active.</returns>
-        static DbgThread[] FetchActiveThreads()
+        static DbgThread[] FetchActiveThreads(bool ignoreSpamThreads = false)
         {
             List<DbgThread> activeThreads = new();
             if (Threads.HasElements())
@@ -385,7 +440,15 @@ namespace HCResourceLibraryApp
                 foreach (DbgThread thread in Threads)
                 {
                     if (thread.IsSetup() && thread.IsActiveQ)
-                        activeThreads.Add(thread);
+                    {
+                        /// ign = t     spm = t     add? F
+                        /// ign = t     spm = f     add? T
+                        /// ign = f     spm = t     add? T
+                        /// ign = f     spm = f     add? T
+
+                        if (!(ignoreSpamThreads && IsMarkedAsSpam(thread.Index)))
+                            activeThreads.Add(thread);
+                    }
                 }
             }
             return activeThreads.ToArray();
@@ -398,7 +461,6 @@ namespace HCResourceLibraryApp
         {
             DbgThread threadToReset = FindThread(threadIx);
             threadToReset?.Reset();
-
             //if (threadToReset is not null)
             //    threadToReset.Reset();
         }
@@ -412,7 +474,7 @@ namespace HCResourceLibraryApp
             DbgThread threadToFlush = FindThread(threadIx);
             if (threadToFlush is not null)
             {
-                if (threadToFlush.Logs.HasElements())
+                if (threadToFlush.Logs.HasElements() && !IsMarkedAsSpam(threadToFlush.Index))
                 {
                     // print thread logs to output
                     for (int tdx = 0; tdx < threadToFlush.Logs.Count && !threadToFlush.OmitFromOutputQ; tdx++)
@@ -430,7 +492,7 @@ namespace HCResourceLibraryApp
                     if (SetFileLocation(FileSaveLocation))
                     {
                         if (!_firstFlushHandledQ)
-                            FileWrite(true, null, GenerateKeyLine(_keyLineStartLog[1..], "<DbugInitialized>"));
+                            FileWrite(true, null, GenerateKeyLine(_keyLineStartLog[1..], "<DbugInitialized>", null, 0));
                         _firstFlushHandledQ = true;
 
                         FileWrite(false, null, threadToFlush.Logs.ToArray());
@@ -438,6 +500,26 @@ namespace HCResourceLibraryApp
                     }
                 }
             }
+        }
+        /// <summary>
+        ///     Checks whether a <see cref="DbgThread"/> at index <paramref name="threadIx"/> is a spammy thread. Thread name is compared to value in <see cref="ThreadSpamsKeywordList"/>.
+        /// </summary>
+        /// <param name="threadIx">Index of potentially spammy thread.</param>
+        /// <returns>A boolean stating whether the thread contains a spam keyword, and thus whether it is a spammy thread.</returns>
+        static bool IsMarkedAsSpam(int threadIx)
+        {
+            bool isSpamThreadQ = false;
+            DbgThread threadSpam = FindThread(threadIx);
+            if (threadSpam is not null && ThreadSpamsKeywordList.HasElements())
+            {
+                for (int spx = 0; spx < ThreadSpamsKeywordList.Count && !isSpamThreadQ; spx++)
+                {
+                    string spamWord = ThreadSpamsKeywordList[spx].ToLower();
+                    if (threadSpam.IsSetup() && threadSpam.Name.ToLower().Contains(spamWord))
+                        isSpamThreadQ = true;
+                }
+            }
+            return isSpamThreadQ;
         }
 
         /// <summary>
@@ -450,7 +532,7 @@ namespace HCResourceLibraryApp
         /// <param name="name">Required. The <see cref="DbgThread.Name"/> to use.</param>
         /// <param name="log">May be null. The single log line.</param>
         /// <returns>A constructed string for a common key log line with whatever values have been provided.</returns>
-        static string GenerateKeyLine(string keyLineForm, string name, string log = null)
+        static string GenerateKeyLine(string keyLineForm, string name, string log = null, int? threadCount = null)
         {
             string finalKeyLine = "";
             if (keyLineForm.IsNotNEW() && name.IsNotNEW())
@@ -461,6 +543,8 @@ namespace HCResourceLibraryApp
                 finalKeyLine = keyLineForm.Replace(_keyName, name).Replace(_keyTime, time).Replace(_keyActiveC, countActive.ToString());
                 if (log.IsNotNEW())
                     finalKeyLine = finalKeyLine.Replace(_keyLog, log);
+                if (threadCount is not null)
+                    finalKeyLine = finalKeyLine.Replace(_keyThreadCount, threadCount.ToString());
             }
             return finalKeyLine;
         }

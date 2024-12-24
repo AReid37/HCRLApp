@@ -59,6 +59,8 @@ namespace HCResourceLibraryApp.DataHandling
         static string _prevRecentDirectory, _recentDirectory;
         bool _hasDecodedQ, _versionAlreadyExistsQ;
         static bool _allowLogDecToolsDbugMessagesQ = false;
+        /// <summary>The index for all logs associated with this class' Dbg thread.</summary>
+        static int ldx;
         public static string RecentDirectory
         {
             get => _recentDirectory.IsNEW() ? null : _recentDirectory;
@@ -89,7 +91,7 @@ namespace HCResourceLibraryApp.DataHandling
             bool hasEncoded = FileWrite(false, commonFileTag, encodeRD);
             if (ChangesMade())
                 _prevRecentDirectory = RecentDirectory;
-            Dbug.SingleLog("LogDecoder.EncodeToSharedFile()", $"Log Decoder has saved recent directory path :: {RecentDirectory}");
+            Dbg.SingleLog("LogDecoder.EncodeToSharedFile()", $"Log Decoder has saved recent directory path :: {RecentDirectory}");
 
             return hasEncoded;
         }
@@ -102,12 +104,12 @@ namespace HCResourceLibraryApp.DataHandling
                     string decode = logDecData[0].Contains(Sep) ? null : logDecData[0];
                     RecentDirectory = decode;
                     _prevRecentDirectory = RecentDirectory;
-                    Dbug.SingleLog("LogDecoder.DecodeFromSharedFile()", $"Log Decoder recieved [{logDecData[0]}], and has loaded recent directory path :: {RecentDirectory}");
+                    Dbg.SingleLog("LogDecoder.DecodeFromSharedFile()", $"Log Decoder recieved [{logDecData[0]}], and has loaded recent directory path :: {RecentDirectory}");
                     fetchedLogDecData = true;
                 }
 
             if (!fetchedLogDecData)
-                Dbug.SingleLog("LogDecoder.DecodeFromSharedFile()", $"Log Decoder recieved no data for directory path (error: {Tools.GetRecentWarnError(false, false)})");
+                Dbg.SingleLog("LogDecoder.DecodeFromSharedFile()", $"Log Decoder recieved no data for directory path (error: {Tools.GetRecentWarnError(false, false)})");
 
             return fetchedLogDecData;
         }
@@ -120,14 +122,14 @@ namespace HCResourceLibraryApp.DataHandling
         public bool DecodeLogInfo(string[] logData, VerNum earliestLibVersion, VerNum latestLibVersion)
         {
             bool hasFullyDecodedLogQ = false;
-            Dbug.StartLogging("LogDecoder.DecodeLogInfo(str[])");
-            Dbug.Log($"Recieved collection object (data from log?) to decode; collection has elements? {logData.HasElements()}");
+            Dbg.StartLogging("LogDecoder.DecodeLogInfo(str[])", out ldx);
+            Dbg.Log(ldx, $"Recieved collection object (data from log?) to decode; collection has elements? {logData.HasElements()}");
             _allowLogDecToolsDbugMessagesQ = true;
             _versionAlreadyExistsQ = false;
 
             if (logData.HasElements())
             {
-                Dbug.Log($"Recieved {logData.Length} lines of log data; proceeding to decode information...");
+                Dbg.Log(ldx, $"Recieved {logData.Length} lines of log data; proceeding to decode information...");
                 short nextSectionNumber = 0, currentSectionNumber = 0;
                 #region sectionNames
                 // were previously "const" strings
@@ -174,7 +176,7 @@ namespace HCResourceLibraryApp.DataHandling
 
 
                 // -- reading version log file --
-                Dbug.NudgeIndent(true);
+                Dbg.NudgeIndent(ldx, true);
                 const int readingTimeOut = 250; // OG "250"
                 for (int llx = 0; llx < logData.Length && llx < readingTimeOut && !endFileReading; llx++)
                 {
@@ -188,15 +190,15 @@ namespace HCResourceLibraryApp.DataHandling
                     {
                         if (!withinOmitBlock)
                         {
-                            Dbug.LogPart($"Searching for Sec#{nextSectionNumber + 1} ({nextSectionName})  //  ");
+                            Dbg.LogPart(ldx, $"Searching for Sec#{nextSectionNumber + 1} ({nextSectionName})  //  ");
                             //if (!(logDataLine.StartsWith(omit) || logDataLine.StartsWith(omitBlockOpen)))
-                                Dbug.Log($"L{lineNum,-2}| {ConditionalText(logDataLine.IsNEW(), $"<null>{(withinASectionQ ? $" ... ({nameof(withinASectionQ)} set to false)" : "")}", logDataLine)}");
+                                Dbg.Log(ldx, $"L{lineNum,-2}| {ConditionalText(logDataLine.IsNEW(), $"<null>{(withinASectionQ ? $" ... ({nameof(withinASectionQ)} set to false)" : "")}", logDataLine)}");
                             firstSearchingDbgRanQ = true;
                         }
                         endFileReading = nextSectionNumber >= maxSectionsCount;                        
                     }
 
-                    Dbug.NudgeIndent(true);
+                    Dbg.NudgeIndent(ldx, true);
                     if (logDataLine.IsNotNEW() && !endFileReading)
                     {
                         logDataLine = logDataLine.Trim();
@@ -205,15 +207,15 @@ namespace HCResourceLibraryApp.DataHandling
                         /// imparsable group (block omit)
                         if (logDataLine.Equals(omitBlockOpen) && !withinOmitBlock)
                         {
-                            Dbug.Log($"Line contained '{omitBlockOpen}' :: starting omission block; ");
-                            Dbug.LogPart("Block Omitting Lines :: ");
+                            Dbg.Log(ldx, $"Line contained '{omitBlockOpen}' :: starting omission block; ");
+                            Dbg.LogPart(ldx, "Block Omitting Lines :: ");
                             withinOmitBlock = true;
                         }
                         else if (logDataLine.Equals(omitBlockClose) && withinOmitBlock)
                         {
                             withinOmitBlock = false;
-                            Dbug.Log("; ");
-                            Dbug.LogPart($"Line contained '{omitBlockClose}' :: ending omission block; ");
+                            Dbg.Log(ldx, "; ");
+                            Dbg.LogPart(ldx, $"Line contained '{omitBlockClose}' :: ending omission block; ");
                         }
 
                         /// imparsable line (single omit)
@@ -237,7 +239,7 @@ namespace HCResourceLibraryApp.DataHandling
                                         currentSectionName = nextSectionName;
                                         currentSectionNumber = nextSectionNumber;
                                         nextSectionNumber++;
-                                        Dbug.Log($"Found section #{currentSectionNumber + 1} ({currentSectionName});");
+                                        Dbg.Log(ldx, $"Found section #{currentSectionNumber + 1} ({currentSectionName});");
                                     }
                                 }
                             }
@@ -246,8 +248,8 @@ namespace HCResourceLibraryApp.DataHandling
                             if (withinASectionQ)
                             {
                                 DecodeInfo decodeInfo = new($"{logDataLine}", currentSectionName);
-                                Dbug.Log($"{{{(currentSectionName.Length > 5 ? currentSectionName.Remove(5) : currentSectionName)}}}  L{lineNum,-2}| {logDataLine}");
-                                Dbug.NudgeIndent(true);
+                                Dbg.Log(ldx, $"{{{(currentSectionName.Length > 5 ? currentSectionName.Remove(5) : currentSectionName)}}}  L{lineNum,-2}| {logDataLine}");
+                                Dbg.NudgeIndent(ldx, true);
                                 bool sectionIssueQ = false;
 
                                 /// VERSION
@@ -269,25 +271,25 @@ namespace HCResourceLibraryApp.DataHandling
 
                                     sectionIssueQ = true;
 
-                                    Dbug.LogPart("Version Data  //  ");
+                                    Dbg.LogPart(ldx, "Version Data  //  ");
                                     logDataLine = RemoveEscapeCharacters(logDataLine);
                                     if (IsSectionTag() && !parsedSectionTagQ)
                                     {
                                         logDataLine = RemoveSquareBrackets(logDataLine);
                                         if (logDataLine.Contains(":") && logDataLine.CountOccuringCharacter(':') == 1)
                                         {
-                                            Dbug.LogPart($"Contains ':', raw data ({logDataLine}); ");
+                                            Dbg.LogPart(ldx, $"Contains ':', raw data ({logDataLine}); ");
                                             string[] verSplit = logDataLine.Split(':');
                                             if (verSplit.HasElements(2))
                                             {
-                                                Dbug.LogPart($"Has sufficent elements after split; ");
+                                                Dbg.LogPart(ldx, $"Has sufficent elements after split; ");
                                                 if (verSplit[1].IsNotNEW())
                                                 {
-                                                    Dbug.Log($"Try parsing split @ix1 ({verSplit[1]}) into {nameof(VerNum)} instance; ");
+                                                    Dbg.Log(ldx, $"Try parsing split @ix1 ({verSplit[1]}) into {nameof(VerNum)} instance; ");
                                                     bool parsed = VerNum.TryParse(verSplit[1], out VerNum verNum, out string parsingIssue);
                                                     if (parsed)
                                                     {
-                                                        Dbug.LogPart($"--> Obtained {nameof(VerNum)} instance [{verNum}]");
+                                                        Dbg.LogPart(ldx, $"--> Obtained {nameof(VerNum)} instance [{verNum}]");
                                                         decodeInfo.NoteResult($"{nameof(VerNum)} instance --> {verNum}");
                                                         logVersion = verNum;
                                                         parsedSectionTagQ = true;
@@ -298,8 +300,8 @@ namespace HCResourceLibraryApp.DataHandling
                                                         {
                                                             if (logVersion.AsNumber.IsWithin(earliestLibVersion.AsNumber, latestLibVersion.AsNumber))
                                                             {
-                                                                Dbug.LogPart($"; Version {logVersion.ToStringNums()} information already exists within library [OVERWRITE Warning]");
-                                                                decodeInfo.NoteIssue($"Version {logVersion.ToStringNums()} information already exists in library (May be overwritten).");
+                                                                Dbg.LogPart(ldx, $"; Version {logVersion.ToStringNums()} information already exists within library [OVERWRITE Warning]");
+                                                                decodeInfo.NoteIssue(ldx, $"Version {logVersion.ToStringNums()} information already exists in library (May be overwritten).");
                                                                 _versionAlreadyExistsQ = true;
                                                             }                                                            
                                                             
@@ -311,8 +313,8 @@ namespace HCResourceLibraryApp.DataHandling
                                                                     suggestedVer = new VerNum(latestLibVersion.MajorNumber + 1, 0);
                                                                 else suggestedVer = new VerNum(latestLibVersion.MajorNumber, latestLibVersion.MinorNumber + 1);
 
-                                                                Dbug.LogPart($"; Suggesting version log number: {suggestedVer}");
-                                                                decodeInfo.NoteIssue($"Suggesting version log number: {suggestedVer}");
+                                                                Dbg.LogPart(ldx, $"; Suggesting version log number: {suggestedVer}");
+                                                                decodeInfo.NoteIssue(ldx, $"Suggesting version log number: {suggestedVer}");
                                                             }                                                            
                                                             else if (logVersion.AsNumber < earliestLibVersion.AsNumber && earliestLibVersion.AsNumber - 1 != logVersion.AsNumber)
                                                             {
@@ -326,22 +328,22 @@ namespace HCResourceLibraryApp.DataHandling
                                                                         suggestedVer = new VerNum(latestLibVersion.MajorNumber - 1, 99);
                                                                     else suggestedVer = new VerNum(latestLibVersion.MajorNumber, latestLibVersion.MinorNumber - 1);
 
-                                                                    Dbug.LogPart($"; Suggesting version log number: {suggestedVer}");
-                                                                    decodeInfo.NoteIssue($"Suggesting version log number: {suggestedVer}");
+                                                                    Dbg.LogPart(ldx, $"; Suggesting version log number: {suggestedVer}");
+                                                                    decodeInfo.NoteIssue(ldx, $"Suggesting version log number: {suggestedVer}");
                                                                 }
                                                             }
                                                         }
                                                     }
                                                     else
                                                     {
-                                                        Dbug.LogPart($"{nameof(VerNum)} instance could not be parsed: {parsingIssue}");
-                                                        decodeInfo.NoteIssue($"{nameof(VerNum)} instance could not be parsed: {parsingIssue}");
+                                                        Dbg.LogPart(ldx, $"{nameof(VerNum)} instance could not be parsed: {parsingIssue}");
+                                                        decodeInfo.NoteIssue(ldx, $"{nameof(VerNum)} instance could not be parsed: {parsingIssue}");
                                                     }
                                                 }
                                                 else
                                                 {
-                                                    Dbug.LogPart("No data in split @ix1");
-                                                    decodeInfo.NoteIssue("No data provided for version number");
+                                                    Dbg.LogPart(ldx, "No data in split @ix1");
+                                                    decodeInfo.NoteIssue(ldx, "No data provided for version number");
                                                 }
                                             }
                                         }
@@ -349,20 +351,20 @@ namespace HCResourceLibraryApp.DataHandling
                                         {
                                             if (logDataLine.Contains(':'))
                                             {
-                                                Dbug.LogPart("This line has too many ':'");
-                                                decodeInfo.NoteIssue("This line has too many ':'");
+                                                Dbg.LogPart(ldx, "This line has too many ':'");
+                                                decodeInfo.NoteIssue(ldx, "This line has too many ':'");
                                             }
                                             else
                                             {
                                                 if (logDataLine.ToLower().StartsWith(secVer.ToLower()))
                                                 {
-                                                    Dbug.LogPart("This line is missing ':'");
-                                                    decodeInfo.NoteIssue("This line is missing ':'");
+                                                    Dbg.LogPart(ldx, "This line is missing ':'");
+                                                    decodeInfo.NoteIssue(ldx, "This line is missing ':'");
                                                 }
                                                 else
                                                 {
-                                                    Dbug.Log($"Only section name '{currentSectionName}' must follow section tag open bracket");
-                                                    decodeInfo.NoteIssue($"Only section name '{currentSectionName}' must follow section tag open bracket");
+                                                    Dbg.Log(ldx, $"Only section name '{currentSectionName}' must follow section tag open bracket");
+                                                    decodeInfo.NoteIssue(ldx, $"Only section name '{currentSectionName}' must follow section tag open bracket");
                                                 }
                                             }
                                         }
@@ -371,18 +373,18 @@ namespace HCResourceLibraryApp.DataHandling
                                     {
                                         if (parsedSectionTagQ)
                                         {
-                                            Dbug.LogPart("Version section tag has already been parsed");
-                                            decodeInfo.NoteIssue("Version section tag has already been parsed");
+                                            Dbg.LogPart(ldx, "Version section tag has already been parsed");
+                                            decodeInfo.NoteIssue(ldx, "Version section tag has already been parsed");
                                         }
                                         else if (logDataLine.StartsWith(secBracL))
                                         {
-                                            Dbug.LogPart("This line does not end with ']'");
-                                            decodeInfo.NoteIssue("This line does not end with ']'");
+                                            Dbg.LogPart(ldx, "This line does not end with ']'");
+                                            decodeInfo.NoteIssue(ldx, "This line does not end with ']'");
                                         }
                                         else
                                         {
-                                            Dbug.LogPart("This line does not start with '['");
-                                            decodeInfo.NoteIssue("This line does not start with '['");
+                                            Dbg.LogPart(ldx, "This line does not start with '['");
+                                            decodeInfo.NoteIssue(ldx, "This line does not start with '['");
                                         }
                                     }
                                     
@@ -431,7 +433,7 @@ namespace HCResourceLibraryApp.DataHandling
                                     /// added tag (may contain placeholders and substitutes)
                                     if (logDataLine.Contains(secBracL) || logDataLine.Contains(secBracR))
                                     {
-                                        Dbug.LogPart("Identified added section tag; ");
+                                        Dbg.LogPart(ldx, "Identified added section tag; ");
                                         wasSectionTag = true;
                                         logDataLine = RemoveEscapeCharacters(logDataLine);
 
@@ -439,7 +441,7 @@ namespace HCResourceLibraryApp.DataHandling
                                         {
                                             if (addedPholderNSubTags.HasElements())
                                             {
-                                                Dbug.LogPart("Clearing ph/sub list; ");
+                                                Dbg.LogPart(ldx, "Clearing ph/sub list; ");
                                                 addedPholderNSubTags.Clear();
                                             }
 
@@ -447,7 +449,7 @@ namespace HCResourceLibraryApp.DataHandling
                                             if (logDataLine.Contains(':') && logDataLine.CountOccuringCharacter(':') <= 1)
                                             {
                                                 /// ADDED  <-->  x,t21; y,p84 
-                                                Dbug.Log("Contains ':', spliting header tag from placeholders and substitutes; ");
+                                                Dbg.Log(ldx, "Contains ':', spliting header tag from placeholders and substitutes; ");
                                                 string[] splitAddHeader = logDataLine.Split(':');
                                                 if (splitAddHeader.HasElements(2))
                                                 {
@@ -458,46 +460,46 @@ namespace HCResourceLibraryApp.DataHandling
                                                             nothingInvalidBehindColonQ = true;
                                                         else
                                                         {
-                                                            Dbug.LogPart("Only section name must be written before ':'");
-                                                            decodeInfo.NoteIssue("Only section name must be written before ':'");
+                                                            Dbg.LogPart(ldx, "Only section name must be written before ':'");
+                                                            decodeInfo.NoteIssue(ldx, "Only section name must be written before ':'");
                                                         }
                                                     }
 
                                                     if (splitAddHeader[1].IsNotNEW() && nothingInvalidBehindColonQ)
                                                     {
-                                                        Dbug.LogPart("Sorting placeholder/substitute groups :: ");
+                                                        Dbg.LogPart(ldx, "Sorting placeholder/substitute groups :: ");
                                                         /// if()    x,t21  <-->  y,p84
                                                         /// else()  x,t21
                                                         List<string> addedPhSubs = new();
                                                         if (splitAddHeader[1].Contains(';'))
                                                         {
-                                                            Dbug.LogPart("Detected multiple >> ");
+                                                            Dbg.LogPart(ldx, "Detected multiple >> ");
                                                             string[] pholdSubs = splitAddHeader[1].Split(';');
                                                             if (pholdSubs.HasElements())
                                                                 foreach (string phs in pholdSubs)
                                                                 {
                                                                     if (phs.IsNotNEW())
                                                                     {
-                                                                        Dbug.LogPart($"{phs} ");
+                                                                        Dbg.LogPart(ldx, $"{phs} ");
                                                                         addedPhSubs.Add(phs);
                                                                     }
                                                                 }
                                                         }
                                                         else if (splitAddHeader[1].Contains(','))
                                                         {
-                                                            Dbug.LogPart($"Only one >> {splitAddHeader[1]}");
+                                                            Dbg.LogPart(ldx, $"Only one >> {splitAddHeader[1]}");
                                                             addedPhSubs.Add(splitAddHeader[1]);
                                                         }
-                                                        Dbug.Log($"; ");
-                                                        //Dbug.Log($" << End ph/sub group sorting ");
+                                                        Dbg.Log(ldx, $"; ");
+                                                        //Dbg.Log(ldx, $" << End ph/sub group sorting ");
 
                                                         if (addedPhSubs.HasElements())
                                                         {
-                                                            Dbug.Log($"Spliting '{addedPhSubs.Count}' placeholder and substitution groups");
+                                                            Dbg.Log(ldx, $"Spliting '{addedPhSubs.Count}' placeholder and substitution groups");
                                                             for (int ps = 0; ps < addedPhSubs.Count; ps++)
                                                             {
                                                                 string phs = $"{addedPhSubs[ps]}".Trim();
-                                                                Dbug.LogPart($" -> Group #{ps + 1} (has ','): {phs.Contains(",")}");
+                                                                Dbg.LogPart(ldx, $" -> Group #{ps + 1} (has ','): {phs.Contains(",")}");
 
                                                                 /// x  <-->  t21
                                                                 /// y  <-->  p84
@@ -507,17 +509,17 @@ namespace HCResourceLibraryApp.DataHandling
                                                                     if (phSub.HasElements(2))
                                                                     {
                                                                         if (phSub.Length > 2)
-                                                                            Dbug.LogPart(";  this group has too many of ',' ... skipping this ph/sub group");
+                                                                            Dbg.LogPart(ldx, ";  this group has too many of ',' ... skipping this ph/sub group");
                                                                         else if (phSub[0].IsNotNEW() && phSub[1].IsNotNEW())
                                                                         {
-                                                                            Dbug.LogPart($" --> Obtained placeholder and substitute :: Sub '{phSub[0].Trim()}' for '{phSub[1].Trim()}'");
+                                                                            Dbg.LogPart(ldx, $" --> Obtained placeholder and substitute :: Sub '{phSub[0].Trim()}' for '{phSub[1].Trim()}'");
                                                                             // multiple tags within tags? screw it.. first come, first serve
                                                                             addedPholderNSubTags.Add(new string[] { phSub[0].Trim(), phSub[1].Trim() }); 
                                                                         }
                                                                     }
                                                                 }
-                                                                else Dbug.LogPart($"; rejected group ({phs})");
-                                                                Dbug.Log(";  ");
+                                                                else Dbg.LogPart(ldx, $"; rejected group ({phs})");
+                                                                Dbg.Log(ldx, ";  ");
                                                             }
 
                                                             if (addedPholderNSubTags.HasElements())
@@ -526,18 +528,18 @@ namespace HCResourceLibraryApp.DataHandling
                                                                 foreach (string[] phsubgroup in addedPholderNSubTags)
                                                                     if (phsubgroup.HasElements(2))
                                                                         phSubs += $"{phsubgroup[0]}/'{phsubgroup[1]}'; ";
-                                                                Dbug.LogPart(phSubs);
+                                                                Dbg.LogPart(ldx, phSubs);
                                                                 decodeInfo.NoteResult(phSubs.Trim());
                                                                 parsedSectionTagQ = true;
                                                                 sectionIssueQ = false;
                                                             }
                                                             else
                                                             {
-                                                                Dbug.LogPart("No placeholder/substitute groups were created and stored");
-                                                                decodeInfo.NoteIssue("No placeholder/substitute groups were created and stored");
+                                                                Dbg.LogPart(ldx, "No placeholder/substitute groups were created and stored");
+                                                                decodeInfo.NoteIssue(ldx, "No placeholder/substitute groups were created and stored");
                                                             }
                                                         }
-                                                        else decodeInfo.NoteIssue("Recieved no placeholder/substitute groups");
+                                                        else decodeInfo.NoteIssue(ldx, "Recieved no placeholder/substitute groups");
                                                     }
                                                 }
                                             }
@@ -547,27 +549,27 @@ namespace HCResourceLibraryApp.DataHandling
                                                 {
                                                     if (logDataLine.Contains(':'))
                                                     {
-                                                        Dbug.LogPart("This line contains too many ':'");
-                                                        decodeInfo.NoteIssue("This line contains too many ':'");
+                                                        Dbg.LogPart(ldx, "This line contains too many ':'");
+                                                        decodeInfo.NoteIssue(ldx, "This line contains too many ':'");
                                                     }
                                                     else
                                                     {
                                                         //if (logDataLine.ToLower().Replace(secAdd.ToLower(), "").IsNEW())
                                                         if (logDataLine.ToLower().StartsWith(secAdd.ToLower()))
                                                         {
-                                                            Dbug.LogPart("This line is missing ':'");
-                                                            decodeInfo.NoteIssue("This line is missing ':'");
+                                                            Dbg.LogPart(ldx, "This line is missing ':'");
+                                                            decodeInfo.NoteIssue(ldx, "This line is missing ':'");
                                                         }
                                                         else
                                                         {
-                                                            Dbug.Log($"Only section name '{currentSectionName}' must follow section tag open bracket");
-                                                            decodeInfo.NoteIssue($"Only section name '{currentSectionName}' must follow section tag open bracket");
+                                                            Dbg.Log(ldx, $"Only section name '{currentSectionName}' must follow section tag open bracket");
+                                                            decodeInfo.NoteIssue(ldx, $"Only section name '{currentSectionName}' must follow section tag open bracket");
                                                         }
                                                     }                                                    
                                                 }
                                                 else
                                                 {
-                                                    Dbug.LogPart("Added section tag identified");
+                                                    Dbg.LogPart(ldx, "Added section tag identified");
                                                     decodeInfo.NoteResult("Added section tag identified");
                                                     parsedSectionTagQ = true;
                                                 }
@@ -577,18 +579,18 @@ namespace HCResourceLibraryApp.DataHandling
                                         {
                                             if (parsedSectionTagQ)
                                             {
-                                                Dbug.LogPart("Added section tag has already been parsed");
-                                                decodeInfo.NoteIssue("Added section tag has already been parsed");
+                                                Dbg.LogPart(ldx, "Added section tag has already been parsed");
+                                                decodeInfo.NoteIssue(ldx, "Added section tag has already been parsed");
                                             }
                                             else if (logDataLine.StartsWith(secBracL))
                                             {
-                                                Dbug.LogPart("This line does not end with ']'");
-                                                decodeInfo.NoteIssue("This line does not end with ']'");
+                                                Dbg.LogPart(ldx, "This line does not end with ']'");
+                                                decodeInfo.NoteIssue(ldx, "This line does not end with ']'");
                                             }
                                             else
                                             {
-                                                Dbug.LogPart("This line does not start with '['");
-                                                decodeInfo.NoteIssue("This line does not start with '['");
+                                                Dbg.LogPart(ldx, "This line does not start with '['");
+                                                decodeInfo.NoteIssue(ldx, "This line does not start with '['");
                                             }
                                         }
                                     }
@@ -600,23 +602,23 @@ namespace HCResourceLibraryApp.DataHandling
                                         string addedContentName = null;
                                         List<string> addedDataIDs = new();
 
-                                        Dbug.LogPart("Identified added data; ");
+                                        Dbg.LogPart(ldx, "Identified added data; ");
                                         logDataLine = RemoveEscapeCharacters(logDataLine);
                                         if (logDataLine.Contains('|') && logDataLine.CountOccuringCharacter('|') == 1)
                                         {
                                             /// 1  <-->  ItemName       -(x25; y32,33 q14)
                                             /// 2  <-->  Other o>       -(x21; a> q21) 
-                                            Dbug.LogPart("Contains '|'; ");
+                                            Dbg.LogPart(ldx, "Contains '|'; ");
                                             string[] splitAddedLine = logDataLine.Split('|');
 
-                                            Dbug.Log($"item line (number '{splitAddedLine[0]}') has info? {splitAddedLine[1].IsNotNEW()}");
+                                            Dbg.Log(ldx, $"item line (number '{splitAddedLine[0]}') has info? {splitAddedLine[1].IsNotNEW()}");
                                             if (splitAddedLine[1].IsNotNEW() && !IsNumberless(splitAddedLine[0]))
                                             {
                                                 // replace placehoder keys with substitution phrases
                                                 /// Other Items     -(x21; y42 q21)
                                                 if (addedPholderNSubTags.HasElements())
                                                 {
-                                                    Dbug.LogPart("Replacing placeholders with their substitutes :: ");
+                                                    Dbg.LogPart(ldx, "Replacing placeholders with their substitutes :: ");
                                                     string spAddLnIx1 = splitAddedLine[1];
                                                     foreach (string[] phSub in addedPholderNSubTags)
                                                     {
@@ -635,23 +637,23 @@ namespace HCResourceLibraryApp.DataHandling
                                                                 /// 
                                                                 /// 
                                                                 // CURR $"[{phSub[0]}] '{phSub[1]}';  "       // OLD $"Subbed '{phSub[0]}' for '{phSub[1]}'; "
-                                                                Dbug.LogPart($"[{phSub[0]}] '{phSub[1]}';  ");
+                                                                Dbg.LogPart(ldx, $"[{phSub[0]}] '{phSub[1]}';  ");
                                                                 spAddLnIx1 = spAddLnIx1.Replace(phSub[0], phSub[1]);
                                                             }
                                                     }
                                                     if (spAddLnIx1 != splitAddedLine[1])
                                                     {
                                                         splitAddedLine[1] = spAddLnIx1;
-                                                        Dbug.Log(" --> replacements complete; ");
+                                                        Dbg.Log(ldx, " --> replacements complete; ");
                                                     }
-                                                    else Dbug.Log(" --> no changes; ");
+                                                    else Dbg.Log(ldx, " --> no changes; ");
                                                 }
 
 
                                                 // parse content name and data ids
                                                 if (splitAddedLine[1].Contains('-') && splitAddedLine[1].CountOccuringCharacter('-') == 1)
                                                 {
-                                                    Dbug.LogPart("Contains '-'; ");
+                                                    Dbg.LogPart(ldx, "Contains '-'; ");
                                                     /// ItemName  <-->  (x25; y32,33 q14)
                                                     /// Other Items  <-->  (x21; y42 q21)
                                                     string[] addedContsNDatas = splitAddedLine[1].Split('-');
@@ -661,8 +663,8 @@ namespace HCResourceLibraryApp.DataHandling
                                                         addedContsNDatas[1] = addedContsNDatas[1].Trim();
                                                         if (!addedContsNDatas[1].StartsWith('(') || !addedContsNDatas[1].EndsWith(')'))
                                                         {
-                                                            Dbug.LogPart("Content data IDs must be enclosed in parentheses; ");
-                                                            decodeInfo.NoteIssue("Content data IDs must be enclosed in parentheses");
+                                                            Dbg.LogPart(ldx, "Content data IDs must be enclosed in parentheses; ");
+                                                            decodeInfo.NoteIssue(ldx, "Content data IDs must be enclosed in parentheses");
                                                             okayContentDataIDs = false;
                                                         }
 
@@ -674,7 +676,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                             if (addedContentsNames.HasElements())
                                                                 okayContentName = !addedContentsNames.Contains(addedContentName);
 
-                                                            Dbug.Log("Fetching content data IDs; ");
+                                                            Dbg.Log(ldx, "Fetching content data IDs; ");
                                                             if (addedContsNDatas[1].CountOccuringCharacter(';') <= 1 && okayContentName) /// Zest -(x22)
                                                             {
                                                                 bool missingMainIDq = false;
@@ -683,7 +685,7 @@ namespace HCResourceLibraryApp.DataHandling
 
                                                                 if (!missingMainIDq)
                                                                 {
-                                                                    Dbug.NudgeIndent(true);
+                                                                    Dbg.NudgeIndent(ldx, true);
                                                                     /// (x25 y32,33 q14)
                                                                     /// (x21 y42 q21)
                                                                     addedContsNDatas[1] = addedContsNDatas[1].Replace(";", "");
@@ -691,26 +693,26 @@ namespace HCResourceLibraryApp.DataHandling
                                                                     /// IF detect CKS-comma: warn ... IF detect CKS-(any bracket or colon): warn and major issue
                                                                     if (DetectUsageOfCharacterKeycode(addedContsNDatas[1], cks01))
                                                                     {
-                                                                        Dbug.LogPart($"Usage of CKS '{cks01}' in data ID groups advised against; ");
-                                                                        decodeInfo.NoteIssue($"Usage of character keycode '{cks01}' in data ID groups is advised against");
+                                                                        Dbg.LogPart(ldx, $"Usage of CKS '{cks01}' in data ID groups advised against; ");
+                                                                        decodeInfo.NoteIssue(ldx, $"Usage of character keycode '{cks01}' in data ID groups is advised against");
                                                                     }
                                                                     if (DetectUsageOfCharacterKeycode(addedContsNDatas[1], cks11))
                                                                     {
                                                                         cksViolationQ = true;
-                                                                        Dbug.LogPart($"Usage of CKS '{cks11}' in data ID groups is not allowed; ");
-                                                                        decodeInfo.NoteIssue($"Usage of character keycode '{cks11}' in data ID groups is not allowed");
+                                                                        Dbg.LogPart(ldx, $"Usage of CKS '{cks11}' in data ID groups is not allowed; ");
+                                                                        decodeInfo.NoteIssue(ldx, $"Usage of character keycode '{cks11}' in data ID groups is not allowed");
                                                                     }
                                                                     if (DetectUsageOfCharacterKeycode(addedContsNDatas[1], cks12) && !cksViolationQ)
                                                                     {
                                                                         cksViolationQ = true;
-                                                                        Dbug.LogPart($"Usage of CKS '{cks12}' in data ID groups is not allowed; ");
-                                                                        decodeInfo.NoteIssue($"Usage of character keycode '{cks12}' in data ID groups is not allowed");
+                                                                        Dbg.LogPart(ldx, $"Usage of CKS '{cks12}' in data ID groups is not allowed; ");
+                                                                        decodeInfo.NoteIssue(ldx, $"Usage of character keycode '{cks12}' in data ID groups is not allowed");
                                                                     }
                                                                     if (DetectUsageOfCharacterKeycode(addedContsNDatas[1], cks02) && !cksViolationQ)
                                                                     {
                                                                         cksViolationQ = true;
-                                                                        Dbug.LogPart($"Usage of CKS '{cks02}' in data ID groups is not allowed; ");
-                                                                        decodeInfo.NoteIssue($"Usage of character keycode '{cks02}' in data ID groups is not allowed");
+                                                                        Dbg.LogPart(ldx, $"Usage of CKS '{cks02}' in data ID groups is not allowed; ");
+                                                                        decodeInfo.NoteIssue(ldx, $"Usage of character keycode '{cks02}' in data ID groups is not allowed");
                                                                     }
 
                                                                     addedContsNDatas[1] = CharacterKeycodeSubstitution(addedContsNDatas[1]);
@@ -723,60 +725,60 @@ namespace HCResourceLibraryApp.DataHandling
                                                                             /// qes
                                                                             if (IsNumberless(dataIDGroup))
                                                                             {
-                                                                                Dbug.LogPart($"Numberless ID group '{dataIDGroup}' is invalid");
-                                                                                decodeInfo.NoteIssue($"Numberless ID group '{dataIDGroup}' is invalid");
-                                                                                Dbug.Log("; ");
+                                                                                Dbg.LogPart(ldx, $"Numberless ID group '{dataIDGroup}' is invalid");
+                                                                                decodeInfo.NoteIssue(ldx, $"Numberless ID group '{dataIDGroup}' is invalid");
+                                                                                Dbg.Log(ldx, "; ");
                                                                             }
                                                                             /// 100, 23
                                                                             else if (RemoveNumbers(dataIDGroup.Replace(",", "").Replace(legRangeKey.ToString(), "")).IsNEW())
                                                                             {
-                                                                                Dbug.LogPart($"Data ID group '{dataIDGroup}' is not a data ID (just numbers)");
-                                                                                decodeInfo.NoteIssue($"Data ID group '{dataIDGroup}' is just numbers (invalid)");
-                                                                                Dbug.Log("; ");
+                                                                                Dbg.LogPart(ldx, $"Data ID group '{dataIDGroup}' is not a data ID (just numbers)");
+                                                                                decodeInfo.NoteIssue(ldx, $"Data ID group '{dataIDGroup}' is just numbers (invalid)");
+                                                                                Dbg.Log(ldx, "; ");
                                                                             }
                                                                             
                                                                             // for valid id groups
                                                                             /// y32,33
                                                                             else if (dataIDGroup.Contains(','))
                                                                             {
-                                                                                Dbug.LogPart($"Got complex ID group '{dataIDGroup}'");
+                                                                                Dbg.LogPart(ldx, $"Got complex ID group '{dataIDGroup}'");
                                                                                 string[] dataIDs = dataIDGroup.Split(',', StringSplitOptions.RemoveEmptyEntries);
                                                                                 if (dataIDs.HasElements(2))
                                                                                 {
-                                                                                    Dbug.LogPart("; ");
+                                                                                    Dbg.LogPart(ldx, "; ");
                                                                                     DisassembleDataID(dataIDs[0], out string dataKey, out _, out string suffix);
                                                                                     NoteLegendKey(dataKey, dataIDs[0]);
                                                                                     NoteLegendKey(suffix, dataIDs[0]);
                                                                                     if (dataKey.IsNotNEW())
                                                                                     {
-                                                                                        Dbug.Log($"Retrieved data key '{dataKey}'; ");
+                                                                                        Dbg.Log(ldx, $"Retrieved data key '{dataKey}'; ");
                                                                                         foreach (string datId in dataIDs)
                                                                                         {
-                                                                                            Dbug.LogPart(". Adding ID; ");
+                                                                                            Dbg.LogPart(ldx, ". Adding ID; ");
                                                                                             DisassembleDataID(datId, out _, out string dataBody, out string sfx);
                                                                                             NoteLegendKey(sfx, datId);
                                                                                             string datToAdd = dataKey + dataBody + sfx;
                                                                                             if (!IsNumberless(datToAdd))
                                                                                             {
                                                                                                 addedDataIDs.Add(datToAdd);
-                                                                                                Dbug.LogPart($"Got and added '{datToAdd}'");
+                                                                                                Dbg.LogPart(ldx, $"Got and added '{datToAdd}'");
                                                                                             }
-                                                                                            Dbug.Log("; ");
+                                                                                            Dbg.Log(ldx, "; ");
                                                                                         }
                                                                                     }
                                                                                 }
                                                                                 else
                                                                                 {
-                                                                                    Dbug.LogPart("; This complex ID group does not have at least 2 IDs");
-                                                                                    decodeInfo.NoteIssue("This complex ID group does not have at least 2 IDs");
-                                                                                    Dbug.Log("; ");
+                                                                                    Dbg.LogPart(ldx, "; This complex ID group does not have at least 2 IDs");
+                                                                                    decodeInfo.NoteIssue(ldx, "This complex ID group does not have at least 2 IDs");
+                                                                                    Dbg.Log(ldx, "; ");
                                                                                 }
                                                                             }
                                                                             /// r20~22
                                                                             /// q21`~24`
                                                                             else if (dataIDGroup.Contains(legRangeKey))
                                                                             {
-                                                                                Dbug.LogPart($"Got range ID group '{dataIDGroup}'; ");
+                                                                                Dbg.LogPart(ldx, $"Got range ID group '{dataIDGroup}'; ");
                                                                                 NoteLegendKey(legRangeKey.ToString(), dataIDGroup);
 
                                                                                 string[] dataIdRng = dataIDGroup.Split(legRangeKey);
@@ -788,7 +790,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                                                     NoteLegendKey(dkSuffix, dataIdRng[0]);
                                                                                     if (dataKey.IsNotNEW())
                                                                                     {
-                                                                                        Dbug.LogPart($"Retrieved data key '{dataKey}' and suffix [{(dkSuffix.IsNEW() ? "<none>" : dkSuffix)}]; ");
+                                                                                        Dbg.LogPart(ldx, $"Retrieved data key '{dataKey}' and suffix [{(dkSuffix.IsNEW() ? "<none>" : dkSuffix)}]; ");
 
                                                                                         dataIdRng[0] = dataIdRng[0].Replace(dataKey, "");
                                                                                         dataIdRng[1] = dataIdRng[1].Replace(dataKey, "");
@@ -805,32 +807,32 @@ namespace HCResourceLibraryApp.DataHandling
                                                                                             if (rngA != rngB)
                                                                                             {
                                                                                                 int lowBound = Math.Min(rngA, rngB), highBound = Math.Max(rngA, rngB);
-                                                                                                Dbug.LogPart($"Parsed range numbers: {lowBound} up to {highBound}; Adding IDs :: ");
+                                                                                                Dbg.LogPart(ldx, $"Parsed range numbers: {lowBound} up to {highBound}; Adding IDs :: ");
 
                                                                                                 for (int rnix = lowBound; rnix <= highBound; rnix++)
                                                                                                 {
                                                                                                     string dataID = $"{dataKey}{rnix}{dkSuffix}".Trim();
                                                                                                     addedDataIDs.Add(dataID);
-                                                                                                    Dbug.LogPart($"{dataID} - ");
+                                                                                                    Dbg.LogPart(ldx, $"{dataID} - ");
                                                                                                 }
                                                                                             }
                                                                                             else
                                                                                             {
-                                                                                                Dbug.LogPart("Both range values cannot be the same");
-                                                                                                decodeInfo.NoteIssue("Both range values cannot be the same");
+                                                                                                Dbg.LogPart(ldx, "Both range values cannot be the same");
+                                                                                                decodeInfo.NoteIssue(ldx, "Both range values cannot be the same");
                                                                                             }
                                                                                         }
                                                                                         else
                                                                                         {
                                                                                             if (parseRngA)
                                                                                             {
-                                                                                                Dbug.LogPart($"Right range value '{dataIdRng[1]}' was an invalid number");
-                                                                                                decodeInfo.NoteIssue($"Right range value '{dataIdRng[1]}' was an invalid number");
+                                                                                                Dbg.LogPart(ldx, $"Right range value '{dataIdRng[1]}' was an invalid number");
+                                                                                                decodeInfo.NoteIssue(ldx, $"Right range value '{dataIdRng[1]}' was an invalid number");
                                                                                             }
                                                                                             else
                                                                                             {
-                                                                                                Dbug.LogPart($"Left range value '{dataIdRng[0]}' was an invalid number");
-                                                                                                decodeInfo.NoteIssue($"Left range value '{dataIdRng[0]}' was an invalid number");
+                                                                                                Dbg.LogPart(ldx, $"Left range value '{dataIdRng[0]}' was an invalid number");
+                                                                                                decodeInfo.NoteIssue(ldx, $"Left range value '{dataIdRng[0]}' was an invalid number");
                                                                                             }
                                                                                         }
                                                                                     }
@@ -839,16 +841,16 @@ namespace HCResourceLibraryApp.DataHandling
                                                                                 {
                                                                                     if (dataIdRng.HasElements())
                                                                                     {
-                                                                                        Dbug.LogPart($"This range group has too many '{legRangeKey}'");
-                                                                                        decodeInfo.NoteIssue($"This range group has too many '{legRangeKey}'");
+                                                                                        Dbg.LogPart(ldx, $"This range group has too many '{legRangeKey}'");
+                                                                                        decodeInfo.NoteIssue(ldx, $"This range group has too many '{legRangeKey}'");
                                                                                     }
                                                                                     else
                                                                                     {
-                                                                                        Dbug.LogPart($"This range is missing values or missing '{legRangeKey}'");
-                                                                                        decodeInfo.NoteIssue($"This range is missing values or missing '{legRangeKey}'");
+                                                                                        Dbg.LogPart(ldx, $"This range is missing values or missing '{legRangeKey}'");
+                                                                                        decodeInfo.NoteIssue(ldx, $"This range is missing values or missing '{legRangeKey}'");
                                                                                     }
                                                                                 }
-                                                                                Dbug.Log("; ");
+                                                                                Dbg.Log(ldx, "; ");
                                                                             }
                                                                             /// x25 q14 ...
                                                                             else
@@ -859,31 +861,31 @@ namespace HCResourceLibraryApp.DataHandling
                                                                                 NoteLegendKey(suffix, dataIDGroup);
 
                                                                                 addedDataIDs.Add(dataIDGroup.Trim());
-                                                                                Dbug.Log($"Got and added ID '{dataIDGroup.Trim()}'; ");
+                                                                                Dbg.Log(ldx, $"Got and added ID '{dataIDGroup.Trim()}'; ");
                                                                             }
                                                                         }
-                                                                    Dbug.NudgeIndent(false);
+                                                                    Dbg.NudgeIndent(ldx, false);
 
                                                                     addedDataIDs = addedDataIDs.ToArray().SortWords();
-                                                                    Dbug.LogPart("Sorted data IDs; ");
+                                                                    Dbg.LogPart(ldx, "Sorted data IDs; ");
                                                                 }
                                                                 else
                                                                 {
-                                                                    Dbug.LogPart("Missing data for added content's 'main ID'");
-                                                                    decodeInfo.NoteIssue("Missing data for added content's 'main ID'");
+                                                                    Dbg.LogPart(ldx, "Missing data for added content's 'main ID'");
+                                                                    decodeInfo.NoteIssue(ldx, "Missing data for added content's 'main ID'");
                                                                 }
                                                             }
                                                             else
                                                             {
                                                                 if (okayContentName)
                                                                 {
-                                                                    Dbug.LogPart("Data IDs line contains too many ';'");
-                                                                    decodeInfo.NoteIssue("Data IDs line contains too many ';'");
+                                                                    Dbg.LogPart(ldx, "Data IDs line contains too many ';'");
+                                                                    decodeInfo.NoteIssue(ldx, "Data IDs line contains too many ';'");
                                                                 }
                                                                 else
                                                                 {
-                                                                    Dbug.LogPart("Content with this name has already been added");
-                                                                    decodeInfo.NoteIssue("Content with this name has already been added");
+                                                                    Dbg.LogPart(ldx, "Content with this name has already been added");
+                                                                    decodeInfo.NoteIssue(ldx, "Content with this name has already been added");
                                                                 }
                                                             }
                                                         }
@@ -892,13 +894,13 @@ namespace HCResourceLibraryApp.DataHandling
                                                     {
                                                         if (addedContsNDatas[0].IsNEW())
                                                         {
-                                                            Dbug.LogPart("Missing data for 'content name'");
-                                                            decodeInfo.NoteIssue("Missing data for 'content name'");
+                                                            Dbg.LogPart(ldx, "Missing data for 'content name'");
+                                                            decodeInfo.NoteIssue(ldx, "Missing data for 'content name'");
                                                         }
                                                         else
                                                         {
-                                                            Dbug.LogPart("Missing data for 'content data IDs'");
-                                                            decodeInfo.NoteIssue("Missing data for 'content data IDs'");
+                                                            Dbg.LogPart(ldx, "Missing data for 'content data IDs'");
+                                                            decodeInfo.NoteIssue(ldx, "Missing data for 'content data IDs'");
                                                         }
                                                     }
                                                 }
@@ -906,24 +908,24 @@ namespace HCResourceLibraryApp.DataHandling
                                                 {
                                                     if (splitAddedLine[1].Contains('-'))
                                                     {
-                                                        Dbug.LogPart("This line contains too many '-'");
-                                                        decodeInfo.NoteIssue("This line contains too many '-'");
+                                                        Dbg.LogPart(ldx, "This line contains too many '-'");
+                                                        decodeInfo.NoteIssue(ldx, "This line contains too many '-'");
                                                     }
                                                     else
                                                     {
-                                                        Dbug.LogPart("This line is missing '-'");
-                                                        decodeInfo.NoteIssue("This line is missing '-'");
+                                                        Dbg.LogPart(ldx, "This line is missing '-'");
+                                                        decodeInfo.NoteIssue(ldx, "This line is missing '-'");
                                                     }
                                                 }
                                             }
                                             else
                                             {
                                                 if (!IsNumberless(splitAddedLine[0]))
-                                                    decodeInfo.NoteIssue("Missing data for 'added content'");
+                                                    decodeInfo.NoteIssue(ldx, "Missing data for 'added content'");
                                                 else
                                                 {
-                                                    Dbug.LogPart("Item line number was not a number");
-                                                    decodeInfo.NoteIssue("Item line number was not a number");
+                                                    Dbg.LogPart(ldx, "Item line number was not a number");
+                                                    decodeInfo.NoteIssue(ldx, "Item line number was not a number");
                                                 }
                                             }
                                         }
@@ -931,13 +933,13 @@ namespace HCResourceLibraryApp.DataHandling
                                         {
                                             if (logDataLine.Contains('|'))
                                             {
-                                                Dbug.LogPart("This line contains too many '|'");
-                                                decodeInfo.NoteIssue("This line contains too many '|'");
+                                                Dbg.LogPart(ldx, "This line contains too many '|'");
+                                                decodeInfo.NoteIssue(ldx, "This line contains too many '|'");
                                             }
                                             else
                                             {
-                                                Dbug.LogPart("This line is missing '|'");
-                                                decodeInfo.NoteIssue("This line is missing '|'");
+                                                Dbg.LogPart(ldx, "This line is missing '|'");
+                                                decodeInfo.NoteIssue(ldx, "This line is missing '|'");
                                             }
                                         }
 
@@ -945,16 +947,16 @@ namespace HCResourceLibraryApp.DataHandling
                                         if (addedDataIDs.HasElements() && addedContentName.IsNotNEW())
                                         {
                                             addedContentsNames.Add(addedContentName);
-                                            Dbug.LogPart($" --> Obtained content name ({addedContentName}) and data Ids (");
+                                            Dbg.LogPart(ldx, $" --> Obtained content name ({addedContentName}) and data Ids (");
                                             foreach (string datID in addedDataIDs)
-                                                Dbug.LogPart($"{datID} ");
-                                            Dbug.LogPart("); ");
+                                                Dbg.LogPart(ldx, $"{datID} ");
+                                            Dbg.LogPart(ldx, "); ");
 
                                             // generate a content base group (and repeat info using overriden CBG.ToString())
                                             ContentBaseGroup newContent = new(logVersion, addedContentName, addedDataIDs.ToArray());                                            
                                             resourceContents.Add(new ResContents(newResConShelfNumber, newContent));
                                             //addedContents.Add(newContent);
-                                            Dbug.LogPart($"Generated {nameof(ContentBaseGroup)} :: {newContent};");
+                                            Dbg.LogPart(ldx, $"Generated {nameof(ContentBaseGroup)} :: {newContent};");
                                             decodeInfo.NoteResult($"Generated {nameof(ContentBaseGroup)} :: {newContent}");
 
                                             sectionIssueQ = false;
@@ -964,8 +966,8 @@ namespace HCResourceLibraryApp.DataHandling
                                     /// no data parsing before tag issue
                                     else
                                     {
-                                        Dbug.LogPart("Added section tag must be parsed before decoding its data");
-                                        decodeInfo.NoteIssue("Added section tag must be parsed before decoding its data");
+                                        Dbg.LogPart(ldx, "Added section tag must be parsed before decoding its data");
+                                        decodeInfo.NoteIssue(ldx, "Added section tag must be parsed before decoding its data");
                                     }
 
                                     EndSectionDbugLog("added", !wasSectionTag && !IsSectionTag());
@@ -1016,21 +1018,21 @@ namespace HCResourceLibraryApp.DataHandling
                                             }
                                             else
                                             {
-                                                Dbug.Log("Additional section tag has already been parsed");
-                                                decodeInfo.NoteIssue("Additional section tag has already been parsed");
+                                                Dbg.Log(ldx, "Additional section tag has already been parsed");
+                                                decodeInfo.NoteIssue(ldx, "Additional section tag has already been parsed");
                                             }
                                         }
                                         else
                                         {
-                                            Dbug.Log($"Only section name '{currentSectionName}' must be within section tag brackets");
-                                            decodeInfo.NoteIssue($"Only section name '{currentSectionName}' must be within section tag brackets");
+                                            Dbg.Log(ldx, $"Only section name '{currentSectionName}' must be within section tag brackets");
+                                            decodeInfo.NoteIssue(ldx, $"Only section name '{currentSectionName}' must be within section tag brackets");
                                         }
                                     }
 
                                     /// additional contents
                                     if (!isHeader && parsedSectionTagQ)
                                     {
-                                        Dbug.LogPart("Identified additional data; ");
+                                        Dbg.LogPart(ldx, "Identified additional data; ");
                                         logDataLine = RemoveEscapeCharacters(logDataLine); 
                                         if (logDataLine.StartsWith('>') && logDataLine.CountOccuringCharacter('>') == 1)
                                         {
@@ -1045,14 +1047,14 @@ namespace HCResourceLibraryApp.DataHandling
                                                 /// (q41~44)  <-->  (x104)
                                                 /// (Cod_Tail) <-->  CodFish (x132)
                                                 /// Mackrel Chunks (r230,231 y192) <--> Mackrel (x300)
-                                                Dbug.LogPart("Contains '-'; ");
+                                                Dbg.LogPart(ldx, "Contains '-'; ");
                                                 string[] splitAdditLine = logDataLine.Split('-');
                                                 if (splitAdditLine.HasElements(2))
                                                     if (splitAdditLine[0].IsNotNEW() && splitAdditLine[1].IsNotNEW())
                                                     {
                                                         splitAdditLine[0] = splitAdditLine[0].Trim();
                                                         splitAdditLine[1] = splitAdditLine[1].Trim();
-                                                        Dbug.Log($"Got contents ({splitAdditLine[0]}) and related content ({splitAdditLine[1]});");
+                                                        Dbg.Log(ldx, $"Got contents ({splitAdditLine[0]}) and related content ({splitAdditLine[1]});");
 
                                                         bool continueToNextAdtSubSectionQ = false;
                                                         List<string> adtConDataIDs = new();
@@ -1065,11 +1067,11 @@ namespace HCResourceLibraryApp.DataHandling
                                                         /// Mackrel Chunks  <-->  (r230,231 y192)
                                                         // + parsed additional content +
                                                         splitAdditLine[0] = splitAdditLine[0].Replace("(", " (").Replace(")", ") ");
-                                                        Dbug.LogPart("Spaced-out parentheses in contents; ");
+                                                        Dbg.LogPart(ldx, "Spaced-out parentheses in contents; ");
                                                         string[] additContsData = splitAdditLine[0].Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
                                                         if (additContsData.HasElements())
                                                         {
-                                                            Dbug.LogPart("Content Parts: ");
+                                                            Dbg.LogPart(ldx, "Content Parts: ");
                                                             string adtDataIDs = "";
                                                             adtContentName = "";
                                                             for (int ax = 0; ax < additContsData.Length; ax++)
@@ -1078,14 +1080,14 @@ namespace HCResourceLibraryApp.DataHandling
                                                                 if (adtConPart.Contains('(') && adtConPart.Contains(')') && adtDataIDs.IsNE())
                                                                     adtDataIDs = adtConPart;
                                                                 else adtContentName += $"{adtConPart} ";
-                                                                Dbug.LogPart($"{adtConPart}{(ax + 1 >= additContsData.Length ? "" : "|")}");
+                                                                Dbg.LogPart(ldx, $"{adtConPart}{(ax + 1 >= additContsData.Length ? "" : "|")}");
                                                             }
 
                                                             bool okayAdtContentName = true;
                                                             if (adtContentName.Contains('(') || adtContentName.Contains(')'))
                                                             {
-                                                                Dbug.LogPart("Content name cannot (directly) contain parentheses");
-                                                                decodeInfo.NoteIssue("Content name cannot (directly) contain parentheses");
+                                                                Dbg.LogPart(ldx, "Content name cannot (directly) contain parentheses");
+                                                                decodeInfo.NoteIssue(ldx, "Content name cannot (directly) contain parentheses");
                                                                 okayAdtContentName = false;
                                                             }                                                            
 
@@ -1095,15 +1097,15 @@ namespace HCResourceLibraryApp.DataHandling
                                                             /// r230  <-->  r231  <-->  y192
                                                             if (adtDataIDs.IsNotNEW() && okayAdtContentName)
                                                             {
-                                                                Dbug.Log("; ");
+                                                                Dbg.Log(ldx, "; ");
                                                                 adtDataIDs = RemoveParentheses(adtDataIDs.Trim().Replace(' ', ','));
                                                                 adtContentName = CharacterKeycodeSubstitution(FixContentName(adtContentName));
-                                                                Dbug.LogPart($"Parsed addit. content name ({(adtContentName.IsNEW() ? "<no name>" : adtContentName)}) and data ID group ({adtDataIDs})");
+                                                                Dbg.LogPart(ldx, $"Parsed addit. content name ({(adtContentName.IsNEW() ? "<no name>" : adtContentName)}) and data ID group ({adtDataIDs})");
 
                                                                 /// u24,23`,29~31,CodTail
                                                                 if (adtDataIDs.Replace(",","").IsNotNEW())
                                                                 {
-                                                                    Dbug.Log($";{(adtDataIDs.Contains(',') ? " Data ID group contains ',';" : "")} Fetching data IDs; ");
+                                                                    Dbg.Log(ldx, $";{(adtDataIDs.Contains(',') ? " Data ID group contains ',';" : "")} Fetching data IDs; ");
                                                                     string[] datIDs = adtDataIDs.Split(',', StringSplitOptions.RemoveEmptyEntries);
                                                                     if (datIDs.HasElements())
                                                                     {
@@ -1132,19 +1134,19 @@ namespace HCResourceLibraryApp.DataHandling
                                                                         NoteLegendKey(dkSuffix, datIDs[0]);
 
                                                                         bool noDataKey = dataKey.IsNEW();
-                                                                        Dbug.LogPart($"Retrieved data key '{dataKey}'{(dkSuffix.IsNEW() ? "" : $" and suffix [{dkSuffix}]")}; ");
+                                                                        Dbg.LogPart(ldx, $"Retrieved data key '{dataKey}'{(dkSuffix.IsNEW() ? "" : $" and suffix [{dkSuffix}]")}; ");
                                                                         
                                                                         /// decode issue handling
                                                                         bool isOnlyNumber = false;
                                                                         if (RemoveNumbers(adtDataIDs.Replace(",", "").Replace(legRangeKey.ToString(), "")).IsNEW())
                                                                         {
                                                                             isOnlyNumber = true;
-                                                                            Dbug.LogPart($"Data ID group is not a data ID (just numbers); ");
-                                                                            decodeInfo.NoteIssue($"Data ID group is just numbers (invalid)");
+                                                                            Dbg.LogPart(ldx, $"Data ID group is not a data ID (just numbers); ");
+                                                                            decodeInfo.NoteIssue(ldx, $"Data ID group is just numbers (invalid)");
                                                                         }
 
                                                                         // go through the data ID groups for this addit.
-                                                                        Dbug.NudgeIndent(true);
+                                                                        Dbg.NudgeIndent(ldx, true);
                                                                         if (!isOnlyNumber && (!noDataKey || dataBody.IsNotNE()))
                                                                             foreach (string rawDatID in datIDs)
                                                                             {
@@ -1154,7 +1156,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                                                 {
                                                                                     invalidDataKey = IsNumberless(datId);
                                                                                     if (invalidDataKey)
-                                                                                        Dbug.LogPart($"Treating Data ID as word (is numberless); ");
+                                                                                        Dbg.LogPart(ldx, $"Treating Data ID as word (is numberless); ");
                                                                                 }
                                                                                 
                                                                                 if (!cksDataIDViolation)
@@ -1166,7 +1168,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                                                         /// q41~44
                                                                                         if (datId.Contains(legRangeKey))
                                                                                         {
-                                                                                            Dbug.LogPart($"Got range ID group '{datId}'; ");
+                                                                                            Dbg.LogPart(ldx, $"Got range ID group '{datId}'; ");
                                                                                             NoteLegendKey(legRangeKey.ToString(), datId);
                                                                                             string[] dataIdRng;
 
@@ -1175,7 +1177,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                                                                 dataIdRng = datId.Split(legRangeKey);
                                                                                                 if (datId.Contains(dataKey))
                                                                                                 {
-                                                                                                    Dbug.LogPart($"Removed data key '{dataKey}' before split; ");
+                                                                                                    Dbg.LogPart(ldx, $"Removed data key '{dataKey}' before split; ");
                                                                                                     dataIdRng = datId.Replace(dataKey, "").Split(legRangeKey);
                                                                                                 }
                                                                                             }
@@ -1191,7 +1193,7 @@ namespace HCResourceLibraryApp.DataHandling
 
                                                                                                 if (dkSuffix.IsNotNEW())
                                                                                                 {
-                                                                                                    Dbug.LogPart($"Retrieved suffix [{(dkSuffix.IsNEW() ? "<none>" : dkSuffix)}]; ");
+                                                                                                    Dbg.LogPart(ldx, $"Retrieved suffix [{(dkSuffix.IsNEW() ? "<none>" : dkSuffix)}]; ");
                                                                                                     dataIdRng[0] = dataIdRng[0].Replace(dkSuffix, "");
                                                                                                     dataIdRng[1] = dataIdRng[1].Replace(dkSuffix, "");
                                                                                                 }
@@ -1199,37 +1201,37 @@ namespace HCResourceLibraryApp.DataHandling
                                                                                                 bool parseRngB = int.TryParse(dataIdRng[1], out int rngB);
                                                                                                 if (parseRngA && parseRngB)
                                                                                                 {
-                                                                                                    //Dbug.Log("..");
+                                                                                                    //Dbg.Log(ldx, "..");
                                                                                                     if (rngA != rngB)
                                                                                                     {
                                                                                                         int lowBound = Math.Min(rngA, rngB), highBound = Math.Max(rngA, rngB);
-                                                                                                        Dbug.LogPart($"Parsed range numbers ({lowBound} up to {highBound}); ");
+                                                                                                        Dbg.LogPart(ldx, $"Parsed range numbers ({lowBound} up to {highBound}); ");
 
-                                                                                                        Dbug.LogPart("Adding IDs :: ");
+                                                                                                        Dbg.LogPart(ldx, "Adding IDs :: ");
                                                                                                         for (int rnix = lowBound; rnix <= highBound; rnix++)
                                                                                                         {
                                                                                                             string dataID = $"{dataKey}{rnix}{dkSuffix}".Trim();
                                                                                                             adtConDataIDs.Add(dataID);
-                                                                                                            Dbug.LogPart($"{dataID} - ");
+                                                                                                            Dbg.LogPart(ldx, $"{dataID} - ");
                                                                                                         }
                                                                                                     }
                                                                                                     else
                                                                                                     {
-                                                                                                        Dbug.LogPart("Both range values cannot be the same");
-                                                                                                        decodeInfo.NoteIssue("Both range values cannot be the same");
+                                                                                                        Dbg.LogPart(ldx, "Both range values cannot be the same");
+                                                                                                        decodeInfo.NoteIssue(ldx, "Both range values cannot be the same");
                                                                                                     }
                                                                                                 }
                                                                                                 else
                                                                                                 {
                                                                                                     if (parseRngA)
                                                                                                     {
-                                                                                                        Dbug.LogPart($"Right range value '{dataIdRng[1]}' was an invalid number");
-                                                                                                        decodeInfo.NoteIssue($"Right range value '{dataIdRng[1]}' was an invalid number");
+                                                                                                        Dbg.LogPart(ldx, $"Right range value '{dataIdRng[1]}' was an invalid number");
+                                                                                                        decodeInfo.NoteIssue(ldx, $"Right range value '{dataIdRng[1]}' was an invalid number");
                                                                                                     }
                                                                                                     else
                                                                                                     {
-                                                                                                        Dbug.LogPart($"Left range value '{dataIdRng[0]}' was an invalid number");
-                                                                                                        decodeInfo.NoteIssue($"Left range value '{dataIdRng[0]}' was an invalid number");
+                                                                                                        Dbg.LogPart(ldx, $"Left range value '{dataIdRng[0]}' was an invalid number");
+                                                                                                        decodeInfo.NoteIssue(ldx, $"Left range value '{dataIdRng[0]}' was an invalid number");
                                                                                                     }
                                                                                                 }
                                                                                             }
@@ -1237,13 +1239,13 @@ namespace HCResourceLibraryApp.DataHandling
                                                                                             {
                                                                                                 if (dataIdRng.HasElements())
                                                                                                 {
-                                                                                                    Dbug.LogPart($"This range group has too many '{legRangeKey}'");
-                                                                                                    decodeInfo.NoteIssue($"This range group has too many '{legRangeKey}'");
+                                                                                                    Dbg.LogPart(ldx, $"This range group has too many '{legRangeKey}'");
+                                                                                                    decodeInfo.NoteIssue(ldx, $"This range group has too many '{legRangeKey}'");
                                                                                                 }
                                                                                                 else
                                                                                                 {
-                                                                                                    Dbug.LogPart($"This range is missing values or missing '{legRangeKey}'");
-                                                                                                    decodeInfo.NoteIssue($"This range is missing values or missing '{legRangeKey}'");
+                                                                                                    Dbg.LogPart(ldx, $"This range is missing values or missing '{legRangeKey}'");
+                                                                                                    decodeInfo.NoteIssue(ldx, $"This range is missing values or missing '{legRangeKey}'");
                                                                                                 }
                                                                                             }
                                                                                         }
@@ -1263,7 +1265,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                                                                 //string dataID = $"{dataKey}{datId.Replace(dataKey, "")}".Trim();
                                                                                                 string dataID = dataKey + dbody + sfx;
                                                                                                 adtConDataIDs.Add(dataID);
-                                                                                                Dbug.LogPart($"Got and added '{dataID}'");
+                                                                                                Dbg.LogPart(ldx, $"Got and added '{dataID}'");
                                                                                             }
                                                                                         }
                                                                                     }
@@ -1275,32 +1277,32 @@ namespace HCResourceLibraryApp.DataHandling
                                                                                         NoteLegendKey(sf, datId);
 
                                                                                         adtConDataIDs.Add(datId);
-                                                                                        Dbug.LogPart($"Got and added '{datId}'");
+                                                                                        Dbg.LogPart(ldx, $"Got and added '{datId}'");
                                                                                     }
                                                                                 }        
                                                                                 else
                                                                                 {
-                                                                                    Dbug.LogPart($"; Data ID group may not contain comma CKS ({cks01})");
-                                                                                    decodeInfo.NoteIssue($"Data ID group may not contain following character keycode: {cks01}");
+                                                                                    Dbg.LogPart(ldx, $"; Data ID group may not contain comma CKS ({cks01})");
+                                                                                    decodeInfo.NoteIssue(ldx, $"Data ID group may not contain following character keycode: {cks01}");
                                                                                 }
 
-                                                                                Dbug.Log(";");
+                                                                                Dbg.Log(ldx, ";");
                                                                             }
-                                                                        Dbug.NudgeIndent(false);
+                                                                        Dbg.NudgeIndent(ldx, false);
                                                                     }
                                                                 }
                                                                 else
                                                                 {
-                                                                    Dbug.LogPart("; Data ID group had no values for data IDs");
-                                                                    decodeInfo.NoteIssue("Data ID group had no values for data IDs");
+                                                                    Dbg.LogPart(ldx, "; Data ID group had no values for data IDs");
+                                                                    decodeInfo.NoteIssue(ldx, "Data ID group had no values for data IDs");
                                                                 }
 
                                                                 if (adtConDataIDs.HasElements())
                                                                 {
                                                                     adtConDataIDs = adtConDataIDs.ToArray().SortWords();
                                                                     if (adtDataIDs.Contains(","))
-                                                                        Dbug.LogPart("--> Sorted Data IDs; ");
-                                                                    else Dbug.Log("; Sorted Data IDs; ");
+                                                                        Dbg.LogPart(ldx, "--> Sorted Data IDs; ");
+                                                                    else Dbg.Log(ldx, "; Sorted Data IDs; ");
                                                                 }
                                                                 
 
@@ -1308,17 +1310,17 @@ namespace HCResourceLibraryApp.DataHandling
                                                                 // complete "content" sub-section
                                                                 if (adtConDataIDs.HasElements())
                                                                 {
-                                                                    Dbug.LogPart($" --> Complete additional contents; Name ({(adtContentName.IsNEW() ? "<no name>" : adtContentName)}) and Data IDs (");
+                                                                    Dbg.LogPart(ldx, $" --> Complete additional contents; Name ({(adtContentName.IsNEW() ? "<no name>" : adtContentName)}) and Data IDs (");
                                                                     foreach (string dId in adtConDataIDs)
-                                                                        Dbug.LogPart($"{dId} ");
-                                                                    Dbug.Log("); ");
+                                                                        Dbg.LogPart(ldx, $"{dId} ");
+                                                                    Dbg.Log(ldx, "); ");
                                                                     continueToNextAdtSubSectionQ = true;
                                                                 }
                                                             }
                                                             else
                                                             {
-                                                                Dbug.LogPart("; Missing content's data ID group");
-                                                                decodeInfo.NoteIssue("Missing content's data ID group");
+                                                                Dbg.LogPart(ldx, "; Missing content's data ID group");
+                                                                decodeInfo.NoteIssue(ldx, "Missing content's data ID group");
                                                             }
                                                         }
 
@@ -1332,20 +1334,20 @@ namespace HCResourceLibraryApp.DataHandling
                                                             if (splitAdditLine[1].CountOccuringCharacter('(') <= 1 && splitAdditLine[1].CountOccuringCharacter(')') <= 1)
                                                             {
                                                                 splitAdditLine[1] = splitAdditLine[1].Replace("(", " (").Replace(")", ") ");
-                                                                Dbug.LogPart("Spaced-out parentheses in related contents; ");
+                                                                Dbg.LogPart(ldx, "Spaced-out parentheses in related contents; ");
                                                                 string[] additContRelData = splitAdditLine[1].Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
                                                                 if (additContRelData.HasElements())
                                                                 {
-                                                                    Dbug.LogPart("Related content parts: ");
+                                                                    Dbg.LogPart(ldx, "Related content parts: ");
                                                                     for (int ax = 0; ax < additContRelData.Length; ax++)
                                                                     {
                                                                         string adtRelPart = additContRelData[ax];
                                                                         if (adtRelPart.Contains('(') && adtRelPart.Contains(')'))
                                                                             adtRelatedDataID = adtRelPart;
                                                                         else adtRelatedName += adtRelPart + " ";
-                                                                        Dbug.LogPart($"{adtRelPart}{(ax + 1 >= additContRelData.Length ? "" : "|")}");
+                                                                        Dbg.LogPart(ldx, $"{adtRelPart}{(ax + 1 >= additContRelData.Length ? "" : "|")}");
                                                                     }
-                                                                    Dbug.LogPart("; ");
+                                                                    Dbg.LogPart(ldx, "; ");
 
                                                                     bool okayRelDataID = false, okayRelName = false;
                                                                     // for name
@@ -1353,8 +1355,8 @@ namespace HCResourceLibraryApp.DataHandling
                                                                     {
                                                                         if (adtRelatedName.Contains('(') || adtRelatedName.Contains(')'))
                                                                         {
-                                                                            Dbug.LogPart("Related content name cannot contain parentheses");
-                                                                            decodeInfo.NoteIssue("Related content name cannot contain parentheses");
+                                                                            Dbg.LogPart(ldx, "Related content name cannot contain parentheses");
+                                                                            decodeInfo.NoteIssue(ldx, "Related content name cannot contain parentheses");
                                                                         }
                                                                         else
                                                                         {
@@ -1379,31 +1381,31 @@ namespace HCResourceLibraryApp.DataHandling
                                                                             }
                                                                             else
                                                                             {
-                                                                                Dbug.LogPart("Related Data ID was not a Data ID (just numbers)");
-                                                                                decodeInfo.NoteIssue("Related Data ID was just numbers (invalid)");
+                                                                                Dbg.LogPart(ldx, "Related Data ID was not a Data ID (just numbers)");
+                                                                                decodeInfo.NoteIssue(ldx, "Related Data ID was just numbers (invalid)");
                                                                             }
                                                                         }
                                                                         else
                                                                         {
                                                                             if (DetectUsageOfCharacterKeycode(adtRelatedDataID, cks01))
                                                                             {
-                                                                                Dbug.LogPart($"; Related data id may not contain comma CKS ({cks01})");
-                                                                                decodeInfo.NoteIssue($"Related Data ID may not contain following character keycode: {cks01}");
+                                                                                Dbg.LogPart(ldx, $"; Related data id may not contain comma CKS ({cks01})");
+                                                                                decodeInfo.NoteIssue(ldx, $"Related Data ID may not contain following character keycode: {cks01}");
                                                                             }
                                                                             else if (!adtRelatedDataID.Contains(legRangeKey))
                                                                             {
-                                                                                Dbug.LogPart("There can only be one related Data ID (contains ',')");
-                                                                                decodeInfo.NoteIssue("There can only be one related Data ID (contains ',')");
+                                                                                Dbg.LogPart(ldx, "There can only be one related Data ID (contains ',')");
+                                                                                decodeInfo.NoteIssue(ldx, "There can only be one related Data ID (contains ',')");
                                                                             }
                                                                             else
                                                                             {
-                                                                                Dbug.LogPart($"There can only be one related Data ID (contains range key '{legRangeKey}')");
-                                                                                decodeInfo.NoteIssue($"There can only be one related Data ID (contains range key '{legRangeKey}')");
+                                                                                Dbg.LogPart(ldx, $"There can only be one related Data ID (contains range key '{legRangeKey}')");
+                                                                                decodeInfo.NoteIssue(ldx, $"There can only be one related Data ID (contains range key '{legRangeKey}')");
                                                                             }
                                                                             adtRelatedDataID = null;
                                                                         }
                                                                     }
-                                                                    Dbug.Log("..");
+                                                                    Dbg.Log(ldx, "..");
 
                                                                     //adtRelatedName = adtRelatedName.IsNEW() ? "<none>" : adtRelatedName;
                                                                     //adtRelatedDataID = adtRelatedDataID.IsNEW() ? "<none>" : adtRelatedDataID;
@@ -1411,13 +1413,13 @@ namespace HCResourceLibraryApp.DataHandling
                                                                     // if (has relDataID, find related ConBase) else (only relName, create new ConBase)
                                                                     if (okayRelName || okayRelDataID)
                                                                     {
-                                                                        Dbug.Log($" --> Complete related contents;  Related Name ({(adtRelatedName.IsNEW() ? "<none>" : adtRelatedName)}) and Related Data ID ({(adtRelatedDataID.IsNEW() ? "<none>" : adtRelatedDataID)}); ");
+                                                                        Dbg.Log(ldx, $" --> Complete related contents;  Related Name ({(adtRelatedName.IsNEW() ? "<none>" : adtRelatedName)}) and Related Data ID ({(adtRelatedDataID.IsNEW() ? "<none>" : adtRelatedDataID)}); ");
                                                                         continueToNextAdtSubSectionQ = true;
                                                                     }
                                                                     else
                                                                     {
-                                                                        Dbug.Log("At least one of the two - Related Name or Related Data ID - must have a value; ");
-                                                                        decodeInfo.NoteIssue("At least one of the two - Related Name or Related Data ID - must have a value; ");
+                                                                        Dbg.Log(ldx, "At least one of the two - Related Name or Related Data ID - must have a value; ");
+                                                                        decodeInfo.NoteIssue(ldx, "At least one of the two - Related Name or Related Data ID - must have a value; ");
                                                                     }
                                                                 }
                                                             }
@@ -1425,13 +1427,13 @@ namespace HCResourceLibraryApp.DataHandling
                                                             {
                                                                 if (splitAdditLine[1].CountOccuringCharacter('(') <= 1)
                                                                 {
-                                                                    Dbug.LogPart("This related content contains too many ')'");
-                                                                    decodeInfo.NoteIssue("This related content contains too many ')'");
+                                                                    Dbg.LogPart(ldx, "This related content contains too many ')'");
+                                                                    decodeInfo.NoteIssue(ldx, "This related content contains too many ')'");
                                                                 }
                                                                 else
                                                                 {
-                                                                    Dbug.LogPart("This related content contains too many '('");
-                                                                    decodeInfo.NoteIssue("This related content contains too many '('");
+                                                                    Dbg.LogPart(ldx, "This related content contains too many '('");
+                                                                    decodeInfo.NoteIssue(ldx, "This related content contains too many '('");
                                                                 }
                                                             }
                                                         }
@@ -1449,19 +1451,19 @@ namespace HCResourceLibraryApp.DataHandling
                                                                 // Exchanged addit content name for related (optional) name
                                                                 // Exchanged content name for related (opt) name
                                                                 // Using related name as content name
-                                                                Dbug.LogPart("Using related name as content name; ");
+                                                                Dbg.LogPart(ldx, "Using related name as content name; ");
                                                                 adtContentName = adtRelatedName;
                                                             }
 
                                                             // generate additional content instance
                                                             ContentAdditionals newAdditCon = new ContentAdditionals(logVersion, adtRelatedDataID, adtContentName, adtConDataIDs.ToArray());
-                                                            Dbug.LogPart($"Generated ContentAdditionals :: {newAdditCon}; Searching for matching ConBase; ");
+                                                            Dbg.LogPart(ldx, $"Generated ContentAdditionals :: {newAdditCon}; Searching for matching ConBase; ");
 
                                                             ResContents matchingResCon = null;
                                                             if (resourceContents.HasElements() && newAdditCon.RelatedDataID != null)
                                                             {
                                                                 // matching with contents in current log decode
-                                                                Dbug.LogPart(" in 'Decoded Library' -- ");
+                                                                Dbg.LogPart(ldx, " in 'Decoded Library' -- ");
                                                                 foreach (ResContents resCon in resourceContents)
                                                                     if (resCon.ContainsDataID(newAdditCon.RelatedDataID, out RCFetchSource source))
                                                                     {
@@ -1471,25 +1473,25 @@ namespace HCResourceLibraryApp.DataHandling
                                                                             /// id and name: save match, end searching
                                                                             bool matchedNameQ = false;
 
-                                                                            Dbug.LogPart($"; Got match ('{newAdditCon.RelatedDataID}'");
+                                                                            Dbg.LogPart(ldx, $"; Got match ('{newAdditCon.RelatedDataID}'");
                                                                             if (resCon.ContentName == adtRelatedName)
                                                                             {
-                                                                                Dbug.LogPart($", plus matched name '{resCon.ContentName}'");
+                                                                                Dbg.LogPart(ldx, $", plus matched name '{resCon.ContentName}'");
                                                                                 matchedNameQ = true;
                                                                             }
-                                                                            Dbug.LogPart(")");
+                                                                            Dbg.LogPart(ldx, ")");
                                                                             matchingResCon = resCon;
 
                                                                             if (matchedNameQ)
                                                                             {
-                                                                                Dbug.LogPart("; Search end");
+                                                                                Dbg.LogPart(ldx, "; Search end");
                                                                                 break;
                                                                             }
-                                                                            else Dbug.LogPart("; Search continue");
+                                                                            else Dbg.LogPart(ldx, "; Search continue");
                                                                         }
                                                                     }
                                                             }
-                                                            Dbug.Log("; ");
+                                                            Dbg.Log(ldx, "; ");
 
                                                             // if (has relDataID, find related ConBase) else if (only relName, create new ConBase)
                                                             bool completedFinalStepQ = false;
@@ -1499,7 +1501,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                                 if (matchingResCon != null)
                                                                 {
                                                                     matchingResCon.StoreConAdditional(newAdditCon);
-                                                                    Dbug.LogPart($"Completed connection of ConAddits ({newAdditCon}) to ConBase ({matchingResCon.ConBase}) [through ID '{newAdditCon.RelatedDataID}']; ");
+                                                                    Dbg.LogPart(ldx, $"Completed connection of ConAddits ({newAdditCon}) to ConBase ({matchingResCon.ConBase}) [through ID '{newAdditCon.RelatedDataID}']; ");
                                                                     decodeInfo.NoteResult($"Connected ConAddits ({newAdditCon}) to ({matchingResCon.ConBase}) [by ID '{newAdditCon.RelatedDataID}']");
                                                                 }
                                                                 /// to be connected with ConBase from library
@@ -1507,7 +1509,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                                 {
                                                                     looseConAddits.Add(newAdditCon);
                                                                     looseInfoRCDataIDs.Add(newAdditCon.RelatedDataID);
-                                                                    Dbug.LogPart($"No connection found: storing 'loose' ConAddits ({newAdditCon}) [using ID '{newAdditCon.RelatedDataID}']");
+                                                                    Dbg.LogPart(ldx, $"No connection found: storing 'loose' ConAddits ({newAdditCon}) [using ID '{newAdditCon.RelatedDataID}']");
                                                                     decodeInfo.NoteResult($"Stored loose ConAddits ({newAdditCon}) [using ID '{newAdditCon.RelatedDataID}']");
                                                                 }
                                                                 completedFinalStepQ = true;
@@ -1518,12 +1520,12 @@ namespace HCResourceLibraryApp.DataHandling
                                                                 decodeInfo = new DecodeInfo($"{decodeInfo.logLine} [from Additional]", secAdd);
                                                                 if (heldIssueMsg.IsNotNEW())
                                                                 {
-                                                                    Dbug.LogPart(" Relay:");
-                                                                    decodeInfo.NoteIssue(heldIssueMsg);
-                                                                    Dbug.LogPart("; ");
+                                                                    Dbg.LogPart(ldx, " Relay:");
+                                                                    decodeInfo.NoteIssue(ldx, heldIssueMsg);
+                                                                    Dbg.LogPart(ldx, "; ");
                                                                 }
 
-                                                                Dbug.LogPart("No Related Data ID, no match with existing ResContents; ");
+                                                                Dbg.LogPart(ldx, "No Related Data ID, no match with existing ResContents; ");
                                                                 ContentBaseGroup adtAsNewContent = new(logVersion, newAdditCon.OptionalName, adtConDataIDs.ToArray());
 
                                                                 /// integrating similar ConAddits that became ConBase (ConAddits-Base) (by name)
@@ -1561,16 +1563,16 @@ namespace HCResourceLibraryApp.DataHandling
                                                                     }                                                                    
                                                                     
                                                                     ContentBaseGroup ogConBase = sameConBaseFromConAddits.ConBase;
-                                                                    Dbug.Log($"A ConAddits-to-ConBase ({ogConBase}) has similar content name; ");
+                                                                    Dbg.Log(ldx, $"A ConAddits-to-ConBase ({ogConBase}) has similar content name; ");
 
                                                                     List<string> compiledDataIds = new();
                                                                     compiledDataIds.AddRange(ogConBase.DataIDString.Split(' '));
                                                                     compiledDataIds.AddRange(adtConDataIDs.ToArray());
-                                                                    Dbug.LogPart($"Integrating data IDs ({adtAsNewContent.DataIDString}) into existing ConAddits-to-ConBase; ");
+                                                                    Dbg.LogPart(ldx, $"Integrating data IDs ({adtAsNewContent.DataIDString}) into existing ConAddits-to-ConBase; ");
 
                                                                     adtAsNewContent = new ContentBaseGroup(logVersion, newAdditCon.OptionalName, compiledDataIds.ToArray());
                                                                     resourceContents[resConArrIx] = new ResContents(newResConShelfNumber, adtAsNewContent);
-                                                                    Dbug.LogPart($"Regenerated ConBase (@ix{resConArrIx}) from ConAddits info :: {adtAsNewContent}");
+                                                                    Dbg.LogPart(ldx, $"Regenerated ConBase (@ix{resConArrIx}) from ConAddits info :: {adtAsNewContent}");
 
                                                                     if (foundEditableDi)
                                                                     {
@@ -1579,7 +1581,7 @@ namespace HCResourceLibraryApp.DataHandling
 
                                                                         DecodeInfo rewriteDI = new DecodeInfo($"{prevDi.logLine}\n{decodeInfo.logLine}", prevDi.sectionName);
                                                                         if (prevDi.NotedIssueQ)
-                                                                            rewriteDI.NoteIssue(prevDi.decodeIssue);
+                                                                            rewriteDI.NoteIssue(ldx, prevDi.decodeIssue);
                                                                         rewriteDI.NoteResult($"Regenerated ConAddits-to-ConBase :: {adtAsNewContent}");
                                                                         decodingInfoDock[editDiIx] = rewriteDI;
                                                                     }
@@ -1588,7 +1590,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                                 else
                                                                 {
                                                                     resourceContents.Add(new ResContents(newResConShelfNumber, adtAsNewContent));
-                                                                    Dbug.LogPart($"Generated new ConBase from ConAddits info :: {adtAsNewContent}");
+                                                                    Dbg.LogPart(ldx, $"Generated new ConBase from ConAddits info :: {adtAsNewContent}");
                                                                     decodeInfo.NoteResult($"Generated ConBase from ConAddits :: {adtAsNewContent}");
                                                                 }
                                                                 completedFinalStepQ = true;
@@ -1601,13 +1603,13 @@ namespace HCResourceLibraryApp.DataHandling
                                                     {
                                                         if (splitAdditLine[0].IsNotNEW())
                                                         {
-                                                            Dbug.LogPart("Line is missing information for 'related content';");
-                                                            decodeInfo.NoteIssue("Line is missing information for 'related content';");
+                                                            Dbg.LogPart(ldx, "Line is missing information for 'related content';");
+                                                            decodeInfo.NoteIssue(ldx, "Line is missing information for 'related content';");
                                                         }
                                                         else
                                                         {
-                                                            Dbug.LogPart("Line is missing information for 'additional content';");
-                                                            decodeInfo.NoteIssue("Line is missing information for 'additional content';");
+                                                            Dbg.LogPart(ldx, "Line is missing information for 'additional content';");
+                                                            decodeInfo.NoteIssue(ldx, "Line is missing information for 'additional content';");
                                                         }
                                                     }
                                             }
@@ -1615,13 +1617,13 @@ namespace HCResourceLibraryApp.DataHandling
                                             {
                                                 if (logDataLine.Contains('-'))
                                                 {
-                                                    Dbug.LogPart("This line contains too many '-'");
-                                                    decodeInfo.NoteIssue("This line contains too many '-'");
+                                                    Dbg.LogPart(ldx, "This line contains too many '-'");
+                                                    decodeInfo.NoteIssue(ldx, "This line contains too many '-'");
                                                 }
                                                 else
                                                 {
-                                                    Dbug.LogPart("This line is missing '-'");
-                                                    decodeInfo.NoteIssue("This line is missing '-'");
+                                                    Dbg.LogPart(ldx, "This line is missing '-'");
+                                                    decodeInfo.NoteIssue(ldx, "This line is missing '-'");
                                                 }
                                             }
                                         }
@@ -1629,13 +1631,13 @@ namespace HCResourceLibraryApp.DataHandling
                                         {
                                             if (logDataLine.StartsWith('>'))
                                             {
-                                                Dbug.LogPart("This line contains too many '>'");
-                                                decodeInfo.NoteIssue("This line contains too many '>'");
+                                                Dbg.LogPart(ldx, "This line contains too many '>'");
+                                                decodeInfo.NoteIssue(ldx, "This line contains too many '>'");
                                             }
                                             else
                                             {
-                                                Dbug.LogPart("This line does not start with '>'");
-                                                decodeInfo.NoteIssue("This line does not start with '>'");
+                                                Dbg.LogPart(ldx, "This line does not start with '>'");
+                                                decodeInfo.NoteIssue(ldx, "This line does not start with '>'");
                                             }                                            
                                         }
                                     }
@@ -1643,8 +1645,8 @@ namespace HCResourceLibraryApp.DataHandling
                                     /// no data parsing before tag issue
                                     if (!isHeader && !parsedSectionTagQ)
                                     {
-                                        Dbug.LogPart("Additional section tag must be parsed before decoding its data");
-                                        decodeInfo.NoteIssue("Additional section tag must be parsed before decoding its data");
+                                        Dbg.LogPart(ldx, "Additional section tag must be parsed before decoding its data");
+                                        decodeInfo.NoteIssue(ldx, "Additional section tag must be parsed before decoding its data");
                                     }
 
                                     EndSectionDbugLog("additional", !IsSectionTag());
@@ -1670,19 +1672,19 @@ namespace HCResourceLibraryApp.DataHandling
 
                                     sectionIssueQ = true;
 
-                                    Dbug.LogPart("TTA Data  //  ");
+                                    Dbg.LogPart(ldx, "TTA Data  //  ");
                                     logDataLine = RemoveEscapeCharacters(logDataLine);
                                     if (IsSectionTag() && !parsedSectionTagQ)
                                     {
                                         logDataLine = RemoveSquareBrackets(logDataLine);
                                         if (logDataLine.Contains(':') && logDataLine.CountOccuringCharacter(':') == 1)
                                         {
-                                            Dbug.LogPart($"Contains ':', raw data ({logDataLine}); ");
+                                            Dbg.LogPart(ldx, $"Contains ':', raw data ({logDataLine}); ");
                                             string[] splitLogData = logDataLine.Split(':');
                                             if (splitLogData.HasElements())
                                                 if (splitLogData[1].IsNotNEW())
                                                 {
-                                                    Dbug.Log($"Has sufficent elements after split -- parsing; ");
+                                                    Dbg.Log(ldx, $"Has sufficent elements after split -- parsing; ");
                                                     if (int.TryParse(splitLogData[1], out int ttaNum))
                                                     {
                                                         if (ttaNum >= 0)
@@ -1764,18 +1766,18 @@ namespace HCResourceLibraryApp.DataHandling
                                                                 ranVerificationCountQ = true;
                                                             }
 
-                                                            Dbug.LogPart($"--> Obtained TTA number '{ttaNum}'");
+                                                            Dbg.LogPart(ldx, $"--> Obtained TTA number '{ttaNum}'");
                                                             if (ranVerificationCountQ)
                                                             {
                                                                 if (countedTTANum == ttaNum)
                                                                 {
-                                                                    Dbug.LogPart(" [Verified!]");
+                                                                    Dbg.LogPart(ldx, " [Verified!]");
                                                                     checkVerifiedQ = true;
                                                                 }
                                                                 else
                                                                 {
-                                                                    Dbug.LogPart($" [Check counted '{countedTTANum}' instead]");
-                                                                    decodeInfo.NoteIssue($"TTA verification counted '{countedTTANum}' instead of obtained number '{ttaNum}'");
+                                                                    Dbg.LogPart(ldx, $" [Check counted '{countedTTANum}' instead]");
+                                                                    decodeInfo.NoteIssue(ldx, $"TTA verification counted '{countedTTANum}' instead of obtained number '{ttaNum}'");
                                                                 }
                                                             }
                                                             decodeInfo.NoteResult($"Got TTA number '{ttaNum}'");
@@ -1786,40 +1788,40 @@ namespace HCResourceLibraryApp.DataHandling
                                                         }
                                                         else
                                                         {
-                                                            Dbug.LogPart("TTA number is less than zero (0)");
-                                                            decodeInfo.NoteIssue("TTA number cannot be less than zero (0)");
+                                                            Dbg.LogPart(ldx, "TTA number is less than zero (0)");
+                                                            decodeInfo.NoteIssue(ldx, "TTA number cannot be less than zero (0)");
                                                         }
                                                     }
                                                     else
                                                     {
-                                                        Dbug.LogPart("TTA number could not be parsed");
-                                                        decodeInfo.NoteIssue("TTA number could not be parsed");
+                                                        Dbg.LogPart(ldx, "TTA number could not be parsed");
+                                                        decodeInfo.NoteIssue(ldx, "TTA number could not be parsed");
                                                     }
                                                 }
                                                 else
                                                 {
-                                                    Dbug.LogPart("No data in split @ix1");
-                                                    decodeInfo.NoteIssue("No data provied for TTA number");
+                                                    Dbg.LogPart(ldx, "No data in split @ix1");
+                                                    decodeInfo.NoteIssue(ldx, "No data provied for TTA number");
                                                 }
                                         }
                                         else
                                         {
                                             if (logDataLine.Contains(':'))
                                             {
-                                                Dbug.LogPart("This line has too many ':'");
-                                                decodeInfo.NoteIssue("This line has too many ':'");
+                                                Dbg.LogPart(ldx, "This line has too many ':'");
+                                                decodeInfo.NoteIssue(ldx, "This line has too many ':'");
                                             }
                                             else
                                             {
                                                 if (logDataLine.ToLower().StartsWith(secTTA.ToLower()))
                                                 {
-                                                    Dbug.LogPart("This line is missing ':'");
-                                                    decodeInfo.NoteIssue("This line is missing ':'");
+                                                    Dbg.LogPart(ldx, "This line is missing ':'");
+                                                    decodeInfo.NoteIssue(ldx, "This line is missing ':'");
                                                 }
                                                 else
                                                 {
-                                                    Dbug.Log($"Only section name '{currentSectionName}' must follow section tag open bracket");
-                                                    decodeInfo.NoteIssue($"Only section name '{currentSectionName}' must follow section tag open bracket");
+                                                    Dbg.Log(ldx, $"Only section name '{currentSectionName}' must follow section tag open bracket");
+                                                    decodeInfo.NoteIssue(ldx, $"Only section name '{currentSectionName}' must follow section tag open bracket");
                                                 }                                                
                                             }
                                         }
@@ -1828,18 +1830,18 @@ namespace HCResourceLibraryApp.DataHandling
                                     {
                                         if (parsedSectionTagQ)
                                         {
-                                            Dbug.LogPart("TTA section tag has already been parsed");
-                                            decodeInfo.NoteIssue("TTA section tag has already been parsed");
+                                            Dbg.LogPart(ldx, "TTA section tag has already been parsed");
+                                            decodeInfo.NoteIssue(ldx, "TTA section tag has already been parsed");
                                         }
                                         else if (logDataLine.StartsWith(secBracL))
                                         {
-                                            Dbug.LogPart("This line does not end with ']'");
-                                            decodeInfo.NoteIssue("This line does not end with ']'");
+                                            Dbg.LogPart(ldx, "This line does not end with ']'");
+                                            decodeInfo.NoteIssue(ldx, "This line does not end with ']'");
                                         }
                                         else
                                         {
-                                            Dbug.LogPart("This line does not start with '['");
-                                            decodeInfo.NoteIssue("This line does not start with '['");
+                                            Dbg.LogPart(ldx, "This line does not start with '['");
+                                            decodeInfo.NoteIssue(ldx, "This line does not start with '['");
                                         }
                                     }
                                     
@@ -1891,21 +1893,21 @@ namespace HCResourceLibraryApp.DataHandling
                                             }
                                             else
                                             {
-                                                Dbug.Log("Updated section tag has already been parsed");
-                                                decodeInfo.NoteIssue("Updated section tag has already been parsed");
+                                                Dbg.Log(ldx, "Updated section tag has already been parsed");
+                                                decodeInfo.NoteIssue(ldx, "Updated section tag has already been parsed");
                                             }
                                         }
                                         else
                                         {
-                                            Dbug.Log($"Only section name '{currentSectionName}' must be within section tag brackets");
-                                            decodeInfo.NoteIssue($"Only section name '{currentSectionName}' must be within section tag brackets");
+                                            Dbg.Log(ldx, $"Only section name '{currentSectionName}' must be within section tag brackets");
+                                            decodeInfo.NoteIssue(ldx, $"Only section name '{currentSectionName}' must be within section tag brackets");
                                         }
                                     }
 
                                     /// updated contents
                                     if (!isHeader && parsedSectionTagQ)
                                     {
-                                        Dbug.LogPart("Identified updated data; ");
+                                        Dbg.LogPart(ldx, "Identified updated data; ");
                                         logDataLine = RemoveEscapeCharacters(logDataLine);
                                         if (logDataLine.StartsWith('>') && logDataLine.CountOccuringCharacter('>') == 1)
                                         {
@@ -1922,20 +1924,20 @@ namespace HCResourceLibraryApp.DataHandling
                                                     {
                                                         selfUpdatingAllowed = true;
                                                         logDataLine = logDataLine.Replace(":", "");
-                                                        Dbug.LogPart($"Self-updating enabled, contains '>{updtSelfKey}'; ");
+                                                        Dbg.LogPart(ldx, $"Self-updating enabled, contains '>{updtSelfKey}'; ");
                                                     }
                                                     else
                                                     {
-                                                        Dbug.LogPart($"Character '{updtSelfKey}' may only follow after '>' to enable self-updating function");
-                                                        decodeInfo.NoteIssue($"Character '{updtSelfKey}' may only follow after '>' to enable self-updating function");
+                                                        Dbg.LogPart(ldx, $"Character '{updtSelfKey}' may only follow after '>' to enable self-updating function");
+                                                        decodeInfo.NoteIssue(ldx, $"Character '{updtSelfKey}' may only follow after '>' to enable self-updating function");
                                                     }
                                                 }
                                                 else
                                                 {
                                                     if (logDataLine.CountOccuringCharacter(updtSelfKey) > 1)
                                                     {
-                                                        Dbug.LogPart($"This line contains too many '{updtSelfKey}'");
-                                                        decodeInfo.NoteIssue($"This line contains too many '{updtSelfKey}'");
+                                                        Dbg.LogPart(ldx, $"This line contains too many '{updtSelfKey}'");
+                                                        decodeInfo.NoteIssue(ldx, $"This line contains too many '{updtSelfKey}'");
                                                         haltQ = true;
                                                     }
                                                 }
@@ -1945,15 +1947,15 @@ namespace HCResourceLibraryApp.DataHandling
 
                                                 /// Taco Sauce (y32)  <-->  Fixed to look much saucier
                                                 /// (q42)  <-->  Redesigned to look cooler
-                                                Dbug.LogPart("Contains '-'; ");
+                                                Dbg.LogPart(ldx, "Contains '-'; ");
                                                 string[] splitLogLine = logDataLine.Split('-');
                                                 if (splitLogLine.HasElements(2) && !haltQ)
                                                     if (splitLogLine[0].IsNotNEW() && splitLogLine[1].IsNotNEW())
                                                     {
-                                                        Dbug.Log($"Got updated content info ({splitLogLine[0]}) and change description ({splitLogLine[1]}); ");
+                                                        Dbg.Log(ldx, $"Got updated content info ({splitLogLine[0]}) and change description ({splitLogLine[1]}); ");
 
                                                         // updated contents info
-                                                        Dbug.LogPart("Content Parts: ");
+                                                        Dbg.LogPart(ldx, "Content Parts: ");
                                                         string updtContentName = "", updtDataID = "", updtChangeDesc = "";
                                                         splitLogLine[0] = splitLogLine[0].Replace("(", " (").Replace(")", ") ");
                                                         string[] updtConData = splitLogLine[0].Split(' ', StringSplitOptions.RemoveEmptyEntries);
@@ -1963,39 +1965,39 @@ namespace HCResourceLibraryApp.DataHandling
                                                             if (updtDataPart.Contains('(') && updtDataPart.Contains(')') && updtDataID.IsNE())
                                                                 updtDataID = updtDataPart;
                                                             else updtContentName += $"{updtDataPart} ";
-                                                            Dbug.LogPart($"{updtDataPart}{(ux + 1 == updtConData.Length ? "" : "|")}");
+                                                            Dbg.LogPart(ldx, $"{updtDataPart}{(ux + 1 == updtConData.Length ? "" : "|")}");
                                                         }
-                                                        Dbug.LogPart("; ");
+                                                        Dbg.LogPart(ldx, "; ");
                                                         updtDataID = RemoveParentheses(updtDataID);
                                                         updtContentName = CharacterKeycodeSubstitution(FixContentName(updtContentName));
-                                                        Dbug.Log("..");
+                                                        Dbg.Log(ldx, "..");
 
                                                         bool okayDataIDQ = false;
                                                         if (updtDataID.Contains(',') || updtDataID.Contains(legRangeKey) || DetectUsageOfCharacterKeycode(updtDataID, cks01))
                                                         {
-                                                            Dbug.LogPart("Only one updated ID may be referenced per update");
+                                                            Dbg.LogPart(ldx, "Only one updated ID may be referenced per update");
                                                             if (DetectUsageOfCharacterKeycode(updtDataID, cks01))
                                                             {
-                                                                Dbug.LogPart($" (contains comma CKS '{cks01}')");
-                                                                decodeInfo.NoteIssue($"Only one updated ID can be referenced (no data groups; contains character keycode '{cks01}')");
+                                                                Dbg.LogPart(ldx, $" (contains comma CKS '{cks01}')");
+                                                                decodeInfo.NoteIssue(ldx, $"Only one updated ID can be referenced (no data groups; contains character keycode '{cks01}')");
                                                             }
                                                             else if (updtDataID.Contains(','))
                                                             {
-                                                                Dbug.LogPart(" (contains ',')");
-                                                                decodeInfo.NoteIssue($"Only one updated ID can be referenced (no data groups; contains ',')");
+                                                                Dbg.LogPart(ldx, " (contains ',')");
+                                                                decodeInfo.NoteIssue(ldx, $"Only one updated ID can be referenced (no data groups; contains ',')");
                                                             }
                                                             else
                                                             {
-                                                                Dbug.LogPart($" (contains '{legRangeKey}')");
-                                                                decodeInfo.NoteIssue($"Only one updated ID can be referenced (no ranges; contains '{legRangeKey}')");
+                                                                Dbg.LogPart(ldx, $" (contains '{legRangeKey}')");
+                                                                decodeInfo.NoteIssue(ldx, $"Only one updated ID can be referenced (no ranges; contains '{legRangeKey}')");
                                                             }
                                                         }
                                                         else
                                                         {
                                                             if (updtDataID.IsNEW())
                                                             {
-                                                                Dbug.LogPart("No updated ID has been provided");
-                                                                decodeInfo.NoteIssue("No updated ID has been provided");
+                                                                Dbg.LogPart(ldx, "No updated ID has been provided");
+                                                                decodeInfo.NoteIssue(ldx, "No updated ID has been provided");
                                                             }
                                                             else
                                                             {
@@ -2010,12 +2012,12 @@ namespace HCResourceLibraryApp.DataHandling
                                                                     NoteLegendKey(sfx, updtDataID);
 
                                                                     okayDataIDQ = true;
-                                                                    Dbug.Log($"Completed updated contents: Updated Name ({(updtContentName.IsNEW() ? "<null>" : updtContentName)}) and Data ID ({updtDataID}); ");
+                                                                    Dbg.Log(ldx, $"Completed updated contents: Updated Name ({(updtContentName.IsNEW() ? "<null>" : updtContentName)}) and Data ID ({updtDataID}); ");
                                                                 }
                                                                 else
                                                                 {
-                                                                    Dbug.LogPart("Updated ID was not a data ID (just numbers)");
-                                                                    decodeInfo.NoteIssue("Updated ID was just numbers (invalid)");
+                                                                    Dbg.LogPart(ldx, "Updated ID was not a data ID (just numbers)");
+                                                                    decodeInfo.NoteIssue(ldx, "Updated ID was just numbers (invalid)");
                                                                 }                                                                
                                                             }
                                                         }
@@ -2028,13 +2030,13 @@ namespace HCResourceLibraryApp.DataHandling
                                                         if (okayDataIDQ)
                                                         {
                                                             ContentChanges newConChanges = new(logVersion, updtContentName, updtDataID, updtChangeDesc);
-                                                            Dbug.Log($"Generated {nameof(ContentChanges)} instance :: {newConChanges}; ");
+                                                            Dbg.Log(ldx, $"Generated {nameof(ContentChanges)} instance :: {newConChanges}; ");
 
                                                             /// testing... and now enabled, self updating contents aren't loose
                                                             bool isSelfConnected = false;
                                                             if (enableSelfUpdatingFunction && selfUpdatingAllowed)
                                                             {
-                                                                Dbug.LogPart("[SELF-UPDATING] Searching for connection in 'Decoded Library' -- ");
+                                                                Dbg.LogPart(ldx, "[SELF-UPDATING] Searching for connection in 'Decoded Library' -- ");
 
                                                                 ResContents matchingResCon = null;
                                                                 ContentAdditionals subMatchConAdd = new();
@@ -2055,13 +2057,13 @@ namespace HCResourceLibraryApp.DataHandling
                                                                                 /// id and name: save match, end searching
                                                                                 bool matchedNameQ = false;
 
-                                                                                Dbug.LogPart($" Got match ('{newConChanges.RelatedDataID}' from source '{source}'");
+                                                                                Dbg.LogPart(ldx, $" Got match ('{newConChanges.RelatedDataID}' from source '{source}'");
                                                                                 /// checks for matching content name against ConBase or ConAddits
                                                                                 if (source.Equals(RCFetchSource.ConBaseGroup))
                                                                                 {
                                                                                     if (resCon.ContentName == updtContentName)
                                                                                     {
-                                                                                        Dbug.LogPart($", plus matched name '{resCon.ContentName}'");
+                                                                                        Dbg.LogPart(ldx, $", plus matched name '{resCon.ContentName}'");
                                                                                         matchedNameQ = true;
                                                                                     }
                                                                                 }
@@ -2069,42 +2071,42 @@ namespace HCResourceLibraryApp.DataHandling
                                                                                 {
                                                                                     if (subMatchConAdd.OptionalName == updtContentName)
                                                                                     {
-                                                                                        Dbug.LogPart($", plus matched name '{subMatchConAdd.OptionalName}'");
+                                                                                        Dbg.LogPart(ldx, $", plus matched name '{subMatchConAdd.OptionalName}'");
                                                                                         matchedNameQ = true;
                                                                                     }
                                                                                 }
-                                                                                Dbug.LogPart(")");
+                                                                                Dbg.LogPart(ldx, ")");
 
                                                                                 if (matchedNameQ)
                                                                                 {
-                                                                                    Dbug.LogPart("; Search end");
+                                                                                    Dbg.LogPart(ldx, "; Search end");
                                                                                     break;
                                                                                 }
-                                                                                else Dbug.LogPart("; Search continue");
+                                                                                else Dbg.LogPart(ldx, "; Search continue");
                                                                             }
                                                                         }
-                                                                    Dbug.Log("; ");
+                                                                    Dbg.Log(ldx, "; ");
                                                                 }
 
                                                                 /// matching self-updated content connection
                                                                 if (matchingResCon != null)
                                                                 {
                                                                     matchingResCon.StoreConChanges(newConChanges);
-                                                                    Dbug.LogPart($"Completed connection of ConChanges ({newConChanges}) using ");
+                                                                    Dbg.LogPart(ldx, $"Completed connection of ConChanges ({newConChanges}) using ");
                                                                     if (subMatchConAdd.IsSetup())
-                                                                        Dbug.LogPart($"ConAddits ({subMatchConAdd})");
-                                                                    else Dbug.LogPart($"ConBase ({matchingResCon.ConBase})");
-                                                                    Dbug.Log($" [by ID '{newConChanges.RelatedDataID}'] (self-updated)");
+                                                                        Dbg.LogPart(ldx, $"ConAddits ({subMatchConAdd})");
+                                                                    else Dbg.LogPart(ldx, $"ConBase ({matchingResCon.ConBase})");
+                                                                    Dbg.Log(ldx, $" [by ID '{newConChanges.RelatedDataID}'] (self-updated)");
                                                                     decodeInfo.NoteResult($"Connected ConChanges ({newConChanges}) to {(subMatchConAdd.IsSetup() ? $"ConAddits ({subMatchConAdd})" : $"ConBase {matchingResCon.ConBase}")} [by ID '{newConChanges.RelatedDataID}']");
 
-                                                                    decodeInfo.NoteIssue("Self-updating content: updating content in its introduced version is advised against");
+                                                                    decodeInfo.NoteIssue(ldx, "Self-updating content: updating content in its introduced version is advised against");
                                                                     isSelfConnected = true;
 
                                                                     // these actions just for the decode display on log submission page
                                                                     ContentChanges copy4NonLoose = new(logVersion, newConChanges.InternalName + Sep, updtDataID, updtChangeDesc);
                                                                     looseConChanges.Add(copy4NonLoose); 
                                                                     looseInfoRCDataIDs.Add(copy4NonLoose.RelatedDataID);
-                                                                    Dbug.LogPart($" Added ConChanges copy (IntNam: '{copy4NonLoose.InternalName}') to loose for decode display");
+                                                                    Dbg.LogPart(ldx, $" Added ConChanges copy (IntNam: '{copy4NonLoose.InternalName}') to loose for decode display");
                                                                 }
                                                             }
 
@@ -2113,9 +2115,9 @@ namespace HCResourceLibraryApp.DataHandling
                                                             {
                                                                 looseConChanges.Add(newConChanges);
                                                                 looseInfoRCDataIDs.Add(newConChanges.RelatedDataID);
-                                                                //Dbug.LogPart($"Storing 'loose' ConChanges [using ID '{newConChanges.RelatedDataID}']");
+                                                                //Dbg.LogPart(ldx, $"Storing 'loose' ConChanges [using ID '{newConChanges.RelatedDataID}']");
                                                                 //decodeInfo.NoteResult($"Stored loose ConChanges ({newConChanges}) [using ID '{newConChanges.RelatedDataID}']");
-                                                                Dbug.LogPart($"Storing 'loose' ConChanges");
+                                                                Dbg.LogPart(ldx, $"Storing 'loose' ConChanges");
                                                                 decodeInfo.NoteResult($"Stored loose ConChanges ({newConChanges})");
                                                             }
                                                             sectionIssueQ = false;
@@ -2125,13 +2127,13 @@ namespace HCResourceLibraryApp.DataHandling
                                                     {
                                                         if (splitLogLine[0].IsNEW())
                                                         {
-                                                            Dbug.LogPart("This line is missing data for 'updated content'");
-                                                            decodeInfo.NoteIssue("This line is missing data for 'updated content'");
+                                                            Dbg.LogPart(ldx, "This line is missing data for 'updated content'");
+                                                            decodeInfo.NoteIssue(ldx, "This line is missing data for 'updated content'");
                                                         }
                                                         else
                                                         {
-                                                            Dbug.LogPart("This line is missing data for 'change description'");
-                                                            decodeInfo.NoteIssue("This line is missing data for 'change description'");
+                                                            Dbg.LogPart(ldx, "This line is missing data for 'change description'");
+                                                            decodeInfo.NoteIssue(ldx, "This line is missing data for 'change description'");
                                                         }
                                                     }
                                             }
@@ -2139,13 +2141,13 @@ namespace HCResourceLibraryApp.DataHandling
                                             {
                                                 if (logDataLine.Contains('-'))
                                                 {
-                                                    Dbug.LogPart("This line contains too many '-'");
-                                                    decodeInfo.NoteIssue("This line contains too many '-'");
+                                                    Dbg.LogPart(ldx, "This line contains too many '-'");
+                                                    decodeInfo.NoteIssue(ldx, "This line contains too many '-'");
                                                 }
                                                 else
                                                 {
-                                                    Dbug.LogPart("This line is missing '-'");
-                                                    decodeInfo.NoteIssue("This line is missing '-'");
+                                                    Dbg.LogPart(ldx, "This line is missing '-'");
+                                                    decodeInfo.NoteIssue(ldx, "This line is missing '-'");
                                                 }
                                             }
                                         }
@@ -2153,13 +2155,13 @@ namespace HCResourceLibraryApp.DataHandling
                                         {
                                             if (logDataLine.StartsWith('>'))
                                             {
-                                                Dbug.LogPart("This line contains too many '>'");
-                                                decodeInfo.NoteIssue("This line contains too many '>'");
+                                                Dbg.LogPart(ldx, "This line contains too many '>'");
+                                                decodeInfo.NoteIssue(ldx, "This line contains too many '>'");
                                             }
                                             else
                                             {
-                                                Dbug.LogPart("This line does not start with '>'");
-                                                decodeInfo.NoteIssue("This line does not start with '>'");
+                                                Dbg.LogPart(ldx, "This line does not start with '>'");
+                                                decodeInfo.NoteIssue(ldx, "This line does not start with '>'");
                                             }
                                         }
                                     }
@@ -2167,8 +2169,8 @@ namespace HCResourceLibraryApp.DataHandling
                                     /// no data parsing before tag issue
                                     if (!isHeader && !parsedSectionTagQ)
                                     {
-                                        Dbug.LogPart("Updated section tag must be parsed before decoding its data");
-                                        decodeInfo.NoteIssue("Updated section tag must be parsed before decoding its data");
+                                        Dbg.LogPart(ldx, "Updated section tag must be parsed before decoding its data");
+                                        decodeInfo.NoteIssue(ldx, "Updated section tag must be parsed before decoding its data");
                                     }
 
                                     EndSectionDbugLog("updated", !IsSectionTag());
@@ -2213,14 +2215,14 @@ namespace HCResourceLibraryApp.DataHandling
                                             }
                                             else
                                             {
-                                                Dbug.Log("Legend section tag has already been parsed");
-                                                decodeInfo.NoteIssue("Legend section tag has already been parsed");
+                                                Dbg.Log(ldx, "Legend section tag has already been parsed");
+                                                decodeInfo.NoteIssue(ldx, "Legend section tag has already been parsed");
                                             }
                                         }
                                         else
                                         {
-                                            Dbug.Log($"Only section name '{currentSectionName}' must be within section tag brackets");
-                                            decodeInfo.NoteIssue($"Only section name '{currentSectionName}' must be within section tag brackets");
+                                            Dbg.Log(ldx, $"Only section name '{currentSectionName}' must be within section tag brackets");
+                                            decodeInfo.NoteIssue(ldx, $"Only section name '{currentSectionName}' must be within section tag brackets");
                                         }
                                     }
 
@@ -2229,7 +2231,7 @@ namespace HCResourceLibraryApp.DataHandling
                                     {
                                         if (logDataLine.Contains('-') && logDataLine.CountOccuringCharacter('-') == 1)
                                         {
-                                            Dbug.LogPart("Identified legend data; Contains '-'; ");
+                                            Dbg.LogPart(ldx, "Identified legend data; Contains '-'; ");
                                             logDataLine = RemoveEscapeCharacters(logDataLine);
                                             string[] splitLegKyDef = logDataLine.Split('-');
                                             if (splitLegKyDef.HasElements(2))
@@ -2239,14 +2241,14 @@ namespace HCResourceLibraryApp.DataHandling
                                                     if (splitLegKyDef[0].Contains(" "))
                                                     {
                                                         splitLegKyDef[0] = splitLegKyDef[0].Replace(" ", "").Trim();
-                                                        Dbug.LogPart("Removed space in key; ");
+                                                        Dbg.LogPart(ldx, "Removed space in key; ");
                                                     }
                                                     splitLegKyDef[1] = splitLegKyDef[1].Trim();
-                                                    Dbug.LogPart($"Trimmed data; ");
+                                                    Dbg.LogPart(ldx, $"Trimmed data; ");
 
 
                                                     LegendData newLegData = new(splitLegKyDef[0], logVersion, splitLegKyDef[1]);
-                                                    Dbug.Log($"Generated new {nameof(LegendData)} :: {newLegData.ToString()}; ");
+                                                    Dbg.Log(ldx, $"Generated new {nameof(LegendData)} :: {newLegData.ToString()}; ");
                                                     decodeInfo.NoteResult($"Generated {nameof(LegendData)} :: {newLegData.ToString()}");
                                                     if (splitLegKyDef[1].Contains(" "))
                                                     {
@@ -2259,20 +2261,20 @@ namespace HCResourceLibraryApp.DataHandling
                                                         }
 
                                                         if (warnSpaceInDataIDKeyDefinitionQ)
-                                                            decodeInfo.NoteIssue("Legend definition should not have spaces if representing a data ID");
+                                                            decodeInfo.NoteIssue(ldx, "Legend definition should not have spaces if representing a data ID");
                                                     }
 
 
                                                     if (legendDatas.HasElements())
                                                     {
-                                                        Dbug.LogPart("Searching for existing key; ");
+                                                        Dbg.LogPart(ldx, "Searching for existing key; ");
                                                         LegendData matchingLegDat = null;
                                                         foreach (LegendData legDat in legendDatas)
                                                         {
                                                             if (legDat.IsSetup())
                                                                 if (legDat.Key == newLegData.Key)
                                                                 {
-                                                                    Dbug.LogPart($"Found matching key ({newLegData.Key}) in ({legDat}); ");
+                                                                    Dbg.LogPart(ldx, $"Found matching key ({newLegData.Key}) in ({legDat}); ");
                                                                     matchingLegDat = legDat;
                                                                     break;
                                                                 }
@@ -2299,13 +2301,13 @@ namespace HCResourceLibraryApp.DataHandling
                                                             bool addedDef = matchingLegDat.AddKeyDefinition(newLegData[0]);
                                                             if (addedDef)
                                                             {
-                                                                Dbug.LogPart($"Expanded legend data :: {matchingLegDat.ToString()}");
+                                                                Dbg.LogPart(ldx, $"Expanded legend data :: {matchingLegDat.ToString()}");
                                                                 newDecInfo.NoteResult($"Edited existing legend data (new definition) :: {matchingLegDat.ToString()}");
                                                             }
                                                             else
                                                             {
-                                                                Dbug.LogPart($"New definition '{newLegData[0]}' could not be added (duplicate?)");
-                                                                newDecInfo.NoteIssue($"New definition '{newLegData[0]}' could not be added (duplicate?)");
+                                                                Dbg.LogPart(ldx, $"New definition '{newLegData[0]}' could not be added (duplicate?)");
+                                                                newDecInfo.NoteIssue(ldx, $"New definition '{newLegData[0]}' could not be added (duplicate?)");
                                                             }
 
                                                             if (newDecInfo.IsSetup())
@@ -2316,17 +2318,17 @@ namespace HCResourceLibraryApp.DataHandling
                                                         }
                                                         else
                                                         {
-                                                            Dbug.LogPart("No similar key exists; ");
+                                                            Dbg.LogPart(ldx, "No similar key exists; ");
                                                             legendDatas.Add(newLegData);
-                                                            Dbug.LogPart("Added new legend data to decode library");
+                                                            Dbg.LogPart(ldx, "Added new legend data to decode library");
                                                         }
                                                     }
                                                     else
                                                     {
                                                         legendDatas.Add(newLegData);
-                                                        Dbug.LogPart("Added new legend data to decode library");
+                                                        Dbg.LogPart(ldx, "Added new legend data to decode library");
                                                     }                                                    
-                                                    //Dbug.LogPart("; ");
+                                                    //Dbg.LogPart(ldx, "; ");
 
                                                     sectionIssueQ = false;
                                                 }
@@ -2334,28 +2336,28 @@ namespace HCResourceLibraryApp.DataHandling
                                                 {
                                                     if (splitLegKyDef[0].IsNEW())
                                                     {
-                                                        Dbug.LogPart("This line is missing data for 'legend key'");
-                                                        decodeInfo.NoteIssue("This line is missing data for 'legend key'");
+                                                        Dbg.LogPart(ldx, "This line is missing data for 'legend key'");
+                                                        decodeInfo.NoteIssue(ldx, "This line is missing data for 'legend key'");
                                                     }
                                                     else
                                                     {
-                                                        Dbug.LogPart("This line is missing data for 'key definition'");
-                                                        decodeInfo.NoteIssue("This line is missing data for 'key definition'");
+                                                        Dbg.LogPart(ldx, "This line is missing data for 'key definition'");
+                                                        decodeInfo.NoteIssue(ldx, "This line is missing data for 'key definition'");
                                                     }
                                                 }
-                                            //Dbug.Log("  //  End legend");
+                                            //Dbg.Log(ldx, "  //  End legend");
                                         }
                                         else
                                         {
                                             if (logDataLine.Contains('-'))
                                             {
-                                                Dbug.LogPart("This line contains too many '-'");
-                                                decodeInfo.NoteIssue("This line contains too many '-'");
+                                                Dbg.LogPart(ldx, "This line contains too many '-'");
+                                                decodeInfo.NoteIssue(ldx, "This line contains too many '-'");
                                             }
                                             else
                                             {
-                                                Dbug.LogPart("This line is missing '-'");
-                                                decodeInfo.NoteIssue("This line is missing '-'");
+                                                Dbg.LogPart(ldx, "This line is missing '-'");
+                                                decodeInfo.NoteIssue(ldx, "This line is missing '-'");
                                             }
                                         }
                                     }
@@ -2363,8 +2365,8 @@ namespace HCResourceLibraryApp.DataHandling
                                     /// no data parsing before tag issue
                                     if (!isHeader && !parsedSectionTagQ)
                                     {
-                                        Dbug.LogPart("Legend section tag must be parsed before decoding its data");
-                                        decodeInfo.NoteIssue("Legend section tag must be parsed before decoding its data");
+                                        Dbg.LogPart(ldx, "Legend section tag must be parsed before decoding its data");
+                                        decodeInfo.NoteIssue(ldx, "Legend section tag must be parsed before decoding its data");
                                     }
 
                                     EndSectionDbugLog("legend", !IsSectionTag());
@@ -2411,14 +2413,14 @@ namespace HCResourceLibraryApp.DataHandling
                                             }
                                             else
                                             {
-                                                Dbug.LogPart("Summary section tag has already been parsed");
-                                                decodeInfo.NoteIssue("Summary section tag has already been parsed");
+                                                Dbg.LogPart(ldx, "Summary section tag has already been parsed");
+                                                decodeInfo.NoteIssue(ldx, "Summary section tag has already been parsed");
                                             }
                                         }
                                         else
                                         {
-                                            Dbug.Log($"Only section name '{currentSectionName}' must be within section tag brackets");
-                                            decodeInfo.NoteIssue($"Only section name '{currentSectionName}' must be within section tag brackets");
+                                            Dbg.Log(ldx, $"Only section name '{currentSectionName}' must be within section tag brackets");
+                                            decodeInfo.NoteIssue(ldx, $"Only section name '{currentSectionName}' must be within section tag brackets");
                                         }
                                     }
 
@@ -2426,17 +2428,17 @@ namespace HCResourceLibraryApp.DataHandling
                                     if (!isHeader && parsedSectionTagQ)
                                     {
                                         logDataLine = logDataLine.Trim();
-                                        Dbug.LogPart("Identified summary data; ");
+                                        Dbg.LogPart(ldx, "Identified summary data; ");
                                         if (logDataLine.StartsWith(">") && logDataLine.CountOccuringCharacter('>') == 1)
                                         {
-                                            Dbug.LogPart("Starts with '>'; ");
+                                            Dbg.LogPart(ldx, "Starts with '>'; ");
                                             string sumPart = FullstopCheck(logDataLine.Replace(">", ""));
                                             if (sumPart.IsNotNE())
                                             {
                                                 bool isDupe = false;
                                                 if (summaryDataParts.HasElements())
                                                 {
-                                                    Dbug.LogPart("Valid summary part? ");
+                                                    Dbg.LogPart(ldx, "Valid summary part? ");
                                                     for (int sdpx = 0; sdpx < summaryDataParts.Count && !isDupe; sdpx++)
                                                     {
                                                         if (summaryDataParts[sdpx] == sumPart)
@@ -2444,17 +2446,17 @@ namespace HCResourceLibraryApp.DataHandling
                                                     }
                                                     if (isDupe)
                                                     {
-                                                        Dbug.LogPart("No, this summary part is a duplicate");
-                                                        decodeInfo.NoteIssue("Summary part is a duplicate");
+                                                        Dbg.LogPart(ldx, "No, this summary part is a duplicate");
+                                                        decodeInfo.NoteIssue(ldx, "Summary part is a duplicate");
                                                     }
-                                                    else Dbug.LogPart("Yes (not a duplicate)");
-                                                    Dbug.Log("; ");
+                                                    else Dbg.LogPart(ldx, "Yes (not a duplicate)");
+                                                    Dbg.Log(ldx, "; ");
                                                 }
 
                                                 if (!isDupe)
                                                 {
                                                     summaryDataParts.Add(sumPart);
-                                                    Dbug.LogPart($"--> Obtained summary part :: {sumPart}");
+                                                    Dbg.LogPart(ldx, $"--> Obtained summary part :: {sumPart}");
                                                     decodeInfo.NoteResult($"Obtained summary part :: {sumPart}");
 
                                                     sectionIssueQ = false;
@@ -2462,21 +2464,21 @@ namespace HCResourceLibraryApp.DataHandling
                                             }
                                             else
                                             {
-                                                Dbug.LogPart("Missing data for 'summary part'");
-                                                decodeInfo.NoteIssue("Missing data for 'summary part'");
+                                                Dbg.LogPart(ldx, "Missing data for 'summary part'");
+                                                decodeInfo.NoteIssue(ldx, "Missing data for 'summary part'");
                                             }
                                         }
                                         else
                                         {
                                             if (logDataLine.StartsWith('>'))
                                             {
-                                                Dbug.LogPart("This line contains too many '>'");
-                                                decodeInfo.NoteIssue("This line contains too many '>'");
+                                                Dbg.LogPart(ldx, "This line contains too many '>'");
+                                                decodeInfo.NoteIssue(ldx, "This line contains too many '>'");
                                             }
                                             else
                                             {
-                                                Dbug.LogPart("This line does not start with '>'");
-                                                decodeInfo.NoteIssue("This line does not start with '>'");
+                                                Dbg.LogPart(ldx, "This line does not start with '>'");
+                                                decodeInfo.NoteIssue(ldx, "This line does not start with '>'");
                                             }
                                         }
                                     }
@@ -2484,8 +2486,8 @@ namespace HCResourceLibraryApp.DataHandling
                                     /// no data parsing before tag issue
                                     if (!isHeader && !parsedSectionTagQ)
                                     {
-                                        Dbug.LogPart("Summary section tag must be parsed before decoding its data");
-                                        decodeInfo.NoteIssue("Summary section tag must be parsed before decoding its data");
+                                        Dbg.LogPart(ldx, "Summary section tag must be parsed before decoding its data");
+                                        decodeInfo.NoteIssue(ldx, "Summary section tag must be parsed before decoding its data");
                                     }
 
                                     EndSectionDbugLog("summary", !IsSectionTag());
@@ -2495,11 +2497,11 @@ namespace HCResourceLibraryApp.DataHandling
                                 /// decoding info dock reports
                                 if (decodeInfo.IsSetup())
                                 {
-                                    Dbug.LogPart($"{Ind34}//{Ind34}{{DIDCheck}} ");
+                                    Dbg.LogPart(ldx, $"{Ind34}//{Ind34}{{DIDCheck}} ");
                                     /// check if any decoding infos have been inserted                                    
                                     if (prevDecodingInfoDock.HasElements())
                                     {
-                                        //Dbug.LogPart("      {DIDCheck} ");
+                                        //Dbg.LogPart(ldx, "      {DIDCheck} ");
                                         string changedIndex = "", changeType = "None";
                                         for (int px = 0; px < prevDecodingInfoDock.Count && changedIndex.IsNE(); px++)
                                         {
@@ -2530,34 +2532,34 @@ namespace HCResourceLibraryApp.DataHandling
                                             }
                                         }
 
-                                        Dbug.LogPart($"[{changeType}]{changedIndex}");
-                                        Dbug.LogPart(";  ");
-                                        //Dbug.Log(";  //  ");
+                                        Dbg.LogPart(ldx, $"[{changeType}]{changedIndex}");
+                                        Dbg.LogPart(ldx, ";  ");
+                                        //Dbg.Log(ldx, ";  //  ");
                                     }
 
                                     /// add new decoding info dock
                                     if (decodeInfo.IsSetup())
                                     {
-                                        Dbug.LogPart($"[Added]@{decodingInfoDock.Count};  ");
+                                        Dbg.LogPart(ldx, $"[Added]@{decodingInfoDock.Count};  ");
                                         decodingInfoDock.Add(decodeInfo);
                                     }
 
                                     /// set previous decoding info dock
                                     if (decodingInfoDock.HasElements())
                                     {
-                                        //Dbug.LogPart($"[<]prevDID set;  ");
+                                        //Dbg.LogPart(ldx, $"[<]prevDID set;  ");
                                         prevDecodingInfoDock = new List<DecodeInfo>();
                                         prevDecodingInfoDock.AddRange(decodingInfoDock.ToArray());
                                     }
                                 }                                
-                                Dbug.Log(" // ");
+                                Dbg.Log(ldx, " // ");
 
 
                                 if (sectionIssueQ || decodeInfo.NotedIssueQ)
                                     if (currentSectionNumber.IsWithin(0, (short)(countSectionIssues.Length - 1)))
                                         countSectionIssues[currentSectionNumber]++;
 
-                                Dbug.NudgeIndent(false);
+                                Dbg.NudgeIndent(ldx, false);
                             }
 
                             
@@ -2578,35 +2580,35 @@ namespace HCResourceLibraryApp.DataHandling
                                     subText = isDataQ.Value ? "(data)" : "(section tag)";
                                     if (isDataQ.Value)
                                     {
-                                        Dbug.Log(" // ");
+                                        Dbg.Log(ldx, " // ");
                                         preText = ".   ";
                                     }
                                 }
 
-                                //Dbug.Log($"{preText}End {section} {subText}");
-                                Dbug.LogPart($"{preText}End {section} {subText}");
+                                //Dbg.Log(ldx, $"{preText}End {section} {subText}");
+                                Dbg.LogPart(ldx, $"{preText}End {section} {subText}");
                             }
                         }
                         else
                         {
                             if (withinOmitBlock)
                             {
-                                //Dbug.Log($"Omitting L{lineNum} --> Block Omission: currently within line omission block.");
-                                Dbug.LogPart($"{lineNum} ");
+                                //Dbg.Log(ldx, $"Omitting L{lineNum} --> Block Omission: currently within line omission block.");
+                                Dbg.LogPart(ldx, $"{lineNum} ");
                             }
                             else if (invalidLine)
                             {
                                 /// report invalid key issue
                                 DecodeInfo diMain = new($"L{lineNum}| {logDataLine}", "Main Decoding");
-                                diMain.NoteIssue($"The '{Sep}' character is an invalid character and may not be placed within decodable log lines.");
+                                diMain.NoteIssue(ldx, $"The '{Sep}' character is an invalid character and may not be placed within decodable log lines.");
                                 decodingInfoDock.Add(diMain);
 
-                                Dbug.Log($"Skipping L{lineNum} --> Contains invalid character: '{Sep}'");
+                                Dbg.Log(ldx, $"Skipping L{lineNum} --> Contains invalid character: '{Sep}'");
                             }
-                            else Dbug.Log($"Omitting L{lineNum} --> Imparsable: Line starts with '{omit}'");
+                            else Dbg.Log(ldx, $"Omitting L{lineNum} --> Imparsable: Line starts with '{omit}'");
                         }
                     }
-                    Dbug.NudgeIndent(false);
+                    Dbg.NudgeIndent(ldx, false);
                     
                     // aka 'else'
                     if (logDataLine.IsNEW() && !endFileReading)
@@ -2614,17 +2616,17 @@ namespace HCResourceLibraryApp.DataHandling
                         // as weird as it may seem, checks for non-described or unnoted legend keys goes here
                         if (!ranLegendChecksQ && usedLegendKeys.HasElements() && usedLegendKeysSources.HasElements() && legendDatas.HasElements() && currentSectionName == secLeg)
                         {
-                            Dbug.NudgeIndent(true);
-                            Dbug.Log($"{{Legend_Checks}}");
+                            Dbg.NudgeIndent(ldx, true);
+                            Dbg.Log(ldx, $"{{Legend_Checks}}");
                             const string clampSuffix = "...";
                             const int clampDistance = 7;
 
-                            Dbug.NudgeIndent(true);
+                            Dbg.NudgeIndent(ldx, true);
                             // get all keys
                             /// from notes
                             List<string> allKeys = new();
                             List<string> allKeysSources = null;
-                            Dbug.LogPart(">> Fetching used legend keys (and sources) :: ");
+                            Dbg.LogPart(ldx, ">> Fetching used legend keys (and sources) :: ");
                             if (usedLegendKeys.Count == usedLegendKeysSources.Count)
                             {
                                 allKeysSources = new();
@@ -2640,13 +2642,13 @@ namespace HCResourceLibraryApp.DataHandling
                                         allKeysSources.Add(ukSource);
                                         addedQ = "+";
                                     }
-                                    Dbug.LogPart($" {addedQ}'{usedKey}' ");
+                                    Dbg.LogPart(ldx, $" {addedQ}'{usedKey}' ");
                                 }
                             }
                             else
                             {
                                 /// backup - legkeys only
-                                Dbug.LogPart("[aborted sources; UKLen!=UKSLen] :: ");
+                                Dbg.LogPart(ldx, "[aborted sources; UKLen!=UKSLen] :: ");
                                 foreach (string usedKey in usedLegendKeys)
                                 {
                                     string addedQ = null;
@@ -2655,12 +2657,12 @@ namespace HCResourceLibraryApp.DataHandling
                                         allKeys.Add(usedKey);
                                         addedQ = "+";
                                     }
-                                    Dbug.LogPart($" {addedQ}'{usedKey}' ");
+                                    Dbg.LogPart(ldx, $" {addedQ}'{usedKey}' ");
                                 }
                             }
-                            Dbug.Log("; ");
+                            Dbg.Log(ldx, "; ");
                             /// from generations
-                            Dbug.LogPart(">> Fetching generated legend keys (& decInfoIx as '@#') :: ");
+                            Dbg.LogPart(ldx, ">> Fetching generated legend keys (& decInfoIx as '@#') :: ");
                             List<int> decodeInfoIndicies = new();
                             List<string> generatedKeys = new();
                             foreach (LegendData legDat in legendDatas)
@@ -2686,12 +2688,12 @@ namespace HCResourceLibraryApp.DataHandling
                                 }
 
                                 generatedKeys.Add(legDat.Key);
-                                Dbug.LogPart($" {addedQ}'{legDat.Key}' {diIx} ");
+                                Dbg.LogPart(ldx, $" {addedQ}'{legDat.Key}' {diIx} ");
                             }
-                            Dbug.Log("; ");
+                            Dbg.Log(ldx, "; ");
 
                             // check all keys and determine if unnoted or unused
-                            Dbug.Log("Checking all legend keys for possible issues; ");
+                            Dbg.Log(ldx, "Checking all legend keys for possible issues; ");
                             int getAccessIxFromListForOGdi = 0, usedSourceIx = 0;
                             foreach (string aKey in allKeys)
                             {
@@ -2702,8 +2704,8 @@ namespace HCResourceLibraryApp.DataHandling
 
                                 if (isUsed || isGenerated)
                                 {
-                                    Dbug.LogPart($"Checked: {(isUsed ? "  used" : "NO USE")}|{(isGenerated ? "gen'd " : "NO GEN")} // Result for key '{aKey}'  --> ");
-                                    //Dbug.LogPart($"key [{aKey}]  |  used? [{isUsed}]  |  generated? [{isGenerated}]  -->  ");
+                                    Dbg.LogPart(ldx, $"Checked: {(isUsed ? "  used" : "NO USE")}|{(isGenerated ? "gen'd " : "NO GEN")} // Result for key '{aKey}'  --> ");
+                                    //Dbg.LogPart(ldx, $"key [{aKey}]  |  used? [{isUsed}]  |  generated? [{isGenerated}]  -->  ");
                                 }
 
                                 /// unnnoted key issue
@@ -2759,15 +2761,15 @@ namespace HCResourceLibraryApp.DataHandling
                                     }                                    
 
                                     /// issue reported here
-                                    Dbug.LogPart("Unnoted Key Issue");
-                                    legCheckDi.NoteIssue($"Key '{aKey}' was used but not described (Unnoted Legend Key)");
+                                    Dbg.LogPart(ldx, "Unnoted Key Issue");
+                                    legCheckDi.NoteIssue(ldx, $"Key '{aKey}' was used but not described (Unnoted Legend Key)");
                                     decodingInfoDock.Add(legCheckDi);
                                     issueWasTriggered = true;
                                 }
                                 /// unused key issue
                                 else if (!isUsed && isGenerated)
                                 {
-                                    Dbug.LogPart("Unused Key Issue");
+                                    Dbg.LogPart(ldx, "Unused Key Issue");
                                     string diIssueMsg = $"Key '{aKey}' was described but not used (Unnecessary Legend Key)";
 
                                     bool fetchedAndEditedOGDi = false;
@@ -2781,7 +2783,7 @@ namespace HCResourceLibraryApp.DataHandling
                                         if (!ogDI.NotedIssueQ)
                                         {
                                             legCheckDi = new DecodeInfo(ogDI.logLine, ogDI.sectionName);
-                                            legCheckDi.NoteIssue(diIssueMsg);
+                                            legCheckDi.NoteIssue(ldx, diIssueMsg);
                                             legCheckDi.NoteResult(ogDI.resultingInfo);
 
                                             decodingInfoDock[accessIx] = legCheckDi;
@@ -2790,22 +2792,22 @@ namespace HCResourceLibraryApp.DataHandling
                                     }
 
                                     if (!fetchedAndEditedOGDi)
-                                        legCheckDi.NoteIssue(diIssueMsg);
+                                        legCheckDi.NoteIssue(ldx, diIssueMsg);
                                     
                                     issueWasTriggered = true;
                                 }
                                 else if (isUsed && isGenerated)
-                                    Dbug.LogPart("Key is okay");
+                                    Dbg.LogPart(ldx, "Key is okay");
 
                                 if (issueWasTriggered)
                                     countSectionIssues[currentSectionNumber]++;
 
                                 usedSourceIx++;
-                                Dbug.Log("; ");
+                                Dbg.Log(ldx, "; ");
                             }
 
-                            Dbug.NudgeIndent(false);
-                            Dbug.NudgeIndent(false);
+                            Dbg.NudgeIndent(ldx, false);
+                            Dbg.NudgeIndent(ldx, false);
 
                             ranLegendChecksQ = true;
                         }
@@ -2813,14 +2815,14 @@ namespace HCResourceLibraryApp.DataHandling
 
                         if (currentSectionNumber.IsWithin(0, (short)(countSectionIssues.Length - 1)) && currentSectionName.IsNotNE() && !currentSectionName.Equals(lastSectionName))
                         {
-                            Dbug.Log($"..  Sec#{currentSectionNumber + 1} '{currentSectionName}' ended with [{countSectionIssues[currentSectionNumber]}] issues;");
+                            Dbg.Log(ldx, $"..  Sec#{currentSectionNumber + 1} '{currentSectionName}' ended with [{countSectionIssues[currentSectionNumber]}] issues;");
                             lastSectionName = currentSectionName;
                         }
 
                         if (!firstSearchingDbgRanQ && !withinOmitBlock)
                         {
-                            Dbug.LogPart($"Searching for Sec#{nextSectionNumber + 1} ({nextSectionName})  //  ");
-                            Dbug.Log($"L{lineNum,-2}| {ConditionalText(logDataLine.IsNEW(), $"<null>{(withinASectionQ ? $" ... (no longer within a section)" : "")}", logDataLine)}");
+                            Dbg.LogPart(ldx, $"Searching for Sec#{nextSectionNumber + 1} ({nextSectionName})  //  ");
+                            Dbg.Log(ldx, $"L{lineNum,-2}| {ConditionalText(logDataLine.IsNEW(), $"<null>{(withinASectionQ ? $" ... (no longer within a section)" : "")}", logDataLine)}");
                         }
                         withinASectionQ = false;
                     }
@@ -2832,32 +2834,32 @@ namespace HCResourceLibraryApp.DataHandling
                     {
                         endFileReading = true;
                         string forcedEndReason = llx + 1 >= readingTimeOut ? $"reading timeout - max {readingTimeOut} lines" : "file ends";
-                        Dbug.Log($" --> Decoding from file complete (forced: {forcedEndReason}) ... ending file reading <cap-{capacityPercentage:0}%>");
+                        Dbg.Log(ldx, $" --> Decoding from file complete (forced: {forcedEndReason}) ... ending file reading <cap-{capacityPercentage:0}%>");
 
                         /// "File Too Long" issue
                         if (llx + 1 >= readingTimeOut)
                         {
                             DecodeInfo tooLongDi = new ("Decoder Issue; <no source line>", secVer);
-                            tooLongDi.NoteIssue($"File reading has been forced to end: Version Log is too long (limit of {readingTimeOut} lines)");
+                            tooLongDi.NoteIssue(ldx, $"File reading has been forced to end: Version Log is too long (limit of {readingTimeOut} lines)");
                             decodingInfoDock.Add(tooLongDi);
                         }    
                     }
                     else if (endFileReading)
-                        Dbug.Log($" --> Decoding from file complete ... ending file reading <cap-{capacityPercentage:0}%>");
+                        Dbg.Log(ldx, $" --> Decoding from file complete ... ending file reading <cap-{capacityPercentage:0}%>");
 
                     TaskNum++;
                     ProgressBarUpdate(TaskNum / TaskCount, true, endFileReading);
                 }
-                Dbug.NudgeIndent(false);
+                Dbg.NudgeIndent(ldx, false);
 
                 // -- compile decode library instance --
                 if (endFileReading)
                 {
-                    Dbug.Log("- - - - - - - - - - -");
+                    Dbg.Log(ldx, "- - - - - - - - - - -");
 
                     DecodedLibrary = new ResLibrary();
                     ResContents looseInfoRC;
-                    Dbug.LogPart("Initialized Decode Library instance");
+                    Dbg.LogPart(ldx, "Initialized Decode Library instance");
 
                     /// create loose ResCon
                     if (looseConAddits.HasElements() || looseConChanges.HasElements())
@@ -2865,13 +2867,13 @@ namespace HCResourceLibraryApp.DataHandling
                         ContentBaseGroup looseCbg = new(logVersion, ResLibrary.LooseResConName, looseInfoRCDataIDs.ToArray());
                         looseInfoRC = new(newResConShelfNumber, looseCbg, looseConAddits.ToArray(), looseConChanges.ToArray());
                         resourceContents.Insert(0, looseInfoRC);
-                        Dbug.LogPart($"; Generated and inserted 'loose' ResCon instance :: {looseInfoRC}");
+                        Dbg.LogPart(ldx, $"; Generated and inserted 'loose' ResCon instance :: {looseInfoRC}");
                     }
-                    Dbug.Log("; ");
+                    Dbg.Log(ldx, "; ");
 
                     if (testLibConAddUpdConnectionQ)
                     {
-                        Dbug.Log("ENABLED :: [TESTING LIBRARY CONADDITS AND CONCHANGES CONNECTIONS]");
+                        Dbg.Log(ldx, "ENABLED :: [TESTING LIBRARY CONADDITS AND CONCHANGES CONNECTIONS]");
                         /**
                         FROM 'HCRLA - EX1 VERSION LOG'
                         ..  Additional
@@ -2895,22 +2897,22 @@ namespace HCResourceLibraryApp.DataHandling
                         DecodedLibrary.AddContent(t1RC, t2RC);
                     }
 
-                    Dbug.Log($"Transferring decoded ResCons to Decode Library; {(resourceContents.HasElements() ? "" : "No ResCons to transfer to Decode Library; ")}");
+                    Dbg.Log(ldx, $"Transferring decoded ResCons to Decode Library; {(resourceContents.HasElements() ? "" : "No ResCons to transfer to Decode Library; ")}");
                     if (resourceContents.HasElements())
                         DecodedLibrary.AddContent(true, resourceContents.ToArray());
 
-                    Dbug.Log($"Transferring decoded Legends to Decode Library; {(legendDatas.HasElements() ? "" : "No Legends to transfer to Decode Library; ")}");
+                    Dbg.Log(ldx, $"Transferring decoded Legends to Decode Library; {(legendDatas.HasElements() ? "" : "No Legends to transfer to Decode Library; ")}");
                     if (legendDatas.HasElements())
                         DecodedLibrary.AddLegend(legendDatas.ToArray());
 
-                    Dbug.LogPart("Initializing summary data; ");
+                    Dbg.LogPart(ldx, "Initializing summary data; ");
                     summaryData = new SummaryData(logVersion, ttaNumber, summaryDataParts.ToArray());
-                    Dbug.Log($"Generated {nameof(SummaryData)} instance :: {summaryData.ToStringShortened()};");
-                    Dbug.Log($"Transferring version summary to Decode Library; {(summaryData.IsSetup() ? "" : "No summary to transfer to Decode Library; ")}");
+                    Dbg.Log(ldx, $"Generated {nameof(SummaryData)} instance :: {summaryData.ToStringShortened()};");
+                    Dbg.Log(ldx, $"Transferring version summary to Decode Library; {(summaryData.IsSetup() ? "" : "No summary to transfer to Decode Library; ")}");
                     if (summaryData.IsSetup())
                         DecodedLibrary.AddSummary(summaryData);
 
-                    Dbug.Log("Transferring decode dbug info group to Decode Info Dock;");
+                    Dbg.Log(ldx, "Transferring decode dbug info group to Decode Info Dock;");
                     DecodeInfoDock = decodingInfoDock;
 
                     // -- relay complete decode --
@@ -2920,7 +2922,7 @@ namespace HCResourceLibraryApp.DataHandling
             }
 
             _allowLogDecToolsDbugMessagesQ = false;
-            Dbug.EndLogging();
+            Dbg.EndLogging(ldx);
             return hasFullyDecodedLogQ;            
         }
         public bool DecodeLogInfo(string[] logData)
@@ -2965,7 +2967,7 @@ namespace HCResourceLibraryApp.DataHandling
                 }
 
                 if (dbgStr.IsNotNE())
-                    Dbug.LogPart($"CKS: {dbgStr.Trim()}; ");
+                    Dbg.LogPart(ldx, $"CKS: {dbgStr.Trim()}; ");
                     // ..; CKS: &00[-] &11[(]; ...
             }
             return subbedStr;
@@ -2990,7 +2992,7 @@ namespace HCResourceLibraryApp.DataHandling
             if (str.IsNotNEW())
             {
                 str = str.Replace("[", "").Replace("]", "");
-                Dbug.LogPart("Removed square brackets; ");
+                Dbg.LogPart(ldx, "Removed square brackets; ");
             }
             return str;
         }
@@ -3000,7 +3002,7 @@ namespace HCResourceLibraryApp.DataHandling
             if (str.IsNotNEW())
             {
                 str = str.Replace("(", "").Replace(")", "");
-                Dbug.LogPart("Removed parentheses; ");
+                Dbg.LogPart(ldx, "Removed parentheses; ");
             }
             return str;
         }
@@ -3008,13 +3010,13 @@ namespace HCResourceLibraryApp.DataHandling
         public static string FixContentName(string conNam, bool dbgLogQ = true)
         {
             if (dbgLogQ)
-                Dbug.LogPart($"Name recieved: ");
+                Dbg.LogPart(ldx, $"Name recieved: ");
             string fixedConNam;
             if (conNam.IsNotNEW())
             {
                 conNam = conNam.Trim();
                 if (dbgLogQ)
-                    Dbug.LogPart($"{conNam} -- ");
+                    Dbg.LogPart(ldx, $"{conNam} -- ");
 
                 fixedConNam = "";
                 bool hadSpaceBefore = false;
@@ -3060,18 +3062,18 @@ namespace HCResourceLibraryApp.DataHandling
                 if (dbgLogQ)
                 {
                     if (fixedConNam != conNam)
-                        Dbug.LogPart($"Edited name: {fixedConNam}");
-                    else Dbug.LogPart("No edits");
+                        Dbg.LogPart(ldx, $"Edited name: {fixedConNam}");
+                    else Dbg.LogPart(ldx, "No edits");
                 }                    
             }
             else
             {
                 fixedConNam = conNam;
                 if (dbgLogQ)
-                    Dbug.LogPart("<null>");
+                    Dbg.LogPart(ldx, "<null>");
             }
             if (dbgLogQ)
-                Dbug.LogPart("; ");
+                Dbg.LogPart(ldx, "; ");
             return fixedConNam;
         }
         /// <summary>also partly logs "Removed Esc.Chars: [{n t a f r}]; "</summary>
@@ -3124,7 +3126,7 @@ namespace HCResourceLibraryApp.DataHandling
                 }
 
                 if (subLogPart.IsNotNE())
-                    Dbug.LogPart($"Removed Esc.Chars [{subLogPart.Trim()}]; ");
+                    Dbg.LogPart(ldx, $"Removed Esc.Chars [{subLogPart.Trim()}]; ");
                 str = newStr;
             }
             return str;
@@ -3150,9 +3152,9 @@ namespace HCResourceLibraryApp.DataHandling
                 if (!str.EndsWith("."))
                 {
                     str = $"{str}.";
-                    Dbug.LogPart("Added fullstop; ");
+                    Dbg.LogPart(ldx, "Added fullstop; ");
                 }
-                else Dbug.LogPart("Checked fullstop; ");
+                else Dbg.LogPart(ldx, "Checked fullstop; ");
                 str = str.Trim();
             }
             return str;
@@ -3174,7 +3176,7 @@ namespace HCResourceLibraryApp.DataHandling
                 if (!usedLegendKeys.Contains(legKey))
                 {
                     usedLegendKeys.Add(legKey);
-                    Dbug.LogPart($"Noted legend key: {legKey}");
+                    Dbg.LogPart(ldx, $"Noted legend key: {legKey}");
 
 
                     if (usedLegendKeysSources != null && sourceDataID.IsNotNEW())
@@ -3183,9 +3185,9 @@ namespace HCResourceLibraryApp.DataHandling
                         if (usedLegendKeysSources.Count < usedLegendKeys.Count)
                         {
                             usedLegendKeysSources.Add(sourceDataID);
-                            Dbug.LogPart($" [+ID: {sourceDataID}]");
+                            Dbg.LogPart(ldx, $" [+ID: {sourceDataID}]");
                         }
-                        Dbug.LogPart("; ");
+                        Dbg.LogPart(ldx, "; ");
                     }
                 }
         }
@@ -3209,7 +3211,7 @@ namespace HCResourceLibraryApp.DataHandling
                         dataKey = splitDKnSfx[0];
                         suffix = splitDKnSfx[1];
                         if (_allowLogDecToolsDbugMessagesQ)
-                            Dbug.LogPart($"GDnS: {dataKey}[{trueNum}]{suffix}; ");
+                            Dbg.LogPart(ldx, $"GDnS: {dataKey}[{trueNum}]{suffix}; ");
                     }
                 }
             }
@@ -3275,7 +3277,7 @@ namespace HCResourceLibraryApp.DataHandling
                 }                
 
                 if (_allowLogDecToolsDbugMessagesQ)
-                    Dbug.LogPart($"DD:{dataKey}[{dataBody}]{suffix}; ");
+                    Dbg.LogPart(ldx, $"DD:{dataKey}[{dataBody}]{suffix}; ");
 
 
                 // local method

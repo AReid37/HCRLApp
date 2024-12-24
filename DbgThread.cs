@@ -13,7 +13,7 @@ namespace HCResourceLibraryApp
         List<string> _logs;
         bool _activeQ;
         /// extras
-        bool _outputOmissionQ;
+        bool _outputOmissionQ, _isInterruptedQ;
         const int noIndex = -1, indentFactor = Dbg.indentFactor;
 
 
@@ -32,12 +32,13 @@ namespace HCResourceLibraryApp
         internal int Indent { get => _indent; set => _indent = value < 0 ? 0 : value; }
         /// <summary>States whether a thread's session is ongoing.</summary>
         internal bool IsActiveQ { get => _activeQ;  set => _activeQ = value; }
-        /// <summary>Tally the times this debug thread was activated (sessions and single logs).</summary>
+        /// <summary>Tally the times this debug thread was activated (sessions and single logs). Has a limit of 9999.</summary>
         internal int Count { get => _count; }
 
 
         /// <summary>Disables the thread logs from being printed to output. Will still be printed to file.</summary>
         internal bool OmitFromOutputQ { get => _outputOmissionQ; set => _outputOmissionQ = value; }
+        internal bool IsInterruptedQ { get => _isInterruptedQ; set => _isInterruptedQ = value; }
         #endregion
 
 
@@ -86,14 +87,17 @@ namespace HCResourceLibraryApp
                 }
                 else
                 {
-                    finalLogStr = Partial ?? ""; // if left non-null, uses left, else uses right
-                    finalLogStr += log;
-                    Partial = null;
+                    if (!IsInterruptedQ)
+                    {
+                        finalLogStr = Partial ?? ""; // if left non-null, uses left, else uses right
+                        finalLogStr += log;
+                        Partial = null;
+                    }
+                    else finalLogStr = log;
                 }
 
                 if (finalLogStr.IsNotNEW())
                     Logs.Add(finalLogStr.PadLeft((Indent * indentFactor) + finalLogStr.Length));
-
             }
         }
         /// <summary>Resets the thread to be ready for another session.</summary>
@@ -101,13 +105,14 @@ namespace HCResourceLibraryApp
         internal void Reset()
         {
             if (_activeQ)
-                _count++;
+                _count += _count < 9999 ? 1 : 0;
 
             _logs = new List<string>();
             _partial = null;
             _indent = 0;
             _activeQ = false;
             _outputOmissionQ = false;
+            _isInterruptedQ = false;
         }
 
 
@@ -118,6 +123,7 @@ namespace HCResourceLibraryApp
             toStr += $" @{_index} ";
             toStr += $" [{(_logs.HasElements() ? _logs.Count : 0)}{(Partial.IsNotNEW() ? " 1/2" : "")} lns, {_indent} ind";
             toStr += $", {(_activeQ ? "Active" : "Off")}, {_count}sc]";
+            toStr += $" {{{(_outputOmissionQ ? "Omit" : "-")} {(_isInterruptedQ ? "Intrptd" : "-")}}}";
             return toStr;
         }
     }

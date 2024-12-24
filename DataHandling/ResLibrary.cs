@@ -41,7 +41,7 @@ namespace HCResourceLibraryApp.DataHandling
         const string legDataTag = "lgd";
         const string sumDataTag = "sum";
         const string stampRLSavedData = "ResLibrary Has Saved Data", stampRLSavedDataTag = "RLDS"; 
-        static bool disableAddDbug = false;
+        //static bool disableAddDbug = false;
         List<ResContents> _contents, _prevContents;
         List<LegendData> _legends, _prevLegends;
         List<SummaryData> _summaries, _prevSummaries;
@@ -79,10 +79,9 @@ namespace HCResourceLibraryApp.DataHandling
             List<int> newShelfIdList = new();
             if (newContents.HasElements())
             {
-                if (disableAddDbug)
-                    Dbug.DeactivateNextLogSession();
-                Dbug.StartLogging("ResLibrary.AddContent(prms RC[])");
-                Dbug.LogPart($"Recieved [{newContents.Length}] new ResCons for library; Refresh integration info dock? {keepLooseRCQ}");
+                Dbg.StartLogging("ResLibrary.AddContent(prms RC[])", out int rlx);
+                Dbg.ToggleThreadOutputOmission(rlx);
+                Dbg.LogPart(rlx, $"Recieved [{newContents.Length}] new ResCons for library; Refresh integration info dock? {keepLooseRCQ}");
 
                 rlaInfoDock = new List<ResLibAddInfo>();
                 if (!keepLooseRCQ)
@@ -91,23 +90,23 @@ namespace HCResourceLibraryApp.DataHandling
                 List<int> shelfNums = new();
                 if (Contents.HasElements())
                 {
-                    Dbug.LogPart("; Fetching existing shelf numbers");
-                    //Dbug.LogPart("; Fetching existing shelf numbers ::");
+                    Dbg.LogPart(rlx, "; Fetching existing shelf numbers");
+                    //Dbg.LogPart(rlx, "; Fetching existing shelf numbers ::");
                     foreach (ResContents resCon in Contents)
                     {
                         shelfNums.Add(resCon.ShelfID);
-                        //Dbug.LogPart($" {resCon.ShelfID}");
+                        //Dbg.LogPart(rlx, $" {resCon.ShelfID}");
                     }
                 }
                 else
                 {
-                    Dbug.LogPart("; No pre-existing contents in library");
+                    Dbg.LogPart(rlx, "; No pre-existing contents in library");
                     Contents = new List<ResContents>();
                 }
-                Dbug.Log("; ");
+                Dbg.Log(rlx, "; ");
 
-                Dbug.Log("Proceeding to add new ResCons to library; ");
-                Dbug.NudgeIndent(true);
+                Dbg.Log(rlx, "Proceeding to add new ResCons to library; ");
+                Dbg.NudgeIndent(rlx, true);
                 for (int x = 0; x < newContents.Length; x++)
                 {
                     ResContents newRC = newContents[x].CloneResContent(true);
@@ -116,12 +115,12 @@ namespace HCResourceLibraryApp.DataHandling
                         // find connections for ConAdts and ConChgs
                         if (newRC.ContentName == LooseResConName)
                         {
-                            Dbug.LogPart("Identified 'loose' ResCon; ");
+                            Dbg.LogPart(rlx, "Identified 'loose' ResCon; ");
 
                             /// IF existing contents and able to sort loose contents: sort loose contents; 
                             if (Contents.HasElements() && !keepLooseRCQ)
                             {
-                                Dbug.Log("Library has pre-existing contents that may serve as connections; ");
+                                Dbg.Log(rlx, "Library has pre-existing contents that may serve as connections; ");
                                 ResLibIntegrationInfo rliInfo = new();
                                 RCFetchSource rliType = RCFetchSource.None;
 
@@ -130,13 +129,13 @@ namespace HCResourceLibraryApp.DataHandling
                                 if (newRC.ConAddits.HasElements())
                                 {
                                     rliType = RCFetchSource.ConAdditionals;
-                                    Dbug.Log("Making connections :: ConAddits to ConBase");
-                                    Dbug.NudgeIndent(true);
+                                    Dbg.Log(rlx, "Making connections :: ConAddits to ConBase");
+                                    Dbg.NudgeIndent(rlx, true);
                                     foreach (ContentAdditionals looseCa in newRC.ConAddits)
                                     {
                                         if (looseCa.IsSetup())
                                         {
-                                            Dbug.LogPart($"Connecting ConAddits ({looseCa}) >> ");
+                                            Dbg.LogPart(rlx, $"Connecting ConAddits ({looseCa}) >> ");
                                             ResContents matchingResCon = null;
 
                                             /// matching here
@@ -157,7 +156,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                     if (source == RCFetchSource.ConBaseGroup)
                                                     {
                                                         matchingResCon = resCon;
-                                                        Dbug.LogPart("[by trueID] ");
+                                                        Dbg.LogPart(rlx, "[by trueID] ");
                                                         break;
                                                     }
                                                 }
@@ -166,23 +165,23 @@ namespace HCResourceLibraryApp.DataHandling
                                             /// connection here
                                             if (matchingResCon != null)
                                             {
-                                                Dbug.LogPart($"Found ResCon {{{matchingResCon}}} >> ");
+                                                Dbg.LogPart(rlx, $"Found ResCon {{{matchingResCon}}} >> ");
                                                 if (matchingResCon.StoreConAdditional(looseCa))
                                                 {
                                                     RCextras.Add(matchingResCon.ToString());
-                                                    Dbug.LogPart($"Connected with ConBase ({matchingResCon.ConBase}) [by ID '{looseCa.RelatedDataID}']");
+                                                    Dbg.LogPart(rlx, $"Connected with ConBase ({matchingResCon.ConBase}) [by ID '{looseCa.RelatedDataID}']");
 
                                                     rliInfo = new ResLibIntegrationInfo(rliType, looseCa.DataIDString, looseCa.OptionalName, matchingResCon.ContentName, looseCa.RelatedDataID);
                                                 }
-                                                else Dbug.LogPart($"Rejected ConAddits");
+                                                else Dbg.LogPart(rlx, $"Rejected ConAddits");
                                             }
-                                            else Dbug.LogPart("No ConBase connections found (discarded)");
+                                            else Dbg.LogPart(rlx, "No ConBase connections found (discarded)");
 
                                             if (!rliInfo.IsSetup())
                                                 rliInfo = new ResLibIntegrationInfo(rliType, looseCa.DataIDString, looseCa.OptionalName, null, null);
-                                            Dbug.LogPart(" <rlii> "); /// this logs regardless of what happens
+                                            Dbg.LogPart(rlx, " <rlii> "); /// this logs regardless of what happens
                                         }
-                                        Dbug.Log(";");
+                                        Dbg.Log(rlx, ";");
 
                                         /// add ConAddits info to dock
                                         if (rliInfo.IsSetup())
@@ -191,11 +190,11 @@ namespace HCResourceLibraryApp.DataHandling
                                             rliInfo = new ResLibIntegrationInfo();
                                         }
                                     }
-                                    Dbug.NudgeIndent(false);
+                                    Dbg.NudgeIndent(rlx, false);
 
                                     if (RCextras.HasElements())
                                         foreach(string rcEdit in RCextras)
-                                            Dbug.Log($". Edited RC :: {rcEdit}");
+                                            Dbg.Log(rlx, $". Edited RC :: {rcEdit}");
                                 }
 
                                 /// find matching and connect ConChanges
@@ -203,8 +202,8 @@ namespace HCResourceLibraryApp.DataHandling
                                 if (newRC.ConChanges.HasElements())
                                 {
                                     rliType = RCFetchSource.ConChanges;
-                                    Dbug.Log("Making connections :: ConChanges to ConBase/ConAddits");
-                                    Dbug.NudgeIndent(true);
+                                    Dbg.Log(rlx, "Making connections :: ConChanges to ConBase/ConAddits");
+                                    Dbg.NudgeIndent(rlx, true);
                                     foreach (ContentChanges looseCc in newRC.ConChanges)
                                     {
                                         if (looseCc.IsSetup())
@@ -215,7 +214,7 @@ namespace HCResourceLibraryApp.DataHandling
 
                                             if (!selfUpdatedQ)
                                             {
-                                                Dbug.LogPart($"Connecting ConChanges ({looseCc.ToStringShortened()}) >> ");
+                                                Dbg.LogPart(rlx, $"Connecting ConChanges ({looseCc.ToStringShortened()}) >> ");
                                                 ResContents matchingResCon = null;
                                                 rliInfo = new ResLibIntegrationInfo();
                                                 string matchedID = looseCc.RelatedDataID;
@@ -234,7 +233,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                     {
                                                         matchingResCon = resCon;
                                                         matchedID = trueRelDataID;
-                                                        Dbug.LogPart("[by trueID] ");
+                                                        Dbg.LogPart(rlx, "[by trueID] ");
                                                         break;
                                                     }
                                                 }
@@ -242,7 +241,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                 /// connection here
                                                 if (matchingResCon != null)
                                                 {
-                                                    Dbug.LogPart($"Found ResCon {{{matchingResCon}}} >> ");
+                                                    Dbg.LogPart(rlx, $"Found ResCon {{{matchingResCon}}} >> ");
                                                     if (matchingResCon.ContainsDataID(matchedID, out RCFetchSource source, out DataHandlerBase dataSource))
                                                     {
                                                         bool connectCCq = false;
@@ -254,12 +253,12 @@ namespace HCResourceLibraryApp.DataHandling
                                                                 if (matchingResCon.StoreConChanges(looseCc))
                                                                 {
                                                                     RCextras.Add(matchingResCon.ToString());
-                                                                    Dbug.LogPart($"Connected with ConBase ({matchCbg}) [by ID '{looseCc.RelatedDataID}']");
+                                                                    Dbg.LogPart(rlx, $"Connected with ConBase ({matchCbg}) [by ID '{looseCc.RelatedDataID}']");
                                                                     connectCCq = true;
                                                                 }
-                                                                else Dbug.LogPart($"Rejected ConChanges");
+                                                                else Dbg.LogPart(rlx, $"Rejected ConChanges");
                                                             }
-                                                            else Dbug.LogPart("ConBase could not be fetched");
+                                                            else Dbg.LogPart(rlx, "ConBase could not be fetched");
                                                         }
                                                         else if (source == RCFetchSource.ConAdditionals)
                                                         {
@@ -269,28 +268,28 @@ namespace HCResourceLibraryApp.DataHandling
                                                                 if (matchingResCon.StoreConChanges(looseCc))
                                                                 {
                                                                     RCextras.Add(matchingResCon.ToString());
-                                                                    Dbug.LogPart($"Connected with ConAddits ({matchCa}) [by ID '{looseCc.RelatedDataID}']");
+                                                                    Dbg.LogPart(rlx, $"Connected with ConAddits ({matchCa}) [by ID '{looseCc.RelatedDataID}']");
                                                                     connectCCq = true;
                                                                 }
-                                                                else Dbug.LogPart($"Rejected ConChanges");
+                                                                else Dbg.LogPart(rlx, $"Rejected ConChanges");
                                                             }
-                                                            else Dbug.LogPart("ConAddit could not be fetched");
+                                                            else Dbg.LogPart(rlx, "ConAddit could not be fetched");
                                                         }
-                                                        else Dbug.LogPart($"Source is neither ConBase nor ConAddits (source: '{source}')");
+                                                        else Dbg.LogPart(rlx, $"Source is neither ConBase nor ConAddits (source: '{source}')");
 
                                                         if (connectCCq)
                                                             rliInfo = new ResLibIntegrationInfo(rliType, looseCc.RelatedDataID, looseCc.ChangeDesc, matchingResCon.ContentName, looseCc.RelatedDataID);
                                                     }
                                                 }
-                                                else Dbug.LogPart("No connections found (discarded)");
+                                                else Dbg.LogPart(rlx, "No connections found (discarded)");
 
                                                 if (!rliInfo.IsSetup())
                                                     rliInfo = new ResLibIntegrationInfo(rliType, looseCc.RelatedDataID, looseCc.ChangeDesc, null, null);
-                                                Dbug.LogPart(" <rlii> "); /// this logs regardless of what happens
+                                                Dbg.LogPart(rlx, " <rlii> "); /// this logs regardless of what happens
                                             }
-                                            else Dbug.LogPart($"Skipping self-updating ConChanges ({looseCc.ToStringShortened()})");
+                                            else Dbg.LogPart(rlx, $"Skipping self-updating ConChanges ({looseCc.ToStringShortened()})");
                                         }
-                                        Dbug.Log("; ");
+                                        Dbg.Log(rlx, "; ");
 
                                         /// add ConChanges info to dock
                                         if (rliInfo.IsSetup())
@@ -299,11 +298,11 @@ namespace HCResourceLibraryApp.DataHandling
                                             rliInfo = new ResLibIntegrationInfo();
                                         }
                                     }
-                                    Dbug.NudgeIndent(false);
+                                    Dbg.NudgeIndent(rlx, false);
 
                                     if (RCextras.HasElements())
                                         foreach (string rcEdits in RCextras)
-                                            Dbug.Log($". Edited RC :: {rcEdits}");
+                                            Dbg.Log(rlx, $". Edited RC :: {rcEdits}");
                                 }
                             }
                             /// ELSE don't sort loose contents
@@ -311,19 +310,19 @@ namespace HCResourceLibraryApp.DataHandling
                             {
                                 if (keepLooseRCQ)
                                 {
-                                    Dbug.Log("Unallowed from sorting loose ResCon; ");
+                                    Dbg.Log(rlx, "Unallowed from sorting loose ResCon; ");
                                     newRC.ShelfID = GetNewShelfNum();
                                     shelfNums.Add(newRC.ShelfID);
 
                                     Contents.Add(newRC);
-                                    Dbug.Log($"*Added* :: {newRC}; ");
+                                    Dbg.Log(rlx, $"*Added* :: {newRC}; ");
                                 }
                                 else
                                 {
-                                    Dbug.LogPart("No pre-existing library contents to search for connections");
+                                    Dbg.LogPart(rlx, "No pre-existing library contents to search for connections");
                                     if (newRC.ConAddits.HasElements())
                                     {
-                                        Dbug.LogPart($"; Discarding loose conAddits [{newRC.ConAddits.Count}]");
+                                        Dbg.LogPart(rlx, $"; Discarding loose conAddits [{newRC.ConAddits.Count}]");
                                         foreach (ContentAdditionals disCa in newRC.ConAddits)
                                         {
                                             ResLibIntegrationInfo info = new(RCFetchSource.ConAdditionals, disCa.DataIDString, disCa.OptionalName, null, null);
@@ -333,7 +332,7 @@ namespace HCResourceLibraryApp.DataHandling
                                     }
                                     if (newRC.ConChanges.HasElements())
                                     {
-                                        Dbug.LogPart($"; Discarding loose conChanges [{newRC.ConChanges.Count}]");
+                                        Dbg.LogPart(rlx, $"; Discarding loose conChanges [{newRC.ConChanges.Count}]");
                                         int countUpdt = 0;
                                         foreach (ContentChanges disCc in newRC.ConChanges)
                                         {
@@ -350,9 +349,9 @@ namespace HCResourceLibraryApp.DataHandling
                                         }
 
                                         if (countUpdt < newRC.ConChanges.Count)
-                                            Dbug.LogPart($"; Omitted [{newRC.ConChanges.Count - countUpdt}] self-updated conChanges");
+                                            Dbg.LogPart(rlx, $"; Omitted [{newRC.ConChanges.Count - countUpdt}] self-updated conChanges");
                                     }
-                                    Dbug.Log("; ");
+                                    Dbg.Log(rlx, "; ");
                                 }
                             }
                         }
@@ -374,19 +373,19 @@ namespace HCResourceLibraryApp.DataHandling
                                     infoAdd.SetAddedOutcome();
                                     newShelfIdList.Add(newRC.ShelfID);
                                     Contents.Add(newRC);
-                                    Dbug.Log($"Added :: {newRC}");
+                                    Dbg.Log(rlx, $"Added :: {newRC}");
                                 }
                                 else
                                 {
                                     infoAdd.SetAddedOutcome(false);
                                     infoAdd.SetExtraInfo("Missing base content");
-                                    Dbug.Log($"Rejected :: Unset RC; No ContentBaseGroup.");
+                                    Dbg.Log(rlx, $"Rejected :: Unset RC; No ContentBaseGroup.");
                                 }
                             }
                             else
                             {
                                 infoAdd.SetAddedOutcome(false, true);
-                                Dbug.Log($"Rejected duplicate :: {newRC}");
+                                Dbg.Log(rlx, $"Rejected duplicate :: {newRC}");
                             }
 
                             /// get info for conBase, conAddits, and conChanges
@@ -434,8 +433,8 @@ namespace HCResourceLibraryApp.DataHandling
                         addedContentsQ = true;
                     }
                 }
-                Dbug.NudgeIndent(false);                               
-                Dbug.EndLogging();
+                Dbg.NudgeIndent(rlx, false);                               
+                Dbg.EndLogging(rlx);
 
                 // static method
                 int GetNewShelfNum()
@@ -487,9 +486,9 @@ namespace HCResourceLibraryApp.DataHandling
             bool addedLegendQ = false;
             if (newLegends.HasElements())
             {
-                if (disableAddDbug)
-                    Dbug.DeactivateNextLogSession();
-                Dbug.StartLogging("ResLibrary.AddLegend(prms LegData[])");
+                Dbg.StartLogging("ResLibrary.AddLegend(prms LegData[])", out int rlx);
+                Dbg.ToggleThreadOutputOmission(rlx);
+
                 for (int lx = 0; lx < newLegends.Length; lx++)
                 {
                     LegendData leg = newLegends[lx].CloneLegend();
@@ -516,7 +515,7 @@ namespace HCResourceLibraryApp.DataHandling
                                 infoAdd.SetAddedOutcome();
                                 leg.AdoptIndex(Legends.Count);
                                 Legends.Add(leg);
-                                Dbug.Log($"Added Lgd :: {leg}");
+                                Dbg.Log(rlx, $"Added Lgd :: {leg}");
                                 addedLegendQ = true;
                             }
                             else
@@ -535,7 +534,7 @@ namespace HCResourceLibraryApp.DataHandling
                                     infoAdd.SetAddedOutcome();
                                     infoAdd.SetAddedObject(dupedLegData.ToString());
                                     infoAdd.SetExtraInfo($"Edited existing with new: '{leg}'");
-                                    Dbug.Log($"Edited Lgd {(byOverwriteQ ? "(ovr) " : "")}:: {dupedLegData}");
+                                    Dbg.Log(rlx, $"Edited Lgd {(byOverwriteQ ? "(ovr) " : "")}:: {dupedLegData}");
                                     addedLegendQ = true;
                                 }
                                 else
@@ -543,7 +542,7 @@ namespace HCResourceLibraryApp.DataHandling
                                     bool isPartial = leg.ToString() != dupedLegData.ToString();
                                     infoAdd.SetAddedOutcome(false, true);
                                     infoAdd.SetExtraInfo(isPartial ? $"Partial duplicate by definition" : "");
-                                    Dbug.Log($"Rejected {(isPartial ? "partial " : "")}duplicate {(byOverwriteQ ? "(ovr) " : "")}:: {leg}");
+                                    Dbg.Log(rlx, $"Rejected {(isPartial ? "partial " : "")}duplicate {(byOverwriteQ ? "(ovr) " : "")}:: {leg}");
                                 }
                             }
 
@@ -551,7 +550,7 @@ namespace HCResourceLibraryApp.DataHandling
                                 rlaInfoDock.Add(infoAdd);
                         }
                 }
-                Dbug.EndLogging();
+                Dbg.EndLogging(rlx);
             }
             return addedLegendQ;
         }
@@ -560,9 +559,9 @@ namespace HCResourceLibraryApp.DataHandling
             bool addedSummaryQ = false;
             if (newSummaries.HasElements())
             {
-                if (disableAddDbug)
-                    Dbug.DeactivateNextLogSession();
-                Dbug.StartLogging("ResLibrary.AddSummary(SumData[])");
+                Dbg.StartLogging("ResLibrary.AddSummary(SumData[])", out int rlx);
+                Dbg.ToggleThreadOutputOmission(rlx);
+
                 for (int sx = 0; sx < newSummaries.Length; sx++)
                 {
                     SummaryData sum = newSummaries[sx].CloneSummary();
@@ -588,33 +587,33 @@ namespace HCResourceLibraryApp.DataHandling
                                 sum.AdoptIndex(Summaries.Count);
                                 Summaries.Add(sum);
                                 infoAdd.SetAddedOutcome();
-                                Dbug.Log($"Added Smry :: {sum.ToStringShortened()}");
+                                Dbg.Log(rlx, $"Added Smry :: {sum.ToStringShortened()}");
                             }
                             else
                             {
                                 infoAdd.SetAddedOutcome(false, true);
-                                Dbug.Log($"Rejected duplicate :: {sum.ToStringShortened()}");
+                                Dbg.Log(rlx, $"Rejected duplicate :: {sum.ToStringShortened()}");
                             }
 
                             if (infoAdd.IsSetup())
                                 rlaInfoDock.Add(infoAdd);
                         }
                 }
-                Dbug.EndLogging();
+                Dbg.EndLogging(rlx);
             }
             return addedSummaryQ;
         }        
         public void Integrate(ResLibrary other, out ResLibAddInfo[] resLibAddedInfoDock, out ResLibIntegrationInfo[] resLibIntegrationInfoDock)
         {
-            Dbug.StartLogging("ResLibrary.Integrate()");
+            Dbg.StartLogging("ResLibrary.Integrate()", out int rlx);
             resLibIntegrationInfoDock = null;
             resLibAddedInfoDock = null;
             if (other != null)
             {
-                Dbug.LogPart("Other ResLibrary is instantiated; ");
+                Dbg.LogPart(rlx, "Other ResLibrary is instantiated; ");
                 if (other.IsSetup())
                 {
-                    Dbug.Log("Instance is also setup -- integrating libraries; ");
+                    Dbg.Log(rlx, "Instance is also setup -- integrating libraries; ");
 
                     // add resCons
                     AddContent(other.Contents.ToArray());
@@ -630,10 +629,10 @@ namespace HCResourceLibraryApp.DataHandling
                     if (rlaInfoDock.HasElements())
                         resLibAddedInfoDock = rlaInfoDock.ToArray();
                 }
-                else Dbug.Log("Other ResLibrary is not setup; ");
+                else Dbg.Log(rlx, "Other ResLibrary is not setup; ");
             }
-            else Dbug.Log("Other ResLibrary is null; ");
-            Dbug.EndLogging();
+            else Dbg.Log(rlx, "Other ResLibrary is null; ");
+            Dbg.EndLogging(rlx);
         }        
         public void Overwrite(ResLibrary other, out ResLibOverwriteInfo[] resLibOverwriteInfoDock, out ResLibIntegrationInfo[] looseIntegrationInfoDock)
         {
@@ -670,20 +669,20 @@ namespace HCResourceLibraryApp.DataHandling
             looseIntegrationInfoDock = null;            
             if (other != null)
             {
-                Dbug.StartLogging("ResLibrary.Overwrite()");
-                Dbug.Log($"Received other ResLib instance; Is Setup? {other.IsSetup()};");
+                Dbg.StartLogging("ResLibrary.Overwrite()", out int rlx);
+                Dbg.Log(rlx, $"Received other ResLib instance; Is Setup? {other.IsSetup()};");
                 if (other.Contents.HasElements())
                 {
                     VerNum verNum = other.Contents[0].ConBase.VersionNum;
                     if (other.Contents[0].ContentName == LooseResConName && other.Contents.HasElements(2))
                         verNum = other.Contents[1].ConBase.VersionNum;
 
-                    Dbug.LogPart($"Other ResLib instance information :: Contents [{other.Contents.Count}], ");
+                    Dbg.LogPart(rlx, $"Other ResLib instance information :: Contents [{other.Contents.Count}], ");
                     if (other.Legends.HasElements())
-                        Dbug.LogPart($"Legends [{other.Legends.Count}], ");
+                        Dbg.LogPart(rlx, $"Legends [{other.Legends.Count}], ");
                     if (other.Summaries.HasElements())
-                        Dbug.LogPart($"Summaries [{other.Summaries.Count}], ");
-                    Dbug.Log($"Version to overwrite [{verNum}];");
+                        Dbg.LogPart(rlx, $"Summaries [{other.Summaries.Count}], ");
+                    Dbg.Log(rlx, $"Version to overwrite [{verNum}];");
 
 
                     ResLibrary libVer = GetVersion(verNum);
@@ -693,21 +692,21 @@ namespace HCResourceLibraryApp.DataHandling
                         if (libVer.Contents[0].ContentName == LooseResConName && libVer.Contents.HasElements(2))
                             libVerVerify = libVer.Contents[1].ConBase.VersionNum;
 
-                        Dbug.Log($"Fetched library version {verNum.ToStringNums()} [Confirmed? {libVerVerify.Equals(verNum)}] -- Is Setup? [{libVer.IsSetup()}] :: Contents? [{libVer.Contents.HasElements()}], Legends? [{libVer.Legends.HasElements()}], Summaries? [{libVer.Summaries.HasElements()}]; ");
+                        Dbg.Log(rlx, $"Fetched library version {verNum.ToStringNums()} [Confirmed? {libVerVerify.Equals(verNum)}] -- Is Setup? [{libVer.IsSetup()}] :: Contents? [{libVer.Contents.HasElements()}], Legends? [{libVer.Legends.HasElements()}], Summaries? [{libVer.Summaries.HasElements()}]; ");
                         List<ResLibOverwriteInfo> rloInfoDock = new List<ResLibOverwriteInfo>();
                         ResContents integrationQueueRC = null;
-                        Dbug.Log("Initialized ResLibrary Overwrite Info Dock; ");
+                        Dbg.Log(rlx, "Initialized ResLibrary Overwrite Info Dock; ");
 
                         // OVERWRITING : Base Contents
-                        Dbug.Log($"Overwriting: Base Contents; {(libVer.Contents.HasElements() ? "Proceed..." : "Skip")}");
+                        Dbg.Log(rlx, $"Overwriting: Base Contents; {(libVer.Contents.HasElements() ? "Proceed..." : "Skip")}");
                         if (libVer.Contents.HasElements())
                         {
-                            Dbug.NudgeIndent(true);
+                            Dbg.NudgeIndent(rlx, true);
 
                             // net change detection loop
-                            Dbug.LogPart("Generating net changes list (aligns with existing list)  //  ");
-                            Dbug.Log("NCLegend :: [=]Existing & Overwriting has,  [-]Only Existing has,  [+]Only Overwriting has,  (indexExisting:indexOverwriting),  [*]alternate ResCon Matching,  [l]loose ResCon; ");
-                            Dbug.LogPart("> Net Changes Results ::");
+                            Dbg.LogPart(rlx, "Generating net changes list (aligns with existing list)  //  ");
+                            Dbg.Log(rlx, "NCLegend :: [=]Existing & Overwriting has,  [-]Only Existing has,  [+]Only Overwriting has,  (indexExisting:indexOverwriting),  [*]alternate ResCon Matching,  [l]loose ResCon; ");
+                            Dbg.LogPart(rlx, "> Net Changes Results ::");
                             /// Net Change List usage
                             /// - Aligns with existing content list, sources numbers from overwriting list
                             ///     Existing has, Overwriting Matches ->indexO [in existing range]
@@ -823,19 +822,19 @@ namespace HCResourceLibraryApp.DataHandling
                                 {
                                     netChangeList.Add(indexOther);
 
-                                    Dbug.LogPart($"  {ncResult}(");
+                                    Dbg.LogPart(rlx, $"  {ncResult}(");
                                     if (indexExisting.HasValue)
-                                        Dbug.LogPart(indexExisting.Value.ToString());
-                                    else Dbug.LogPart("'");
-                                    Dbug.LogPart(":");
+                                        Dbg.LogPart(rlx, indexExisting.Value.ToString());
+                                    else Dbg.LogPart(rlx, "'");
+                                    Dbg.LogPart(rlx, ":");
                                     if (indexOther.HasValue)
-                                        Dbug.LogPart(indexOther.Value.ToString());
-                                    else Dbug.LogPart("'");
-                                    Dbug.LogPart(")");
+                                        Dbg.LogPart(rlx, indexOther.Value.ToString());
+                                    else Dbg.LogPart(rlx, "'");
+                                    Dbg.LogPart(rlx, ")");
                                 }
                                 else endNetChangeQ = true;
                             }
-                            Dbug.Log("; ");
+                            Dbg.Log(rlx, "; ");
 
 
                             // overwriting loop
@@ -884,14 +883,14 @@ namespace HCResourceLibraryApp.DataHandling
                                     }
                                 }
 
-                                Dbug.Log($"@{lvx} | Existing {{{strExist}}}  //  Overwriting {{{strOther}}}");                                
+                                Dbg.Log(rlx, $"@{lvx} | Existing {{{strExist}}}  //  Overwriting {{{strOther}}}");                                
 
                                 noMoreRCq = resConE == null && resConO == null;
                                 if (!noMoreRCq)
                                 {
                                     bool enableLooseHandlingQ = false;
 
-                                    Dbug.LogPart(" -> ");
+                                    Dbg.LogPart(rlx, " -> ");
                                     /// IF has existing:
                                     ///     IF existing is loose: Enable Loose Handling*;
                                     ///     ELSE 'IF existing is not loose:'
@@ -904,15 +903,15 @@ namespace HCResourceLibraryApp.DataHandling
                                     ///     ELSE 'IF overwriting is not loose:' add overwriting;                                    
                                     if (resConE != null)
                                     {
-                                        Dbug.LogPart("Existing RC exists; ");
+                                        Dbg.LogPart(rlx, "Existing RC exists; ");
                                         if (resConE.ContentName == LooseResConName)
                                         {
                                             enableLooseHandlingQ = true;
-                                            Dbug.LogPart("Existing RC is loose");
+                                            Dbg.LogPart(rlx, "Existing RC is loose");
                                         }
                                         else
                                         {
-                                            Dbug.LogPart($"{(resConO == null ? "No overwriting RC" : "Overwriting RC exists")}; ");
+                                            Dbg.LogPart(rlx, $"{(resConO == null ? "No overwriting RC" : "Overwriting RC exists")}; ");
                                             if (resConO != null)
                                             {
                                                 if (resConO.ContentName == LooseResConName)
@@ -922,14 +921,14 @@ namespace HCResourceLibraryApp.DataHandling
                                                     Contents[resConE.ShelfID].Overwrite(resConO, out ResLibOverwriteInfo[] info);
                                                     AddToInfoDock(info);
                                                 }
-                                                Dbug.LogPart($"{(enableLooseHandlingQ ? "Overwriting RC is loose" : "Existing RC may be overwritten by overwriting RC")}");
+                                                Dbg.LogPart(rlx, $"{(enableLooseHandlingQ ? "Overwriting RC is loose" : "Existing RC may be overwritten by overwriting RC")}");
                                             }
                                             else
                                             {
                                                 Contents[resConE.ShelfID] = new ResContents();
                                                 ResLibOverwriteInfo info = new(resConE.ToString(), null);
                                                 info.SetOverwriteStatus();
-                                                Dbug.LogPart($"Removed existing RC (shelf ix {resConE.ShelfID}) from library contents");
+                                                Dbg.LogPart(rlx, $"Removed existing RC (shelf ix {resConE.ShelfID}) from library contents");
 
                                                 AddToInfoDock(info);
                                             }
@@ -950,9 +949,9 @@ namespace HCResourceLibraryApp.DataHandling
                                             info.SetOverwriteStatus();
                                             AddToInfoDock(info);
                                         }
-                                        Dbug.LogPart($"Overwriting RC exists (no existing RC); {(enableLooseHandlingQ ? "Overwriting RC is loose" : "Added overwriting RC to library as new content")}");
+                                        Dbg.LogPart(rlx, $"Overwriting RC exists (no existing RC); {(enableLooseHandlingQ ? "Overwriting RC is loose" : "Added overwriting RC to library as new content")}");
                                     }
-                                    Dbug.Log("; ");
+                                    Dbg.Log(rlx, "; ");
 
 
                                     /// IF Enable Loose Handling*:
@@ -979,8 +978,8 @@ namespace HCResourceLibraryApp.DataHandling
                                         List<ContentAdditionals> queueLooseAddits = new();
                                         List<ContentChanges> queueLooseChanges = new();
 
-                                        Dbug.LogPart(" >> ");
-                                        Dbug.LogPart("Handling Loose : ");
+                                        Dbg.LogPart(rlx, " >> ");
+                                        Dbg.LogPart(rlx, "Handling Loose : ");
                                         if (resConE != null)
                                         {
                                             isLooseE = resConE.ContentName == LooseResConName;
@@ -991,18 +990,18 @@ namespace HCResourceLibraryApp.DataHandling
                                             isLooseO = resConO.ContentName == LooseResConName;
                                             ixOtherLoose = isLooseO ? 1 : 0;
                                         }
-                                        Dbug.LogPart($"Existing is loose? [{ixExistingLoose == 1}], Overwriting is loose? [{ixOtherLoose == 1}]; ");
+                                        Dbg.LogPart(rlx, $"Existing is loose? [{ixExistingLoose == 1}], Overwriting is loose? [{ixOtherLoose == 1}]; ");
                                         if (ixExistingLoose == ixOtherLoose)
                                         {
                                             ixExistingLoose = 0;
                                             ixOtherLoose = 0;
                                         }
-                                        Dbug.Log($"Back sets (Ex/Ov) [{ixOtherLoose} / {ixExistingLoose}]; ");
+                                        Dbg.Log(rlx, $"Back sets (Ex/Ov) [{ixOtherLoose} / {ixExistingLoose}]; ");
 
                                         
                                         bool noMoreLooseQ = false;
                                         string matchMethodAdt = "", matchMethodUpd = "", ixAdtListO = "", ixUpdListO = "";
-                                        Dbug.NudgeIndent(true);
+                                        Dbg.NudgeIndent(rlx, true);
                                         for (int lx = 0; !noMoreLooseQ; lx++)
                                         {
                                             ContentAdditionals caE = null, caO = null;
@@ -1099,11 +1098,11 @@ namespace HCResourceLibraryApp.DataHandling
                                             noMoreLooseQ = caE == null && ccE == null && caO == null && ccO == null;
 
                                             // content additionals
-                                            Dbug.Log($"ConAdt @{lx} | Existing [{strAdtE}]  //  Overwriting [{strAdtO}]{matchMethodAdt}; ");
-                                            Dbug.LogPart(" -> ");
+                                            Dbg.Log(rlx, $"ConAdt @{lx} | Existing [{strAdtE}]  //  Overwriting [{strAdtO}]{matchMethodAdt}; ");
+                                            Dbg.LogPart(rlx, " -> ");
                                             if (caE != null)
                                             {
-                                                Dbug.LogPart($"Existing Addit exists; ");
+                                                Dbg.LogPart(rlx, $"Existing Addit exists; ");
                                                 if (caO != null)
                                                 {
                                                     ResContents parentRC = null;
@@ -1119,7 +1118,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                     }
                                                     loosened = caE.OverwriteLoose(caO, parentRC, out ResLibOverwriteInfo info);
 
-                                                    Dbug.LogPart($"Existing Addit may be overwritten; {(loosened != null ? "Edited existing has been loosened, adding to loose queue" : "")}");
+                                                    Dbg.LogPart(rlx, $"Existing Addit may be overwritten; {(loosened != null ? "Edited existing has been loosened, adding to loose queue" : "")}");
                                                     if (loosened != null)
                                                     {
                                                         queueLooseDataIDs.Add(loosened.RelatedDataID);
@@ -1130,7 +1129,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                 }
                                                 else
                                                 {
-                                                    Dbug.LogPart("Removing existing addit from connected RC");
+                                                    Dbg.LogPart(rlx, "Removing existing addit from connected RC");
                                                     ResContents parentRC = null;
                                                     if (caE.RelatedShelfID != ResContents.NoShelfNum)
                                                         parentRC = Contents[caE.RelatedShelfID];
@@ -1141,12 +1140,12 @@ namespace HCResourceLibraryApp.DataHandling
                                                     {
                                                         bool disposedQ = parentRC.DisposeConAdditional(caE);  
                                                         info.SetOverwriteStatus(disposedQ);
-                                                        Dbug.LogPart($" {(disposedQ ? "(Done)" : "(Undisposed, Failed)")}");
+                                                        Dbg.LogPart(rlx, $" {(disposedQ ? "(Done)" : "(Undisposed, Failed)")}");
                                                     }
                                                     else
                                                     {
                                                         info.SetOverwriteStatus(false);
-                                                        Dbug.LogPart(" (Failed)");
+                                                        Dbg.LogPart(rlx, " (Failed)");
                                                     }
 
                                                     AddToInfoDock(info);
@@ -1156,7 +1155,7 @@ namespace HCResourceLibraryApp.DataHandling
                                             {
                                                 if (caO != null)
                                                 {
-                                                    Dbug.LogPart("Overwriting Addit exists (no existing addit); Adding overwriting addit to loose queue");
+                                                    Dbg.LogPart(rlx, "Overwriting Addit exists (no existing addit); Adding overwriting addit to loose queue");
                                                     ResLibOverwriteInfo info = new(null, caO.ToString());
                                                     info.SetSourceSubCategory(SourceCategory.Adt);
                                                     info.SetLooseContentStatus();
@@ -1167,17 +1166,17 @@ namespace HCResourceLibraryApp.DataHandling
 
                                                     AddToInfoDock(info);
                                                 }
-                                                else Dbug.LogPart("No overwriting or existing addit");
+                                                else Dbg.LogPart(rlx, "No overwriting or existing addit");
                                             }
-                                            Dbug.Log("; ");
+                                            Dbg.Log(rlx, "; ");
 
 
                                             // content changes
-                                            Dbug.Log($"ConChg @{lx} | Existing [{strUpdE}]  //  Overwriting [{strUpdO}]{matchMethodUpd}; ");
-                                            Dbug.LogPart(" -> ");
+                                            Dbg.Log(rlx, $"ConChg @{lx} | Existing [{strUpdE}]  //  Overwriting [{strUpdO}]{matchMethodUpd}; ");
+                                            Dbg.LogPart(rlx, " -> ");
                                             if (ccE != null)
                                             {
-                                                Dbug.LogPart("Existing changes exists; ");
+                                                Dbg.LogPart(rlx, "Existing changes exists; ");
                                                 if (ccO != null)
                                                 {
                                                     ResContents parentRC = null;
@@ -1193,7 +1192,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                     }
                                                     loosened = ccE.OverwriteLoose(ccO, parentRC, out ResLibOverwriteInfo info);
 
-                                                    Dbug.LogPart($"Existing Changes may be overwritten; {(loosened != null ? "Edited existing has been loosened, adding to loose queue" : "")}");
+                                                    Dbg.LogPart(rlx, $"Existing Changes may be overwritten; {(loosened != null ? "Edited existing has been loosened, adding to loose queue" : "")}");
                                                     if (loosened != null)
                                                     {
                                                         queueLooseDataIDs.Add(loosened.RelatedDataID);
@@ -1204,7 +1203,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                 }
                                                 else
                                                 {
-                                                    Dbug.LogPart("Removing existing changes from connected RC");
+                                                    Dbg.LogPart(rlx, "Removing existing changes from connected RC");
                                                     ResContents parentRC = null;
                                                     if (ccE.RelatedShelfID != ResContents.NoShelfNum)
                                                         parentRC = Contents[ccE.RelatedShelfID];
@@ -1215,12 +1214,12 @@ namespace HCResourceLibraryApp.DataHandling
                                                     {
                                                         bool disposedQ = parentRC.DisposeConChanges(ccE);
                                                         info.SetOverwriteStatus(disposedQ);
-                                                        Dbug.LogPart($" {(disposedQ ? "(Done)" : "(Undisposed, Failed)")}");
+                                                        Dbg.LogPart(rlx, $" {(disposedQ ? "(Done)" : "(Undisposed, Failed)")}");
                                                     }
                                                     else
                                                     {
                                                         info.SetOverwriteStatus(false);
-                                                        Dbug.LogPart(" (Failed)");
+                                                        Dbg.LogPart(rlx, " (Failed)");
                                                     }
 
                                                     AddToInfoDock(info);
@@ -1236,7 +1235,7 @@ namespace HCResourceLibraryApp.DataHandling
 
                                                     if (!isSelfUpdatedQ)
                                                     {
-                                                        Dbug.LogPart("Overwriting changes exists (no existing changes); Adding overwriting changes to loose queue");
+                                                        Dbg.LogPart(rlx, "Overwriting changes exists (no existing changes); Adding overwriting changes to loose queue");
                                                         ResLibOverwriteInfo info = new(null, ccO.ToString());
                                                         info.SetSourceSubCategory(SourceCategory.Upd);
                                                         info.SetLooseContentStatus();
@@ -1247,57 +1246,57 @@ namespace HCResourceLibraryApp.DataHandling
 
                                                         AddToInfoDock(info);
                                                     }
-                                                    else Dbug.LogPart("Overwriting changes were self-updated, skipping");
+                                                    else Dbg.LogPart(rlx, "Overwriting changes were self-updated, skipping");
                                                 }
-                                                else Dbug.LogPart("No overwriting or existing changes");
+                                                else Dbg.LogPart(rlx, "No overwriting or existing changes");
                                             }
-                                            Dbug.Log("; ");
+                                            Dbg.Log(rlx, "; ");
 
 
                                             // compile loose queue
                                             if (noMoreLooseQ)
                                             {
-                                                Dbug.LogPart("Compiling any queued loose contents");
+                                                Dbg.LogPart(rlx, "Compiling any queued loose contents");
                                                 if (queueLooseDataIDs.HasElements())
                                                 {
                                                     ContentBaseGroup looseCbg = new(verNum, LooseResConName, queueLooseDataIDs.ToArray());
                                                     integrationQueueRC = new ResContents(0, looseCbg, queueLooseAddits.ToArray(), queueLooseChanges.ToArray());
-                                                    Dbug.LogPart($"; Loose queue compilied :: {integrationQueueRC}");
+                                                    Dbg.LogPart(rlx, $"; Loose queue compilied :: {integrationQueueRC}");
                                                 }
-                                                else Dbug.LogPart(" (None recieved)");
-                                                Dbug.Log("; ");
+                                                else Dbg.LogPart(rlx, " (None recieved)");
+                                                Dbg.Log(rlx, "; ");
                                             }                                            
                                         }
-                                        Dbug.NudgeIndent(false);
+                                        Dbg.NudgeIndent(rlx, false);
                                     }
 
                                 }
-                                else Dbug.Log("No ResCons provided; Base Contents overwriting End; ");
+                                else Dbg.Log(rlx, "No ResCons provided; Base Contents overwriting End; ");
 
 
                                 // reports the new overwriting info items
-                                Dbug.NudgeIndent(true);
+                                Dbg.NudgeIndent(rlx, true);
                                 if (rloInfoDock.HasElements() && !noMoreRCq)
                                 {
-                                    Dbug.Log("Overwrite summary of these ResContents; ");
-                                    Dbug.NudgeIndent(true);
+                                    Dbg.Log(rlx, "Overwrite summary of these ResContents; ");
+                                    Dbg.NudgeIndent(rlx, true);
                                     for (int ix = ixInfoDockLatest; ix < rloInfoDock.Count; ix++)
-                                        Dbug.Log(rloInfoDock[ix].ToString() + "; ");
+                                        Dbg.Log(rlx, rloInfoDock[ix].ToString() + "; ");
                                     ixInfoDockLatest = rloInfoDock.Count;
-                                    Dbug.NudgeIndent(false);
+                                    Dbg.NudgeIndent(rlx, false);
                                 }
-                                Dbug.NudgeIndent(false);
+                                Dbg.NudgeIndent(rlx, false);
                             }
 
-                            Dbug.NudgeIndent(false);
+                            Dbg.NudgeIndent(rlx, false);
                         }
 
 
                         // OVERWRITING : Legend Contents
-                        Dbug.Log($"Overwriting: Legends; {(libVer.Legends.HasElements() || other.Legends.HasElements() ? "Proceed..." : "Skip")}");
+                        Dbg.Log(rlx, $"Overwriting: Legends; {(libVer.Legends.HasElements() || other.Legends.HasElements() ? "Proceed..." : "Skip")}");
                         if (libVer.Legends.HasElements() || other.Legends.HasElements())
                         {
-                            Dbug.NudgeIndent(true);
+                            Dbg.NudgeIndent(rlx, true);
 
                             /// The overwriting process for the legends will need to be redone.
                             ///     - Previously, only the introduced legends would be fetched from the library, overlooking the array of used legends from the overwriting library (other)
@@ -1351,7 +1350,7 @@ namespace HCResourceLibraryApp.DataHandling
                                 }
 
 
-                                Dbug.Log($"@ix{lgx}  |  Existing [{strLegE}]  //  Overwriting [{strLegO}] (Match method : {strLegOMatchMethod}); ");
+                                Dbg.Log(rlx, $"@ix{lgx}  |  Existing [{strLegE}]  //  Overwriting [{strLegO}] (Match method : {strLegOMatchMethod}); ");
                                 ResLibOverwriteInfo info = new(strLegE, strLegO, SourceOverwrite.Legend);
                                 info.SetOverwriteStatus(false);
 
@@ -1359,25 +1358,25 @@ namespace HCResourceLibraryApp.DataHandling
 
                                 if (!noMoreLegsQ)
                                 {
-                                    Dbug.LogPart(" -> ");
+                                    Dbg.LogPart(rlx, " -> ");
                                     if (legE != null)
                                     {
-                                        Dbug.LogPart("Existing Legend exists; ");
+                                        Dbg.LogPart(rlx, "Existing Legend exists; ");
                                         if (legO != null)
                                         {
-                                            Dbug.LogPart("Overwriting Legend exists; Existing Legend may be overwritten with Overwriting Legend");
+                                            Dbg.LogPart(rlx, "Overwriting Legend exists; Existing Legend may be overwritten with Overwriting Legend");
                                             if (legE.Index != ResContents.NoShelfNum)
                                                 Legends[legE.Index].Overwrite(legO, out info);
-                                            else Dbug.LogPart(" (Failed)");
+                                            else Dbg.LogPart(rlx, " (Failed)");
 
                                             AddToInfoDock(info);
                                         }
                                         else
                                         {
-                                            Dbug.LogPart("No overwriting legend; ");
+                                            Dbg.LogPart(rlx, "No overwriting legend; ");
                                             if (legE.VersionIntroduced.Equals(verNum))
                                             {
-                                                Dbug.LogPart($"Existing Legend introduced in current version ({verNum}); Removing Existing Legend");
+                                                Dbg.LogPart(rlx, $"Existing Legend introduced in current version ({verNum}); Removing Existing Legend");
                                                 if (legE.Index != ResContents.NoShelfNum)
                                                 {
                                                     LegendData trueLegE = Legends[legE.Index];
@@ -1390,31 +1389,31 @@ namespace HCResourceLibraryApp.DataHandling
 
                                                 AddToInfoDock(info);
                                             }
-                                            else Dbug.LogPart($"Existing Legend introduced in a different version, no changes made");
+                                            else Dbg.LogPart(rlx, $"Existing Legend introduced in a different version, no changes made");
                                         }
                                     }
                                     else
                                     {
-                                        Dbug.LogPart("Overwriting Legend exists (no existing Legend); Adding new Legend item to library");
+                                        Dbg.LogPart(rlx, "Overwriting Legend exists (no existing Legend); Adding new Legend item to library");
                                         bool addedLegOq = AddLegend(legO);
                                         info.SetOverwriteStatus(addedLegOq);
 
                                         AddToInfoDock(info);
                                     }
-                                    Dbug.Log("; ");
-                                    Dbug.Log($" -> Legend Overwriting Outcome: {info}; ");
+                                    Dbg.Log(rlx, "; ");
+                                    Dbg.Log(rlx, $" -> Legend Overwriting Outcome: {info}; ");
                                 }
-                                else Dbug.Log("No Legends provided; Legends overwriting End; ");
+                                else Dbg.Log(rlx, "No Legends provided; Legends overwriting End; ");
                             }
-                            Dbug.NudgeIndent(false);
+                            Dbg.NudgeIndent(rlx, false);
                         }
 
 
                         // OVERWRITING : Summary Contents
-                        Dbug.Log($"Overwriting: Summaries; {(libVer.Summaries.HasElements() || other.Summaries.HasElements() ? "Proceed..." : "Skip")}");
+                        Dbg.Log(rlx, $"Overwriting: Summaries; {(libVer.Summaries.HasElements() || other.Summaries.HasElements() ? "Proceed..." : "Skip")}");
                         if (libVer.Summaries.HasElements() || other.Summaries.HasElements())
                         {
-                            Dbug.NudgeIndent(true);
+                            Dbg.NudgeIndent(rlx, true);
 
                             bool noMoreSumsQ = false;
                             for (int smx = 0; !noMoreSumsQ; smx++)
@@ -1431,7 +1430,7 @@ namespace HCResourceLibraryApp.DataHandling
                                     sumO = other.Summaries[smx];
                                     strSumO = sumO.ToString();
                                 }
-                                Dbug.Log($"@ix{smx}  |  Existing [{strSumE}]  //  Overwriting [{strSumO}]; ");
+                                Dbg.Log(rlx, $"@ix{smx}  |  Existing [{strSumE}]  //  Overwriting [{strSumO}]; ");
                                 ResLibOverwriteInfo info = new(strSumE, strSumO, SourceOverwrite.Summary);
                                 info.SetOverwriteStatus(false);
 
@@ -1441,57 +1440,57 @@ namespace HCResourceLibraryApp.DataHandling
                                 {
                                     // note: summaries can be replaced, but they can never be removed, and therefore an 'add' also may never occur
                                     // There must always be a summary, a maximum of 1!
-                                    Dbug.LogPart(" -> ");
+                                    Dbg.LogPart(rlx, " -> ");
                                     if (sumE != null)
                                     {
-                                        Dbug.LogPart("Existing Summary exists; ");
+                                        Dbg.LogPart(rlx, "Existing Summary exists; ");
                                         if (sumO != null)
                                         {
-                                            Dbug.LogPart("Overwriting Summary exists; Existing Summary may be overwritten with Overwriting Summary");
+                                            Dbg.LogPart(rlx, "Overwriting Summary exists; Existing Summary may be overwritten with Overwriting Summary");
                                             if (sumE.Index != ResContents.NoShelfNum)
                                                 Summaries[sumE.Index].Overwrite(sumO, out info);
-                                            else Dbug.LogPart(" (Failed)");
+                                            else Dbg.LogPart(rlx, " (Failed)");
                                         }
-                                        else Dbug.LogPart("No overwriting summary; No changes made");
+                                        else Dbg.LogPart(rlx, "No overwriting summary; No changes made");
                                     }
-                                    else Dbug.LogPart("Overwriting Summary exists (no existing summary); No changes made (!! no existing?! : ISSUE !!)");
-                                    Dbug.Log("; ");
-                                    Dbug.Log($" -> Summary Overwriting Outcome: {info}; ");
+                                    else Dbg.LogPart(rlx, "Overwriting Summary exists (no existing summary); No changes made (!! no existing?! : ISSUE !!)");
+                                    Dbg.Log(rlx, "; ");
+                                    Dbg.Log(rlx, $" -> Summary Overwriting Outcome: {info}; ");
                                 }
-                                else Dbug.Log("No Summaries provided; Summaries overwriting End; ");
+                                else Dbg.Log(rlx, "No Summaries provided; Summaries overwriting End; ");
 
                                 AddToInfoDock(info);
                             }
-                            Dbug.NudgeIndent(false);
+                            Dbg.NudgeIndent(rlx, false);
                         }
 
 
                         // OVERWRITING : Loose integration
-                        Dbug.Log($"Overwriting: Looose Content Integration :: {(integrationQueueRC != null ? "Proceed..." : "Skip")}");
+                        Dbg.Log(rlx, $"Overwriting: Looose Content Integration :: {(integrationQueueRC != null ? "Proceed..." : "Skip")}");
                         if (integrationQueueRC != null)
                         {
                             bool integratedLooseQ = AddContent(false, integrationQueueRC);
-                            Dbug.Log($" -> Received loose ResCon: {integrationQueueRC}; Integration successful? {(integratedLooseQ ? "Yes" : "No")}; ");
+                            Dbg.Log(rlx, $" -> Received loose ResCon: {integrationQueueRC}; Integration successful? {(integratedLooseQ ? "Yes" : "No")}; ");
                         }
 
 
 
                         // information send-off
-                        Dbug.LogPart("Compiling information docks (overwriting [");
+                        Dbg.LogPart(rlx, "Compiling information docks (overwriting [");
                         if (rloInfoDock.HasElements())
                         {
                             resLibOverwriteInfoDock = rloInfoDock.ToArray();
-                            Dbug.LogPart($"{resLibOverwriteInfoDock.Length}");
+                            Dbg.LogPart(rlx, $"{resLibOverwriteInfoDock.Length}");
                         }
-                        else Dbug.LogPart("0");
-                        Dbug.LogPart("], integration [");
+                        else Dbg.LogPart(rlx, "0");
+                        Dbg.LogPart(rlx, "], integration [");
                         if (rliInfoDock.HasElements())
                         {
                             looseIntegrationInfoDock = rliInfoDock.ToArray();
-                            Dbug.LogPart($"{rliInfoDock.ToArray().Length}");
+                            Dbg.LogPart(rlx, $"{rliInfoDock.ToArray().Length}");
                         }
-                        else Dbug.LogPart("0");
-                        Dbug.Log("]); ");
+                        else Dbg.LogPart(rlx, "0");
+                        Dbg.Log(rlx, "]); ");
 
 
                         // LOCAL METHOD
@@ -1505,9 +1504,9 @@ namespace HCResourceLibraryApp.DataHandling
                                 }
                         }
                     }
-                    else Dbug.Log($"Could not fetch library version details; Cancelling overwriting; ");
+                    else Dbg.Log(rlx, $"Could not fetch library version details; Cancelling overwriting; ");
                 }
-                Dbug.EndLogging();
+                Dbg.EndLogging(rlx);
             }
         }
         public bool GetVersionRange(out VerNum lowest, out VerNum highest)
@@ -1538,14 +1537,14 @@ namespace HCResourceLibraryApp.DataHandling
         }
         public void ClearLibrary()
         {
-            Dbug.SingleLog("ResLibrary.ClearLibrary()", "ResLibrary's data has been cleared (reset)");
+            Dbg.SingleLog("ResLibrary.ClearLibrary()", "ResLibrary's data has been cleared (reset)");
             _contents = new List<ResContents>();
             _legends = new List<LegendData>();
             _summaries = new List<SummaryData>();
         }
         public bool RevertToVersion(VerNum verReversion)
         {
-            Dbug.StartLogging("ResLibrary.RevertToVersion(VerNum)");
+            Dbg.StartLogging("ResLibrary.RevertToVersion(VerNum)", out int rlx);
             bool revertedQ = false;
             if (IsSetup())
             {
@@ -1558,11 +1557,11 @@ namespace HCResourceLibraryApp.DataHandling
                     // reversion time!
                     if (GetVersionRange(out _, out VerNum currVer))
                     {
-                        Dbug.LogPart($"Retrieved latest library version ({currVer}), and reversion version ({verReversion}); ");
+                        Dbg.LogPart(rlx, $"Retrieved latest library version ({currVer}), and reversion version ({verReversion}); ");
                         if (currVer.AsNumber > verReversion.AsNumber)
                         {
-                            Dbug.Log("Fetching array of versions to unload; ");
-                            Dbug.LogPart("- Versions to unload ::");
+                            Dbg.Log(rlx, "Fetching array of versions to unload; ");
+                            Dbg.LogPart(rlx, "- Versions to unload ::");
                             List<VerNum> unloadableVers = new();
                             for (int cvx = currVer.AsNumber; cvx > verReversion.AsNumber; cvx--)
                             {
@@ -1570,10 +1569,10 @@ namespace HCResourceLibraryApp.DataHandling
                                 if (unloadableVerNum.HasValue())
                                 {
                                     unloadableVers.Add(unloadableVerNum);
-                                    Dbug.LogPart($"  {unloadableVerNum.ToStringNums()}");
+                                    Dbg.LogPart(rlx, $"  {unloadableVerNum.ToStringNums()}");
                                 }
                             }
-                            Dbug.Log("; Proceeding to revert versions;");
+                            Dbg.Log(rlx, "; Proceeding to revert versions;");
 
                             ProgressBarInitialize();
                             ProgressBarUpdate(0);
@@ -1584,7 +1583,7 @@ namespace HCResourceLibraryApp.DataHandling
                             for (int ulx = 0; ulx < unloadableVers.Count; ulx++)
                             {
                                 VerNum verToUnload = unloadableVers[ulx];
-                                Dbug.Log($"Unloading -- Version {verToUnload} contents; ");
+                                Dbg.Log(rlx, $"Unloading -- Version {verToUnload} contents; ");
 
                                 bool firstUnload = ulx == 0;
                                 int countExempted = 0, countExempted2 = 0;
@@ -1593,12 +1592,12 @@ namespace HCResourceLibraryApp.DataHandling
                                 List<SummaryData> summariesCopy = new();
 
                                 // INDENT MAJOR
-                                Dbug.NudgeIndent(true);
+                                Dbg.NudgeIndent(rlx, true);
 
 
                                 // -- REMOVE CONTENTS --
-                                Dbug.Log("ResContents; ");
-                                Dbug.NudgeIndent(true);
+                                Dbg.Log(rlx, "ResContents; ");
+                                Dbg.NudgeIndent(rlx, true);
                                 if (firstUnload)
                                     contentsCopy.AddRange(Contents.ToArray());
                                 else
@@ -1609,7 +1608,7 @@ namespace HCResourceLibraryApp.DataHandling
                                 /// resCon exemption loop
                                 if (contentsCopy.HasElements())
                                 {
-                                    Dbug.Log($"Copied [{contentsCopy.Count}] ResContents from {(firstUnload ? "main contents" : "remaining contents")}; ");
+                                    Dbg.Log(rlx, $"Copied [{contentsCopy.Count}] ResContents from {(firstUnload ? "main contents" : "remaining contents")}; ");
                                     foreach (ResContents resCon in contentsCopy)
                                     {
                                         if (resCon.IsSetup())
@@ -1626,7 +1625,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                         if (caToRemove.VersionAdded.Equals(verToUnload))
                                                             if (resCon.DisposeConAdditional(caToRemove))
                                                             {
-                                                                Dbug.Log($". Removed ConAddits :: {caToRemove} [from {resCon}]");
+                                                                Dbg.Log(rlx, $". Removed ConAddits :: {caToRemove} [from {resCon}]");
                                                                 caRemovalAdjust--;
                                                                 countExempted2++;
                                                             }
@@ -1641,7 +1640,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                         if (ccToRemove.VersionChanged.Equals(verToUnload))
                                                             if (resCon.DisposeConChanges(ccToRemove))
                                                             {
-                                                                Dbug.Log($". Removed ConChanges :: {ccToRemove} [from {resCon}]");
+                                                                Dbg.Log(rlx, $". Removed ConChanges :: {ccToRemove} [from {resCon}]");
                                                                 ccRemovalAdjust--;
                                                                 countExempted2++;
                                                             }
@@ -1655,20 +1654,20 @@ namespace HCResourceLibraryApp.DataHandling
                                             else
                                             {
                                                 countExempted++;
-                                                Dbug.Log($". Exempted :: {resCon}");
+                                                Dbg.Log(rlx, $". Exempted :: {resCon}");
                                             }
                                         }
                                     }
-                                    Dbug.Log($"[{countExempted}] ResContents (and [{countExempted2}] ConAddits/ConChanges) were removed, [{remainingContents.Count}] remain; ");
+                                    Dbg.Log(rlx, $"[{countExempted}] ResContents (and [{countExempted2}] ConAddits/ConChanges) were removed, [{remainingContents.Count}] remain; ");
                                 }
-                                else Dbug.Log("There are no ResContents to remove; ");
-                                Dbug.NudgeIndent(false);
+                                else Dbg.Log(rlx, "There are no ResContents to remove; ");
+                                Dbg.NudgeIndent(rlx, false);
 
 
                                 // -- REMOVE LEGENDS --
                                 countExempted = 0;
-                                Dbug.Log("LegendDatas; ");
-                                Dbug.NudgeIndent(true);
+                                Dbg.Log(rlx, "LegendDatas; ");
+                                Dbg.NudgeIndent(rlx, true);
                                 if (firstUnload)
                                     legendsCopy.AddRange(Legends.ToArray());
                                 else
@@ -1679,7 +1678,7 @@ namespace HCResourceLibraryApp.DataHandling
                                 /// legends exemption loop
                                 if (legendsCopy.HasElements())
                                 {
-                                    Dbug.Log($"Copied [{legendsCopy.Count}] Legend Datas from {(firstUnload ? "main contents" : "remaining contents")}; ");
+                                    Dbg.Log(rlx, $"Copied [{legendsCopy.Count}] Legend Datas from {(firstUnload ? "main contents" : "remaining contents")}; ");
                                     foreach (LegendData legDat in legendsCopy)
                                     {
                                         if (legDat.IsSetup())
@@ -1689,20 +1688,20 @@ namespace HCResourceLibraryApp.DataHandling
                                             else
                                             {
                                                 countExempted++;
-                                                Dbug.Log($". Exempted Legd :: {legDat}");
+                                                Dbg.Log(rlx, $". Exempted Legd :: {legDat}");
                                             }
                                         }
                                     }
-                                    Dbug.Log($"[{countExempted}] Legend Datas were removed, [{remainingLegends.Count}] remain; ");
+                                    Dbg.Log(rlx, $"[{countExempted}] Legend Datas were removed, [{remainingLegends.Count}] remain; ");
                                 }
-                                else Dbug.Log("There are no Legend Datas to remove; ");
-                                Dbug.NudgeIndent(false);
+                                else Dbg.Log(rlx, "There are no Legend Datas to remove; ");
+                                Dbg.NudgeIndent(rlx, false);
 
 
                                 // -- REMOVE SUMMARIES --
                                 countExempted2 = 0;
-                                Dbug.Log("SummaryDatas; ");
-                                Dbug.NudgeIndent(true);
+                                Dbg.Log(rlx, "SummaryDatas; ");
+                                Dbg.NudgeIndent(rlx, true);
                                 if (firstUnload)
                                     summariesCopy.AddRange(Summaries.ToArray());
                                 else
@@ -1713,7 +1712,7 @@ namespace HCResourceLibraryApp.DataHandling
                                 /// summaries exemption loop
                                 if (summariesCopy.HasElements())
                                 {
-                                    Dbug.Log($"Copied [{summariesCopy.Count}] Summary Datas from {(firstUnload ? "main contents" : "remaining contents")}; ");
+                                    Dbg.Log(rlx, $"Copied [{summariesCopy.Count}] Summary Datas from {(firstUnload ? "main contents" : "remaining contents")}; ");
                                     foreach (SummaryData sumDat in summariesCopy)
                                     {
                                         if (sumDat.IsSetup())
@@ -1722,17 +1721,17 @@ namespace HCResourceLibraryApp.DataHandling
                                             else
                                             {
                                                 countExempted2++;
-                                                Dbug.Log($". Exempted Smry :: {sumDat.ToStringShortened()}");    
+                                                Dbg.Log(rlx, $". Exempted Smry :: {sumDat.ToStringShortened()}");    
                                             }
                                     }
-                                    Dbug.Log($"[{countExempted2}] Summaries Datas were removed, [{remainingSummaries.Count}] remain; ");
+                                    Dbg.Log(rlx, $"[{countExempted2}] Summaries Datas were removed, [{remainingSummaries.Count}] remain; ");
                                 }
-                                else Dbug.Log("There are no Summary Datas to remove; ");
-                                Dbug.NudgeIndent(false);
+                                else Dbg.Log(rlx, "There are no Summary Datas to remove; ");
+                                Dbg.NudgeIndent(rlx, false);
 
 
                                 // UNINDENT MAJOR
-                                Dbug.NudgeIndent(false);
+                                Dbg.NudgeIndent(rlx, false);
 
                                 TaskNum++;
                                 ProgressBarUpdate(TaskNum / TaskCount, true);
@@ -1740,16 +1739,16 @@ namespace HCResourceLibraryApp.DataHandling
 
                             revertedQ = true;
                         }
-                        else Dbug.Log("Version to revert to is ahead of or equal to current version; ");
+                        else Dbg.Log(rlx, "Version to revert to is ahead of or equal to current version; ");
                     }
-                    else Dbug.Log("Could not retrieve latest library version; ");
+                    else Dbg.Log(rlx, "Could not retrieve latest library version; ");
 
 
                     // if reversion successfull, set contents, legends, and summaries to remaining data
                     // else, no changes
                     if (revertedQ)
                     {
-                        Dbug.LogPart("Version reversion complete; Updating library with remaining contents");
+                        Dbg.LogPart(rlx, "Version reversion complete; Updating library with remaining contents");
                         /// contents
                         if (remainingContents.HasElements())
                             Contents = remainingContents;
@@ -1766,15 +1765,15 @@ namespace HCResourceLibraryApp.DataHandling
                         if (GetVersionRange(out _, out VerNum postRevertCurr))
                         {
                             revertedQ = postRevertCurr.Equals(verReversion);
-                            Dbug.LogPart($"; Verified? {revertedQ}");
+                            Dbg.LogPart(rlx, $"; Verified? {revertedQ}");
                         }
-                        Dbug.Log("; ");
+                        Dbg.Log(rlx, "; ");
                     }
                 }
-                else Dbug.Log("Received an invalid version to revert to; ");
+                else Dbg.Log(rlx, "Received an invalid version to revert to; ");
             }
-            else Dbug.Log($"ResLibrary is not setup; ");
-            Dbug.EndLogging();
+            else Dbg.Log(rlx, $"ResLibrary is not setup; ");
+            Dbg.EndLogging(rlx);
             return revertedQ;
         }
         public SearchResult[] SearchLibrary(string searchArg, SearchOptions searchOpts, int maxResults = 99)
@@ -1782,8 +1781,8 @@ namespace HCResourceLibraryApp.DataHandling
             List<SearchResult> results = new();
             if (IsSetup() && maxResults > 0)
             {
-                Dbug.StartLogging("ResLibrary.SearchLibrary()");
-                Dbug.Log($"Received search query; search Arg [{searchArg}]  --  search Opts [{searchOpts}]  --  max Results [{maxResults}]; ");
+                Dbg.StartLogging("ResLibrary.SearchLibrary()", out int rlx);
+                Dbg.Log(rlx, $"Received search query; search Arg [{searchArg}]  --  search Opts [{searchOpts}]  --  max Results [{maxResults}]; ");
 
                 /// IF recieved search arguement and search options: do a proper search query; ELSE select items at random
                 if (searchArg.IsNotNEW() && searchOpts.IsSetup())
@@ -1835,7 +1834,7 @@ namespace HCResourceLibraryApp.DataHandling
                             NOTE : RelData ID* is only checked when the Base Content Category is exempted from search options
                      */
 
-                    Dbug.Log("Search arguement and search options provided; proceeding with search query; ");
+                    Dbg.Log(rlx, "Search arguement and search options provided; proceeding with search query; ");
                     List<SearchResult> initialResultsAll = new(), irrelevantResults = new();
                     List<string> contentNames = new();
 
@@ -1845,8 +1844,8 @@ namespace HCResourceLibraryApp.DataHandling
 
 
                     // FIRST STEP - Find any results within results limit
-                    Dbug.Log("1st Step: Find all results; ");
-                    Dbug.NudgeIndent(true);
+                    Dbg.Log(rlx, "1st Step: Find all results; ");
+                    Dbg.NudgeIndent(rlx, true);
                     for (int cx = 0; cx < Contents.Count; cx++)
                     {
                         // setup
@@ -1988,13 +1987,13 @@ namespace HCResourceLibraryApp.DataHandling
                                     initialResultsAll.Add(result);
                             }
 
-                            Dbug.LogPart($"RC #{content.ShelfID} '{content.ContentName}' provided '{resultBatch.Count}' results:");
-                            Dbug.LogPart($" {(dbgCountBase > 0 ? $"[Bse = {dbgCountBase}]" : "")}");
-                            Dbug.LogPart($" {(dbgCountAdt > 0 ? $"[Adt = {dbgCountAdt}]" : "")}");
-                            Dbug.LogPart($" {(dbgCountUpd > 0 ? $"[Upd = {dbgCountUpd}]" : "")}");
+                            Dbg.LogPart(rlx, $"RC #{content.ShelfID} '{content.ContentName}' provided '{resultBatch.Count}' results:");
+                            Dbg.LogPart(rlx, $" {(dbgCountBase > 0 ? $"[Bse = {dbgCountBase}]" : "")}");
+                            Dbg.LogPart(rlx, $" {(dbgCountAdt > 0 ? $"[Adt = {dbgCountAdt}]" : "")}");
+                            Dbg.LogPart(rlx, $" {(dbgCountUpd > 0 ? $"[Upd = {dbgCountUpd}]" : "")}");
                             if (dbgDupeCount > 0)
-                                Dbug.LogPart($" -- Removed '{dbgDupeCount}' duplicate results");
-                            Dbug.Log("; ");
+                                Dbg.LogPart(rlx, $" -- Removed '{dbgDupeCount}' duplicate results");
+                            Dbg.Log(rlx, "; ");
                         }
 
                         TaskNum++;
@@ -2002,25 +2001,25 @@ namespace HCResourceLibraryApp.DataHandling
                     }
                     if (initialResultsAll.HasElements())
                     {
-                        Dbug.LogPart($" -> Shrinking initial results within max results limit '{maxResults}'; ");
+                        Dbg.LogPart(rlx, $" -> Shrinking initial results within max results limit '{maxResults}'; ");
                         for (int ix = 0; ix < initialResultsAll.Count && irrelevantResults.Count < maxResults; ix++)
                             irrelevantResults.Add(initialResultsAll[ix]);
 
-                        Dbug.Log($"{(irrelevantResults.Count <= maxResults ? "Done" : $"ERROR: improperly limited [{irrelevantResults.Count} <= {maxResults} : False]")}; ");
+                        Dbg.Log(rlx, $"{(irrelevantResults.Count <= maxResults ? "Done" : $"ERROR: improperly limited [{irrelevantResults.Count} <= {maxResults} : False]")}; ");
                     }
-                    Dbug.NudgeIndent(false);
+                    Dbg.NudgeIndent(rlx, false);
 
 
                     // SECOND STEP - Sort results by relevance and alphanumeric order
-                    Dbug.Log("2nd Step: relevance and alphanumeric sorting; ");
+                    Dbg.Log(rlx, "2nd Step: relevance and alphanumeric sorting; ");
                     contentNames = contentNames.ToArray().SortWords();
                     List<SearchResult> exactResults = new(), priorityPartialResults = new(), partialResults = new();
                     if (contentNames.HasElements())
                     {
                         List<SearchResult> iniExactRes = new(), iniPriorityPartialRes = new(), iniPartialRes = new();
 
-                        Dbug.Log(" -> Sorting all results into initial exacts, priority partials*, and partials; ");
-                        Dbug.NudgeIndent(true);
+                        Dbg.Log(rlx, " -> Sorting all results into initial exacts, priority partials*, and partials; ");
+                        Dbg.NudgeIndent(rlx, true);
                         for (int nx = 0; nx < contentNames.Count; nx++)
                         {
                             string contentName = contentNames[nx];
@@ -2041,38 +2040,38 @@ namespace HCResourceLibraryApp.DataHandling
                                 }
                             }
 
-                            Dbug.LogPart($"@{nx + 1} '{contentName}', Exct [{iniExactRes.Count - dbgPrevExactCount}], Prtl [{iniPriorityPartialRes.Count - dbgPrevPriorityCount}* + {iniPartialRes.Count - dbgPrevPartialCount}]");
+                            Dbg.LogPart(rlx, $"@{nx + 1} '{contentName}', Exct [{iniExactRes.Count - dbgPrevExactCount}], Prtl [{iniPriorityPartialRes.Count - dbgPrevPriorityCount}* + {iniPartialRes.Count - dbgPrevPartialCount}]");
                             if (nx % 3 == 2 || contentNames.Count == nx + 1)
-                                Dbug.Log("; ");
-                            else Dbug.LogPart("    //    ");
+                                Dbg.Log(rlx, "; ");
+                            else Dbg.LogPart(rlx, "    //    ");
                         }
-                        Dbug.NudgeIndent(false);
+                        Dbg.NudgeIndent(rlx, false);
 
-                        Dbug.Log($" -> Limiting exacts [E] ('{iniExactRes.Count}' items), priority partials [R] ('{iniPriorityPartialRes.Count}' items), and partial [P] ('{iniPartialRes.Count}' items) results to cumulative total '{maxResults}'; ");
-                        Dbug.NudgeIndent(true);
+                        Dbg.Log(rlx, $" -> Limiting exacts [E] ('{iniExactRes.Count}' items), priority partials [R] ('{iniPriorityPartialRes.Count}' items), and partial [P] ('{iniPartialRes.Count}' items) results to cumulative total '{maxResults}'; ");
+                        Dbg.NudgeIndent(rlx, true);
                         int resultTotal = 0;
                         bool addedResultQ = true;
-                        Dbug.LogPart("Adding ::");
+                        Dbg.LogPart(rlx, "Adding ::");
                         for (int x = 0; resultTotal < maxResults && addedResultQ; x++)
                         {
                             int indexPriority = resultTotal - exactResults.Count;
                             int indexPartial = resultTotal - exactResults.Count - priorityPartialResults.Count;
-                            Dbug.LogPart($" [{resultTotal + 1}]");
+                            Dbg.LogPart(rlx, $" [{resultTotal + 1}]");
 
                             if (resultTotal < iniExactRes.Count)
                             {
                                 exactResults.Add(iniExactRes[resultTotal]);
-                                Dbug.LogPart($"E{resultTotal}");
+                                Dbg.LogPart(rlx, $"E{resultTotal}");
                             }
                             else if (indexPriority < iniPriorityPartialRes.Count)
                             {
                                 priorityPartialResults.Add(iniPriorityPartialRes[indexPriority]);
-                                Dbug.LogPart($"R{indexPriority}");
+                                Dbg.LogPart(rlx, $"R{indexPriority}");
                             }
                             else if (indexPartial < iniPartialRes.Count)
                             {
                                 partialResults.Add(iniPartialRes[indexPartial]);
-                                Dbug.LogPart($"P{indexPartial}");
+                                Dbg.LogPart(rlx, $"P{indexPartial}");
                             }
                             else addedResultQ = false;
 
@@ -2081,20 +2080,20 @@ namespace HCResourceLibraryApp.DataHandling
                             TaskNum++;
                             ProgressBarUpdate(TaskNum / TaskCount);
                         }
-                        Dbug.Log(";  Done; ");
-                        Dbug.NudgeIndent(false);
+                        Dbg.Log(rlx, ";  Done; ");
+                        Dbg.NudgeIndent(rlx, false);
                     }
-                    else Dbug.Log("No initial results from 1st step. No results found.");
+                    else Dbg.Log(rlx, "No initial results from 1st step. No results found.");
 
 
                     // THIRD STEP - Compile results in exact/partial relevance -UNLESS- ignoring relevance
                     if (contentNames.HasElements())
                     {
-                        Dbug.Log("3rd Step: compile results exact/partial -or- ignore relevance; ");
-                        Dbug.LogPart(" -> ");
+                        Dbg.Log(rlx, "3rd Step: compile results exact/partial -or- ignore relevance; ");
+                        Dbg.LogPart(rlx, " -> ");
                         if (!searchOpts.ignoreRelevanceQ)
                         {
-                            Dbug.LogPart($"Relevance; Exact / Partial - submitting 'exact results' ['{exactResults.Count}' items] and 'partial results' ['{priorityPartialResults.Count}* + {partialResults.Count}' items] to 'results'");
+                            Dbg.LogPart(rlx, $"Relevance; Exact / Partial - submitting 'exact results' ['{exactResults.Count}' items] and 'partial results' ['{priorityPartialResults.Count}* + {partialResults.Count}' items] to 'results'");
                             if (exactResults.HasElements())
                                 results.AddRange(exactResults);
                             if (priorityPartialResults.HasElements())
@@ -2104,17 +2103,17 @@ namespace HCResourceLibraryApp.DataHandling
                         }
                         else
                         {
-                            Dbug.LogPart($"Ignoring Relevance; Order By Shelf ID - submitting 'initial results' ['{irrelevantResults.Count}' items] to 'results'");
+                            Dbg.LogPart(rlx, $"Ignoring Relevance; Order By Shelf ID - submitting 'initial results' ['{irrelevantResults.Count}' items] to 'results'");
                             results.AddRange(irrelevantResults);
                         }
-                        Dbug.Log("; ");
+                        Dbg.Log(rlx, "; ");
                     }
                     ProgressBarUpdate(1, true);
                 }
                 else
                 {
-                    Dbug.Log("No search arguement or search options available; selecting results at random; ");
-                    Dbug.LogPart($"Shelf IDs selected ('{maxResults}' items):");
+                    Dbg.Log(rlx, "No search arguement or search options available; selecting results at random; ");
+                    Dbg.LogPart(rlx, $"Shelf IDs selected ('{maxResults}' items):");
                     List<int> randomInts = new();
                     string dbgSelectedItems = "";
                     for (int rx = 0; rx < maxResults && randomInts.Count < Contents.Count; rx++)
@@ -2127,20 +2126,20 @@ namespace HCResourceLibraryApp.DataHandling
                             timeOut--;
                         }
 
-                        Dbug.LogPart($" {randInt}");
+                        Dbg.LogPart(rlx, $" {randInt}");
                         randomInts.Add(randInt);
                         ResContents randomContent = Contents[randInt];
                         results.Add(new SearchResult(Sep, Sep, false, randomContent.ContentName, randomContent.ContentName, SourceCategory.Bse, randomContent.ShelfID));
                         dbgSelectedItems += $" '{randomContent.ContentName.Replace(" ", "_")}'";
                     }
-                    Dbug.Log("; ");
+                    Dbg.Log(rlx, "; ");
 
-                    Dbug.Log($"Selected Items: ");
-                    Dbug.NudgeIndent(true);
-                    Dbug.Log($"{dbgSelectedItems.Trim().Replace(" ", ", ")}");
-                    Dbug.NudgeIndent(false);
+                    Dbg.Log(rlx, $"Selected Items: ");
+                    Dbg.NudgeIndent(rlx, true);
+                    Dbg.Log(rlx, $"{dbgSelectedItems.Trim().Replace(" ", ", ")}");
+                    Dbg.NudgeIndent(rlx, false);
                 }
-                Dbug.EndLogging();
+                Dbg.EndLogging(rlx);
             }
 
             return results.ToArray();
@@ -2149,49 +2148,41 @@ namespace HCResourceLibraryApp.DataHandling
         public ResLibrary CloneLibrary()
         {
             ResLibrary clone = null;
-            bool prevDADbg = disableAddDbug;
-            disableAddDbug = true;
-
-            //Dbug.DeactivateNextLogSession();
-            Dbug.StartLogging("ResLibrary.CloneLibrary()");
-            Dbug.Log($"Cloning current ResLibrary instance; Instance is setup? {IsSetup()} [#:{GetHashCode()}]; ");
+            Dbg.StartLogging("ResLibrary.CloneLibrary()", out int rlx);
+            Dbg.Log(rlx, $"Cloning current ResLibrary instance; Instance is setup? {IsSetup()} [#:{GetHashCode()}]; ");
             if (IsSetup())
             {
-                Dbug.LogPart(">> Cloning  ::  ");
+                Dbg.LogPart(rlx, ">> Cloning  ::  ");
                 clone = new ResLibrary();
 
-                Dbug.LogPart($"Contents [{Contents.Count}] / ");
+                Dbg.LogPart(rlx, $"Contents [{Contents.Count}] / ");
                 foreach (ResContents rc in Contents)
                     clone.AddContent(rc.CloneResContent());
 
-                Dbug.LogPart($"Legends [{Legends.Count}] / ");
+                Dbg.LogPart(rlx, $"Legends [{Legends.Count}] / ");
                 foreach (LegendData lg in Legends)
                     clone.AddLegend(lg.CloneLegend());
 
-                Dbug.LogPart($"Summaries [{Summaries.Count}]");
+                Dbg.LogPart(rlx, $"Summaries [{Summaries.Count}]");
                 foreach (SummaryData sm in Summaries)
                     clone.AddSummary(sm.CloneSummary());
 
-                Dbug.Log($"  //  Clone ResLibrary instance returned [#:{clone.GetHashCode()}]; ");
+                Dbg.Log(rlx, $"  //  Clone ResLibrary instance returned [#:{clone.GetHashCode()}]; ");
             }
-            else Dbug.Log("Cloning cancelled; NULL instance returned [#:--]; ");
-            Dbug.EndLogging();
+            else Dbg.Log(rlx, "Cloning cancelled; NULL instance returned [#:--]; ");
+            Dbg.EndLogging(rlx);
 
-            disableAddDbug = prevDADbg;
             return clone;
         }
         /// <summary>Fetches the contents, legends, and summaries introduced in a given <paramref name="version"/>. The returned instance may not have elements for all collections.</summary>
         /// <param name="getUsedLegendQ">If <c>true</c>, will get all legends that are used within the given version. Otherwise, only legends that were introduced in given version.</param>
         public ResLibrary GetVersion(VerNum version, bool getUsedLegendQ = true)
         {
-            //Dbug.DeactivateNextLogSession();
-            //Dbug.StartLogging("ResLibrary.GetVersion()");
             ResLibrary verLogDetails = new();
             List<string> allDataIDs = new();
             
             if (IsSetup())
             {
-                disableAddDbug = true;
                 for (int rdx = 0; rdx < 3; rdx++)
                 {
                     switch (rdx)
@@ -2358,10 +2349,7 @@ namespace HCResourceLibraryApp.DataHandling
                             break;
                     }
                 }
-                disableAddDbug = false;
             }
-
-            //Dbug.EndLogging();
 
             return verLogDetails;
         }
@@ -2458,8 +2446,6 @@ namespace HCResourceLibraryApp.DataHandling
         ResLibrary GetPreviousSelf()
         {
             ResLibrary prevSelf = new();
-            bool prevDADbg = disableAddDbug;
-            disableAddDbug = true;
 
             if (_prevContents != null)
                 prevSelf.AddContent(_prevContents.ToArray());
@@ -2468,7 +2454,6 @@ namespace HCResourceLibraryApp.DataHandling
             if (_prevSummaries != null)
                 prevSelf.AddSummary(_prevSummaries.ToArray());
             
-            disableAddDbug = prevDADbg;
             return prevSelf;
         }
         /// <summary>For <see cref="SearchLibrary(string, SearchOptions, int)"/>; Checks for any matches of <paramref name="arg"/> in <paramref name="text"/>.</summary>
@@ -2510,103 +2495,103 @@ namespace HCResourceLibraryApp.DataHandling
         // DATA HANDLING METHODS
         protected override bool EncodeToSharedFile()
         {
-            Dbug.IgnoreNextLogSession();
-            Dbug.StartLogging("ResLibrary.EncodeToSharedFile()");
+            Dbg.StartLogging("ResLibrary.EncodeToSharedFile()", out int rlx);
+            Dbg.ToggleThreadOutputOmission(rlx);
             bool encodedQ = true;
             
             if (IsSetup())
             {
-                Dbug.LogPart("ResLibrary is setup, creating stamp: ");
+                Dbg.LogPart(rlx, "ResLibrary is setup, creating stamp: ");
                 bool noIssue = true;
                 // 0th verify saving of data
                 if (Base.FileWrite(false, stampRLSavedDataTag, stampRLSavedData))
-                    Dbug.LogPart("[STAMPED]; ");
-                else Dbug.LogPart("[ ? ? ? ] (no stamp); ");
-                Dbug.Log("Proceeding with encoding; ");
+                    Dbg.LogPart(rlx, "[STAMPED]; ");
+                else Dbg.LogPart(rlx, "[ ? ? ? ] (no stamp); ");
+                Dbg.Log(rlx, "Proceeding with encoding; ");
 
                 // 1st encode contents
-                Dbug.Log($"Encoding [{Contents.Count}] ResContents; ");
+                Dbg.Log(rlx, $"Encoding [{Contents.Count}] ResContents; ");
                 for (int rcix = 0; rcix < Contents.Count && noIssue; rcix++)
                 {
                     ResContents resCon = Contents[rcix];
-                    Dbug.LogPart($"+ Encoding :: {resCon}");
+                    Dbg.LogPart(rlx, $"+ Encoding :: {resCon}");
 
                     if (resCon.IsSetup())
                     {
                         noIssue = Base.FileWrite(false, resCon.ShelfID.ToString(), resCon.EncodeGroups());
-                        Dbug.Log($"{Base.ConditionalText(noIssue, "", "[!issue]")}; ");
+                        Dbg.Log(rlx, $"{Base.ConditionalText(noIssue, "", "[!issue]")}; ");
 
                         if (noIssue)
                         {
-                            Dbug.NudgeIndent(true);
+                            Dbg.NudgeIndent(rlx, true);
                             foreach (string rcLine in resCon.EncodeGroups())
                                 if (rcLine.IsNotNE())
-                                    Dbug.Log($"tag [{resCon.ShelfID}]| {rcLine}");
-                            Dbug.NudgeIndent(false);
+                                    Dbg.Log(rlx, $"tag [{resCon.ShelfID}]| {rcLine}");
+                            Dbg.NudgeIndent(rlx, false);
                         }
                     }
-                    else Dbug.Log("; Skipped -- Was not setup; ");
+                    else Dbg.Log(rlx, "; Skipped -- Was not setup; ");
                 }
 
                 // 2nd encode legends
                 if (noIssue)
                 {
-                    Dbug.Log($"Encoding [{Legends.Count}] Legend Datas; ");
+                    Dbg.Log(rlx, $"Encoding [{Legends.Count}] Legend Datas; ");
                     List<string> resLibLegendsLines = new();
 
-                    Dbug.NudgeIndent(true);
+                    Dbg.NudgeIndent(rlx, true);
                     foreach (LegendData legDat in Legends)
                     {
                         if (legDat.IsSetup())
                         {
                             resLibLegendsLines.Add(legDat.Encode());
-                            Dbug.Log($"{legDat.Encode()}");
+                            Dbg.Log(rlx, $"{legDat.Encode()}");
                         }
-                        else Dbug.Log($"Skipped ({legDat}) -- was not setup; ");
+                        else Dbg.Log(rlx, $"Skipped ({legDat}) -- was not setup; ");
                     }
-                    Dbug.NudgeIndent(false);
+                    Dbg.NudgeIndent(rlx, false);
 
                     noIssue = Base.FileWrite(false, legDataTag, resLibLegendsLines.ToArray());
-                    Dbug.Log($"{Base.ConditionalText(noIssue, $"Successfully encoded legend datas (with tag '{legDataTag}')", "Failed to encode legend datas")};");
+                    Dbg.Log(rlx, $"{Base.ConditionalText(noIssue, $"Successfully encoded legend datas (with tag '{legDataTag}')", "Failed to encode legend datas")};");
                 }
 
                 // 3rd encode summaries
                 if (noIssue)
                 {
-                    Dbug.Log($"Encoding [{Summaries.Count}] Summary Datas; ");
+                    Dbg.Log(rlx, $"Encoding [{Summaries.Count}] Summary Datas; ");
                     List<string> resLibSummaryLines = new();
 
-                    Dbug.NudgeIndent(true);
+                    Dbg.NudgeIndent(rlx, true);
                     foreach (SummaryData sumDat in Summaries)
                     {
                         if (sumDat.IsSetup())
                         {
                             resLibSummaryLines.Add(sumDat.Encode());
-                            Dbug.Log($"{sumDat.Encode()}");
+                            Dbg.Log(rlx, $"{sumDat.Encode()}");
                         }
-                        else Dbug.Log($"Skipped ({sumDat.ToStringShortened()}) -- was not setup; ");
+                        else Dbg.Log(rlx, $"Skipped ({sumDat.ToStringShortened()}) -- was not setup; ");
                     }
-                    Dbug.NudgeIndent(false);
+                    Dbg.NudgeIndent(rlx, false);
 
                     noIssue = Base.FileWrite(false, sumDataTag, resLibSummaryLines.ToArray());
-                    Dbug.Log($"{Base.ConditionalText(noIssue, $"Successfully encoded summary datas (with tag '{sumDataTag}')", "Failed to encode summary datas")};");
+                    Dbg.Log(rlx, $"{Base.ConditionalText(noIssue, $"Successfully encoded summary datas (with tag '{sumDataTag}')", "Failed to encode summary datas")};");
                 }
 
-                Dbug.Log($"Encoded ResLibrary? {noIssue}");
+                Dbg.Log(rlx, $"Encoded ResLibrary? {noIssue}");
                 encodedQ = noIssue;
             }
-            else Dbug.Log("Not enough data within ResLibrary to proceed with encoding; ");
+            else Dbg.Log(rlx, "Not enough data within ResLibrary to proceed with encoding; ");
 
             if (encodedQ)
                 SetPreviousSelf();
 
-            Dbug.EndLogging();
+            Dbg.EndLogging(rlx);
             return encodedQ;
         }
         protected override bool DecodeFromSharedFile()
         {
-            Dbug.IgnoreNextLogSession();
-            Dbug.StartLogging("ResLibrary.DecodeFromSharedFile()");
+            Dbg.StartLogging("ResLibrary.DecodeFromSharedFile()", out int rlx);
+            Dbg.ToggleThreadOutputOmission(rlx);
             bool noDataButIsOkay = true;
             if (Base.FileRead(stampRLSavedDataTag, out string[] hasDataLine))
             {
@@ -2622,14 +2607,14 @@ namespace HCResourceLibraryApp.DataHandling
                 // contents decode
                 if (!Contents.HasElements())
                 { /// wrapping
-                    Dbug.Log("Decoding ResContents; ");
+                    Dbg.Log(rlx, "Decoding ResContents; ");
                     Contents = new List<ResContents>();
 
                     /// if true, will show the full result of decoding the ResCon instance (detailed result output)
                     const int noDataTimeout = 25;                    
                     int lastFetchedIx = -1;
                     int shelfNum = 0;
-                    Dbug.NudgeIndent(true);
+                    Dbg.NudgeIndent(rlx, true);
                     for (int lx = 0; lx - noDataTimeout <= lastFetchedIx; lx++)
                     {
                         if (Base.FileRead(lx.ToString(), out string[] rawRCData))
@@ -2637,17 +2622,17 @@ namespace HCResourceLibraryApp.DataHandling
                             if (rawRCData.HasElements())
                             {
                                 if (lastFetchedIx + 1 < lx)
-                                    Dbug.Log("; Timeout restart; ");
+                                    Dbg.Log(rlx, "; Timeout restart; ");
 
                                 bool dbugGroupCondition = showDecodedLine || expandDecodeDebug;
                                 if (dbugGroupCondition)
                                 {
-                                    Dbug.Log($"Data with tag [{lx}] retrieved; ");
-                                    Dbug.NudgeIndent(true);
+                                    Dbg.Log(rlx, $"Data with tag [{lx}] retrieved; ");
+                                    Dbg.NudgeIndent(rlx, true);
                                 }
                                
-                                for (int rlx = 0; rlx < rawRCData.Length && showDecodedLine; rlx++)
-                                    Dbug.Log($"L{rlx + 1}| {rawRCData[rlx]}");
+                                for (int rclx = 0; rclx < rawRCData.Length && showDecodedLine; rclx++)
+                                    Dbg.Log(rlx, $"L{rclx + 1}| {rawRCData[rclx]}");
 
                                 string[] resConData = new string[3]
                                 {
@@ -2659,51 +2644,51 @@ namespace HCResourceLibraryApp.DataHandling
                                 if (decodedRC.DecodeGroups(shelfNum, resConData))
                                 {
                                     Contents.Add(decodedRC);
-                                    Dbug.Log($"Decoded ResCon instance :: {decodedRC}; ");
+                                    Dbg.Log(rlx, $"Decoded ResCon instance :: {decodedRC}; ");
                                     shelfNum++;
                                     lastFetchedIx = lx;
 
                                     if (expandDecodeDebug)
                                     {
-                                        Dbug.NudgeIndent(true);
-                                        Dbug.Log($">> {decodedRC.ConBase}");
+                                        Dbg.NudgeIndent(rlx, true);
+                                        Dbg.Log(rlx, $">> {decodedRC.ConBase}");
                                         if (decodedRC.ConAddits.HasElements())
                                         {
-                                            Dbug.LogPart(">> ");
+                                            Dbg.LogPart(rlx, ">> ");
                                             for (int xca = 0; xca < decodedRC.ConAddits.Count; xca++)
-                                                Dbug.LogPart($"{decodedRC.ConAddits[xca]}{(xca + 1 < decodedRC.ConAddits.Count ? "  //  " : "")}");
-                                            Dbug.Log("..");
+                                                Dbg.LogPart(rlx, $"{decodedRC.ConAddits[xca]}{(xca + 1 < decodedRC.ConAddits.Count ? "  //  " : "")}");
+                                            Dbg.Log(rlx, "..");
                                         }
                                         if (decodedRC.ConChanges.HasElements())
                                         {
-                                            Dbug.LogPart(">> ");
+                                            Dbg.LogPart(rlx, ">> ");
                                             for (int xcc = 0; xcc < decodedRC.ConChanges.Count; xcc++)
-                                                Dbug.LogPart($"{decodedRC.ConChanges[xcc]}{(xcc + 1 < decodedRC.ConChanges.Count ? "  //  " : "")}");
-                                            Dbug.Log("  ..");
+                                                Dbg.LogPart(rlx, $"{decodedRC.ConChanges[xcc]}{(xcc + 1 < decodedRC.ConChanges.Count ? "  //  " : "")}");
+                                            Dbg.Log(rlx, "  ..");
                                         }
-                                        Dbug.NudgeIndent(false);
+                                        Dbg.NudgeIndent(rlx, false);
                                     }
                                 }
-                                else Dbug.Log("ResCon instance could not be decoded; ");
+                                else Dbg.Log(rlx, "ResCon instance could not be decoded; ");
                                 if (dbugGroupCondition) 
-                                    Dbug.NudgeIndent(false);
+                                    Dbg.NudgeIndent(rlx, false);
                             }
                             else
                             {
                                 if (lastFetchedIx + 1 == lx || lastFetchedIx == lx)
-                                    Dbug.LogPart($"No data retrieved; Timing out: {noDataTimeout - (lx - lastFetchedIx)}");
-                                else Dbug.LogPart($" {noDataTimeout - (lx - lastFetchedIx)}");
+                                    Dbg.LogPart(rlx, $"No data retrieved; Timing out: {noDataTimeout - (lx - lastFetchedIx)}");
+                                else Dbg.LogPart(rlx, $" {noDataTimeout - (lx - lastFetchedIx)}");
                             }
                         }
                     }
-                    Dbug.Log("; Timeout end; ");
-                    Dbug.NudgeIndent(false);
+                    Dbg.Log(rlx, "; Timeout end; ");
+                    Dbg.NudgeIndent(rlx, false);
                 }
 
                 // legends decode
                 if (!Legends.HasElements())
                 { /// wrapping
-                    Dbug.LogPart("Decoding Legend Data; ");
+                    Dbg.LogPart(rlx, "Decoding Legend Data; ");
                     Legends = new List<LegendData>();
 
                     if (Base.FileRead(legDataTag, out string[] legendsData))
@@ -2711,68 +2696,68 @@ namespace HCResourceLibraryApp.DataHandling
                         if (legendsData.HasElements())
                         {
                             int countLine = 1;
-                            Dbug.Log($"Fetched [{legendsData.Length}] lines of legend data; ");
+                            Dbg.Log(rlx, $"Fetched [{legendsData.Length}] lines of legend data; ");
                             foreach (string legData in legendsData)
                             {
                                 if (expandDecodeDebug)
-                                    Dbug.Log($"L{countLine}| {legData}");
+                                    Dbg.Log(rlx, $"L{countLine}| {legData}");
 
-                                Dbug.NudgeIndent(true);
+                                Dbg.NudgeIndent(rlx, true);
                                 LegendData decodedLegd = new();
                                 if (decodedLegd.Decode(legData))
                                 {
                                     decodedLegd.AdoptIndex(Legends.Count);
                                     Legends.Add(decodedLegd);
-                                    Dbug.Log($"Decoded Legend :: {decodedLegd}; ");
+                                    Dbg.Log(rlx, $"Decoded Legend :: {decodedLegd}; ");
                                 }
-                                else Dbug.Log($"Legend Data could not be decoded{(!expandDecodeDebug ? $" :: source ({legData})" : "")};");
-                                Dbug.NudgeIndent(false);
+                                else Dbg.Log(rlx, $"Legend Data could not be decoded{(!expandDecodeDebug ? $" :: source ({legData})" : "")};");
+                                Dbg.NudgeIndent(rlx, false);
                                 countLine++;
                             }
                         }
-                        else Dbug.Log("Recieved no legend data; ");
+                        else Dbg.Log(rlx, "Recieved no legend data; ");
                     }
-                    else Dbug.Log($"Could not read from file; Issue :: {Tools.GetRecentWarnError(false, false)}");
+                    else Dbg.Log(rlx, $"Could not read from file; Issue :: {Tools.GetRecentWarnError(false, false)}");
                 }
 
                 // summaries decode
                 if (!Summaries.HasElements())
                 { /// wrapping
-                    Dbug.LogPart("Decoding Summary Data; ");
+                    Dbg.LogPart(rlx, "Decoding Summary Data; ");
                     Summaries = new List<SummaryData>();
 
                     if (Base.FileRead(sumDataTag, out string[] summariesData))
                     {
                         if (summariesData.HasElements())
                         {
-                            Dbug.Log($"Fetched [{summariesData.Length}] lines of summary data;");
+                            Dbg.Log(rlx, $"Fetched [{summariesData.Length}] lines of summary data;");
                             int countLine = 1;
                             foreach (string sumData in summariesData)
                             {
                                 if (expandDecodeDebug)
-                                    Dbug.Log($"L{countLine}| {sumData}");
+                                    Dbg.Log(rlx, $"L{countLine}| {sumData}");
                                 
-                                Dbug.NudgeIndent(true);
+                                Dbg.NudgeIndent(rlx, true);
                                 SummaryData decodedSmry = new();
                                 if (decodedSmry.Decode(sumData))
                                 {
                                     decodedSmry.AdoptIndex(Summaries.Count);
                                     Summaries.Add(decodedSmry);
-                                    Dbug.Log($"Decoded Summary :: {decodedSmry.ToStringShortened()}; ");
+                                    Dbg.Log(rlx, $"Decoded Summary :: {decodedSmry.ToStringShortened()}; ");
                                 }
-                                else Dbug.Log($"Summary Data could not be decoded{(!expandDecodeDebug ? $" :: source ({sumData})" : "")}; ");
-                                Dbug.NudgeIndent(false);
+                                else Dbg.Log(rlx, $"Summary Data could not be decoded{(!expandDecodeDebug ? $" :: source ({sumData})" : "")}; ");
+                                Dbg.NudgeIndent(rlx, false);
 
                                 countLine++;
                             }
                         }
-                        else Dbug.Log("Recieved no summary data; ");
+                        else Dbg.Log(rlx, "Recieved no summary data; ");
                     }
-                    else Dbug.Log($"Could not read from file; Issue :: {Tools.GetRecentWarnError(false, false)}");
+                    else Dbg.Log(rlx, $"Could not read from file; Issue :: {Tools.GetRecentWarnError(false, false)}");
                 }
             }      
-            else Dbug.Log("ResLibrary has no saved data to decode; ");
-            Dbug.EndLogging();
+            else Dbg.Log(rlx, "ResLibrary has no saved data to decode; ");
+            Dbg.EndLogging(rlx);
 
             SetPreviousSelf();
             return IsSetup() || noDataButIsOkay;

@@ -114,11 +114,11 @@ namespace HCResourceLibraryApp.DataHandling
         
         protected override bool EncodeToSharedFile()
         {
-            Dbug.StartLogging("ContentValidator.EncodeToSharedFile()");
+            Dbg.StartLogging("ContentValidator.EncodeToSharedFile()", out int cvx);
             bool noDataButOkayQ = !IsSetup(), encodedConValQ = false;
             if (IsSetup())
             {
-                Dbug.Log($"Is setup; Preparing to encode '{_folderPaths.Count}' folder paths and '{_fileExts.Count}' file extensions; ");
+                Dbg.Log(cvx, $"Is setup; Preparing to encode '{_folderPaths.Count}' folder paths and '{_fileExts.Count}' file extensions; ");
                 List<string> conValDataLines = new();
                 bool fetchedFolderDataQ = false, fetchedFileExtsDataQ = false;
 
@@ -126,16 +126,16 @@ namespace HCResourceLibraryApp.DataHandling
                 /// folder paths
                 if (_folderPaths.HasElements())
                 {
-                    Dbug.Log("Encoding all folder paths; ");
-                    Dbug.NudgeIndent(true);
+                    Dbg.Log(cvx, "Encoding all folder paths; ");
+                    Dbg.NudgeIndent(cvx, true);
                     foreach (string fdPath in _folderPaths)
                         if (fdPath.IsNotNEW())
                         {
                             conValDataLines.Add(fdPath);
                             fetchedFolderDataQ = true;
-                            Dbug.Log($" + Encoded folder :: L{conValDataLines.Count}| {fdPath}; ");
+                            Dbg.Log(cvx, $" + Encoded folder :: L{conValDataLines.Count}| {fdPath}; ");
                         }
-                    Dbug.NudgeIndent(false);
+                    Dbg.NudgeIndent(cvx, false);
                 }
                 /// file extensions
                 if (_fileExts.HasElements())
@@ -146,7 +146,7 @@ namespace HCResourceLibraryApp.DataHandling
                             allFExts += $"{fExt} ";
                     if (allFExts.IsNotNE())
                     {
-                        Dbug.Log($" + Encoding all file extensions :: L{conValDataLines.Count + 1}| {allFExts}; ");
+                        Dbg.Log(cvx, $" + Encoding all file extensions :: L{conValDataLines.Count + 1}| {allFExts}; ");
                         allFExts = allFExts.Trim().Replace(" ", Sep);
                         conValDataLines.Add(allFExts);
                         fetchedFileExtsDataQ = true;
@@ -159,66 +159,66 @@ namespace HCResourceLibraryApp.DataHandling
 
                 if (encodedConValQ)
                     SetPreviousSelf();
-                Dbug.Log($"Successfully encoded to file? {(encodedConValQ? "True; Previous self is up-to-date" : "False")}; ");
+                Dbg.Log(cvx, $"Successfully encoded to file? {(encodedConValQ? "True; Previous self is up-to-date" : "False")}; ");
             }
-            else Dbug.Log("Not setup; No data to encode but that's okay...");
-            Dbug.EndLogging();
+            else Dbg.Log(cvx, "Not setup; No data to encode but that's okay...");
+            Dbg.EndLogging(cvx);
             return encodedConValQ || noDataButOkayQ;
         }
         protected override bool DecodeFromSharedFile()
         {
-            Dbug.StartLogging("ContentValidator.DecodeFromSharedFile()");
+            Dbg.StartLogging("ContentValidator.DecodeFromSharedFile()", out int cvx);
             bool decodedConValDataQ = Base.FileRead(commonFileTag, out string[] conValDataLines);
-            Dbug.Log($"Fetching file data (using tag '{commonFileTag}'); Successfully read from file? {decodedConValDataQ}; {nameof(conValDataLines)} has elements? {conValDataLines.HasElements()}");
+            Dbg.Log(cvx, $"Fetching file data (using tag '{commonFileTag}'); Successfully read from file? {decodedConValDataQ}; {nameof(conValDataLines)} has elements? {conValDataLines.HasElements()}");
 
             _folderPaths = new List<string>();
             _fileExts = new List<string>();
             if (decodedConValDataQ && conValDataLines.HasElements())
             {
-                Dbug.Log("Preparing to decode content validator data; ");
-                Dbug.NudgeIndent(true);
+                Dbg.Log(cvx, "Preparing to decode content validator data; ");
+                Dbg.NudgeIndent(cvx, true);
                 for (int lx = 0; lx < conValDataLines.Length && decodedConValDataQ; lx++)
                 {
                     decodedConValDataQ = false;
                     string line = conValDataLines[lx];
                     bool lastLine = lx + 1 == conValDataLines.Length;
-                    Dbug.LogPart($"Decoding {(!lastLine ? "folder path" : "file extensions")}; ");
+                    Dbg.LogPart(cvx, $"Decoding {(!lastLine ? "folder path" : "file extensions")}; ");
 
                     if (!lastLine)
                     {
                         _folderPaths.Add(line);
-                        Dbug.Log($"Fetched folder :: {line}; ");
+                        Dbg.Log(cvx, $"Fetched folder :: {line}; ");
                         decodedConValDataQ = true;
                     }
                     else
                     {
                         if (line.Contains(Sep))
                         {
-                            Dbug.Log("There are multiple extensions; ");
+                            Dbg.Log(cvx, "There are multiple extensions; ");
                             string[] fExts = line.Split(Sep);
                             if (fExts.HasElements())
                             {
                                 _fileExts.AddRange(fExts);
-                                Dbug.LogPart($" > Fetched file extensions :: {line.Replace(Sep, " ")}");
+                                Dbg.LogPart(cvx, $" > Fetched file extensions :: {line.Replace(Sep, " ")}");
                                 decodedConValDataQ = true;
                             }
                         }
                         else
                         {
                             _fileExts.Add(line);
-                            Dbug.LogPart($"Fetched file extension :: {line}");
+                            Dbg.LogPart(cvx, $"Fetched file extension :: {line}");
                             decodedConValDataQ = true;
                         }
-                        Dbug.Log("; ");
+                        Dbg.Log(cvx, "; ");
                     }
                 }
 
                 SetPreviousSelf();
-                Dbug.Log($"Previous self has been set; Confirmed as the same? {!ChangesMade()}; ");
-                Dbug.NudgeIndent(false);
+                Dbg.Log(cvx, $"Previous self has been set; Confirmed as the same? {!ChangesMade()}; ");
+                Dbg.NudgeIndent(cvx, false);
             }
-            Dbug.Log($"End decoding for Content Validator -- successful decoding? {decodedConValDataQ}; ");
-            Dbug.EndLogging();
+            Dbg.Log(cvx, $"End decoding for Content Validator -- successful decoding? {decodedConValDataQ}; ");
+            Dbg.EndLogging(cvx);
             return decodedConValDataQ;
         }
 
@@ -231,15 +231,15 @@ namespace HCResourceLibraryApp.DataHandling
         /// the... THE MAIN PURPOSE!!
         public bool Validate(VerNum[] versionRange, string[] folderPaths, string[] fileTypeExts)
         {
-            Dbug.StartLogging("ContentValidator.Validate()");
-            Dbug.Log($"Initiating Content Integrity Validation process...");
+            Dbg.StartLogging("ContentValidator.Validate()", out int cvx);
+            Dbg.Log(cvx, $"Initiating Content Integrity Validation process...");
 
             const int progressBarWidth = 32;
             bool civProcessBegunQ = false;
             bool isLibrarySetupQ = false;
             if (_libraryRef != null)
                 isLibrarySetupQ = _libraryRef.IsSetup();
-            Dbug.Log($"Content Validator: Has reference to library and library is setup? [{_libraryRef != null} & {isLibrarySetupQ}]; Received version range? [{versionRange.HasElements()}]; Received folder paths? [{folderPaths.HasElements()}]; Received file extensions? [{fileTypeExts.HasElements()}]; ");
+            Dbg.Log(cvx, $"Content Validator: Has reference to library and library is setup? [{_libraryRef != null} & {isLibrarySetupQ}]; Received version range? [{versionRange.HasElements()}]; Received folder paths? [{folderPaths.HasElements()}]; Received file extensions? [{fileTypeExts.HasElements()}]; ");
 
             // it all begins here
             if (isLibrarySetupQ && versionRange.HasElements() && folderPaths.HasElements() && fileTypeExts.HasElements())
@@ -250,7 +250,7 @@ namespace HCResourceLibraryApp.DataHandling
                 bool continueToStep_gatherDataIDs = false;
 
                 // + store folder paths and file extensions +
-                Dbug.Log("Folder paths and file extensions received have been stored; ");
+                Dbg.Log(cvx, "Folder paths and file extensions received have been stored; ");
                 _conValInfoDock = null;
                 anyInvalidatedQ = null;
                 folderPaths = folderPaths.SortWords().ToArray();
@@ -263,13 +263,13 @@ namespace HCResourceLibraryApp.DataHandling
                 TaskCount = folderPaths.Length;
 
                 // + fetch all sub-folders within given folder paths +
-                Dbug.Log("Preparing to fetch all sub-folder paths and contents; ");
-                Dbug.NudgeIndent(true);
+                Dbg.Log(cvx, "Preparing to fetch all sub-folder paths and contents; ");
+                Dbg.NudgeIndent(cvx, true);
                 List<DirectoryInfo> allFoldersList = new();
                 foreach (string folderPath in folderPaths)
                 {                    
                     DirectoryInfo fPathInfo = new(folderPath);
-                    Dbug.Log($"Received folder path :: {folderPath} [{(fPathInfo.Exists? "Exists" : (fPathInfo.ToString().StartsWith(FolderPathDisabledToken) ? "Disabled" : "D.N.E!"))}]");
+                    Dbg.Log(cvx, $"Received folder path :: {folderPath} [{(fPathInfo.Exists? "Exists" : (fPathInfo.ToString().StartsWith(FolderPathDisabledToken) ? "Disabled" : "D.N.E!"))}]");
                     if (fPathInfo.Exists)
                     {
                         allFoldersList.Add(fPathInfo);
@@ -282,15 +282,15 @@ namespace HCResourceLibraryApp.DataHandling
                         DirectoryInfo[] fPathSubFolders = fPathInfo.GetDirectories($"*", EOdir_ignoreInaccessible);
                         FileInfo[] fPathFiles = fPathInfo.GetFiles($"*", EOdir_ignoreInaccessible);
 
-                        Dbug.LogPart($"Main folder contains ");
+                        Dbg.LogPart(cvx, $"Main folder contains ");
                         if (fPathFiles != null)
-                            Dbug.LogPart($"[{fPathFiles.Length}] files and ");
+                            Dbg.LogPart(cvx, $"[{fPathFiles.Length}] files and ");
                         if (fPathSubFolders != null)
-                            Dbug.LogPart($"[{fPathSubFolders.Length}] sub-folders");
-                        else Dbug.LogPart("no sub-folders");
+                            Dbg.LogPart(cvx, $"[{fPathSubFolders.Length}] sub-folders");
+                        else Dbg.LogPart(cvx, "no sub-folders");
                         if (!fPathFiles.HasElements() && !fPathSubFolders.HasElements())
-                            Dbug.LogPart(" (Empty? Inaccessible?)");
-                        Dbug.Log($" [Attributes: {fPathInfo.Attributes}]; ");
+                            Dbg.LogPart(cvx, " (Empty? Inaccessible?)");
+                        Dbg.Log(cvx, $" [Attributes: {fPathInfo.Attributes}]; ");
 
 
                         /// IF main sub-folders have been fetched: get all sub-folders within the sub-folders
@@ -298,15 +298,15 @@ namespace HCResourceLibraryApp.DataHandling
                         {
                             TaskCount += fPathSubFolders.Length;
 
-                            Dbug.NudgeIndent(true);                            
+                            Dbg.NudgeIndent(cvx, true);                            
                             for (int fpsx = 0; fpsx < fPathSubFolders.Length; fpsx++)
                             {
                                 DirectoryInfo fPathSub = fPathSubFolders[fpsx];
                                 allFoldersList.Add(fPathSub);
 
                                 string relativeSubPath = fPathSub.ToString().Clamp(relativePathDist, relativePathClampSuffix, fPathSub.Name, false);
-                                Dbug.Log($"SubF {fpsx + 1}| {relativeSubPath}");
-                                Dbug.NudgeIndent(true);
+                                Dbg.Log(cvx, $"SubF {fpsx + 1}| {relativeSubPath}");
+                                Dbg.NudgeIndent(cvx, true);
 
                                 /// this EnumerationOptions is set to: A) fetch all sub-folders -- B) ignore inaccessibles
                                 EnumerationOptions EOsubDir_getAllDirs_ignoreInaccessibles = new();
@@ -316,15 +316,15 @@ namespace HCResourceLibraryApp.DataHandling
                                 DirectoryInfo[] subDirs = fPathSub.GetDirectories("*", EOsubDir_getAllDirs_ignoreInaccessibles);
                                 FileInfo[] subDirFiles = fPathSub.GetFiles("*", EOsubDir_getAllDirs_ignoreInaccessibles);
 
-                                Dbug.LogPart($"Contains ");
+                                Dbg.LogPart(cvx, $"Contains ");
                                 if (subDirFiles != null)
-                                    Dbug.LogPart($"[{subDirFiles.Length}] files and ");
+                                    Dbg.LogPart(cvx, $"[{subDirFiles.Length}] files and ");
                                 if (subDirs != null)
-                                    Dbug.LogPart($"[{subDirs.Length}] sub-folders{(subDirs.HasElements()? " (listed below)" : "")}");
-                                else Dbug.LogPart("no sub-folders");
+                                    Dbg.LogPart(cvx, $"[{subDirs.Length}] sub-folders{(subDirs.HasElements()? " (listed below)" : "")}");
+                                else Dbg.LogPart(cvx, "no sub-folders");
                                 if (!subDirFiles.HasElements() && !subDirs.HasElements())
-                                    Dbug.LogPart(" (Empty? Inaccessible?)");
-                                Dbug.Log($" [Attributes: {fPathSub.Attributes}]; ");
+                                    Dbg.LogPart(cvx, " (Empty? Inaccessible?)");
+                                Dbg.Log(cvx, $" [Attributes: {fPathSub.Attributes}]; ");
 
 
                                 /// IF sub-folder's sub-folders have been fetched: add valid directories to full list and search
@@ -344,17 +344,17 @@ namespace HCResourceLibraryApp.DataHandling
                                     }
                                     deepSubDirs = deepSubDirs.ToArray().SortWords();
 
-                                    Dbug.NudgeIndent(true);
+                                    Dbg.NudgeIndent(cvx, true);
                                     foreach (string aDSDir in deepSubDirs)
-                                        Dbug.Log($"{relativePathClampSuffix}{aDSDir.Clamp(subRelativePathDist, relativePathClampSuffix, fPathSub.Name, true)}");
-                                    Dbug.NudgeIndent(false);
+                                        Dbg.Log(cvx, $"{relativePathClampSuffix}{aDSDir.Clamp(subRelativePathDist, relativePathClampSuffix, fPathSub.Name, true)}");
+                                    Dbg.NudgeIndent(cvx, false);
                                 }
-                                Dbug.NudgeIndent(false);
+                                Dbg.NudgeIndent(cvx, false);
 
                                 TaskNum++;
                                 ProgressBarUpdate(TaskNum / TaskCount);
                             }                            
-                            Dbug.NudgeIndent(false);
+                            Dbg.NudgeIndent(cvx, false);
                         }
                     }
 
@@ -365,13 +365,13 @@ namespace HCResourceLibraryApp.DataHandling
                 if (allFoldersList.HasElements())
                 {
                     continueToStep_gatherDataIDs = true;
-                    Dbug.Log($"Completed fetching all folder paths (total of '{allFoldersList.Count}'); ");
-                    Dbug.NudgeIndent(true);
+                    Dbg.Log(cvx, $"Completed fetching all folder paths (total of '{allFoldersList.Count}'); ");
+                    Dbg.NudgeIndent(cvx, true);
                     foreach (DirectoryInfo dir in allFoldersList)
-                        Dbug.Log(dir.ToString());
-                    Dbug.NudgeIndent(false);
+                        Dbg.Log(cvx, dir.ToString());
+                    Dbg.NudgeIndent(cvx, false);
                 }
-                Dbug.NudgeIndent(false);
+                Dbg.NudgeIndent(cvx, false);
 
                 ProgressBarUpdate(1, true);
                 ProgressBarInitialize(false, false, progressBarWidth, 0, 0, ForECol.Correction);
@@ -402,12 +402,12 @@ namespace HCResourceLibraryApp.DataHandling
                         verHigh = verLow;
                     }
 
-                    Dbug.Log($"Gathering and expanding all Data IDs within version range: {(verLow.Equals(verHigh)? $"{verLow} only" : $"{verLow} to {verHigh}")}; ");
-                    Dbug.NudgeIndent(true);
-                    Dbug.Log($"Gathering Data IDs from library shelves; ");
+                    Dbg.Log(cvx, $"Gathering and expanding all Data IDs within version range: {(verLow.Equals(verHigh)? $"{verLow} only" : $"{verLow} to {verHigh}")}; ");
+                    Dbg.NudgeIndent(cvx, true);
+                    Dbg.Log(cvx, $"Gathering Data IDs from library shelves; ");
 
                     /// gather data IDs
-                    Dbug.NudgeIndent(true);
+                    Dbg.NudgeIndent(cvx, true);
                     List<string> allDataIDs = new();
                     foreach (ResContents resCon in _libraryRef.Contents)
                     {
@@ -461,18 +461,18 @@ namespace HCResourceLibraryApp.DataHandling
                         }
 
                         if (somethingMightHaveBeenAddedq)
-                            Dbug.Log(dbugText + "; ");
+                            Dbg.Log(cvx, dbugText + "; ");
 
                         TaskNum++;
                         ProgressBarUpdate(TaskNum / TaskCount);
                     }
-                    Dbug.NudgeIndent(false);
+                    Dbg.NudgeIndent(cvx, false);
 
                     /// expand the data IDs
                     allDataIDs = allDataIDs.ToArray().SortWords();
                     ConValInfo[] preExpandedIDs = new ConValInfo[allDataIDs.Count];
-                    Dbug.Log($"Gathered and sorted '{allDataIDs.Count}' Data IDs; Proceeding to expand data IDs by legend datas and create ConValInfo instances; ");
-                    Dbug.NudgeIndent(true);
+                    Dbg.Log(cvx, $"Gathered and sorted '{allDataIDs.Count}' Data IDs; Proceeding to expand data IDs by legend datas and create ConValInfo instances; ");
+                    Dbg.NudgeIndent(cvx, true);
                     for (int lx = 0; lx < _libraryRef.Legends.Count; lx++)
                     {
                         /// non-wordy data IDs ... the regulars here
@@ -481,7 +481,7 @@ namespace HCResourceLibraryApp.DataHandling
                         {
                             string expandedLegDef = $"{legData[0].Replace(" ", SpaceReplace)}{SpaceReplace}";
                             string dbugPretText = $"{legData.Key} '{expandedLegDef}'";
-                            Dbug.LogPart($"For {dbugPretText, -20}   //   ");
+                            Dbg.LogPart(cvx, $"For {dbugPretText, -20}   //   ");
                             for (int ax = 0; ax < allDataIDs.Count; ax++)
                             {
                                 string ogDataID = allDataIDs[ax];
@@ -494,39 +494,39 @@ namespace HCResourceLibraryApp.DataHandling
                                         if (legData.Key == dk)
                                         {
                                             string trueDID = $"{expandedLegDef}{db}";
-                                            Dbug.LogPart($"{db} ");
+                                            Dbg.LogPart(cvx, $"{db} ");
                                             preExpandedIDs[ax] = new ConValInfo(dk + db, trueDID);
                                             allDataIDs[ax] = null;
                                         }
                                     }                                   
                                 }                            
                             }
-                            Dbug.Log("; ");
+                            Dbg.Log(cvx, "; ");
                         }
 
                         /// wordy IDs are fetched at the end
                         if (lx + 1 == _libraryRef.Legends.Count)
                         {
-                            Dbug.LogPart("Wordy Data IDs (non-legend)  //  ");
+                            Dbg.LogPart(cvx, "Wordy Data IDs (non-legend)  //  ");
                             for (int ax2 = 0; ax2 < allDataIDs.Count; ax2++)
                             {
                                 if (allDataIDs[ax2].IsNotNE())
                                 {
-                                    Dbug.LogPart($"{allDataIDs[ax2]} ");
+                                    Dbg.LogPart(cvx, $"{allDataIDs[ax2]} ");
                                     preExpandedIDs[ax2] = new ConValInfo(allDataIDs[ax2], allDataIDs[ax2]);
                                 }
                             }
-                            Dbug.Log("; ");
+                            Dbg.Log(cvx, "; ");
                         }
 
                         TaskNum++;
                         ProgressBarUpdate(TaskNum / TaskCount);
                     }   
-                    Dbug.NudgeIndent(false);
+                    Dbg.NudgeIndent(cvx, false);
 
-                    Dbug.Log($"Created '{preExpandedIDs.Length}' ConValInfos with expanded data IDs; Moving info list to next stage; ");
+                    Dbg.Log(cvx, $"Created '{preExpandedIDs.Length}' ConValInfos with expanded data IDs; Moving info list to next stage; ");
                     allExpandedDataIDs.AddRange(preExpandedIDs);
-                    Dbug.NudgeIndent(false);
+                    Dbg.NudgeIndent(cvx, false);
                 }
 
                 ProgressBarUpdate(1, true);
@@ -541,23 +541,23 @@ namespace HCResourceLibraryApp.DataHandling
                     TaskCount = allExpandedDataIDs.Count;
                     ProgressBarUpdate(0, false, false, "Verifying");
 
-                    Dbug.Log("- - - - - - - - - - - - - - - - -");
-                    Dbug.Log("Content Integrity Verification process is ready to begin; Proceeding to validate contents; ");
-                    Dbug.LogPart("File extensions in use:");
+                    Dbg.Log(cvx, "- - - - - - - - - - - - - - - - -");
+                    Dbg.Log(cvx, "Content Integrity Verification process is ready to begin; Proceeding to validate contents; ");
+                    Dbg.LogPart(cvx, "File extensions in use:");
                     foreach (string fileExt in fileTypeExts)
-                        Dbug.LogPart($" {fileExt}");
-                    Dbug.Log("; ");
-                    Dbug.Log("NOTE :: VALIDATED SYMBOLS :: ! (unmodified validation)   //   * (Replaced '_' with ' ')   //   ** (Removed ' ');");
+                        Dbg.LogPart(cvx, $" {fileExt}");
+                    Dbg.Log(cvx, "; ");
+                    Dbg.Log(cvx, "NOTE :: VALIDATED SYMBOLS :: ! (unmodified validation)   //   * (Replaced '_' with ' ')   //   ** (Removed ' ');");
 
                     const int allValidatedNum = 0;
                     int countInvalidated = allValidatedNum;
 
-                    Dbug.NudgeIndent(true);
+                    Dbg.NudgeIndent(cvx, true);
                     /// FOR each expanded data ID (ConValInfo)                    
                     for (int cdx = 0; cdx < allExpandedDataIDs.Count; cdx++)
                     {
                         ConValInfo conToVal = allExpandedDataIDs[cdx];
-                        Dbug.LogPart($"Validating {$"'{conToVal.DataID}'", -25}  //  ");
+                        Dbg.LogPart(cvx, $"Validating {$"'{conToVal.DataID}'", -25}  //  ");
                         bool foundThisContentQ = false;
                         string filePath = null;
 
@@ -587,7 +587,7 @@ namespace HCResourceLibraryApp.DataHandling
                                         {
                                             string relativePath = fileToCheck.FullName.Clamp(relativePathDist, relativePathClampSuffix, fileToCheck.Name, false);
                                             filePath = relativePath;
-                                            Dbug.LogPart($"VALIDATED!  Found file '{conToVal.DataID}{fileExt}' at following relative path :: {relativePath}");
+                                            Dbg.LogPart(cvx, $"VALIDATED!  Found file '{conToVal.DataID}{fileExt}' at following relative path :: {relativePath}");
                                         }
                                         else
                                         {
@@ -596,7 +596,7 @@ namespace HCResourceLibraryApp.DataHandling
                                             {
                                                 string relativePath = fileToCheck.FullName.Clamp(relativePathDist, relativePathClampSuffix, fileToCheck.Name, false);
                                                 filePath = relativePath;
-                                                Dbug.LogPart($"VALIDATED*  Found file '{conToVal.DataID.Replace("_", " ")}{fileExt}' at following relative path :: {relativePath}");
+                                                Dbg.LogPart(cvx, $"VALIDATED*  Found file '{conToVal.DataID.Replace("_", " ")}{fileExt}' at following relative path :: {relativePath}");
                                             }
                                             else
                                             {
@@ -605,7 +605,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                 {
                                                     string relativePath = fileToCheck.FullName.Clamp(relativePathDist, relativePathClampSuffix, fileToCheck.Name, false);
                                                     filePath = relativePath;
-                                                    Dbug.LogPart($"VALIDATED**  Found file '{conToVal.DataID.Replace(" ", "")}{fileExt}' at following relative path :: {relativePath}");
+                                                    Dbg.LogPart(cvx, $"VALIDATED**  Found file '{conToVal.DataID.Replace(" ", "")}{fileExt}' at following relative path :: {relativePath}");
                                                 }
                                             }
                                         }
@@ -618,26 +618,26 @@ namespace HCResourceLibraryApp.DataHandling
                             conToVal.ConfirmValidation(filePath);
                             allExpandedDataIDs[cdx] = conToVal;
                             if (allExpandedDataIDs[cdx].IsValidated)
-                                Dbug.LogPart(" [!]");
+                                Dbg.LogPart(cvx, " [!]");
                         }
                         else
                         {
-                            Dbug.LogPart("Invalidated");
+                            Dbg.LogPart(cvx, "Invalidated");
                             countInvalidated++;
                         }
-                        Dbug.Log("; ");
+                        Dbg.Log(cvx, "; ");
 
                         TaskNum++;
                         ProgressBarUpdate(TaskNum / TaskCount);
                     }
 
                     anyInvalidatedQ = countInvalidated != allValidatedNum;
-                    Dbug.NudgeIndent(false);
+                    Dbg.NudgeIndent(cvx, false);
 
                     float truePercentValidated = (float)(allExpandedDataIDs.Count - countInvalidated) / allExpandedDataIDs.Count * 100f;
                     float clampedPercentValidated = countInvalidated > 0 ? truePercentValidated.Clamp(0, 99.99f) : truePercentValidated;
                     string validationTurnout = $"'{allExpandedDataIDs.Count - countInvalidated}' of '{allExpandedDataIDs.Count}' (actual: {truePercentValidated:0.000}% | sent: {clampedPercentValidated:0.00}%)";
-                    Dbug.Log($"Content Integrity Verification process complete; {validationTurnout} contents were validated; Moving list of ConValInfos data to be accessed by other classes; ");
+                    Dbg.Log(cvx, $"Content Integrity Verification process complete; {validationTurnout} contents were validated; Moving list of ConValInfos data to be accessed by other classes; ");
                     _percentValidation = clampedPercentValidated;
                     _conValInfoDock = allExpandedDataIDs;
                 }
@@ -645,7 +645,7 @@ namespace HCResourceLibraryApp.DataHandling
                 ProgressBarUpdate(1);
             }
 
-            Dbug.EndLogging();
+            Dbg.EndLogging(cvx);
             return civProcessBegunQ;
         }
 

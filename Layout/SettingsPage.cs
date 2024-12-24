@@ -1046,7 +1046,7 @@ namespace HCResourceLibraryApp.Layout
                     {
                         endActiveMenuKey = true;
                         Program.LogState("Settings|Content Integrity|View All Data IDs");
-                        Dbug.StartLogging("SettingsPage.SubPage_ContentIntegrity():ViewAllDataIds");
+                        Dbg.StartLogging("SettingsPage.SubPage_ContentIntegrity():ViewAllDataIds", out int stpgx);
 
                         // gather data
                         ProgressBarInitialize(false, false, 25, 0, 0, ForECol.Accent);
@@ -1058,27 +1058,27 @@ namespace HCResourceLibraryApp.Layout
                         List<string> legendKeys = new() { miscPhrase }, legendDefs = new() { miscPhrase };
                         List<string> legendSymbols = new();
                         string legendKeysString = "";
-                        Dbug.Log("Fetching Legend Keys (and Definitions) --> ");
-                        Dbug.NudgeIndent(true);
+                        Dbg.Log(stpgx, "Fetching Legend Keys (and Definitions) --> ");
+                        Dbg.NudgeIndent(stpgx, true);
                         foreach (LegendData legDat in _resLibrary.Legends)
                         {
-                            Dbug.LogPart($"Key '{legDat.Key}' | Added? {IsNotSymbol(legDat.Key)}");
+                            Dbg.LogPart(stpgx, $"Key '{legDat.Key}' | Added? {IsNotSymbol(legDat.Key)}");
                             if (IsNotSymbol(legDat.Key))
                             {
                                 /// adding definition before key so they are sorted properly
                                 legendKeys.Add($"{legDat[0]} {legDat.Key}");
                                 legendDefs.Add($"{legDat[0]}");
                                 legendKeysString += $"{legDat.Key} ";
-                                Dbug.LogPart($" | and Definition '{legDat[0]}'");
+                                Dbg.LogPart(stpgx, $" | and Definition '{legDat[0]}'");
                             }
                             else legendSymbols.Add(legDat.Key);
-                            Dbug.Log("; ");
+                            Dbg.Log(stpgx, "; ");
 
                             TaskNum++;
                             ProgressBarUpdate(TaskNum / TaskCount, true);
                         }
-                        Dbug.NudgeIndent(false);
-                        Dbug.Log("Done, and sorted; ");
+                        Dbg.NudgeIndent(stpgx, false);
+                        Dbg.Log(stpgx, "Done, and sorted; ");
                         legendKeys = legendKeys.ToArray().SortWords();
                         legendDefs = legendDefs.ToArray().SortWords();
 
@@ -1088,28 +1088,28 @@ namespace HCResourceLibraryApp.Layout
 
                         /// fetch all data ids
                         List<string> allDataIds = new();
-                        Dbug.Log("Fetching all Data IDs (Data Ids in angled brackets '<>' were rejected); Note that legend symbols are disregarded; ");
-                        Dbug.NudgeIndent(true);
+                        Dbg.Log(stpgx, "Fetching all Data IDs (Data Ids in angled brackets '<>' were rejected); Note that legend symbols are disregarded; ");
+                        Dbg.NudgeIndent(stpgx, true);
                         foreach (ResContents resCon in _resLibrary.Contents)
                         {
-                            Dbug.LogPart($"From #{resCon.ShelfID} {$"'{resCon.ContentName}'", -30}  //  CBG :: ");
+                            Dbg.LogPart(stpgx, $"From #{resCon.ShelfID} {$"'{resCon.ContentName}'", -30}  //  CBG :: ");
                             for (int cbx = 0; cbx < resCon.ConBase.CountIDs; cbx++)
                             {
                                 string datID = RemoveLegendSymbols(resCon.ConBase[cbx]);
                                 if (!allDataIds.Contains(datID))
                                 {
                                     allDataIds.Add(datID);
-                                    Dbug.LogPart($"{datID} ");
+                                    Dbg.LogPart(stpgx, $"{datID} ");
                                 }
-                                else Dbug.LogPart($"<{datID}> ");
+                                else Dbg.LogPart(stpgx, $"<{datID}> ");
                             }
 
                             if (resCon.ConAddits.HasElements())
                             {
-                                Dbug.LogPart("  //  CAs ::");
+                                Dbg.LogPart(stpgx, "  //  CAs ::");
                                 for (int casx = 0; casx < resCon.ConAddits.Count; casx++)
                                 {
-                                    Dbug.LogPart($" |[{casx + 1}]");
+                                    Dbg.LogPart(stpgx, $" |[{casx + 1}]");
                                     ContentAdditionals conAdt = resCon.ConAddits[casx];
                                     for (int cax = 0; cax < conAdt.CountIDs; cax++)
                                     {
@@ -1117,19 +1117,19 @@ namespace HCResourceLibraryApp.Layout
                                         if (!allDataIds.Contains(datID))
                                         {
                                             allDataIds.Add(datID);
-                                            Dbug.LogPart($"{datID} ");
+                                            Dbg.LogPart(stpgx, $"{datID} ");
                                         }
-                                        else Dbug.LogPart($"<{datID}> ");
+                                        else Dbg.LogPart(stpgx, $"<{datID}> ");
                                     }
                                 }
                             }
-                            Dbug.Log("; ");
+                            Dbg.Log(stpgx, "; ");
 
                             TaskNum++;
                             ProgressBarUpdate(TaskNum / TaskCount, true);
                         }
-                        Dbug.NudgeIndent(false);
-                        Dbug.Log("Done, and sorted; ");
+                        Dbg.NudgeIndent(stpgx, false);
+                        Dbg.Log(stpgx, "Done, and sorted; ");
                         allDataIds = allDataIds.ToArray().SortWords();
 
                         ProgressBarUpdate(1, true);
@@ -1141,15 +1141,15 @@ namespace HCResourceLibraryApp.Layout
                             _resLibrary.GetVersionRange(out _, out VerNum latestVer);
                             FormatLine($"All data IDs from shelves of library (version: {latestVer.ToStringNums()}).", ForECol.Accent);
 
-                            Dbug.Log("Printing Data ID categories; Data IDs in angled brackets '<>' are misc. IDs that required disassembling; ");
-                            Dbug.NudgeIndent(true);
+                            Dbg.Log(stpgx, "Printing Data ID categories; Data IDs in angled brackets '<>' are misc. IDs that required disassembling; ");
+                            Dbg.NudgeIndent(stpgx, true);
                             for (int lx = 0; lx < legendKeys.Count; lx++)
                             {
                                 string legendDef = legendDefs[lx];
                                 string legendKey = legendDef != miscPhrase ? legendKeys[lx].Replace($"{legendDef} ", "") : legendKeys[lx];
                                 bool isMiscCategoryQ = legendKey == miscPhrase;
-                                Dbug.Log($"Category '{legendKey}' [{legendDef}]");
-                                Dbug.NudgeIndent(true);
+                                Dbg.Log(stpgx, $"Category '{legendKey}' [{legendDef}]");
+                                Dbg.NudgeIndent(stpgx, true);
 
                                 // get data IDs for category (legend key)
                                 string dataIDList = "";
@@ -1184,13 +1184,13 @@ namespace HCResourceLibraryApp.Layout
                                                 datIDToPrint = datID;
                                                 
                                                 disableOrignalLogPrintQ = true;
-                                                Dbug.LogPart($"<{datIDToPrint}> ");
+                                                Dbg.LogPart(stpgx, $"<{datIDToPrint}> ");
                                             }
                                         }
                                     }
 
                                     if (!disableOrignalLogPrintQ)
-                                        Dbug.LogPart($"{datIDToPrint} ");
+                                        Dbg.LogPart(stpgx, $"{datIDToPrint} ");
                                     if (datIDToPrint.IsNotNE())
                                     {
                                         dataIDList += $"{datIDToPrint} ";
@@ -1204,7 +1204,7 @@ namespace HCResourceLibraryApp.Layout
                                     // for misc
                                     if (isMiscCategoryQ)
                                     {
-                                        Dbug.Log(" .. Grouping and condensing misc data IDs; ");
+                                        Dbg.Log(stpgx, " .. Grouping and condensing misc data IDs; ");
                                         const string miscGroupSplitKey = "//misc//";
                                         string[] miscIDs = MiscDataIDGrouping(dataIDList, miscGroupSplitKey, true);
 
@@ -1214,8 +1214,8 @@ namespace HCResourceLibraryApp.Layout
                                             {
                                                 preReBuiltDataIdList += $"\n{miscIDs[mx]}";
                                                 if (mx + 1 < miscIDs.Length)
-                                                    Dbug.Log($":: {miscIDs[mx]};");
-                                                else Dbug.LogPart($":: {miscIDs[mx]}; ");
+                                                    Dbg.Log(stpgx, $":: {miscIDs[mx]};");
+                                                else Dbg.LogPart(stpgx, $":: {miscIDs[mx]}; ");
                                             }
                                         if (preReBuiltDataIdList.IsNotNE())
                                             dataIDList = preReBuiltDataIdList;
@@ -1224,24 +1224,24 @@ namespace HCResourceLibraryApp.Layout
                                     // for regulars
                                     else
                                     {
-                                        Dbug.Log(" ..  Condensing with ranges; ");
+                                        Dbg.Log(stpgx, " ..  Condensing with ranges; ");
                                         string dataIDListWithRanges = Extensions.CreateNumericDataIDRanges(dataIDList.Split(" "));
                                         bool uncondensedQ = false;
                                         if (dataIDList.Contains(dataIDListWithRanges))
                                         {
-                                            Dbug.LogPart("Remains uncondensed; ");
+                                            Dbg.LogPart(stpgx, "Remains uncondensed; ");
                                             uncondensedQ = true;
                                         }
 
                                         if (dataIDListWithRanges.IsNotNE() && !uncondensedQ)
                                         {
-                                            Dbug.LogPart($":: {dataIDListWithRanges}");
+                                            Dbg.LogPart(stpgx, $":: {dataIDListWithRanges}");
                                             dataIDList = dataIDListWithRanges;
                                         }
                                     }
                                 }
-                                else Dbug.LogPart(" .. No data IDs to condense .."); 
-                                Dbug.LogPart($" .. Counted '{dataIDCount}' data IDs; ");
+                                else Dbg.LogPart(stpgx, " .. No data IDs to condense .."); 
+                                Dbg.LogPart(stpgx, $" .. Counted '{dataIDCount}' data IDs; ");
 
                                 // all printing here
                                 if (!isMiscCategoryQ || (isMiscCategoryQ && dataIDList.IsNotNE()))
@@ -1256,10 +1256,10 @@ namespace HCResourceLibraryApp.Layout
                                     Format(dataIDList.Trim(), ForECol.Normal);
                                     NewLine(lx + 1 != legendKeys.Count ? 2 : 1);
                                 }
-                                Dbug.Log($" //  End '{legendKey}'");
-                                Dbug.NudgeIndent(false);
+                                Dbg.Log(stpgx, $" //  End '{legendKey}'");
+                                Dbg.NudgeIndent(stpgx, false);
                             }
-                            Dbug.NudgeIndent(false);
+                            Dbg.NudgeIndent(stpgx, false);
 
                             // Display TTA
                             NewLine(HSNL(0, 2) > 1 ? 3 : 2);
@@ -1267,7 +1267,7 @@ namespace HCResourceLibraryApp.Layout
                             Highlight(false, $"Total Contents :: {allDataIds.Count}.", allDataIds.Count.ToString());
                             Pause();
                         }
-                        Dbug.EndLogging();
+                        Dbg.EndLogging(stpgx);
 
                         // method - more like 'remove legend suffixes'
                         string RemoveLegendSymbols(string str)
@@ -1554,11 +1554,11 @@ namespace HCResourceLibraryApp.Layout
         // civ display method and useful enum -- public, for testing
         public static void DisplayCivResults(ConValInfo[] civDatas, CivDisplayType displayType)
         {
-            Dbug.StartLogging("SettingsPage.DisplayCivResults()");
+            Dbg.StartLogging("SettingsPage.DisplayCivResults()", out int stpgx);
             if (civDatas.HasElements())
             {
-                Dbug.Log($"Received ConValInfo array with '{civDatas.Length}' elements and a display type of '{displayType}'; ");
-                Dbug.Log("Fetching all data IDs and generating Legend Data instances from ConValInfos received; ");
+                Dbg.Log(stpgx, $"Received ConValInfo array with '{civDatas.Length}' elements and a display type of '{displayType}'; ");
+                Dbg.Log(stpgx, "Fetching all data IDs and generating Legend Data instances from ConValInfos received; ");
 
                 // Get legend data from library
                 const string miscPhrase = "Miscellaneous", invalidatedTag = DataHandlerBase.Sep;
@@ -1592,27 +1592,27 @@ namespace HCResourceLibraryApp.Layout
                             legends[ldx] = aLegData;
                     }                   
                 }
-                Dbug.Log($" -> Fetched '{legends.Length}' Legend Datas from ResLibrary; ");
+                Dbg.Log(stpgx, $" -> Fetched '{legends.Length}' Legend Datas from ResLibrary; ");
 
 
                 // Categorize, print and indicate verification of data IDs
                 if (legends.HasElements())
                 {
-                    Dbug.Log($"Proceeding to categorize, print, and indicate verification of all IDs; Display type: {displayType}; ");
-                    Dbug.Log($"Any Data ID marked with '{invalidatedTag}' has been invalidated by CIV process; ");
+                    Dbg.Log(stpgx, $"Proceeding to categorize, print, and indicate verification of all IDs; Display type: {displayType}; ");
+                    Dbg.Log(stpgx, $"Any Data ID marked with '{invalidatedTag}' has been invalidated by CIV process; ");
                     List<string> legendKeysList = new();
                     foreach (LegendData ld in legends)
                         legendKeysList.Add(ld.Key);
 
                     Program.ToggleFormatUsageVerification();
-                    Dbug.NudgeIndent(true);
+                    Dbg.NudgeIndent(stpgx, true);
                     for (int lx = 0; lx < legends.Length; lx++)
                     {
                         LegendData legDat = legends[lx];
                         List<string> invalidDataIDsList = new();
-                        Dbug.Log($"Category '{legDat.Key}' [{legDat[0]}]");
+                        Dbg.Log(stpgx, $"Category '{legDat.Key}' [{legDat[0]}]");
 
-                        Dbug.NudgeIndent(true);
+                        Dbg.NudgeIndent(stpgx, true);
                         string dataIDList = "";
                         int dataIDCount = 0, dataIDinvalidatedCount = 0;
                         bool isMiscCategoryQ = legDat.Key == miscPhrase;
@@ -1666,7 +1666,7 @@ namespace HCResourceLibraryApp.Layout
                                         dataIDinvalidatedCount++;
                                     }
 
-                                    Dbug.LogPart($"{dataIDToPrint} ");
+                                    Dbg.LogPart(stpgx, $"{dataIDToPrint} ");
                                     dataIDList += $"{dataIDToPrint} ";
                                     dataIDCount++;
                                 }
@@ -1677,8 +1677,8 @@ namespace HCResourceLibraryApp.Layout
                         List<string> miscDataIDListWithRanges = new();
                         if (isMiscCategoryQ)
                         {
-                            Dbug.Log("; ");
-                            Dbug.Log("Splitting misc data IDs into letter groups; ");
+                            Dbg.Log(stpgx, "; ");
+                            Dbg.Log(stpgx, "Splitting misc data IDs into letter groups; ");
                             string[] preMiscDataIDListWithRanges = MiscDataIDGrouping(dataIDList, miscGroupSplitKey, displayType == CivDisplayType.Compact, invalidatedTag, ' ', false);
                             if (preMiscDataIDListWithRanges.HasElements())
                                 foreach (string mDataList in preMiscDataIDListWithRanges)
@@ -1698,36 +1698,36 @@ namespace HCResourceLibraryApp.Layout
 
                                     if (!brokenToPartsQ)
                                         miscDataIDListWithRanges.Add(mDataList);
-                                    Dbug.Log($":: {mDataList}; {dbgText}");
+                                    Dbg.Log(stpgx, $":: {mDataList}; {dbgText}");
                                 }
                         }
 
                         // condense to ranges if allowed (Compact Only)
                         if (displayType == CivDisplayType.Compact && !isMiscCategoryQ)
                         {
-                            Dbug.Log(" ..  Condensing with ranges; ");
+                            Dbg.Log(stpgx, " ..  Condensing with ranges; ");
                             string dataIDListWithRanges = Extensions.CreateNumericDataIDRanges(dataIDList.Split(" "), false);
                             bool uncondensedQ = false;
                             if (dataIDList.Contains(dataIDListWithRanges))
                             {
-                                Dbug.LogPart("Remains uncondensed; ");
+                                Dbg.LogPart(stpgx, "Remains uncondensed; ");
                                 uncondensedQ = true;
                             }
 
                             if (dataIDListWithRanges.IsNotNE() && !uncondensedQ)
                             {
-                                Dbug.LogPart($":: {dataIDListWithRanges}");
+                                Dbg.LogPart(stpgx, $":: {dataIDListWithRanges}");
                                 dataIDList = dataIDListWithRanges;
                             }
                         }
-                        Dbug.LogPart($" .. Counted '{dataIDCount}' data IDs, '{dataIDinvalidatedCount}' were invalidated; ");
+                        Dbg.LogPart(stpgx, $" .. Counted '{dataIDCount}' data IDs, '{dataIDinvalidatedCount}' were invalidated; ");
 
 
                         // all printing here
                         if ((!isMiscCategoryQ && dataIDList.IsNotNE()) || (isMiscCategoryQ && dataIDList.IsNotNE()))
                         {
                             float percentValid = ((float)(dataIDCount - dataIDinvalidatedCount)) / dataIDCount * 100f;
-                            Dbug.LogPart($"[{percentValid:0.#}% valid]; ");
+                            Dbg.LogPart(stpgx, $"[{percentValid:0.#}% valid]; ");
 
                             Format($"[{legDat[0]}] ", ForECol.Highlight);
                             if (displayType != CivDisplayType.Focused)
@@ -1765,10 +1765,10 @@ namespace HCResourceLibraryApp.Layout
                             }
                             NewLine(lx + 1 != legends.Length ? 2 : 1);
                         }
-                        Dbug.Log($" //  End '{legDat.Key}'");
-                        Dbug.NudgeIndent(false);
+                        Dbg.Log(stpgx, $" //  End '{legDat.Key}'");
+                        Dbg.NudgeIndent(stpgx, false);
                     }
-                    Dbug.NudgeIndent(false);
+                    Dbg.NudgeIndent(stpgx, false);
                     Program.ToggleFormatUsageVerification();
 
                     /**
@@ -1776,9 +1776,9 @@ namespace HCResourceLibraryApp.Layout
                         {
                             string legendKey = legendKeys[lx];
                             string legendDef = legendKey != miscPhrase ? legendDefs[lx].Replace($"{legendKey} ", "") : legendDefs[lx];
-                            Dbug.Log($"Category '{legendKey}' [{legendDef}]");
+                            Dbg.Log(stpgx, $"Category '{legendKey}' [{legendDef}]");
 
-                            Dbug.NudgeIndent(true);
+                            Dbg.NudgeIndent(stpgx, true);
                             string dataIDList = "";
                             int dataIDCount = 0;
                             for (int dx = 0; dx < allDataIds.Count; dx++)
@@ -1811,13 +1811,13 @@ namespace HCResourceLibraryApp.Layout
                                             datIDToPrint = datID;
                                                 
                                             disableOrignalLogPrintQ = true;
-                                            Dbug.LogPart($"<{datIDToPrint}> ");
+                                            Dbg.LogPart(stpgx, $"<{datIDToPrint}> ");
                                         }
                                     }
                                 }
 
                                 if (!disableOrignalLogPrintQ)
-                                    Dbug.LogPart($"{datIDToPrint} ");
+                                    Dbg.LogPart(stpgx, $"{datIDToPrint} ");
                                 if (datIDToPrint.IsNotNE())
                                 {
                                     dataIDList += $"{datIDToPrint} ";
@@ -1827,22 +1827,22 @@ namespace HCResourceLibraryApp.Layout
 
                             if (legendKey != miscPhrase)
                             {
-                                Dbug.Log(" ..  Condensing with ranges; ");
+                                Dbg.Log(stpgx, " ..  Condensing with ranges; ");
                                 string dataIDListWithRanges = Extensions.CreateNumericDataIDRanges(dataIDList.Split(" "));
                                 bool uncondensedQ = false;
                                 if (dataIDList.Contains(dataIDListWithRanges))
                                 {
-                                    Dbug.LogPart("Remains uncondensed; ");
+                                    Dbg.LogPart(stpgx, "Remains uncondensed; ");
                                     uncondensedQ = true;
                                 }
 
                                 if (dataIDListWithRanges.IsNotNE() && !uncondensedQ)
                                 {
-                                    Dbug.LogPart($":: {dataIDListWithRanges}");
+                                    Dbg.LogPart(stpgx, $":: {dataIDListWithRanges}");
                                     dataIDList = dataIDListWithRanges;
                                 }
                             }
-                            Dbug.LogPart($" .. Counted '{dataIDCount}' data IDs; ");
+                            Dbg.LogPart(stpgx, $" .. Counted '{dataIDCount}' data IDs; ");
 
                             // all printing here
                             if (legendKey != miscPhrase || (legendKey == miscPhrase && dataIDList.IsNotNE()))
@@ -1855,15 +1855,15 @@ namespace HCResourceLibraryApp.Layout
                                 Format(dataIDList.Trim(), ForECol.Normal);
                                 NewLine(lx + 1 != legendKeys.Count ? 2 : 1);
                             }
-                            Dbug.Log($" //  End '{legendKey}'");
-                            Dbug.NudgeIndent(false);
+                            Dbg.Log(stpgx, $" //  End '{legendKey}'");
+                            Dbg.NudgeIndent(stpgx, false);
                         }
                      
                      */
                 }
             }
-            else Dbug.Log("Received no ConValInfos data to create a display; ");
-            Dbug.EndLogging();
+            else Dbg.Log(stpgx, "Received no ConValInfos data to create a display; ");
+            Dbg.EndLogging(stpgx);
         }
         public static void ShowPrefsColors(Preferences prefs)
         {

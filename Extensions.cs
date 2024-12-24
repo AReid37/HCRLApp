@@ -244,9 +244,10 @@ namespace HCResourceLibraryApp
             string rangedNumbers = "";
             if (numbers.HasElements())
             {
-                Dbug.IgnoreNextLogSession();
-                Dbug.StartLogging("Extensions.CreateNumericDataIDRanges(str[])");
-                Dbug.Log($"Recieved '{numbers.Length}' numbers to create ranges from; Removing null/empty entries; ");
+                Dbg.StartLogging("Extensions.CreateNumericDataIDRanges(...)", out int tx);
+                Dbg.ToggleThreadOutputOmission(tx);
+
+                Dbg.Log(tx, $"Recieved '{numbers.Length}' numbers to create ranges from; Removing null/empty entries; ");
                 List<string> fltNumbers = new();
                 foreach (string numT in numbers)
                     if (numT.IsNotNEW())
@@ -254,8 +255,8 @@ namespace HCResourceLibraryApp
 
                 if (fltNumbers.HasElements() && sortWordsQ)
                     fltNumbers = fltNumbers.ToArray().SortWords();
-                Dbug.Log($"Filtered down to '{fltNumbers.Count}' numbers; {(sortWordsQ? "Sorted numbers; " : "")}Creating Ranges; ");
-                Dbug.Log($"LEGEND :: Range Enter '{{' -- Range Exit '}}' -- Base Num '@#' --  End Range Num '!' -- Last Num Ends Range '>' -- Incompatibility Range Break '*' -- Range Indicators [' .]");
+                Dbg.Log(tx, $"Filtered down to '{fltNumbers.Count}' numbers; {(sortWordsQ? "Sorted numbers; " : "")}Creating Ranges; ");
+                Dbg.Log(tx, $"LEGEND :: Range Enter '{{' -- Range Exit '}}' -- Base Num '@#' --  End Range Num '!' -- Last Num Ends Range '>' -- Incompatibility Range Break '*' -- Range Indicators [' .]");
 
                 string baseNumT = null, baseOddNumT = null;
                 bool withinRangeQ = false, withinOddRangeQ = false;
@@ -273,7 +274,7 @@ namespace HCResourceLibraryApp
                     /// 5 6
                     if (parsedCurrNum && parsedPrevNum)
                     {
-                        //Dbug.LogPart("\\");
+                        //Dbg.LogPart("\\");
 
                         /// IF this num is next in sequence; ELSE this num is beyond sequence 
                         if (prevNum + 1 == currNum)
@@ -281,11 +282,11 @@ namespace HCResourceLibraryApp
                             /// is not within range |
                             if (!withinRangeQ)
                             {
-                                Dbug.LogPart($" {{");
+                                Dbg.LogPart(tx, $" {{");
                                 withinRangeQ = true;
                                 baseNumT = prevNum.ToString();
 
-                                Dbug.LogPart($"@{baseNumT}'{currNumT}");
+                                Dbg.LogPart(tx, $"@{baseNumT}'{currNumT}");
 
                                 /// IF there is preceding sequences AND there is base sequence number: remove last-printed number in sequence (iow. remove base number)
                                 if (rangedNumbers.IsNotNE() && baseNumT.IsNotNE())
@@ -296,7 +297,7 @@ namespace HCResourceLibraryApp
                                     numToPrint = baseNumT;
                                 else
                                 {
-                                    Dbug.LogPart($"!}}> ");
+                                    Dbg.LogPart(tx, $"!}}> ");
                                     numToPrint = $"{baseNumT},{currNumT}";
                                 }
                             }
@@ -305,10 +306,10 @@ namespace HCResourceLibraryApp
                             {
                                 /// IF more numbers follow: don't print number; ELSE print sequence-ending/last number
                                 if (!lastNumberQ)
-                                    Dbug.LogPart($"'{currNumT}");
+                                    Dbg.LogPart(tx, $"'{currNumT}");
                                 else
                                 {
-                                    Dbug.LogPart($"'{currNumT}!}}> ");
+                                    Dbg.LogPart(tx, $"'{currNumT}!}}> ");
                                     numToPrint = $"~{currNumT}";
                                 }
                             }
@@ -324,10 +325,10 @@ namespace HCResourceLibraryApp
                                 if (numToPrint.IsNE())
                                     numToPrint = $"~{prevNumT},";
 
-                                Dbug.LogPart($"!}}");
+                                Dbg.LogPart(tx, $"!}}");
                             }
 
-                            Dbug.LogPart($" {currNumT}");
+                            Dbg.LogPart(tx, $" {currNumT}");
                             numToPrint += $"{currNumT},";
 
                             withinRangeQ = false;
@@ -338,7 +339,7 @@ namespace HCResourceLibraryApp
                     /// 6_2 7-wet
                     else
                     {
-                        //Dbug.LogPart("/");
+                        //Dbg.LogPart("/");
 
                         /// IF is within range; (IF current num is odd AND previous is normal; print sequence-ending number, start odd number sequences)
                         if (withinRangeQ)
@@ -351,9 +352,9 @@ namespace HCResourceLibraryApp
                                         numToPrint = $",{prevNumT},";
                                 if (numToPrint.IsNE())
                                     numToPrint = $"~{prevNumT},";
-                                Dbug.LogPart($"!}}*");
+                                Dbg.LogPart(tx, $"!}}*");
 
-                                //Dbug.LogPart($" {currNumT}");
+                                //Dbg.LogPart($" {currNumT}");
                                 //numToPrint += $"{currNumT},";
 
                                 withinRangeQ = false;
@@ -384,11 +385,11 @@ namespace HCResourceLibraryApp
                                             /// is not within odd range; ELSE is within odd range
                                             if (!withinOddRangeQ)
                                             {
-                                                Dbug.LogPart($" {{");
+                                                Dbg.LogPart(tx, $" {{");
                                                 withinOddRangeQ = true;
                                                 baseOddNumT = prevNumT;
 
-                                                Dbug.LogPart($"@{prevNumT}.{currNumT}");
+                                                Dbg.LogPart(tx, $"@{prevNumT}.{currNumT}");
 
                                                 /// IF there is preceding sequences AND there is odd base sequence number: remove last-printed number in sequence (iow. remove odd base number)
                                                 if (rangedNumbers.IsNotNE() && baseOddNumT.IsNotNE())
@@ -399,7 +400,7 @@ namespace HCResourceLibraryApp
                                                     numToPrint = baseOddNumT;
                                                 else
                                                 {
-                                                    Dbug.LogPart($"!}}> ");
+                                                    Dbg.LogPart(tx, $"!}}> ");
                                                     numToPrint = $"{baseOddNumT},{currNumT}";
                                                 }
                                             }
@@ -407,10 +408,10 @@ namespace HCResourceLibraryApp
                                             {
                                                 /// IF more numbers follow: don't print number; ELSE print sequence-ending/last number
                                                 if (!lastNumberQ)
-                                                    Dbug.LogPart($".{currNumT}");
+                                                    Dbg.LogPart(tx, $".{currNumT}");
                                                 else
                                                 {
-                                                    Dbug.LogPart($".{currNumT}!}}> ");
+                                                    Dbg.LogPart(tx, $".{currNumT}!}}> ");
                                                     numToPrint = $"~{currNumT}";
                                                 }
                                             }
@@ -426,10 +427,10 @@ namespace HCResourceLibraryApp
                                                 if (numToPrint.IsNE())
                                                     numToPrint = $"~{prevNumT},";
 
-                                                Dbug.LogPart($"!}}");
+                                                Dbg.LogPart(tx, $"!}}");
                                             }
 
-                                            Dbug.LogPart($" {currNumT}");
+                                            Dbg.LogPart(tx, $" {currNumT}");
                                             numToPrint += $"{currNumT},";
 
                                             withinOddRangeQ = false;
@@ -446,85 +447,17 @@ namespace HCResourceLibraryApp
                                             if (numToPrint.IsNE())
                                                 numToPrint = $"~{prevNumT},";
 
-                                            Dbug.LogPart($"!}}**");
+                                            Dbg.LogPart(tx, $"!}}**");
                                         }
 
                                         /// // since 'justPrint' isn't disabled here, the following lines can be commented out
-                                        /// Dbug.LogPart($" {currNumT}");
+                                        /// Dbg.LogPart($" {currNumT}");
                                         /// numToPrint += $"{currNumT},";
 
                                         withinOddRangeQ = false;
                                         baseOddNumT = null;
                                     }
                                 }
-
-                                #region dispose/
-                                //if (parsedCurrOddNum && parsedPrevOddNum)
-                                //{
-                                //    justPrintQ = false;
-                                //    if (prevEndNum + 1 == currEndNum)
-                                //    {
-                                //        /// is not within range |
-                                //        if (!withinOddRangeQ)
-                                //        {
-                                //            Dbug.LogPart(" {");
-                                //            withinOddRangeQ = true;
-                                //            baseOddNumT = prevNumT;
-
-                                //            Dbug.LogPart($"@{baseOddNumT}'{currNumT}");
-
-                                //            ///
-                                //            if (rangedNumbers.IsNotNE() && baseOddNumT.IsNotNE())
-                                //                ;
-
-                                //            ///
-                                //            if (!lastNumberQ)
-                                //                ;
-                                //            else
-                                //            {
-                                //                Dbug.LogPart($"!}}> ");
-                                //            }
-                                //        }
-                                //        /// is within range |
-                                //        else
-                                //        {
-                                //            /// IF more odd numbers follow: don't print number; ELSE print sequence-ending/last odd number
-                                //            if (!lastNumberQ)
-                                //                Dbug.LogPart($"'{currNumT}");
-                                //            else
-                                //            {
-                                //                Dbug.LogPart($"'{currNumT}!}}> ");
-                                //            }
-                                //        }
-                                //    }
-                                //    else
-                                //    {
-                                //        /// IF was within odd range (IF sequence of 2: print as normal; IF number to print unset, sequence of 3+: print sequence-ending odd number)
-                                //        if (withinOddRangeQ)
-                                //        {
-                                //            if (TryGetEndingNumber(baseOddNumT, out int baseEndNum))
-                                //                if (baseEndNum + 1 == prevEndNum)
-                                //                    ;
-                                //            if (numToPrint.IsNE())
-                                //                ;
-
-                                //            Dbug.LogPart($"!}}");
-                                //        }
-
-                                //        Dbug.LogPart($" {currNumT}");
-
-                                //        withinOddRangeQ = false;
-                                //        baseOddNumT = null;
-                                //    }
-                                //}    
-                                //else
-                                //{
-                                //    if (withinOddRangeQ)
-                                //    {
-
-                                //    }
-                                //}
-                                #endregion
                             }
 
                             /// IF just print next number: (IF is within odd range: end odd range)
@@ -538,7 +471,7 @@ namespace HCResourceLibraryApp
                                     if (numToPrint.IsNE())
                                         numToPrint = $"~{prevNumT},";
 
-                                    Dbug.LogPart($"!}}*");
+                                    Dbg.LogPart(tx, $"!}}*");
 
                                     //withinOddRangeQ = false;
                                     //baseOddNumT = null;
@@ -547,7 +480,7 @@ namespace HCResourceLibraryApp
                                 withinOddRangeQ = false;
                                 baseOddNumT = null;
 
-                                Dbug.LogPart($" {currNumT}");
+                                Dbg.LogPart(tx, $" {currNumT}");
                                 numToPrint += $"{currNumT},";
                             }
                         }
@@ -557,12 +490,12 @@ namespace HCResourceLibraryApp
                     if (numToPrint.IsNotNE())
                         rangedNumbers += numToPrint;
                 }
-                Dbug.Log(" // End");
+                Dbg.Log(tx, " // End");
 
                 if (rangedNumbers.IsNotNE())
                     rangedNumbers = rangedNumbers.Replace(",", " ").Trim();
-                Dbug.Log($"Result Range Numbers: {rangedNumbers}");
-                Dbug.EndLogging();
+                Dbg.Log(tx, $"Result Range Numbers: {rangedNumbers}");
+                Dbg.EndLogging(tx);
             }
             return rangedNumbers;
 
@@ -824,9 +757,9 @@ namespace HCResourceLibraryApp
                 - Note that numeric congregation only happens in preparation to comparisons (when the words become arrays of numbers) (to determine order)
             ***/
 
-            Dbug.DeactivateNextLogSession();
-            Dbug.StartLogging("Extensions.SortWords(this str[])");
-            Dbug.Log($"Recieved words to sort... are there really any words to sort? {(words.HasElements() ? "Yes" : "No")}");
+            Dbg.StartLogging("Extensions.SortWords(this str[])", out int tx);
+            Dbg.ToggleThreadOutputOmission(tx);
+            Dbg.Log(tx, $"Recieved words to sort... are there really any words to sort? {(words.HasElements() ? "Yes" : "No")}");
             List<string> orderedWords = new();
 
             if (words.HasElements())
@@ -846,20 +779,20 @@ namespace HCResourceLibraryApp
                     }
                     else nullWordsCount++;
                 }
-                Dbug.Log($"Completed filtering the array of words (removed NEWs, replaced \\0, trimmed) --> Original word count [{words.Length}]; Filtered word count[{filteredWords.Count}]; Lengthiest word length [{lengthiestWordLength}]; Skipped words count [{nullWordsCount}]");
+                Dbg.Log(tx, $"Completed filtering the array of words (removed NEWs, replaced \\0, trimmed) --> Original word count [{words.Length}]; Filtered word count[{filteredWords.Count}]; Lengthiest word length [{lengthiestWordLength}]; Skipped words count [{nullWordsCount}]");
 
                 if (filteredWords.HasElements())
                 {
                     // filtered words to score arrays
                     const char replaceNullScore = '`';
-                    Dbug.Log($"Creating words scoring list for [{filteredWords.Count}] words at [{lengthiestWordLength}] maximum array length each [where {replaceNullScore} is null score {CharScore('\0')}]");
-                    Dbug.NudgeIndent(true);
+                    Dbg.Log(tx, $"Creating words scoring list for [{filteredWords.Count}] words at [{lengthiestWordLength}] maximum array length each [where {replaceNullScore} is null score {CharScore('\0')}]");
+                    Dbg.NudgeIndent(tx, true);
                     const int vacancyScore = -1;
                     List<int[]> scoredWords = new List<int[]>(filteredWords.Count);
                     for (int fltwIx = 0; fltwIx < filteredWords.Count; fltwIx++)
                     {
                         string fltWord = filteredWords[fltwIx];
-                        Dbug.LogPart($"Scoring word @index-{fltwIx} '{fltWord}' -->  [");
+                        Dbg.LogPart(tx, $"Scoring word @index-{fltwIx} '{fltWord}' -->  [");
 
                         int[] scoredWordArr = new int[lengthiestWordLength];
                         int congregatedNumber = vacancyScore;
@@ -944,31 +877,31 @@ namespace HCResourceLibraryApp
                             else cScore = CharScore('\0');
 
                             // set score to array
-                            //Dbug.LogPart($" {cScore}|{(c.IsNotNull()? c : ' ')} ");
-                            Dbug.LogPart($"{(cScore == CharScore('\0') ? replaceNullScore.ToString() : cScore.ToString())} ");
+                            //Dbg.LogPart($" {cScore}|{(c.IsNotNull()? c : ' ')} ");
+                            Dbg.LogPart(tx, $"{(cScore == CharScore('\0') ? replaceNullScore.ToString() : cScore.ToString())} ");
                             scoredWordArr[cIx] = cScore;
                         }
                         scoredWords.Add(scoredWordArr);
-                        Dbug.Log("]");
+                        Dbg.Log(tx, "]");
                     }
-                    Dbug.NudgeIndent(false);
+                    Dbg.NudgeIndent(tx, false);
 
 
                     // Sort into order
-                    Dbug.Log($"Comparing scores of {filteredWords.Count} filtered words and sorting them into order;");
-                    Dbug.NudgeIndent(true);
+                    Dbg.Log(tx, $"Comparing scores of {filteredWords.Count} filtered words and sorting them into order;");
+                    Dbg.NudgeIndent(tx, true);
                     List<int> wordOrderByIndex = new List<int>();
                     for (int thisIx = 0; thisIx < filteredWords.Count; thisIx++)
                     {
                         string thisWord = filteredWords[thisIx];
                         int[] thisWordArr = scoredWords[thisIx];
 
-                        Dbug.LogPart($"Sorting word at ix#{thisIx} '{thisWord}' as score array --> [");
-                        foreach (int score in thisWordArr) { Dbug.LogPart($"{score} "); }
-                        Dbug.Log("]");
+                        Dbg.LogPart(tx, $"Sorting word at ix#{thisIx} '{thisWord}' as score array --> [");
+                        foreach (int score in thisWordArr) { Dbg.LogPart(tx, $"{score} "); }
+                        Dbg.Log(tx, "]");
 
                         // words to compare...
-                        Dbug.NudgeIndent(true);
+                        Dbg.NudgeIndent(tx, true);
                         if (wordOrderByIndex.HasElements())
                         {
                             const int noInsertIndex = -1;
@@ -978,7 +911,7 @@ namespace HCResourceLibraryApp
                                 int otherIx = wordOrderByIndex[wobIx];
                                 string otherWord = filteredWords[otherIx];
                                 int[] otherWordArr = scoredWords[otherIx];
-                                Dbug.LogPart($"Comparing '{thisWord}' to '{otherWord}' (as this#|other#) --> "); // left off here
+                                Dbg.LogPart(tx, $"Comparing '{thisWord}' to '{otherWord}' (as this#|other#) --> "); // left off here
 
 
                                 /// So, score comparisons -- how we doin it?
@@ -1053,8 +986,8 @@ namespace HCResourceLibraryApp
                                     int thisVacNum = (int)Math.Pow(10, thisC3);
                                     int otherVacNum = (int)Math.Pow(10, otherC3);
 
-                                    Dbug.LogPart($" {thisScore}{(thisScore == vacancyScore? $"({thisVacNum})" : "")}|"); //  x(a)|y(b)
-                                    Dbug.LogPart($"{otherScore}{(otherScore == vacancyScore? $"({otherVacNum})" : "")} ");
+                                    Dbg.LogPart(tx, $" {thisScore}{(thisScore == vacancyScore? $"({thisVacNum})" : "")}|"); //  x(a)|y(b)
+                                    Dbg.LogPart(tx, $"{otherScore}{(otherScore == vacancyScore? $"({otherVacNum})" : "")} ");
 
                                     string dbgCodePathName = "n/a";
                                     /// With numCong : 1st part ---
@@ -1169,14 +1102,14 @@ namespace HCResourceLibraryApp
 
                                     dbgCodePathName = dbgCodePathName.Replace("Path.", "p");
                                     if (endComparisons)
-                                        Dbug.LogPart(true ? $"[{dbgCodePathName}] " : "");
+                                        Dbg.LogPart(tx, true ? $"[{dbgCodePathName}] " : "");
                                 }
 
                                 if (endComparisons)
                                 {
                                     if (insertIndex != noInsertIndex)
-                                        Dbug.Log(" --> <O>");
-                                    else Dbug.Log(" --> <X>");
+                                        Dbg.Log(tx, " --> <O>");
+                                    else Dbg.Log(tx, " --> <X>");
                                 }
                             }
 
@@ -1184,47 +1117,47 @@ namespace HCResourceLibraryApp
                             if (insertIndex == noInsertIndex)
                             {
                                 wordOrderByIndex.Add(thisIx); /// add to end of list
-                                Dbug.Log($"Added '{thisWord}' to end of sorting list.");
+                                Dbg.Log(tx, $"Added '{thisWord}' to end of sorting list.");
                             }
                             else
                             {
                                 wordOrderByIndex.Insert(insertIndex, thisIx); /// insert into list
-                                Dbug.Log($"Inserted '{thisWord}' (ix#{thisIx}) at index [{insertIndex}] of sorting list.");
+                                Dbg.Log(tx, $"Inserted '{thisWord}' (ix#{thisIx}) at index [{insertIndex}] of sorting list.");
                             }
                         }
                         /// no words to compare; add to sort list
                         else
                         {
-                            Dbug.Log("No words to compare with. Adding to order list.");
+                            Dbg.Log(tx, "No words to compare with. Adding to order list.");
                             wordOrderByIndex.Add(thisIx);
                         }
 
-                        Dbug.LogPart($"End sorting ix#{thisIx}  //  Current sorting order list :: [");
+                        Dbg.LogPart(tx, $"End sorting ix#{thisIx}  //  Current sorting order list :: [");
                         foreach (int sortOrderNum in wordOrderByIndex) 
                         {
-                            Dbug.LogPart($"{Base.SurroundText($"{sortOrderNum}", Base.ConditionalText(sortOrderNum == thisIx, "*", " ")).Trim()} ");
-                            //Dbug.LogPart($"{sortOrderNum} "); 
+                            Dbg.LogPart(tx, $"{Base.SurroundText($"{sortOrderNum}", Base.ConditionalText(sortOrderNum == thisIx, "*", " ")).Trim()} ");
+                            //Dbg.LogPart($"{sortOrderNum} "); 
                         }
-                        Dbug.Log("]");
-                        Dbug.NudgeIndent(false);
+                        Dbg.Log(tx, "]");
+                        Dbg.NudgeIndent(tx, false);
                     }
-                    Dbug.NudgeIndent(false);
+                    Dbg.NudgeIndent(tx, false);
 
 
                     // compile ordered words array
                     if (wordOrderByIndex.HasElements())
                     {
-                        Dbug.Log("Sorting complete! Returning array of sorted words; Adding (as [index#]word)");
-                        Dbug.NudgeIndent(true);
+                        Dbg.Log(tx, "Sorting complete! Returning array of sorted words; Adding (as [index#]word)");
+                        Dbg.NudgeIndent(tx, true);
                         orderedWords = new();
                         foreach (int wobix in wordOrderByIndex)
                         {
                             string wordToAdd = filteredWords[wobix];
-                                Dbug.LogPart($"[{orderedWords.Count}]{wordToAdd} // ");
+                                Dbg.LogPart(tx, $"[{orderedWords.Count}]{wordToAdd} // ");
                             orderedWords.Add(wordToAdd);
                         }
-                        Dbug.Log(" --> DONE!");
-                        Dbug.NudgeIndent(false);
+                        Dbg.Log(tx, " --> DONE!");
+                        Dbg.NudgeIndent(tx, false);
                     }
                 }
 
@@ -1232,7 +1165,7 @@ namespace HCResourceLibraryApp
                 else
                 {
                     orderedWords.AddRange(words);
-                    Dbug.Log("Returning array of words as is (no filtered words)");
+                    Dbg.Log(tx, "Returning array of words as is (no filtered words)");
                 }
             }
 
@@ -1240,10 +1173,10 @@ namespace HCResourceLibraryApp
             else
             {
                 orderedWords.AddRange(words);
-                Dbug.Log("Returning array of words as is (no words)");
+                Dbg.Log(tx, "Returning array of words as is (no words)");
             }
 
-            Dbug.EndLogging();
+            Dbg.EndLogging(tx);
             return orderedWords;
         }
         /**
@@ -1339,7 +1272,7 @@ namespace HCResourceLibraryApp
                 }
             }
 
-            //Dbug.SingleLog("Extensions.Decode(this s, out c)", $"Parsed [{parsed}]; string [{s}], returned color [{c}]");
+            //Dbg.SingleLog("Extensions.Decode(this s, out c)", $"Parsed [{parsed}]; string [{s}], returned color [{c}]");
             return parsed;
         }
         public static float GetScaleFactorH(this DimHeight dh)

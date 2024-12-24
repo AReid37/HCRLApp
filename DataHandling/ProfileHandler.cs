@@ -226,15 +226,15 @@ namespace HCResourceLibraryApp.DataHandling
         /// <remarks>Also responsible for generating the profiles file if one doesn't exist.</remarks>
         public static bool FetchProfiles()
         {
-            Dbug.StartLogging("ProfileHandler.FetchProfiles()");
-            Dbug.Log("Proceeding to fetch any available profiles on file...");
+            Dbg.StartLogging("ProfileHandler.FetchProfiles()", out int phx);
+            Dbg.Log(phx, "Proceeding to fetch any available profiles on file...");
             bool noIssues = true;
 
             /// i dunno, what do if can't set location? nothin'
             if (IsInitialized() && Base.SetFileLocation(ProfilesFile))
             {
                 noIssues = Base.FileRead(null, out string[] profileDataLines);
-                Dbug.LogPart($"Fetched file? {noIssues}; ");
+                Dbg.LogPart(phx, $"Fetched file? {noIssues}; ");
 
                 // IF profiles file exists: get profile information; ELSE create profiles file.
                 if (noIssues)
@@ -245,8 +245,8 @@ namespace HCResourceLibraryApp.DataHandling
                     /// L3+ -> profileInfos 
                     if (profileDataLines.HasElements(3))
                     {
-                        Dbug.Log($"File contains [{profileDataLines.Length}] lines of data; Proceeding to parse data; ");
-                        Dbug.NudgeIndent(true);
+                        Dbg.Log(phx, $"File contains [{profileDataLines.Length}] lines of data; Proceeding to parse data; ");
+                        Dbg.NudgeIndent(phx, true);
 
                         // fetch profile information \ determine last active profile
                         ProfileInfo lastActiveProfile = new();
@@ -256,14 +256,14 @@ namespace HCResourceLibraryApp.DataHandling
                             string profInfoLine = profileDataLines[pfx];
                             bool lastActiveQ = false;
 
-                            Dbug.Log($"L{pfx + 1}| {profInfoLine}; ");
-                            Dbug.LogPart(" -> ");
+                            Dbg.Log(phx, $"L{pfx + 1}| {profInfoLine}; ");
+                            Dbg.LogPart(phx, " -> ");
 
                             // IF...: get active profile ID; ELSE decode profile infos;
                             if (pfx == 1)
                             {
                                 lastActiveProfID = profInfoLine;
-                                Dbug.LogPart($"Last active profile ID: [{lastActiveProfID}]");
+                                Dbg.LogPart(phx, $"Last active profile ID: [{lastActiveProfID}]");
                             }
                             else
                             {
@@ -271,48 +271,48 @@ namespace HCResourceLibraryApp.DataHandling
                                 if (profInfoLine.IsNotNEW())
                                 {
                                     profInfo.DecodeProfileInfo(profInfoLine);
-                                    Dbug.LogPart($"Decoded profile info >> {profInfo}  /// ");
+                                    Dbg.LogPart(phx, $"Decoded profile info >> {profInfo}  /// ");
 
                                     lastActiveQ = profInfo.profileID == lastActiveProfID;
                                 }
-                                else Dbug.LogPart("Missing profile line data");
+                                else Dbg.LogPart(phx, "Missing profile line data");
 
                                 if (profInfo.IsSetupQ())
                                 {
                                     AllProfiles.Add(profInfo);
-                                    Dbug.LogPart("; Added to profiles list");
+                                    Dbg.LogPart(phx, "; Added to profiles list");
                                 }
 
                                 // determine profile to autoload here
                                 if (!lastActiveProfile.IsSetupQ() && lastActiveQ)
                                 {
-                                    Dbug.LogPart("; Profile was active");
+                                    Dbg.LogPart(phx, "; Profile was active");
                                     lastActiveProfile = profInfo;
                                 }
                             }
-                            Dbug.Log("; ");
+                            Dbg.Log(phx, "; ");
                         }
                         
-                        Dbug.NudgeIndent(false);
-                        Dbug.Log("Data parsing complete; Proceeding to switch to last active profile; ");
+                        Dbg.NudgeIndent(phx, false);
+                        Dbg.Log(phx, "Data parsing complete; Proceeding to switch to last active profile; ");
 
 
                         // auto-load last active profile (auto-switch to profile)
                         SwitchProfile(lastActiveProfID);
                     }
-                    else Dbug.Log("Not enough data on file (less than 3 lines); ");
+                    else Dbg.Log(phx, "Not enough data on file (less than 3 lines); ");
                 }
                 else
                 {
-                    Dbug.Log("File does not exist; Creating file, adding stamp...");
+                    Dbg.Log(phx, "File does not exist; Creating file, adding stamp...");
                     noIssues = Base.FileWrite(true, null, profFileStamp);
                 }
 
                 SetPreviousSelf();
             }
-            else Dbug.Log("Unable to set file reading location...");
+            else Dbg.Log(phx, "Unable to set file reading location...");
 
-            Dbug.EndLogging();
+            Dbg.EndLogging(phx);
             return noIssues;
         }
         /// <summary>
@@ -324,9 +324,8 @@ namespace HCResourceLibraryApp.DataHandling
         {
             if (IsInitialized())
             {
-                bool loadedAProfileQ = false;
-                Dbug.StartLogging("ProfileHandler.SwitchProfile()");
-                Dbug.Log($"Switching to profile of ID '{profileID}'; retaining profile data? {retainProfileDataQ};");
+                Dbg.StartLogging("ProfileHandler.SwitchProfile()", out int phx);
+                Dbg.Log(phx, $"Switching to profile of ID '{profileID}'; retaining profile data? {retainProfileDataQ};");
 
                 // find the profile with matching ID
                 ProfileInfo profileToActivate = new();
@@ -349,23 +348,18 @@ namespace HCResourceLibraryApp.DataHandling
                     CurrProfileStyleKey = profileToActivate.profileStyleKey;
                     CurrProfileDescription = profileToActivate.profileDescription;
                     SetPreviousSelf();
-                    Dbug.Log($"Switched to profile :: {profileToActivate};");
+                    Dbg.Log(phx, $"Switched to profile :: {profileToActivate};");
 
                     // for disabling profile loading after switching (retains dataHandler info)
                     DataHandlerBase.SetProfileDirectory(profileToActivate.profileID);
                     if (!retainProfileDataQ)
                     {
-                        Dbug.Log("Proceeding to load profile data; ");
-                        Dbug.EndLogging();
-                        loadedAProfileQ = true;
-
+                        Dbg.Log(phx, "Proceeding to load profile data; ");
                         LoadProfile();
                     }
                 }
-                else Dbug.Log($"Could not find profile of ID '{profileID}'; ");
-
-                if (!loadedAProfileQ)
-                    Dbug.EndLogging();
+                else Dbg.Log(phx, $"Could not find profile of ID '{profileID}'; ");
+                Dbg.EndLogging(phx);
             }            
         }
         /// <summary>Assists in switching to another profile after the initial auto-load on application startup (in-app profile switching assist).</summary>
@@ -481,7 +475,7 @@ namespace HCResourceLibraryApp.DataHandling
                 if (CurrProfileID == NoProfID && noIssues)
                     _externalProfileDetectedQ = true;
 
-                Dbug.SingleLog("ProfileHandler.LoadProfile()", $"Loaded Profile: ID.{CurrProfileID}  //  Loaded data handlers? [{noIssues}]; {(_externalProfileDetectedQ ? "External profile detected; " : "")}");
+                Dbg.SingleLog("ProfileHandler.LoadProfile()", $"Loaded Profile: ID.{CurrProfileID}  //  Loaded data handlers? [{noIssues}]; {(_externalProfileDetectedQ ? "External profile detected; " : "")}");
             }
             return noIssues;
         }
@@ -491,7 +485,7 @@ namespace HCResourceLibraryApp.DataHandling
         /// <returns>A booleaon representing the success of saving profiles info and profile specific data.</returns>
         public static bool SaveProfile()
         {
-            Dbug.StartLogging("ProfileHandler.SaveProfile()");
+            Dbg.StartLogging("ProfileHandler.SaveProfile()", out int phx);
             bool noIssues = false;
 
             /// two parts
@@ -500,12 +494,12 @@ namespace HCResourceLibraryApp.DataHandling
             /// 
             if (IsInitialized())
             {
-                Dbug.LogPart("Profile Handler is initialized; Proceeding to save data... ");
+                Dbg.LogPart(phx, "Profile Handler is initialized; Proceeding to save data... ");
 
                 // 1. Save All Profiles Info
                 if (AllProfiles.HasElements())
                 {
-                    Dbug.Log($"Number of profiles to save [{AllProfiles.Count}]; ");
+                    Dbg.Log(phx, $"Number of profiles to save [{AllProfiles.Count}]; ");
                     List<string> profilesSaveInfo = new();
                     /** ProfilesFile.txt layout
                      *  -> L1 - profile file header stamp
@@ -513,13 +507,13 @@ namespace HCResourceLibraryApp.DataHandling
                      *  -> L3+ - profile info string  {}
                      */
 
-                    Dbug.NudgeIndent(true);
+                    Dbg.NudgeIndent(phx, true);
                     for (int pfx = -2; pfx < AllProfiles.Count; pfx++)
                     {
                         // L1  stamp
                         if (pfx == -2)
                         {
-                            Dbug.LogPart("Added profile file stamp");
+                            Dbg.LogPart(phx, "Added profile file stamp");
                             profilesSaveInfo.Add(profFileStamp);
                         }
 
@@ -528,10 +522,10 @@ namespace HCResourceLibraryApp.DataHandling
                         {
                             string lastActiveProfID = CurrProfileID;
 
-                            Dbug.LogPart($"Currently Active Profile ID :: {CurrProfileID}");
+                            Dbg.LogPart(phx, $"Currently Active Profile ID :: {CurrProfileID}");
                             if (_queuedProfileToSwitch.IsNotNEW())
                             {
-                                Dbug.LogPart($"; Overriding Active Profile ID :: {_queuedProfileToSwitch}");
+                                Dbg.LogPart(phx, $"; Overriding Active Profile ID :: {_queuedProfileToSwitch}");
                                 lastActiveProfID = _queuedProfileToSwitch;
                                 _queuedProfileToSwitch = null;
                             }
@@ -549,45 +543,45 @@ namespace HCResourceLibraryApp.DataHandling
                                     profInfoToSave.AddConsoleColorsToSave(preferences);
 
                                 profilesSaveInfo.Add(profInfoToSave.EncodeProfileInfo());
-                                Dbug.LogPart($"Saved Profile :: {profInfoToSave}");
+                                Dbg.LogPart(phx, $"Saved Profile :: {profInfoToSave}");
                             }
-                            else Dbug.LogPart($"Discared profile (not setup) :: {profInfoToSave}");
+                            else Dbg.LogPart(phx, $"Discared profile (not setup) :: {profInfoToSave}");
                         }
-                        Dbug.Log("; ");
+                        Dbg.Log(phx, "; ");
                     }
-                    Dbug.NudgeIndent(false);
+                    Dbg.NudgeIndent(phx, false);
 
                     if (profilesSaveInfo.HasElements(3) && Base.SetFileLocation(ProfilesFile))
                     {
                         noIssues = Base.FileWrite(true, null, profilesSaveInfo.ToArray());
                         SetPreviousSelf();
                     }
-                    Dbug.Log($"All profiles information saved? {noIssues}; ");
+                    Dbg.Log(phx, $"All profiles information saved? {noIssues}; ");
                 }
-                else Dbug.Log("No data to save (no profiles found); ");
+                else Dbg.Log(phx, "No data to save (no profiles found); ");
 
                 // 2. Regular Library Save
                 if (noIssues && CurrProfileID != NoProfID)
                 {
-                    Dbug.LogPart("Proceeding to save current profile information");
+                    Dbg.LogPart(phx, "Proceeding to save current profile information");
                     if (!CurrProfileIsDeletedQ)
                     {
                         noIssues = dataHandler.SaveToFile(preferences, logDecoder, contentValidator, resourceLibrary, formatterData, bugIdeaData);
                         if (!noIssues)
-                            Dbug.LogPart("; Failed to save current profile's information");
+                            Dbg.LogPart(phx, "; Failed to save current profile's information");
                     }
-                    else Dbug.LogPart("; Current profile has been deleted (skipped)");
-                    Dbug.Log("; ");
+                    else Dbg.LogPart(phx, "; Current profile has been deleted (skipped)");
+                    Dbg.Log(phx, $"; Any issues? {!noIssues}; ");
                 }
                 else
                 {
                     if (!noIssues)
-                        Dbug.Log("Could not proceed to save current profile's information; ");
-                    else Dbug.Log("No profile information to save (no current profile); ");
+                        Dbg.Log(phx, "Could not proceed to save current profile's information; ");
+                    else Dbg.Log(phx, "No profile information to save (no current profile); ");
                 }
             }
-            else Dbug.Log("Cannot save any data; Profile Handler is not initialized; ");
-            Dbug.EndLogging();
+            else Dbg.Log(phx, "Cannot save any data; Profile Handler is not initialized; ");
+            Dbg.EndLogging(phx);
 
             return noIssues;
         }

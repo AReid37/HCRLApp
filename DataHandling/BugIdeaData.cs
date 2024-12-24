@@ -108,75 +108,75 @@ namespace HCResourceLibraryApp.DataHandling
         // METHODS - data handling
         protected override bool EncodeToSharedFile()
         {
-            Dbug.StartLogging("BugIdeaData.EncodeToSharedFile()");
+            Dbg.StartLogging("BugIdeaData.EncodeToSharedFile()", out int bidx);
             bool noDataButOkayQ = !IsSetup(), encodedBugIdea = false;
             if (IsSetup())
             {
-                Dbug.Log($"Is setup; Proceeding to encoding '{biInfo.Count}' bug and idea entries; ");
-                Dbug.NudgeIndent(true);
+                Dbg.Log(bidx, $"Is setup; Proceeding to encoding '{biInfo.Count}' bug and idea entries; ");
+                Dbg.NudgeIndent(bidx, true);
                 List<string> biLines = new();
                 for (int bx = 0; bx < biInfo.Count; bx++)
                 {
-                    Dbug.LogPart(IsSetup() ? "+ Enc" : "- OMIT ");
+                    Dbg.LogPart(bidx, IsSetup() ? "+ Enc" : "- OMIT ");
                     if (biInfo[bx].IsSetup())
                         biLines.Add(biInfo[bx].Encode());
-                    Dbug.Log($"  {biInfo[bx].Encode()}; ");
+                    Dbg.Log(bidx, $"  {biInfo[bx].Encode()}; ");
                 }
-                Dbug.NudgeIndent(false);
+                Dbg.NudgeIndent(bidx, false);
 
                 if (biLines.HasElements())
                 {
                     encodedBugIdea = Base.FileWrite(false, commonFileTag, biLines.ToArray());
                     if (encodedBugIdea)
-                        Dbug.Log("Encoding complete; Proceeding to second encoding state: PRINT INFO...");
+                        Dbg.Log(bidx, "Encoding complete; Proceeding to second encoding state: PRINT INFO...");
 
                     bool printedEntriesQ = PrintInfo();
-                    Dbug.Log($"Printed Entries Result? {(printedEntriesQ ? "Complete / Success" : "Skipped / Failed")}  [Does not affect encoding outcome]; ");
+                    Dbg.Log(bidx, $"Printed Entries Result? {(printedEntriesQ ? "Complete / Success" : "Skipped / Failed")}  [Does not affect encoding outcome]; ");
                 }
 
                 SetPreviousSelf();
-                Dbug.Log($"Updated previous self to current; Confirmed? {!ChangesMade()}; ");
+                Dbg.Log(bidx, $"Updated previous self to current; Confirmed? {!ChangesMade()}; ");
             }
-            else Dbug.Log("Not setup; No data to encode, successful encoding...");
-            Dbug.EndLogging();
+            else Dbg.Log(bidx, "Not setup; No data to encode, successful encoding...");
+            Dbg.EndLogging(bidx);
             return noDataButOkayQ || encodedBugIdea;
         }
         protected override bool DecodeFromSharedFile()
         {
-            Dbug.StartLogging("BugIdeaData.DecodeFromSharedFile");
+            Dbg.StartLogging("BugIdeaData.DecodeFromSharedFile", out int bidx);
             bool decodedBugIdeaDataQ = Base.FileRead(commonFileTag, out string[] bugIdeaLines);
-            Dbug.Log($"Fetching file data (using tag '{commonFileTag}'); Successfully read from file? {decodedBugIdeaDataQ}; {nameof(bugIdeaLines)} has elements? {bugIdeaLines.HasElements()}");
+            Dbg.Log(bidx, $"Fetching file data (using tag '{commonFileTag}'); Successfully read from file? {decodedBugIdeaDataQ}; {nameof(bugIdeaLines)} has elements? {bugIdeaLines.HasElements()}");
 
             if (decodedBugIdeaDataQ && bugIdeaLines.HasElements())
             {
-                Dbug.Log("Preparing to decoded Bug Idea Data; ");
+                Dbg.Log(bidx, "Preparing to decoded Bug Idea Data; ");
 
-                Dbug.NudgeIndent(true);
+                Dbg.NudgeIndent(bidx, true);
                 for (int lx = 0; lx < bugIdeaLines.Length && decodedBugIdeaDataQ; lx++)
                 {
-                    Dbug.LogPart($"+ Decoded :: '{bugIdeaLines[lx]}'? ");
+                    Dbg.LogPart(bidx, $"+ Decoded :: '{bugIdeaLines[lx]}'? ");
                     BugIdeaInfo newBii = new BugIdeaInfo();
                     bool decodedQ = newBii.Decode(bugIdeaLines[lx]);
 
                     if (decodedQ)
                     {
-                        Dbug.LogPart($"True{(newBii.isNewQ ? "; No longer 'New'" : "")}");
+                        Dbg.LogPart(bidx, $"True{(newBii.isNewQ ? "; No longer 'New'" : "")}");
                         newBii.isNewQ = false;
                     }
-                    else Dbug.LogPart("FALSE");
-                    Dbug.Log("; ");
+                    else Dbg.LogPart(bidx, "FALSE");
+                    Dbg.Log(bidx, "; ");
 
                     biInfo.Add(newBii);
                     decodedBugIdeaDataQ = decodedQ;
                 }
-                Dbug.NudgeIndent(false);
+                Dbg.NudgeIndent(bidx, false);
 
                 SetPreviousSelf();
-                Dbug.Log($"Previous self has been set; Confirmed? {!ChangesMade()}; ");
+                Dbg.Log(bidx, $"Previous self has been set; Confirmed? {!ChangesMade()}; ");
             }
 
-            Dbug.Log($"End decoding for Bug Idea Data -- successful decoding? {decodedBugIdeaDataQ}; ");
-            Dbug.EndLogging();
+            Dbg.Log(bidx, $"End decoding for Bug Idea Data -- successful decoding? {decodedBugIdeaDataQ}; ");
+            Dbg.EndLogging(bidx);
             return decodedBugIdeaDataQ;
         }
         bool PrintInfo()
@@ -187,24 +187,24 @@ namespace HCResourceLibraryApp.DataHandling
                 printedInfoQ = false;
                 string prevFileName = Base.FileNameAndType;
 
-                Dbug.StartLogging();
-                Dbug.Log($"PRINT INFO; Stored previous file location; Preparing to print BugIdeaData to seperate file '~/{PrintFileName}'; ");
+                Dbg.StartLogging("BugIdeaData.PrintInfo()", out int bidx);
+                Dbg.Log(bidx, $"PRINT INFO; Stored previous file location; Preparing to print BugIdeaData to seperate file '~/{PrintFileName}'; ");
                 if (Base.SetFileLocation(Base.Directory, PrintFileName))
                 {
-                    Dbug.LogPart($"Checking for existence of print file: ");
+                    Dbg.LogPart(bidx, $"Checking for existence of print file: ");
                     bool printAllEntriesQ = false;
                     FileInfo fileInfo = new(Base.Directory + PrintFileName);
                     if (fileInfo != null)
                     {
                         printAllEntriesQ = !fileInfo.Exists;
-                        Dbug.LogPart(printAllEntriesQ ? "Does Not Exist, printing all entries" : "Exists, printing new entries only");
+                        Dbg.LogPart(bidx, printAllEntriesQ ? "Does Not Exist, printing all entries" : "Exists, printing new entries only");
                     }
-                    else Dbug.LogPart("??");
-                    Dbug.Log("; ");
+                    else Dbg.LogPart(bidx, "??");
+                    Dbg.Log(bidx, "; ");
 
 
-                    Dbug.Log("Gathering print outs of bug / idea entries; ");
-                    Dbug.NudgeIndent(true);                   
+                    Dbg.Log(bidx, "Gathering print outs of bug / idea entries; ");
+                    Dbg.NudgeIndent(bidx, true);                   
                     List<string> printOut = new();
                     foreach (BugIdeaInfo bii in biInfo)
                     {
@@ -214,18 +214,18 @@ namespace HCResourceLibraryApp.DataHandling
                             {
                                 string printLine = $"[{(bii.isBugQ ? "BUG" : "IDEA")}] {bii.description}";
                                 printOut.Add($"\n{printLine}");
-                                Dbug.Log($"Added (new? {bii.isNewQ.ToString()[0]})  ::  '{printLine}'; ");
+                                Dbg.Log(bidx, $"Added (new? {bii.isNewQ.ToString()[0]})  ::  '{printLine}'; ");
 
                                 bii.isNewQ = false;
                             }
                         }
                     }
-                    Dbug.NudgeIndent(false);
+                    Dbg.NudgeIndent(bidx, false);
 
 
                     if (printOut.HasElements())
                     {
-                        Dbug.Log($"Proceeding to print bug / idea entries to file; Printing all entries? {printAllEntriesQ}; {(printAllEntriesQ ? "Adding header to print out; " : "")}");
+                        Dbg.Log(bidx, $"Proceeding to print bug / idea entries to file; Printing all entries? {printAllEntriesQ}; {(printAllEntriesQ ? "Adding header to print out; " : "")}");
 
                         string header = "BUG REPORT / IDEA SUGGESTION - PRINT OUT\n";
                         header += "----------------------------------------";
@@ -238,13 +238,13 @@ namespace HCResourceLibraryApp.DataHandling
                     else
                     {
                         printedInfoQ = !printAllEntriesQ;
-                        Dbug.Log($"No print out information provided // {(printAllEntriesQ ? "Printing all: missing entries [issue]" : "Printing new only: no new entries")}; ");
+                        Dbg.Log(bidx, $"No print out information provided // {(printAllEntriesQ ? "Printing all: missing entries [issue]" : "Printing new only: no new entries")}; ");
                     }
                 }
-                else Dbug.Log("!Failed to set printing file location; ");
+                else Dbg.Log(bidx, "!Failed to set printing file location; ");
 
-                Dbug.Log($"Resetting to previous file location; Confirmed? {Base.SetFileLocation(AppDirectory, prevFileName)}");
-                Dbug.EndLogging();
+                Dbg.Log(bidx, $"Resetting to previous file location; Confirmed? {Base.SetFileLocation(AppDirectory, prevFileName)}");
+                Dbg.EndLogging(bidx);
             }
             return printedInfoQ;
         }

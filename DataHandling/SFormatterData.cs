@@ -846,7 +846,7 @@ namespace HCResourceLibraryApp.DataHandling
             ///     - name2 {string}
             ///     - lineData2 {lines of strings}
 
-            Dbug.StartLogging("SFormatterData.EncodeToSharedFile()");
+            Dbg.StartLogging("SFormatterData.EncodeToSharedFile()", out int sfdx);
             bool noIssuesQ = true;
             for (int enx = 0; enx < 3 && noIssuesQ; enx++)
             {
@@ -861,23 +861,23 @@ namespace HCResourceLibraryApp.DataHandling
                             {
                                 case 0:
                                     noIssuesQ = Base.FileWrite(false, commonFileTag, _nativeColCodeQ.ToString());
-                                    Dbug.Log($"Encoded 'Use Native Color Code Q' :: {_nativeColCodeQ}");
+                                    Dbg.Log(sfdx, $"Encoded 'Use Native Color Code Q' :: {_nativeColCodeQ}");
                                     break;
 
                                 case 1:
                                     noIssuesQ = Base.FileWrite(false, commonFileTag, _editProf1Q.ToString());
-                                    Dbug.Log($"Encoded 'Edit Profile 1 Q' :: {_editProf1Q}");
+                                    Dbg.Log(sfdx, $"Encoded 'Edit Profile 1 Q' :: {_editProf1Q}");
                                     break;
 
                                 case 2:
                                     string group1DataLine = "GOnes";
                                     if (_groupInfo1.HasElements())
                                     {
-                                        Dbug.Log("Encoding Profile 1 Groups; ");
+                                        Dbg.Log(sfdx, "Encoding Profile 1 Groups; ");
                                         foreach (SfdGroupInfo group1s in _groupInfo1)
                                         {
                                             group1DataLine += $"{triSep}{group1s.Encode()}";
-                                            Dbug.Log($" + Encoded :: {group1s}");
+                                            Dbg.Log(sfdx, $" + Encoded :: {group1s}");
                                         }
                                     }
                                     noIssuesQ = Base.FileWrite(false, commonFileTag, group1DataLine);
@@ -887,11 +887,11 @@ namespace HCResourceLibraryApp.DataHandling
                                     string group2DataLine = "GTwos";
                                     if (_groupInfo2.HasElements())
                                     {
-                                        Dbug.Log("Encoding Profile 2 Groups; ");
+                                        Dbg.Log(sfdx, "Encoding Profile 2 Groups; ");
                                         foreach (SfdGroupInfo group2s in _groupInfo2)
                                         {
                                             group2DataLine += $"{triSep}{group2s.Encode()}";
-                                            Dbug.Log($" + Encoded :: {group2s}");
+                                            Dbg.Log(sfdx, $" + Encoded :: {group2s}");
                                         }
                                     }
                                     noIssuesQ = Base.FileWrite(false, commonFileTag, group2DataLine);
@@ -902,91 +902,91 @@ namespace HCResourceLibraryApp.DataHandling
 
                     /// frmt1 -> formatting prof 1 lines
                     case 1:
-                        Dbug.Log("Encoding Formatting profile 1; ");
+                        Dbg.Log(sfdx, "Encoding Formatting profile 1; ");
                         noIssuesQ = Base.FileWrite(false, formatterTag1, _fName1.IsNEW() ? defaultName1 : _fName1);
                         if (noIssuesQ)
                         {
-                            Dbug.Log($" + Encoded Name :: {Name1}; ");
+                            Dbg.Log(sfdx, $" + Encoded Name :: {Name1}; ");
                             if (_lineData1.HasElements())
                             {
                                 noIssuesQ = Base.FileWrite(false, formatterTag1, _lineData1.ToArray());
                                 for (int l1x = 0; l1x < _lineData1.Count && noIssuesQ; l1x++)
-                                    Dbug.Log($" + Encoded line {l1x + 1} :: {_lineData1[l1x]}; ");
+                                    Dbg.Log(sfdx, $" + Encoded line {l1x + 1} :: {_lineData1[l1x]}; ");
                             }
-                            else Dbug.Log($" + No line data to encode; ");
+                            else Dbg.Log(sfdx, $" + No line data to encode; ");
                         }
                         break;
                     
                     /// frmt2 -> formatting profile 2 lines
                     case 2:
-                        Dbug.Log("Encoding Formatting profile 2; ");
+                        Dbg.Log(sfdx, "Encoding Formatting profile 2; ");
                         noIssuesQ = Base.FileWrite(false, formatterTag2, _fName2.IsNEW() ? defaultName2 : _fName2);
                         if (noIssuesQ)
                         {
-                            Dbug.Log($" + Encoded Name :: {Name2}; ");
+                            Dbg.Log(sfdx, $" + Encoded Name :: {Name2}; ");
                             if (_lineData2.HasElements())
                             {
                                 noIssuesQ = Base.FileWrite(false, formatterTag2, _lineData2.ToArray());
                                 for (int l2x = 0; l2x < _lineData2.Count && noIssuesQ; l2x++)
-                                    Dbug.Log($" + Encoded line {l2x + 1} :: {_lineData2[l2x]}; ");
+                                    Dbg.Log(sfdx, $" + Encoded line {l2x + 1} :: {_lineData2[l2x]}; ");
                             }
-                            else Dbug.Log($" + No line data to encode; ");
+                            else Dbg.Log(sfdx, $" + No line data to encode; ");
                         }
                         break;
                 }
 
                 if (!noIssuesQ)
-                    Dbug.Log($"Encountered an error while saving (stage #{enx+1}).");
+                    Dbg.Log(sfdx, $"Encountered an error while saving (stage #{enx+1}).");
             }
 
             if (noIssuesQ)
                 SetPreviousSelf();
 
-            Dbug.EndLogging();
+            Dbg.EndLogging(sfdx);
             return noIssuesQ;
         }
         protected override bool DecodeFromSharedFile()
         {
-            Dbug.StartLogging("SFormatterData.DecodeFromSharedFile()");
+            Dbg.StartLogging("SFormatterData.DecodeFromSharedFile()", out int sfdx);
             bool decodedQ = true, crossCompatibilityIssue = false;
             for (int dcx = 0; dcx < 3 && decodedQ; dcx++)
             {
                 switch (dcx)
                 {
                     case 0:
-                        Dbug.Log("Fetching General Data and Groups Data; ");
-                        Dbug.NudgeIndent(true);
+                        Dbg.Log(sfdx, "Fetching General Data and Groups Data; ");
+                        Dbg.NudgeIndent(sfdx, true);
                         decodedQ = Base.FileRead(commonFileTag, out string[] frmtData);
                         if (decodedQ && frmtData.HasElements(4))
                         {
                             /// use nativeQ
-                            Dbug.LogPart("- Fetching 'Use Native Color Code Q' :: ");
+                            Dbg.LogPart(sfdx, "- Fetching 'Use Native Color Code Q' :: ");
                             if (bool.TryParse(frmtData[0], out bool useNativeQ))
                             {
-                                Dbug.LogPart(useNativeQ.ToString());
+                                Dbg.LogPart(sfdx, useNativeQ.ToString());
                                 _nativeColCodeQ = useNativeQ;
                             }
-                            else Dbug.LogPart($" ??? ");
-                            Dbug.Log("; ");
+                            else Dbg.LogPart(sfdx, $" ??? ");
+                            Dbg.Log(sfdx, "; ");
 
                             /// edit prof 1Q
-                            Dbug.LogPart("- Fetching 'Edit Profile 1 Q' :: ");
+                            Dbg.LogPart(sfdx, "- Fetching 'Edit Profile 1 Q' :: ");
                             if (bool.TryParse(frmtData[1], out bool edit1Q))
                             {
-                                Dbug.LogPart(edit1Q.ToString());
+                                Dbg.LogPart(sfdx, edit1Q.ToString());
                                 _editProf1Q = edit1Q;
                             }
-                            else Dbug.LogPart($" ??? ");
-                            Dbug.Log("; ");
+                            else Dbg.LogPart(sfdx, $" ??? ");
+                            Dbg.Log(sfdx, "; ");
 
                             const string triSep = Sep + Sep + Sep;
 
                             /// group 1
-                            Dbug.LogPart("- Fetching 'Group 1 Data Line'");
+                            Dbg.LogPart(sfdx, "- Fetching 'Group 1 Data Line'");
                             string[] groupOneInfo = frmtData[2].Split(triSep);
                             if (groupOneInfo.HasElements(2))
                             {
-                                Dbug.Log("; ");
+                                Dbg.Log(sfdx, "; ");
                                 _groupInfo1 ??= new List<SfdGroupInfo>();
                                 for (int g1x = 0; g1x < groupOneInfo.Length; g1x++)
                                 {
@@ -996,19 +996,19 @@ namespace HCResourceLibraryApp.DataHandling
                                         if (group1s.Decode(groupOneInfo[g1x]))
                                         {
                                             _groupInfo1.Add(group1s);
-                                            Dbug.Log($"    Decoded :: {group1s}");
+                                            Dbg.Log(sfdx, $"    Decoded :: {group1s}");
                                         }                                  
                                     }
                                 }
                             }
-                            else Dbug.Log(" :: No Group 1s data to decode; ");
+                            else Dbg.Log(sfdx, " :: No Group 1s data to decode; ");
 
                             /// group 2
-                            Dbug.LogPart("- Fetching 'Group 2 Data Line'");
+                            Dbg.LogPart(sfdx, "- Fetching 'Group 2 Data Line'");
                             string[] groupTwoInfo = frmtData[3].Split(triSep);
                             if (groupTwoInfo.HasElements(2))
                             {
-                                Dbug.Log("; ");
+                                Dbg.Log(sfdx, "; ");
                                 _groupInfo2 ??= new List<SfdGroupInfo>();
                                 for (int g2x = 0; g2x < groupTwoInfo.Length; g2x++)
                                 {
@@ -1018,23 +1018,23 @@ namespace HCResourceLibraryApp.DataHandling
                                         if (group2s.Decode(groupTwoInfo[g2x]))
                                         {
                                             _groupInfo2.Add(group2s);
-                                            Dbug.Log($"    Decoded :: {group2s}");
+                                            Dbg.Log(sfdx, $"    Decoded :: {group2s}");
                                         }
                                     }
                                 }
                             }
-                            else Dbug.Log(" :: No Group 2s data to decode; ");
+                            else Dbg.Log(sfdx, " :: No Group 2s data to decode; ");
                         }
                         else
                         {
                             crossCompatibilityIssue = true;
-                            Dbug.Log($"Could not fetch general formatting data values; ");
+                            Dbg.Log(sfdx, $"Could not fetch general formatting data values; ");
                         }
-                        Dbug.NudgeIndent(false);
+                        Dbg.NudgeIndent(sfdx, false);
                         break;
 
                     case 1:
-                        Dbug.Log("Fetching Formatting Profile 1 data; ");
+                        Dbg.Log(sfdx, "Fetching Formatting Profile 1 data; ");
                         decodedQ = Base.FileRead(formatterTag1, out string[] frmt1Data);
                         if (decodedQ && frmt1Data.HasElements())
                         {
@@ -1050,14 +1050,14 @@ namespace HCResourceLibraryApp.DataHandling
                                     _lineData1.Add(f1Data);
                                 }
 
-                                Dbug.Log($" + Decoded {(fx1 == 0 ? "Name" : $"Line {fx1}")} :: {f1Data}");
+                                Dbg.Log(sfdx, $" + Decoded {(fx1 == 0 ? "Name" : $"Line {fx1}")} :: {f1Data}");
                             }
                         }                        
-                        else Dbug.Log($" -> Could not fetch formatting profile data; ");
+                        else Dbg.Log(sfdx, $" -> Could not fetch formatting profile data; ");
                         break;
 
                     case 2:
-                        Dbug.Log("Fetching Formatting Profile 2 data; ");
+                        Dbg.Log(sfdx, "Fetching Formatting Profile 2 data; ");
                         decodedQ = Base.FileRead(formatterTag2, out string[] frmt2Data);
                         if (decodedQ && frmt2Data.HasElements())
                         {
@@ -1073,22 +1073,22 @@ namespace HCResourceLibraryApp.DataHandling
                                     _lineData2.Add(f2Data);
                                 }
 
-                                Dbug.Log($" + Decoded {(fx2 == 0 ? "Name" : $"Line {fx2}")} :: {f2Data}");
+                                Dbg.Log(sfdx, $" + Decoded {(fx2 == 0 ? "Name" : $"Line {fx2}")} :: {f2Data}");
                             }
                         }
-                        else Dbug.Log($" -> Could not fetch formatting profile data; ");
+                        else Dbg.Log(sfdx, $" -> Could not fetch formatting profile data; ");
                         break;
                 }
             }
 
             if (crossCompatibilityIssue)
             {
-                Dbug.Log($"Cross-compatibility issue: previous versions do not contain guaranteed lines for general data; Decoding is okay'd; ");
+                Dbg.Log(sfdx, $"Cross-compatibility issue: previous versions do not contain guaranteed lines for general data; Decoding is okay'd; ");
                 decodedQ = true;
             }
 
             SetPreviousSelf();
-            Dbug.EndLogging();
+            Dbg.EndLogging(sfdx);
             return decodedQ;
         }
         #endregion

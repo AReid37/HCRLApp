@@ -13,7 +13,7 @@ namespace HCResourceLibraryApp.DataHandling
         #region fields / props
         /// <summary>Separator character in file encoding/decoding.</summary>
         internal const string Sep = "%"; // percentage symbol (seperator character; also dissallowed in HCAutoLogger)
-        // public for Dbug.cs
+        // public for Dbg.cs
         public static string AppDirectory = !Program.isDebugVersionQ? @"hcd\" : @"C:\Users\ntrc2\Pictures\High Contrast Textures\HCRLA\hcd-tests\";
         const string FileName = "hcrlaData.txt", BackupFileName = "hcrlaDataBackup.txt"; // change '.txt' to '.hcd' at end of development? Nn....NnnAahhh!
         const string SessionKeyTag = "skt";
@@ -103,7 +103,7 @@ namespace HCResourceLibraryApp.DataHandling
                     else noIssues = false;
 
                     if (!noIssues)
-                        Dbug.SingleLog("DataHandlerBase.SaveToFile()", $"Underlying type: {underlyingType}  //  Issue [Error]: {Tools.GetRecentWarnError(false, true)}");
+                        Dbg.SingleLog("DataHandlerBase.SaveToFile()", $"Underlying type: {underlyingType}  //  Issue [Error]: {Tools.GetRecentWarnError(false, true)}");
                     else TaskNum++;
 
                     ProgressBarUpdate(TaskNum / TaskCount);
@@ -131,7 +131,7 @@ namespace HCResourceLibraryApp.DataHandling
                             if (noIssues)
                             {
                                 _reversionAvailableQ = true;
-                                Dbug.SingleLog("DataHandlerBase.SaveToFile()", $"Previous file save version has been saved to backup file");
+                                Dbg.SingleLog("DataHandlerBase.SaveToFile()", $"Previous file save version has been saved to backup file");
                             }
                             TaskNum++;
                         }
@@ -183,7 +183,7 @@ namespace HCResourceLibraryApp.DataHandling
                     else noIssues = false;
 
                     if (!noIssues)
-                        Dbug.SingleLog("DataHandlerBase.LoadFromFile()", $"Underlying type: {underlyingType}  //  Issue [Error]: {Tools.GetRecentWarnError(false, true)}");
+                        Dbg.SingleLog("DataHandlerBase.LoadFromFile()", $"Underlying type: {underlyingType}  //  Issue [Error]: {Tools.GetRecentWarnError(false, true)}");
                     else TaskNum++;
 
                     ProgressBarUpdate(TaskNum / TaskCount);
@@ -197,7 +197,7 @@ namespace HCResourceLibraryApp.DataHandling
                         if (revertData.HasElements(2))
                         {
                             _reversionAvailableQ = true;
-                            Dbug.SingleLog("DataHandlerBase.LoadFromFile()", "A file save reversion is available");
+                            Dbg.SingleLog("DataHandlerBase.LoadFromFile()", "A file save reversion is available");
                         }
                     }
                     TaskNum++;
@@ -259,8 +259,8 @@ namespace HCResourceLibraryApp.DataHandling
                         }
 
                         if (!revertedQ)
-                            Dbug.SingleLog("DataHandlerBase.RevertSaveFile()", $"Issue in copying reversion data to main file // Issue [Error]: {Tools.GetRecentWarnError(false, true)}");
-                        else Dbug.SingleLog("DataHandlerBase.RevertSaveFile()", $"Finished copying reversion data to main file");
+                            Dbg.SingleLog("DataHandlerBase.RevertSaveFile()", $"Issue in copying reversion data to main file // Issue [Error]: {Tools.GetRecentWarnError(false, true)}");
+                        else Dbg.SingleLog("DataHandlerBase.RevertSaveFile()", $"Finished copying reversion data to main file");
 
                         // remove data from backup file when successfully reverted
                         if (revertedQ)
@@ -273,7 +273,7 @@ namespace HCResourceLibraryApp.DataHandling
                     // only if things have been changed
                     if (!revertedQ)
                     {
-                        Dbug.SingleLog("DataHandlerBase.RevertSaveFile()", "Resetting save states due to reversion failure");
+                        Dbg.SingleLog("DataHandlerBase.RevertSaveFile()", "Resetting save states due to reversion failure");
                         SaveToFile();
                     }
                 }
@@ -361,7 +361,7 @@ namespace HCResourceLibraryApp.DataHandling
                 }
                 sessionKey += keyPiece;
             }
-            Dbug.SingleLog("DataBaseHandler.GetSaveSessionKey()", $"FYI -- {sessionKey}");
+            Dbg.SingleLog("DataBaseHandler.GetSaveSessionKey()", $"FYI -- {sessionKey}");
             return sessionKey;
         }
 

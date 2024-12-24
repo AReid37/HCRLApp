@@ -12,7 +12,7 @@ namespace HCResourceLibraryApp
     public class Program
     {
         static readonly string consoleTitle = "High Contrast Resource Library App";
-        static readonly string developmentVersion = "[v1.3.3a]";
+        static readonly string developmentVersion = "[v1.3.3b]";
         static readonly string lastPublishedVersion = "[v1.3.1d]";
         /// <summary>If <c>true</c>, the application launches for debugging/development. Otherwise, the application launches for the published version.</summary>
         public static readonly bool isDebugVersionQ = true;
@@ -61,9 +61,6 @@ namespace HCResourceLibraryApp
                     HorizontalRule(cLS);
                     Title("CRASH HANDLER", '!', 2);
                     FormatLine($"{Ind34}The Program Unexpectedly Crashed. Exiting Program.", ForECol.Warning);
-                    FormatLine($"{Ind34}Flushing residual Debug Logs", ForECol.Accent);
-                    Dbug.EndLogging(); // to end nested  or  normal
-                    Dbug.EndLogging(); // to end normal 
                     FormatLine($"{Ind34}Saving your data.", ForECol.Accent);
                     SaveData(true);
                     NewLine();
@@ -73,42 +70,45 @@ namespace HCResourceLibraryApp
 
                     /// crash info
                     HorizontalRule('-');
-                    Dbug.StartLogging("Crash Handler Info");
+                    Dbg.StartLogging("Crash Handler Info", out int crashThreadIx);
                     Title("Exception Information");
 
                     FormatLine("Message");
                     FormatLine($"{Ind24}{crashExInfo.Message}", ForECol.Highlight);
-                    Dbug.Log($"MESSAGE  //  {crashExInfo.Message}");
+                    Dbg.Log(crashThreadIx, $"MESSAGE  //  {crashExInfo.Message}");
 
                     FormatLine("Source");
                     FormatLine($"{Ind24}{crashExInfo.Source}", ForECol.Highlight);
-                    Dbug.Log($"SOURCE  //  {crashExInfo.Source}");
+                    Dbg.Log(crashThreadIx, $"SOURCE  //  {crashExInfo.Source}");
 
                     FormatLine("Target Site");
                     FormatLine($"{Ind24}{crashExInfo.TargetSite}", ForECol.Highlight);
-                    Dbug.Log($"TARGET SITE  //  {crashExInfo.TargetSite}");
+                    Dbg.Log(crashThreadIx, $"TARGET SITE  //  {crashExInfo.TargetSite}");
 
                     FormatLine("Stack Trace");
                     FormatLine($"{Ind24}{crashExInfo.StackTrace}", ForECol.Highlight);
-                    Dbug.Log($"STACK TRACE  //  ");
-                    Dbug.NudgeIndent(true);
-                    Dbug.Log($"{crashExInfo.StackTrace}");
-                    Dbug.NudgeIndent(false);
+                    Dbg.Log(crashThreadIx, $"STACK TRACE  //  ");
+                    Dbg.NudgeIndent(crashThreadIx, true);
+                    Dbg.Log(crashThreadIx, $"{crashExInfo.StackTrace}");
+                    Dbg.NudgeIndent(crashThreadIx, false);
 
                     HorizontalRule('-', 2);
-                    Dbug.EndLogging();
+                    Dbg.EndLogging(crashThreadIx);
 
                     Format("Press [Enter] to close program >> ");
                     Pause();
+
+                    Dbg.ShutDown();
                 }
 
-                Dbg.ShutDown();
             }
         }
         static void MainProgram()
         {
             // Lvl.0 - program launch
             Dbg.Initialize();
+            Dbg.SetThreadsKeywordSpamList("Extensions.", "PageBase.");
+
             bool restartProgram;
             do
             {
@@ -266,60 +266,57 @@ namespace HCResourceLibraryApp
             }
             while (restartProgram);
 
-            Dbug.EndLogging();
+
             if (isDebugVersionQ)
                 TextLine($"\n\n**REMEMBER** Test the published version of the application frequently!!\n\tVersion last tested: {lastPublishedVersion}".ToUpper(), Color.White);
 
             #region report caught errors and warnings
-            Dbug.StartLogging("Report Caught Errors and Warnings");
+            Dbg.StartLogging("Report Caught Errors and Warnings", out int ewtx);
             /// report errors and warnings
-            Dbug.Log($"Published version last tested in '{lastPublishedVersion}'; ");
-            Dbug.Log("Reporting any recorded errors and warnings that have occured during this session :: ");
+            Dbg.Log(ewtx, $"Published version last tested in '{lastPublishedVersion}'; ");
+            Dbg.Log(ewtx, "Reporting any recorded errors and warnings that have occured during this session :: ");
             string errorMsg = "0", warnMsg = "0";
 
-            Dbug.Log("ERRORS");
-            Dbug.NudgeIndent(true);
+            Dbg.Log(ewtx, "ERRORS");
+            Dbg.NudgeIndent(ewtx, true);
             for (int ex = 0; errorMsg.IsNotNE(); ex++)
             {
                 errorMsg = Tools.GetWarnError(false, ex, true);
                 if (errorMsg.IsNotNE())
                 {
                     if (ex > 0)
-                        Dbug.Log("-----");
-                    Dbug.Log($"#{ex}  //  {errorMsg}");
+                        Dbg.Log(ewtx, "-----");
+                    Dbg.Log(ewtx, $"#{ex}  //  {errorMsg}");
                 }
                 else if (ex == 0)
-                    Dbug.Log("No errors to report...");
+                    Dbg.Log(ewtx, "No errors to report...");
             }
-            Dbug.NudgeIndent(false);
+            Dbg.NudgeIndent(ewtx, false);
 
-            Dbug.Log("WARNINGS");
-            Dbug.NudgeIndent(true);
+            Dbg.Log(ewtx, "WARNINGS");
+            Dbg.NudgeIndent(ewtx, true);
             for (int wx = 0; warnMsg.IsNotNE(); wx++)
             {
                 warnMsg = Tools.GetWarnError(true, wx, true);
                 if (warnMsg.IsNotNE())
                 {
                     if (wx > 0)
-                        Dbug.Log("- - -");
-                    Dbug.Log($"#{wx}  //  {warnMsg}");
+                        Dbg.Log(ewtx, "- - -");
+                    Dbg.Log(ewtx, $"#{wx}  //  {warnMsg}");
                 }
                 else if (wx == 0)
-                    Dbug.Log("No warnings to report...");
+                    Dbg.Log(ewtx, "No warnings to report...");
             }
-            Dbug.NudgeIndent(false);
+            Dbg.NudgeIndent(ewtx, false);
 
-            Dbug.EndLogging();
+            Dbg.EndLogging(ewtx);
             #endregion
-
-            // a quick test on shutting down open threads
-            Dbg.StartLogging("LateToTheParty", out int lateIx);
-            Dbg.Log(lateIx, "Wait the party is over? Aww cr---");
 
             Dbg.ShutDown();
             /// THE TO DO LIST    
             /// - DEBUG the overwriting system and check for possible errors
             /// - FURTHER DEBUGGING and fixes from bug / idea submission system on published app
+            /// - ADD MORE LOGSTATE METHODS to every paging class. Gives more context to all the debug threads
         }
 
 
@@ -338,7 +335,7 @@ namespace HCResourceLibraryApp
                 const string stateDepthKey = "|";
                 if (prevWhereAbouts != whereAbouts)
                 {
-                    Dbug.SingleLog(pslsn, whereAbouts.Replace(stateDepthKey, " --> "));
+                    Dbg.SingleLog(pslsn, whereAbouts.Replace(stateDepthKey, " --> "));
                     prevWhereAbouts = whereAbouts;
                 }
             }
@@ -369,7 +366,7 @@ namespace HCResourceLibraryApp
 
             //bool outCome = dataHandler_.LoadFromFile(preferences_, logDecoder_, contentValidator_, resourceLibrary_, formatterData_, bugIdeaData_);
             bool outCome = ProfileHandler.LoadProfile();
-            Dbug.SingleLog("Program.LoadData()", $"Outcome of data loading :: {outCome};");
+            Dbg.SingleLog("Program.LoadData()", $"Outcome of data loading :: {outCome};");
         }
         public static bool SaveReversion()
         {
@@ -417,7 +414,7 @@ namespace HCResourceLibraryApp
 
 
         // TESTING STUFF
-        static readonly bool runTest = true;
+        static readonly bool runTest = false;
         static readonly Tests testToRun = Tests.Dbg_Revised;
         enum Tests
         {

@@ -285,7 +285,7 @@ namespace HCResourceLibraryApp.Layout
                 prevMaximumResults = maximumResults;
                 maximumResults = 50 + HSNL(0, 49);
                 if (!_searchOpts.IsSetup())
-                    _searchOpts = new SearchOptions(true, false, SourceContents.All);
+                    _searchOpts = new SearchOptions(false, false, SourceContents.All);
 
 
                 // ++  BROWSE MENU  ++

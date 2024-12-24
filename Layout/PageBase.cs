@@ -225,10 +225,10 @@ namespace HCResourceLibraryApp.Layout
             /// from 'left' to 'right - 1' char spaces
             if (text.IsNotNE() && _enableWordWrapQ)
             {
-                Dbug.DeactivateNextLogSession();
-                Dbug.StartLogging("PageBase.WordWrap(str)");
-                Dbug.LogPart($"Source :: {(_wrapSource == 0 ? "Format()" : (_wrapSource == 1 ? "FormatLine()" : "overload Format()"))}  //  ");
-                Dbug.Log($"Received text :: {text.Replace("\n", "\\n").Replace("\t", "\\t")}");
+                Dbg.StartLogging("PageBase.WordWrap()", out int pgbsx);
+                Dbg.ToggleThreadOutputOmission(pgbsx);
+                Dbg.LogPart(pgbsx, $"Source :: {(_wrapSource == 0 ? "Format()" : (_wrapSource == 1 ? "FormatLine()" : "overload Format()"))}  //  ");
+                Dbg.Log(pgbsx, $"Received text :: {text.Replace("\n", "\\n").Replace("\t", "\\t")}");
 
                 // -- First determine if word requires wrapping --
                 int wrapBuffer = Console.BufferWidth - 1;
@@ -246,11 +246,11 @@ namespace HCResourceLibraryApp.Layout
 
                     _wrapIndentHold = (spaceIndent == 0 /*&& wrapStartPos.IsWithin(0, WordWrapIndentLim)*/ ? wrapStartPos : spaceIndent).Clamp(0, WordWrapIndentLim);
                     //_wrapIndentHold = Extensions.CountOccuringCharacter(copyText, ' ').Clamp(0, WordWrapIndentLim);
-                    Dbug.Log($"Set and held a wrapping indent position :: {_wrapIndentHold}; ");
+                    Dbg.Log(pgbsx, $"Set and held a wrapping indent position :: {_wrapIndentHold}; ");
                 }
                 else if (!holdIndentQ && _wrapIndentHold != wrapUnholdNum)
                 {
-                    Dbug.Log($"Released held wrapping indent position :: {_wrapIndentHold}; ");
+                    Dbg.Log(pgbsx, $"Released held wrapping indent position :: {_wrapIndentHold}; ");
                     _wrapIndentHold = wrapUnholdNum;
                 }
 
@@ -260,17 +260,17 @@ namespace HCResourceLibraryApp.Layout
                 {
                     // -- Prep text to wrap --
                     text = text.Replace("\n", newLineReplace).Replace("\t", tabReplace);
-                    Dbug.LogPart($"Wrapping Text: {wrapBuffer} spaces starting at '{wrapStartPos}'; ");
-                    Dbug.Log($"Replaced any newline escape characters (\\n) with '{newLineReplace}'; Replaced any 'tab' escape characters (\\t) with 8 spaces; ");
+                    Dbg.LogPart(pgbsx, $"Wrapping Text: {wrapBuffer} spaces starting at '{wrapStartPos}'; ");
+                    Dbg.Log(pgbsx, $"Replaced any newline escape characters (\\n) with '{newLineReplace}'; Replaced any 'tab' escape characters (\\t) with 8 spaces; ");
 
 
                     // -- Separate words into bits --
                     List<string> textsToWrap = new();
                     string partTexts = "";
                     bool wasSpaceCharQ = false;
-                    Dbug.Log("Separating text into wrappable pieces :: ");
-                    Dbug.NudgeIndent(true);
-                    Dbug.LogPart($" >|");
+                    Dbg.Log(pgbsx, "Separating text into wrappable pieces :: ");
+                    Dbg.NudgeIndent(pgbsx, true);
+                    Dbg.LogPart(pgbsx, $" >|");
                     for (int tx = 0; tx < text.Length; tx++)
                     {
                         char c = text[tx];
@@ -285,29 +285,29 @@ namespace HCResourceLibraryApp.Layout
                                     partTexts += c.ToString();
 
                                 textsToWrap.Add(partTexts);
-                                Dbug.LogPart($"{partTexts}{(isEndQ ? "" : "|")}");
+                                Dbg.LogPart(pgbsx, $"{partTexts}{(isEndQ ? "" : "|")}");
                                 partTexts = "";
                             }
                         }
                         partTexts += c.ToString();
                         wasSpaceCharQ = isSpaceCharQ;
                     }
-                    Dbug.Log($"|< ");
-                    Dbug.NudgeIndent(false);
+                    Dbg.Log(pgbsx, $"|< ");
+                    Dbg.NudgeIndent(pgbsx, false);
 
 
                     // -- It's time to WRAP! --
-                    Dbug.Log("Words have been separated: proceeding to wrap words; ");
+                    Dbg.Log(pgbsx, "Words have been separated: proceeding to wrap words; ");
                     if (textsToWrap.HasElements())
                     { /// wrapping ... as to hide within...
 
                         string wrappedText = "";
                         int currWrapPos = wrapStartPos;
                         int wrapIndentLevel = 0;
-                        //Dbug.Log($"Extra info :: currWrapPos = {wrapStartPos}, helpWrapPos = {_wrapIndentHold};");
+                        //Dbg.Log(pgbsx, $"Extra info :: currWrapPos = {wrapStartPos}, helpWrapPos = {_wrapIndentHold};");
 
-                        Dbug.NudgeIndent(true);
-                        Dbug.LogPart("> :|");
+                        Dbg.NudgeIndent(pgbsx, true);
+                        Dbg.LogPart(pgbsx, "> :|");
                         for (int wx = 0; wx < textsToWrap.Count; wx++)
                         {
                             bool isStartQ = wx == 0, isEndQ = wx + 1 == textsToWrap.Count;
@@ -319,19 +319,19 @@ namespace HCResourceLibraryApp.Layout
                                 if (wText.Replace(" ", "").IsNE())
                                 {
                                     wrapIndentLevel = Extensions.CountOccuringCharacter(wText, ' ').Clamp(0, WordWrapIndentLim);
-                                    Dbug.LogPart($" [Ind{wrapIndentLevel}8] ");
+                                    Dbg.LogPart(pgbsx, $" [Ind{wrapIndentLevel}8] ");
                                 }
                                 /// this won't run anyway, I'm sure
                                 //else
                                 //{
                                 //    wrapIndentLevel = currWrapPos.Clamp(0, WordWrapIndentLim);
-                                //    Dbug.LogPart($" [LimInd{wrapIndentLevel}8] ");
+                                //    Dbg.LogPart(pgbsx, $" [LimInd{wrapIndentLevel}8] ");
                                 //}
                             }
                             else if (isStartQ && _wrapIndentHold != wrapUnholdNum)
                             {
                                 wrapIndentLevel = _wrapIndentHold.Clamp(0, WordWrapIndentLim);
-                                Dbug.LogPart($" [HldInd{wrapIndentLevel}8] ");
+                                Dbg.LogPart(pgbsx, $" [HldInd{wrapIndentLevel}8] ");
                             }
 
 
@@ -339,7 +339,7 @@ namespace HCResourceLibraryApp.Layout
                             if (currWrapPos + wText.Length < wrapBuffer && !wText.Contains(newLineReplace))
                             {
                                 wrappedText += wText;
-                                Dbug.LogPart($"{wText}");
+                                Dbg.LogPart(pgbsx, $"{wText}");
                             }
                             /// IF ...; ELSE wrap text to next line OR print newline
                             else
@@ -369,14 +369,14 @@ namespace HCResourceLibraryApp.Layout
                                                 wrappedText += $"{WordWrapNewLineKey}{wText}";
                                             else wrappedText += $"\n{wText}";
 
-                                            Dbug.Log("|-> ");
-                                            Dbug.LogPart($" ->|{wText}");
+                                            Dbg.Log(pgbsx, "|-> ");
+                                            Dbg.LogPart(pgbsx, $" ->|{wText}");
                                         }
                                         else
                                         {
                                             wrappedText += wText;
 
-                                            Dbug.LogPart($"|{wText}|-- ");
+                                            Dbg.LogPart(pgbsx, $"|{wText}|-- ");
                                         }
                                     }
                                     else
@@ -412,7 +412,7 @@ namespace HCResourceLibraryApp.Layout
                                                 string subTextIxRange = $"[ix{wTSubIndex}~{wTSubIndex + wTSubLen - 1}]";
                                                 if (isBreakEndQ)
                                                 {
-                                                    Dbug.LogPart($" =>|{subTextIxRange}{wTSubText}");
+                                                    Dbg.LogPart(pgbsx, $" =>|{subTextIxRange}{wTSubText}");
                                                     if (VerifyFormatUsage)
                                                         wrappedText += $"{WordWrapNewLineKey}{wTSubText}";
                                                     else wrappedText += $"\n{wTSubText}";
@@ -424,12 +424,12 @@ namespace HCResourceLibraryApp.Layout
                                                 {
                                                     if (isRemainderQ)
                                                     {
-                                                        Dbug.Log($"{subTextIxRange}{wTSubText}|=> ");
+                                                        Dbg.Log(pgbsx, $"{subTextIxRange}{wTSubText}|=> ");
                                                         wrappedText += $"{wTSubText}";
                                                     }
                                                     else
                                                     {
-                                                        Dbug.Log($" =>|{subTextIxRange}{wTSubText}|=> ");
+                                                        Dbg.Log(pgbsx, $" =>|{subTextIxRange}{wTSubText}|=> ");
                                                         if (VerifyFormatUsage)
                                                             wrappedText += $"{WordWrapNewLineKey}{wTSubText}";
                                                         else wrappedText += $"\n{wTSubText}";
@@ -447,8 +447,8 @@ namespace HCResourceLibraryApp.Layout
                                         currWrapPos = 0;
                                         wText = wrapIndText;
 
-                                        Dbug.Log("|>> ");
-                                        Dbug.LogPart($" >>|{wText}");
+                                        Dbg.Log(pgbsx, "|>> ");
+                                        Dbg.LogPart(pgbsx, $" >>|{wText}");
                                         if (VerifyFormatUsage)
                                             wrappedText += $"{WordWrapNewLineKey}{wText}";
                                         else wrappedText += $"\n{wText}";
@@ -457,12 +457,12 @@ namespace HCResourceLibraryApp.Layout
                                     {
                                         currWrapPos = 0;
                                         string fltWText = wText.Replace(newLineReplace, "");
-                                        Dbug.Log($"{fltWText}|<> ");
+                                        Dbg.Log(pgbsx, $"{fltWText}|<> ");
 
                                         wText = wrapIndText;
                                         if (fltWText.IsEW() && fltWText.CountOccuringCharacter(' ') > 0)
                                             wText += fltWText;
-                                        Dbug.LogPart($" <>|{wText}");
+                                        Dbg.LogPart(pgbsx, $" <>|{wText}");
 
                                         if (VerifyFormatUsage)
                                             wrappedText += $"{fltWText}{WordWrapNewLineKey}{wText}";
@@ -471,22 +471,22 @@ namespace HCResourceLibraryApp.Layout
                                 }
                             }
                             if (!isEndQ)
-                                Dbug.LogPart("|");
+                                Dbg.LogPart(pgbsx, "|");
                             currWrapPos += wText.Length;
                         }
-                        Dbug.Log("|: <");
-                        Dbug.NudgeIndent(false);
+                        Dbg.Log(pgbsx, "|: <");
+                        Dbg.NudgeIndent(pgbsx, false);
 
                         // return wrapped text
-                        Dbug.Log($"Finshed wrapping text :: {wrappedText.Replace("\n", $"{newLineReplace.Trim()}{cRHB}")}");
+                        Dbg.Log(pgbsx, $"Finshed wrapping text :: {wrappedText.Replace("\n", $"{newLineReplace.Trim()}{cRHB}")}");
                         text = wrappedText;
 
-                        Dbug.Log("LEGEND ///  Word divider  |  //  Start|End  > :|: <  //  Wrap  ->  (Just Fits  --)  //  Break'N'Wrap  =>  //  NewLine  >>  (with word  <>)  /// END LEGEND");
+                        Dbg.Log(pgbsx, "LEGEND ///  Word divider  |  //  Start|End  > :|: <  //  Wrap  ->  (Just Fits  --)  //  Break'N'Wrap  =>  //  NewLine  >>  (with word  <>)  /// END LEGEND");
                     }
                 }
-                else Dbug.Log($"This text does not require wrapping: '{wrapBuffer - wrapStartPos - text.Length}' character spaces remain after printing this text.");
+                else Dbg.Log(pgbsx, $"This text does not require wrapping: '{wrapBuffer - wrapStartPos - text.Length}' character spaces remain after printing this text.");
 
-                Dbug.EndLogging();
+                Dbg.EndLogging(pgbsx);
             }
             return text;
         }
@@ -512,34 +512,34 @@ namespace HCResourceLibraryApp.Layout
         /// <param name="highlightedTexts">Cannot be null. Characters, words, or phrases within the text to highlight.</param>
         public static void Highlight(bool newLine, string text, params string[] highlightedTexts)
         {
-            Dbug.DeactivateNextLogSession();
-            Dbug.StartLogging("PageBase.Highlight(str, params str[])");
-            
-            Dbug.Log($"Recieved --> text (\"{text}\"); highlightedTexts (has elements? {highlightedTexts.HasElements()})");
+            Dbg.StartLogging("PageBase.Highlight()", out int pgbsx);
+            Dbg.ToggleThreadOutputOmission(pgbsx);
+
+            Dbg.Log(pgbsx, $"Recieved --> text (\"{text}\"); highlightedTexts (has elements? {highlightedTexts.HasElements()})");
             if (text.IsNotNEW() && highlightedTexts.HasElements())
             {
                 short highlightIndex = 0;
                 foreach (string highText in highlightedTexts)
                 {
-                    Dbug.LogPart($".  |highlightedText (@ index #{highlightIndex}) --> ");
+                    Dbg.LogPart(pgbsx, $".  |highlightedText (@ index #{highlightIndex}) --> ");
                     if (highText.IsNotNE())
                     {
-                        Dbug.LogPart($"{highText}  //  ");
+                        Dbg.LogPart(pgbsx, $"{highText}  //  ");
                         if (text.Contains(highText))
                         {
                             text = text.Replace(highText, $"<{highlightIndex}>");                            
-                            Dbug.Log($"result text --> \"{text}\"");
+                            Dbg.Log(pgbsx, $"result text --> \"{text}\"");
                         }
-                        else Dbug.Log("no change.");
+                        else Dbg.Log(pgbsx, "no change.");
                     }
-                    else Dbug.Log("null or empty highlightedText~");
+                    else Dbg.Log(pgbsx, "null or empty highlightedText~");
                     highlightIndex++;
                 }
 
                 string[] textWords = null;
                 if (textWords == null)
                 { /// wrapping
-                    //Dbug.LogPart("Compiling words ::  ");
+                    //Dbg.LogPart(pgbsx, "Compiling words ::  ");
                     List<string> testWordsCompile = new();
                     string wordBuild = "";
                     bool readingSpaces = false;
@@ -560,7 +560,7 @@ namespace HCResourceLibraryApp.Layout
                     /// get the last word in
                     if (wordBuild.IsNotNE())
                         testWordsCompile.Add(wordBuild);
-                    //Dbug.Log("  --> Done");
+                    //Dbg.Log(pgbsx, "  --> Done");
 
                     textWords = testWordsCompile.ToArray();
                 }
@@ -582,37 +582,37 @@ namespace HCResourceLibraryApp.Layout
                 /// print and highlight words
                 for (int c = 0; c < textWords.Length; c++)
                 {
-                    Dbug.LogPart($".. |");
+                    Dbg.LogPart(pgbsx, $".. |");
 
                     string word = textWords[c];
                     bool end = c + 1 == textWords.Length;
-                    Dbug.LogPart($"assessing word '{word}' || ");
+                    Dbg.LogPart(pgbsx, $"assessing word '{word}' || ");
                     if (word.IsNotNE())
                     {
                         // IF word is or contains subkey, check for matching highlight word or phrase and replace subkey with it
                         if (word.Contains('<') && word.Contains('>'))
                         {
-                            Dbug.LogPart("format highlight word >> ");
+                            Dbg.LogPart(pgbsx, "format highlight word >> ");
                             for (int hli = 0; hli < highlightedTexts.Length; hli++)
                             {
                                 string subKey = $"<{hli}>";
                                 string replacePhrase = highlightedTexts[hli];                                
                                 if (word.Contains(subKey))
                                 {
-                                    Dbug.LogPart($"Replace '{subKey}' with '{replacePhrase}'  //  result -->  ");
+                                    Dbg.LogPart(pgbsx, $"Replace '{subKey}' with '{replacePhrase}'  //  result -->  ");
                                     // <0> == <0>?
                                     if (word == subKey)
                                     {
                                         if (!end || !newLine)
                                             Format(replacePhrase, fecHighlight);
                                         else FormatLine(replacePhrase, fecHighlight);
-                                        Dbug.LogPart($"'[{replacePhrase}]'");
+                                        Dbg.LogPart(pgbsx, $"'[{replacePhrase}]'");
                                     }
 
                                     // <0>, == <0>?
                                     else
                                     {
-                                        Dbug.LogPart("'");
+                                        Dbg.LogPart(pgbsx, "'");
 
                                         string[] splitWord = word.Split(subKey);
                                         for (int wx = 0; wx < splitWord.Length; wx++)
@@ -623,24 +623,24 @@ namespace HCResourceLibraryApp.Layout
                                             if (partWord.IsNotNE())
                                             {
                                                 Format(partWord, fecNormal);
-                                                Dbug.LogPart(partWord);
+                                                Dbg.LogPart(pgbsx, partWord);
                                             }
 
                                             if (!wordEndQ)
                                             {
                                                 Format(replacePhrase, fecHighlight);
-                                                Dbug.LogPart($"[{replacePhrase}]");
+                                                Dbg.LogPart(pgbsx, $"[{replacePhrase}]");
                                             }
 
                                             if (wordEndQ)
                                                 if (newLine && end)
                                                     NewLine();
                                         }
-                                        Dbug.LogPart("'");
+                                        Dbg.LogPart(pgbsx, "'");
                                     }
                                 }
                             }
-                            Dbug.Log($"  // (on newline? {end && newLine})");
+                            Dbg.Log(pgbsx, $"  // (on newline? {end && newLine})");
                         }
 
                         else
@@ -649,16 +649,16 @@ namespace HCResourceLibraryApp.Layout
                                 Format(word, fecNormal);
                             else FormatLine(word, fecNormal);
 
-                            Dbug.Log($"format normal word >> '{word}' (on newline? {end && newLine})");
+                            Dbg.Log(pgbsx, $"format normal word >> '{word}' (on newline? {end && newLine})");
                         }
 
                     }
-                    else Dbug.Log("null or empty word~");
+                    else Dbg.Log(pgbsx, "null or empty word~");
                 }
             }
 
 
-            Dbug.EndLogging();
+            Dbg.EndLogging(pgbsx);
         }
         /// <summary>Temporarily changes the foreground element colors used on the next call to <see cref="Highlight(bool, string, string[])"/></summary>
         public static void ChangeNextHighlightColors(ForECol normalAlt, ForECol highlightAlt)
@@ -709,7 +709,7 @@ namespace HCResourceLibraryApp.Layout
                 ///     > rngFac = (x - n) / (m - n)
                 float rangeFactor = (_preferencesRef.HeightScale.GetScaleFactorH() - DimHeight.Squished.GetScaleFactorH()) / (DimHeight.Fill.GetScaleFactorH() - DimHeight.Squished.GetScaleFactorH());
                 numOfNewLines = minimumNL + (int)(rangeFactor * range);
-                //Dbug.SingleLog("HomePage.HSNL(int, int)", $"Got min|max values ({minimumNL}|{maximumNL}) and range ({range}); Solved for range factor ({rangeFactor * 100:0.0}%); Returned sensitive number of newlines: {numOfNewLines};");
+                //Dbg.SingleLog("HomePage.HSNL(int, int)", $"Got min|max values ({minimumNL}|{maximumNL}) and range ({range}); Solved for range factor ({rangeFactor * 100:0.0}%); Returned sensitive number of newlines: {numOfNewLines};");
             }
             return numOfNewLines;
         }
@@ -731,7 +731,7 @@ namespace HCResourceLibraryApp.Layout
                 ///     > rngFac = (x - n) / (m - n)
                 float rangeFactor = (_preferencesRef.HeightScale.GetScaleFactorH() - DimHeight.Squished.GetScaleFactorH()) / (DimHeight.Fill.GetScaleFactorH() - DimHeight.Squished.GetScaleFactorH());
                 int numOfNewLines = minimumNL + (int)(rangeFactor * range);
-                //Dbug.SingleLog("HomePage.HSNLPrint(int, int)", $"Got min|max values ({minimumNL}|{maximumNL}) and range ({range}); Solved for range factor ({rangeFactor * 100:0.0}%); Returned sensitive number of newlines: {numOfNewLines};");
+                //Dbg.SingleLog("HomePage.HSNLPrint(int, int)", $"Got min|max values ({minimumNL}|{maximumNL}) and range ({range}); Solved for range factor ({rangeFactor * 100:0.0}%); Returned sensitive number of newlines: {numOfNewLines};");
 
                 NewLine(numOfNewLines);
             }
@@ -867,12 +867,12 @@ namespace HCResourceLibraryApp.Layout
             resultNum = 0;
             bool valid = false;
 
-            Dbug.DeactivateNextLogSession();
-            Dbug.StartLogging("Table Form Menu Debug");
+            Dbg.StartLogging("PageBase.TableFormMenu()", out int pgbsx);
+            Dbg.ToggleThreadOutputOmission(pgbsx);
             if (options.HasElements() && titleText.IsNotNEW())
             {
                 // build menu keys
-                Dbug.Log($"Recieved --> '{options.Length}' options; '{titleText}' as menu title; '{titleUnderline}' as underline; '{prompt}' as prompt; '{placeholder}' as placeholder; '{optionColumns}' as number of option columns");
+                Dbg.Log(pgbsx, $"Recieved --> '{options.Length}' options; '{titleText}' as menu title; '{titleUnderline}' as underline; '{prompt}' as prompt; '{placeholder}' as placeholder; '{optionColumns}' as number of option columns");
                 string optNumKeys = "";
                 int countInvalidOpts = 0;
                 List<string> optionsFltrd = new List<string>();
@@ -888,23 +888,23 @@ namespace HCResourceLibraryApp.Layout
 
                 // filter and prep data
                 optNumKeys = optNumKeys.Trim();
-                Dbug.LogPart($"Prep --> Filtered options count is '{optionsFltrd.Count}'; Generated option keys [{optNumKeys}]; Edited placeholder? ");
+                Dbg.LogPart(pgbsx, $"Prep --> Filtered options count is '{optionsFltrd.Count}'; Generated option keys [{optNumKeys}]; Edited placeholder? ");
                 if (placeholder.IsNotNEW())
                 {
-                    Dbug.LogPart($"{placeholder.Length > 50}");
+                    Dbg.LogPart(pgbsx, $"{placeholder.Length > 50}");
                     if (placeholder.Length > 50)
                         placeholder = placeholder.Remove(50);
                 }
-                Dbug.LogPart($"; Edited number of option columns? {!optionColumns.IsWithin(2, 4)} [{optionColumns} -> {optionColumns.Clamp(2, 4)}]");
+                Dbg.LogPart(pgbsx, $"; Edited number of option columns? {!optionColumns.IsWithin(2, 4)} [{optionColumns} -> {optionColumns.Clamp(2, 4)}]");
                 if (!optionColumns.IsWithin(2, 4))
                     optionColumns = optionColumns.Clamp(2, 4);
-                Dbug.Log(";");
+                Dbg.Log(pgbsx, ";");
 
                 // print menu & validate menu options
-                Dbug.LogPart("Printing --> ");
+                Dbg.LogPart(pgbsx, "Printing --> ");
                 if (optionsFltrd.HasElements())
                 {
-                    Dbug.Log($"Title spans window width? {titleSpanWidthQ}; No. option columns: {optionColumns}; Using default prompt? {prompt.IsNEW()} ");
+                    Dbg.Log(pgbsx, $"Title spans window width? {titleSpanWidthQ}; No. option columns: {optionColumns}; Using default prompt? {prompt.IsNEW()} ");
 
                     if (titleSpanWidthQ)
                         Title(titleText, titleUnderline.IsNotNull() ? titleUnderline.Value : DefaultTitleUnderline, 0);
@@ -913,18 +913,18 @@ namespace HCResourceLibraryApp.Layout
 
                     // table here
                     string[] tableInfo = new string[optionColumns];
-                    Dbug.Log("Building options table");
-                    Dbug.NudgeIndent(true);
+                    Dbg.Log(pgbsx, "Building options table");
+                    Dbg.NudgeIndent(pgbsx, true);
                     for (int tbIx = 0; tbIx < optionsFltrd.Count; tbIx++)
                     {
                         int tbIxPlus1 = tbIx + 1;
                         bool endOpts = tbIxPlus1 >= optionsFltrd.Count;
                         bool printTable = tbIxPlus1 % optionColumns == 0; // 1%2 2%2; 
-                        Dbug.LogPart($"Opt#{tbIx} -->  End? {endOpts};  Print Table? {printTable} [{tbIxPlus1 % optionColumns}]  //  ");
+                        Dbg.LogPart(pgbsx, $"Opt#{tbIx} -->  End? {endOpts};  Print Table? {printTable} [{tbIxPlus1 % optionColumns}]  //  ");
 
                         string columnOption = $"[{tbIxPlus1}] {optionsFltrd[tbIx]}";
                         tableInfo[tbIx % optionColumns] = columnOption;
-                        Dbug.Log($"Setting {nameof(tableInfo)}[ix-{tbIx % optionColumns}] to option '{columnOption}'");
+                        Dbg.Log(pgbsx, $"Setting {nameof(tableInfo)}[ix-{tbIx % optionColumns}] to option '{columnOption}'");
 
                         if (printTable || endOpts)
                         {
@@ -945,10 +945,10 @@ namespace HCResourceLibraryApp.Layout
                             }
 
                             tableInfo = new string[optionColumns];
-                            Dbug.Log($".. Printed table with [{optionColumns}] columns. Reset {nameof(tableInfo)}  //  Cause --> Print Table? {printTable};  Options End? {endOpts}");
+                            Dbg.Log(pgbsx, $".. Printed table with [{optionColumns}] columns. Reset {nameof(tableInfo)}  //  Cause --> Print Table? {printTable};  Options End? {endOpts}");
                         }
                     }
-                    Dbug.NudgeIndent(false);
+                    Dbg.NudgeIndent(pgbsx, false);
 
                     Format(prompt.IsNotNEW() ? prompt : $"{Ind24}Select option >> ", ForECol.Normal);
 
@@ -957,11 +957,11 @@ namespace HCResourceLibraryApp.Layout
                     if (valid)
                         resultNum += 1;
 
-                    Dbug.LogPart($"Input recieved [{LastInput}] (colored in '{GetPrefsForeColor(ForECol.InputColor)}');  Valid [{valid}];  Result Number [{resultNum}]");
+                    Dbg.LogPart(pgbsx, $"Input recieved [{LastInput}] (colored in '{GetPrefsForeColor(ForECol.InputColor)}');  Valid [{valid}];  Result Number [{resultNum}]");
                 }
-                Dbug.Log(" --> DONE");
+                Dbg.Log(pgbsx, " --> DONE");
             }
-            Dbug.EndLogging();
+            Dbg.EndLogging(pgbsx);
 
             return valid;
         }
@@ -982,12 +982,12 @@ namespace HCResourceLibraryApp.Layout
             resultKey = null;
             bool valid = false;
 
-            Dbug.DeactivateNextLogSession();
-            Dbug.StartLogging("List Form Menu Debug");
+            Dbg.StartLogging("PageBase.ListFormMenu()", out int pgbsx);
+            Dbg.ToggleThreadOutputOmission(pgbsx);
             if (options.HasElements() && titleText.IsNotNEW())
             {
                 // build menu keys
-                Dbug.Log($"Recieved --> '{options.Length}' options; '{titleText}' as menu title; '{titleUnderline}' as underline; '{prompt}' as prompt; '{placeholder}' as placeholder.");
+                Dbg.Log(pgbsx, $"Recieved --> '{options.Length}' options; '{titleText}' as menu title; '{titleUnderline}' as underline; '{prompt}' as prompt; '{placeholder}' as placeholder.");
                 string optKeys = "";
                 int countInvalidOpts = 0;
                 List<string> optionsFltrd = new List<string>();
@@ -1003,21 +1003,21 @@ namespace HCResourceLibraryApp.Layout
 
                 // filter and prep data
                 optKeys = optKeys.Trim();
-                Dbug.LogPart($"Prep --> Filtered options count is '{optionsFltrd.Count}'; Generated option keys [{optKeys}]; Edited placeholder? ");
+                Dbg.LogPart(pgbsx, $"Prep --> Filtered options count is '{optionsFltrd.Count}'; Generated option keys [{optKeys}]; Edited placeholder? ");
                 if (placeholder.IsNotNEW())
                 {
-                    Dbug.LogPart($"{placeholder.Length > 50}");
+                    Dbg.LogPart(pgbsx, $"{placeholder.Length > 50}");
                     if (placeholder.Length > 50)
                         placeholder = placeholder.Remove(51);
                 }
-                Dbug.Log(";");
+                Dbg.Log(pgbsx, ";");
 
 
                 // print menu & validate menu options
-                Dbug.LogPart("Printing --> ");
+                Dbg.LogPart(pgbsx, "Printing --> ");
                 if (optionsFltrd.HasElements())
                 {
-                    Dbug.LogPart($"Indent List Options? {indentOptsQ}; Using default prompt? {prompt.IsNEW()}  //  ");
+                    Dbg.LogPart(pgbsx, $"Indent List Options? {indentOptsQ}; Using default prompt? {prompt.IsNEW()}  //  ");
 
                     // print menu
                     Title(titleText, titleUnderline.IsNotNull() ? titleUnderline.Value : DefaultTitleUnderline);
@@ -1033,11 +1033,11 @@ namespace HCResourceLibraryApp.Layout
 
                     // validate menu options
                     valid = MenuOptions(StyledInput(placeholder), out resultKey, optKeys.Split(' '));
-                    Dbug.LogPart($"Input recieved [{LastInput}] (colored in '{GetPrefsForeColor(ForECol.InputColor)}');  Valid [{valid}];  Result Key [{resultKey}]");
+                    Dbg.LogPart(pgbsx, $"Input recieved [{LastInput}] (colored in '{GetPrefsForeColor(ForECol.InputColor)}');  Valid [{valid}];  Result Key [{resultKey}]");
                 }
-                Dbug.Log(" --> DONE");
+                Dbg.Log(pgbsx, " --> DONE");
             }
-            Dbug.EndLogging();
+            Dbg.EndLogging(pgbsx);
             return valid;
         }
         public static void MenuMessageQueue(bool trueCondition, bool isWarning, string incorrectionMessage)
@@ -1070,11 +1070,11 @@ namespace HCResourceLibraryApp.Layout
         }
         public static bool ColorMenu(string titleText, out Color color, params Color[] exempt)
         {
-            Dbug.DeactivateNextLogSession();
-            Dbug.StartLogging("PageBase.ColorMenu");
+            Dbg.StartLogging("PageBase.ColorMenu()", out int pgbsx);
+            Dbg.ToggleThreadOutputOmission(pgbsx);
 
             // prep
-            Dbug.LogPart($"Using default menu title? {titleText.IsNEW()}; Exempting any options? {exempt.HasElements()} // ");
+            Dbg.LogPart(pgbsx, $"Using default menu title? {titleText.IsNEW()}; Exempting any options? {exempt.HasElements()} // ");
             const char tDiv = '*';
             const string exemptKey = "-", nRep = "%%";// "nRep" meaning "number Replace" \\ replaced by optionBullet "#|"
             const string colBlackRename = "Default";
@@ -1136,7 +1136,7 @@ namespace HCResourceLibraryApp.Layout
             menuOptions = menuOptions.Trim();
             Format($"{Ind24}Selection >> #", ForECol.Normal);
             string input = StyledInput(null);
-            Dbug.Log($"Table built, resulting menu options [{menuOptions}]");
+            Dbg.Log(pgbsx, $"Table built, resulting menu options [{menuOptions}]");
 
             // menu validation
             if (input.Contains(exemptKey))
@@ -1144,8 +1144,8 @@ namespace HCResourceLibraryApp.Layout
             bool valid = MenuOptions(input, out short optNum, menuOptions.Split(' '));
             int ix1 = optNum / 4, ix2 = optNum % 4;
             color = valid? tableCols[ix1, ix2] : Color.Black;
-            Dbug.Log($"Recieved input [{input}]; Valid input? {valid};  Result Color [#{optNum} ({ix1}, {ix2}) -> '{color}'{(color == Color.Black ? $" ({colBlackRename})" : "")}]");
-            Dbug.EndLogging();
+            Dbg.Log(pgbsx, $"Recieved input [{input}]; Valid input? {valid};  Result Color [#{optNum} ({ix1}, {ix2}) -> '{color}'{(color == Color.Black ? $" ({colBlackRename})" : "")}]");
+            Dbg.EndLogging(pgbsx);
 
             return valid;
         }
@@ -1157,16 +1157,15 @@ namespace HCResourceLibraryApp.Layout
         public static void Wait(float seconds)
         {
             int milliSeconds = (int)(seconds.Clamp(0, 10) * 1000);
-            Dbug.DeactivateNextLogSession();
-            Dbug.StartLogging("PageBase.Wait()");            
-            Dbug.LogPart($"Waiting for {milliSeconds}ms // ");
+            string dbgLog = $"Waiting for {milliSeconds}ms // ";
 
             Stopwatch watch = Stopwatch.StartNew();
-            Dbug.LogPart($"Start time: {watch.Elapsed.TotalMilliseconds}ms");
+            dbgLog += $"Start time: {watch.Elapsed.TotalMilliseconds}ms";
             while (watch.ElapsedMilliseconds < milliSeconds)
                 /* Do nothing but loop, kek */;
-            Dbug.Log($"-- End time: {watch.Elapsed.TotalMilliseconds}ms // Waiting complete.");
-            Dbug.EndLogging();
+
+            dbgLog += $"-- End time: {watch.Elapsed.TotalMilliseconds}ms // Waiting complete.";
+            Dbg.SingleLog("PageBase.Wait()", dbgLog, true);
         }
         /// <summary>Gets and saves cursor position: top and left positions which can be adjusted using <paramref name="alterTop"/> and <paramref name="alterLeft"/>.</summary>
         public static void GetCursorPosition(int alterTop = 0, int alterLeft = 0)
