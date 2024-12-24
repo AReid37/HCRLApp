@@ -12,7 +12,7 @@ namespace HCResourceLibraryApp
     public class Program
     {
         static readonly string consoleTitle = "High Contrast Resource Library App";
-        static readonly string developmentVersion = "[v1.3.3]";
+        static readonly string developmentVersion = "[v1.3.3a]";
         static readonly string lastPublishedVersion = "[v1.3.1d]";
         /// <summary>If <c>true</c>, the application launches for debugging/development. Otherwise, the application launches for the published version.</summary>
         public static readonly bool isDebugVersionQ = true;
@@ -102,12 +102,13 @@ namespace HCResourceLibraryApp
                     Pause();
                 }
 
-                /// should have it restart honestly, oh well...
+                Dbg.ShutDown();
             }
         }
         static void MainProgram()
         {
             // Lvl.0 - program launch
+            Dbg.Initialize();
             bool restartProgram;
             do
             {
@@ -269,15 +270,8 @@ namespace HCResourceLibraryApp
             if (isDebugVersionQ)
                 TextLine($"\n\n**REMEMBER** Test the published version of the application frequently!!\n\tVersion last tested: {lastPublishedVersion}".ToUpper(), Color.White);
 
-            // report all warnings and errors into dbug file??  interesting idea....
-            Dbug.StartLogging("Report Caught Errors and Warnings");
             #region report caught errors and warnings
-            /// these test warning and error reporting
-            //SetFileLocation("ffjjtqkx");
-            //Title("jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj", '\0', -1);
-            //Title("supercalifragilisticexpialidocious; was it spelled properly? hbfkelkfrlessiies", '\0', -1);
-
-
+            Dbug.StartLogging("Report Caught Errors and Warnings");
             /// report errors and warnings
             Dbug.Log($"Published version last tested in '{lastPublishedVersion}'; ");
             Dbug.Log("Reporting any recorded errors and warnings that have occured during this session :: ");
@@ -315,16 +309,17 @@ namespace HCResourceLibraryApp
             }
             Dbug.NudgeIndent(false);
 
-            #endregion
             Dbug.EndLogging();
+            #endregion
 
+            // a quick test on shutting down open threads
+            Dbg.StartLogging("LateToTheParty", out int lateIx);
+            Dbg.Log(lateIx, "Wait the party is over? Aww cr---");
 
+            Dbg.ShutDown();
             /// THE TO DO LIST    
-            /// - IMPLEMENT profile feature.
             /// - DEBUG the overwriting system and check for possible errors
             /// - FURTHER DEBUGGING and fixes from bug / idea submission system on published app
-            /// - CONSIDER crash-handling  (try-catch entire running code? submite final Dbug before closing)
-            /// - UPDGRADE the debugging system to thread-based multi-file logging [if crash-handling fails)
         }
 
 
@@ -422,8 +417,8 @@ namespace HCResourceLibraryApp
 
 
         // TESTING STUFF
-        static readonly bool runTest = false;
-        static readonly Tests testToRun = Tests.MiscRoom;
+        static readonly bool runTest = true;
+        static readonly Tests testToRun = Tests.Dbg_Revised;
         enum Tests
         {
             /// <summary>For random tests that need their own space, but no specific test name (variable tests)</summary>
@@ -447,6 +442,8 @@ namespace HCResourceLibraryApp
 
             Dbug_NestedSessions,
             Dbug_DeactivateSessions, 
+
+            Dbg_Revised,
 
             SFormatter_ColorCode,
             SFormatter_CheckSyntax,
@@ -928,6 +925,113 @@ namespace HCResourceLibraryApp
                     /// nested and deactivated end
                     Dbug.Log("Enabled log line E");
                     Dbug.EndLogging();
+                }
+
+                /// Dbg (Dbug Revised)
+                else if (testToRun == Tests.Dbg_Revised)
+                {
+                    string[] testCases =
+                    {
+                        "1 Test one new thread (A)",
+                        "2 Test a new single log (B)",
+                        "3 Test three new threads concurrently (C ~ E)",
+                        "4 Test existing thread and new single log (F)",
+                        "5 Omit existing thread and test one new thread (G)"
+                    };
+                    string[] threadNames =
+                    {
+                        "Initial.A()", "SoloChannel.B()",
+                        "GrandProcess.C()", "Process.D()", "Subprocess.E()",
+                        "LoneChannel.F()", "Final.G()"
+                    };
+
+                    // OPENNING
+                    TextLine("The results of this test are recorded through Dbg.cs. Nothing to preview here... check the output.", Color.DarkGray);
+                    NewLine();
+                    TextLine("The conducted test cases are printed below:: ");
+                    TextLine("[TestNo.] [Test Case Subject] ([expected thread index [as letters]])", Color.DarkGray);
+                    foreach (string testCase in testCases)
+                    {
+                        TextLine($"{Ind14}{testCase}", Color.Gray);
+                    }
+
+
+                    // TEST CASE 1 - Test one new thread
+                    Dbg.StartLogging(threadNames[0], out int tAix);
+                    Dbg.Log(tAix, "Hello World");
+                    Dbg.Log(tAix, "A new logging system has been conjured. The former Dbug will be superseeded.");
+                    Dbg.NudgeIndent(tAix, false); Dbg.NudgeIndent(tAix, false); /// this one checks for the zero limit
+                    Dbg.NudgeIndent(tAix, true); Dbg.NudgeIndent(tAix, true);  /// <^  both doubled bcuz start log indents once
+                    Dbg.LogPart(tAix, "To the thorough build and testing of this new logger; ");
+                    Dbg.Log(tAix, "Huzzah!");
+                    Dbg.EndLogging(tAix);
+
+
+                    // TEST CASE 2 - Test a new single log
+                    Dbg.SingleLog(threadNames[1], "Let us begin...");
+
+
+                    // TEST CASE 3 - Test three new threads (concurrently)
+                    /// o
+                    Dbg.StartLogging(threadNames[2], out int tCix);
+                    Dbg.Log(tCix, "An example method with many sub-methods within it. Will be the last to print.");
+                    Dbg.Log(tCix, "When other threads from the sub-methods trigger, this one will know. Interrupted, but not severly.");
+                    /// -
+                    Dbg.StartLogging(threadNames[3], out int tDix);
+                    Dbg.Log(tDix, "A method within a greater method, this one has fewer jobs but still holds smaller methods.");
+                    Dbg.Log(tDix, "The second last to be printed; notifies the parent methods thread, and will be interrupted by smaller methods.");
+                    /// --
+                    Dbg.StartLogging(threadNames[4], out int tEix);
+                    Dbg.Log(tEix, "The smallest of methods within many parent methods, this is the final thread under the same method.");
+                    Dbg.NudgeIndent(tEix, true);
+                    Dbg.Log(tEix, "The first to conclude, the first to print. Notifies all parent threads.");
+                    /// -
+                    Dbg.Log(tDix, "Any thread will respond to their own regardless of order in methods.");
+                    Dbg.NudgeIndent(tDix, true);
+                    Dbg.Log(tDix, "See that this continues, after the interruption of the smaller method, which is a single line ignoring the new lines to draw attention.");
+                    Dbg.LogPart(tDix, "Additionally, because this thread is already open, it will only send notice to parent thread once ... ");
+                    /// --
+                    Dbg.EndLogging(tEix);
+                    /// -
+                    Dbg.Log(tDix, "even if it continued after the smaller thread, active or not.");
+                    /// o
+                    Dbg.Log(tCix, "Each thread continues as an individual instance irrespective of other thread interruption. No information is lost.");
+                    /// -
+                    Dbg.EndLogging(tDix);
+                    /// o
+                    Dbg.Log(tCix, "The short-comings of the initial 'Dbug.cs' class are overcome.");
+                    Dbg.EndLogging(tCix);
+
+
+                    // TEST CASE 4 - Test existing thread and new single log
+                    Dbg.StartLogging(threadNames[0], out tAix);
+                    Dbg.Log(tAix, "Reopenned. The implementation of this revamped logger is well done. ");
+                    Dbg.NudgeIndent(tAix, true);
+                    Dbg.Log(tAix, "> Not many errors have occured, no major bugs");
+                    Dbg.Log(tAix, "> The logger in fact out does the original Dbug");
+                    Dbg.SingleLog(threadNames[5], "HOWEVER, I did spend a solid 10+ hrs non-stop working on this. Why do I do this to myself?"); /// prints immediately
+                    Dbg.NudgeIndent(tAix, false);
+                    Dbg.LogPart(tAix, "After all testing is concluded only one thing remains: to replace every 'Dbug' with the revamped 'Dbg' class.");
+                    Dbg.EndLogging(tAix); /// also will conclude the partial log
+
+
+                    // TEST CASE 5 - Omit existing thread and test one new thread
+                    Dbg.StartLogging(threadNames[0], out tAix);
+                    Dbg.ToggleThreadOutputOmission(tAix);
+                    Dbg.Log(tAix, "By the end of this thread, all testing will be completed.");
+                    Dbg.Log(tAix, "The output will not be able to see these logs. Only that of the thread that follows: ");
+                    /// -
+                    Dbg.StartLogging(threadNames[6], out int tFix);
+                    Dbg.LogPart(tFix, "Congratulations!".ToUpper());
+                    Dbg.Log(tFix, " The new debugging class is completely constructed, tested, and ready to use.");
+                    Dbg.NudgeIndent(tFix, true);
+                    Dbg.LogPart(tFix, "Save this progress and prepare for step two: replacement, integration, ");
+                    /// o
+                    Dbg.Log(tAix, "Onwards to chapter two...");
+                    Dbg.EndLogging(tAix);
+                    /// - 
+                    Dbg.Log(tFix, "Upgrades!".ToUpper());
+                    Dbg.EndLogging(tFix);
                 }
 
                 /// SFormatter

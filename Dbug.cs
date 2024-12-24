@@ -10,6 +10,8 @@ namespace HCResourceLibraryApp
     /// </summary>
     public static class Dbug
     {
+        static readonly bool SHUTDOWN_DBUG_CLASS = true;
+        
         // IDEA -- Give Dbug.cs file-writing ability so that debug's can be logged and viewed outside of IDE
         //          ^^ only if a file does not exist with this functionality ... Checked >> FILE DOES NOT EXIST
         const int indentSize = 4, nestLimitNum = 2;
@@ -28,7 +30,10 @@ namespace HCResourceLibraryApp
         static string FileSaveLocation = DataHandlerBase.AppDirectory + FileName;
 
         public static void StartLogging()
-        {            
+        {
+            if (SHUTDOWN_DBUG_CLASS)
+                return;
+
             if (!deactivateNextSessionQ)
             {
                 countSessions++;
@@ -72,7 +77,10 @@ namespace HCResourceLibraryApp
             }            
         }
         public static void StartLogging(string logSessionName)
-        {            
+        {
+            if (SHUTDOWN_DBUG_CLASS)
+                return;
+
             if (!deactivateNextSessionQ)
             {
                 countSessions++;
@@ -131,6 +139,9 @@ namespace HCResourceLibraryApp
         }
         public static void EndLogging()
         {
+            if (SHUTDOWN_DBUG_CLASS)
+                return;
+
             if (!deactivateNextSessionQ)
             {
                 if (!ongoingNestedLogsQ)
@@ -202,6 +213,9 @@ namespace HCResourceLibraryApp
         /// <summary>Unaffected by <see cref="IgnoreNextLogSession"/> and <see cref="DeactivateNextLogSession"/> calls.</summary>
         public static void SingleLog(string logSessionName, string log)
         {
+            if (SHUTDOWN_DBUG_CLASS)
+                return;
+
             //SetIndent(0);
             Debug.WriteLine($"Sg| @{logSessionName} :: {log}");
             AddToLogFlusher($"Sg| @{logSessionName} :: {log}");
@@ -212,6 +226,9 @@ namespace HCResourceLibraryApp
         /// <summary>Increments or decrements the indentation level based on <paramref name="isIncrement"/>'s value.</summary>
         public static void NudgeIndent(bool isIncrement)
         {
+            if (SHUTDOWN_DBUG_CLASS)
+                return;
+
             if (IsWithinNestedLimit() && !deactivateNextSessionQ)
             {
                 int trueLevel = Debug.IndentLevel - 1;
@@ -228,6 +245,9 @@ namespace HCResourceLibraryApp
         ///<summary>Stores partial logs that will be flushed together with the new logged line after using <see cref="Log(string)"/>.</summary>
         public static void LogPart(string log)
         {
+            if (SHUTDOWN_DBUG_CLASS)
+                return;
+
             if (IsWithinNestedLimit() && !deactivateNextSessionQ)
             {
                 if (!ignoreNestedSessionQ)
@@ -241,6 +261,9 @@ namespace HCResourceLibraryApp
         }
         public static void Log(string log)
         {
+            if (SHUTDOWN_DBUG_CLASS)
+                return;
+
             if (IsWithinNestedLimit() && !deactivateNextSessionQ)
             {
                 if (log.IsNotNEW())
@@ -292,6 +315,9 @@ namespace HCResourceLibraryApp
 
         static void SetIndent(int level)
         {
+            if (SHUTDOWN_DBUG_CLASS)
+                return;
+
             // start and end logs are always on level 0. All other text are level 1 and above
             if (Debug.IndentSize != 4)
                 Debug.IndentSize = indentSize;
@@ -307,9 +333,13 @@ namespace HCResourceLibraryApp
             return countSessions <= nestLimitNum;
         }        
 
+
         // File saving
         static void FlushAndSave()
         {
+            if (SHUTDOWN_DBUG_CLASS)
+                return;
+
             if (logSessionFlush.HasElements())
             {
                 /// makes debug saving directory 'invisible' (not interferring with other save locations)
@@ -333,6 +363,9 @@ namespace HCResourceLibraryApp
         }
         static void AddToLogFlusher(string log)
         {
+            if (SHUTDOWN_DBUG_CLASS)
+                return;
+
             if (log.IsNotNEW())
             {
                 string indents = "";
