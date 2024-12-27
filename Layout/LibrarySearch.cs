@@ -12,6 +12,7 @@ namespace HCResourceLibraryApp.Layout
     {
         static ResLibrary _resLibrary;
         static readonly char subMenuUnderline = ':';
+        const string logStateParent = "Library Search";
 
         // LIBRARY SEARCH fields
         static SearchOptions _searchOpts, _prevSearchOpts;
@@ -26,6 +27,8 @@ namespace HCResourceLibraryApp.Layout
             searchResults = Array.Empty<SearchResult>();
             _searchArg = null;
             _prevSearchArg = null;
+
+            Dbg.SingleLog("LibrarySearch.ClearCookies()", "Reset search options, cleared search arguments and results.");
         }
         public static void GetResourceLibraryReference(ResLibrary resourceLibrary)
         {
@@ -38,21 +41,13 @@ namespace HCResourceLibraryApp.Layout
             {
                 BugIdeaPage.OpenPage();
                 
-                Program.LogState("Library Search");
+                Program.LogState(logStateParent);
                 Clear();
                 Title($"Library Search", cTHB, 0);
                 FormatLine($"{Ind24}Allows browsing, searching, and viewing of the library's shelves.", ForECol.Accent);
-                //FormatLine($"{Ind24}WIP .. At the moment, allows browsing and viewing the library's shelves");
-                //NewLine(2);
 
                 /// All the library searchin' and browsin' happens right here
                 exitSearchPageQ = SubPage_LibrarySearch();
-
-
-                // page layout standards end here (for now)
-                /// this for now
-                //exitSearchPageQ = SubPage_RudimentarySearching();
-                /// NOTE :: Page Layout buffer dimensions have been changed to accomadate the rudimentary setup. Remember to reset once official library search page is completed.
             }
             while (!exitSearchPageQ);
         }
@@ -461,7 +456,7 @@ namespace HCResourceLibraryApp.Layout
                 {
                     BugIdeaPage.OpenPage();
 
-                    Program.LogState("Library Search|Search Options");
+                    Program.LogState(logStateParent + "|Search Options");
                     Clear();
                     Title("Search Options", cTHB, 0);
                     FormatLine($"{Ind14}Edit search query filters to refine the results of a library search.", ForECol.Accent);
@@ -585,7 +580,7 @@ namespace HCResourceLibraryApp.Layout
                     const string toNextRs = ">", toPrevRs = "<", toNextSh = ">>", toPrevSh = "<<";
                     int toNextEntMod = noVary, toPrevEntMod = noVary;
 
-                    Program.LogState("Library Search|Entry View");
+                    Program.LogState(logStateParent + "|Entry View");
                     Clear();
                     Title("Entry View", cTHB, 0);
                     FormatLine($"{Ind14}View content's information and tangent to other search results and contents.", ForECol.Accent);

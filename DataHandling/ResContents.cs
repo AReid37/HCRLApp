@@ -335,8 +335,8 @@ namespace HCResourceLibraryApp.DataHandling
             List<ResLibOverwriteInfo> infoDock = new();
             if (IsSetup() && rcNew != null)
             {
-                ResContents prevSelf = CloneResContent();
-                rcNew = rcNew.CloneResContent(true);
+                ResContents prevSelf = CloneResContent(this);
+                rcNew = CloneResContent(this, true);
                 rcNew.ShelfID = ShelfID;
                 bool beginOverwriteQ = IsSetup() && rcNew.IsSetup() && !Equals(rcNew);                
                 ResLibOverwriteInfo rcInfo = new(ToString(), rcNew.ToString());
@@ -713,7 +713,7 @@ namespace HCResourceLibraryApp.DataHandling
                 if (rcInfo[1].IsNotNEW())
                 {
                     /// decode second group
-                    if (!rcInfo[1].Contains(ContentChanges.ccIdentityKey))
+                    if (!rcInfo[1].StartsWith(ContentChanges.ccIdentityKey))
                     {
                         /// gather data
                         List<string> infoConAdts = new();
@@ -862,28 +862,32 @@ namespace HCResourceLibraryApp.DataHandling
 
             return ShelfID != NoShelfNum && conBaseSetup;
         }
-        public ResContents CloneResContent(bool bypassSetupQ = false)
+        /// <summary>Clones a resContents instance. Static to bypass <c>null</c> value issues.</summary>
+        public static ResContents CloneResContent(ResContents resConToClone, bool bypassSetupQ = false)
         {
             ResContents clone = null;
-            if (IsSetup() || (bypassSetupQ && _conBase != null))
+            if (resConToClone is not null)
             {
-                ContentBaseGroup cloneCBG = _conBase.Clone();
-                List<ContentAdditionals> cloneCAs = new();
-                List<ContentChanges> cloneCCs = new();
-
-                if (ConAddits.HasElements())
+                if (resConToClone.IsSetup() || (bypassSetupQ && resConToClone.ConBase != null))
                 {
-                    foreach (ContentAdditionals ca in ConAddits)
-                        cloneCAs.Add(ca.Clone());
-                }
+                    ContentBaseGroup cloneCBG = resConToClone._conBase.Clone();
+                    List<ContentAdditionals> cloneCAs = new();
+                    List<ContentChanges> cloneCCs = new();
 
-                if (ConChanges.HasElements())
-                {
-                    foreach (ContentChanges cc in ConChanges)
-                        cloneCCs.Add(cc.Clone());
-                }
+                    if (resConToClone.ConAddits.HasElements())
+                    {
+                        foreach (ContentAdditionals ca in resConToClone.ConAddits)
+                            cloneCAs.Add(ca.Clone());
+                    }
 
-                clone = new ResContents(ShelfID, cloneCBG, cloneCAs.ToArray(), cloneCCs.ToArray());
+                    if (resConToClone.ConChanges.HasElements())
+                    {
+                        foreach (ContentChanges cc in resConToClone.ConChanges)
+                            cloneCCs.Add(cc.Clone());
+                    }
+
+                    clone = new ResContents(resConToClone.ShelfID, cloneCBG, cloneCAs.ToArray(), cloneCCs.ToArray());
+                }
             }
             return clone;
         }

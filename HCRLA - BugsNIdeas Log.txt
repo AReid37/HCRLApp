@@ -52,12 +52,13 @@
 
 [X] 5# Using command 'add2' in formatter when only two lines place new line at bottom instead placing it before line 2.
 
-[ ] 6# While submitting v1.43 version log, I noticed that some additional contents (that remained as such, not Additional -> Added contents) were not detected as being updated in the same version. While not a big deal, it would be nice to have this pointed out by the system anyway.
+[X] 6# While submitting v1.43 version log, I noticed that some additional contents (that remained as such, not Additional -> Added contents) were not detected as being updated in the same version. While not a big deal, it would be nice to have this pointed out by the system anyway.
 
-[ ] 7# Not sure how to explain it, but self updating upon an additional content that does not become its own thing (Additional -> Added) seems to absolutely BREAK the log submission system. I wasn't luucky enough to realize this before I lost file reversion to fix the mess that made easily. PLS FIX ASAP! 
+[X] 7# Not sure how to explain it, but self updating upon an additional content that does not become its own thing (Additional -> Added) seems to absolutely BREAK the log submission system. I wasn't luucky enough to realize this before I lost file reversion to fix the mess that made easily. PLS FIX ASAP! 
+        DEV_NOTE - Turns out this bug was less of a self-updating issue, but an oversight that the symbol '^' may be used as a user-defined legend key. Thus, when decoding, the line of 'additionals' from file would be misidentified as 'updates' if any additional data IDs contained '^'. Many apologies I couldn't figure this out any sooner.
 
 [X] 8# Generate Steam Log is still receiving no related name for additional contents. It keeps showing up as '/?'.
-        DEV_NOTE - This has been a persistent bug that is hard to test for. I have conducted a more thorough revision of the related code and fixed a few issues. This SHOULD NOT happening anymore.
+        DEV_NOTE - This has been a persistent bug that is hard to test for. I have conducted a more thorough revision of the related code and fixed a few issues. This SHOULD NOT be happening anymore.
 
 [ ] 9# ...
 
@@ -114,7 +115,9 @@
 
 [ ] 21# Better looking Main Menu. Versus the title page art and some of the other stylish pages the Main Menu seems very dull. Probably could use some decoration.
 
-[ ] 22# ...
+[ ] 22# Could I know when the steam log generator hits the limit? I've been making pretty lengthy logs and the limit seems to be 8.18k characters.
+
+[ ] 23# ...
 
 
 ----- F R O M   B U G / I D E A   S U B M I S S I O N   S Y S T E M -----

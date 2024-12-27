@@ -1917,31 +1917,42 @@ namespace HCResourceLibraryApp.DataHandling
                                             if (logDataLine.Contains('-') && logDataLine.CountOccuringCharacter('-') == 1)
                                             {
                                                 bool haltQ = false;
-                                                bool selfUpdatingAllowed = false;
+                                                bool _noticeNoManualSelfUpdQ = false;
+                                                /// manual self-updating is discontinued // this removes any previous successful syntax, notifies of self-updating obsoletion
                                                 if (logDataLine.Contains(updtSelfKey) && logDataLine.CountOccuringCharacter(updtSelfKey) == 1)
                                                 {
                                                     if (logDataLine.Contains($">{updtSelfKey}"))
                                                     {
-                                                        selfUpdatingAllowed = true;
-                                                        logDataLine = logDataLine.Replace(":", "");
-                                                        Dbg.LogPart(ldx, $"Self-updating enabled, contains '>{updtSelfKey}'; ");
+                                                        //selfUpdatingAllowed = true;
+                                                        logDataLine = logDataLine.Replace(">:", ">");
+                                                        //Dbg.LogPart(ldx, $"Self-updating enabled, contains '>{updtSelfKey}'; ");
+                                                        Dbg.LogPart(ldx, $"Removed self-updating key, contains '>{updtSelfKey}' [obsolete]");
+                                                        _noticeNoManualSelfUpdQ = true;
                                                     }
-                                                    else
+                                                    //else
+                                                    else if (logDataLine.Contains($"{updtSelfKey}>"))
                                                     {
-                                                        Dbg.LogPart(ldx, $"Character '{updtSelfKey}' may only follow after '>' to enable self-updating function");
-                                                        decodeInfo.NoteIssue(ldx, $"Character '{updtSelfKey}' may only follow after '>' to enable self-updating function");
+                                                        logDataLine = logDataLine.Replace(":>", ">");
+                                                        Dbg.LogPart(ldx, $"Removed self-updating key, contains '{updtSelfKey}>' [obsolete]");
+                                                        //Dbg.LogPart(ldx, $"Character '{updtSelfKey}' may only follow after '>' to enable self-updating function");
+                                                        //decodeInfo.NoteIssue(ldx, $"Character '{updtSelfKey}' may only follow after '>' to enable self-updating function");
+                                                        _noticeNoManualSelfUpdQ = true;
                                                     }
                                                 }
                                                 else
                                                 {
                                                     if (logDataLine.CountOccuringCharacter(updtSelfKey) > 1)
                                                     {
-                                                        Dbg.LogPart(ldx, $"This line contains too many '{updtSelfKey}'");
-                                                        decodeInfo.NoteIssue(ldx, $"This line contains too many '{updtSelfKey}'");
-                                                        haltQ = true;
+                                                        Dbg.LogPart(ldx, $"Self-updating key limits '{updtSelfKey}' ignored [obsolete]");
+                                                        //Dbg.LogPart(ldx, $"This line contains too many '{updtSelfKey}'");
+                                                        //decodeInfo.NoteIssue(ldx, $"This line contains too many '{updtSelfKey}'");
+                                                        //haltQ = true;
+                                                        _noticeNoManualSelfUpdQ = true;
                                                     }
                                                 }
-                                                    
+                                                if (_noticeNoManualSelfUpdQ)
+                                                    Dbg.Log(ldx, "; ");
+
 
                                                 logDataLine = logDataLine.Replace(">", "");
 
@@ -2031,6 +2042,43 @@ namespace HCResourceLibraryApp.DataHandling
                                                         {
                                                             ContentChanges newConChanges = new(logVersion, updtContentName, updtDataID, updtChangeDesc);
                                                             Dbg.Log(ldx, $"Generated {nameof(ContentChanges)} instance :: {newConChanges}; ");
+                                                            bool selfUpdatingAllowed = false;
+
+                                                            /// this checks for self-updating. In the event that it may have been intended but was not used. Force-enable
+                                                            if (enableSelfUpdatingFunction)
+                                                            {
+                                                                Dbg.LogPart(ldx, "Checking for self-updating; ");
+                                                                Dbg.LogPart(ldx, "In RContents? ");
+                                                                if (resourceContents.HasElements())
+                                                                {
+                                                                    foreach (ResContents resCon in resourceContents)
+                                                                    {
+                                                                        if (resCon.ContainsDataID(updtDataID, out _))
+                                                                        {
+                                                                            Dbg.LogPart(ldx, $"Yes  // Found in: '{resCon}'");
+                                                                            selfUpdatingAllowed = true;
+                                                                            break;
+                                                                        }
+                                                                    }
+                                                                }
+                                                                if (looseConAddits.HasElements())
+                                                                {
+                                                                    Dbg.LogPart(ldx, "No; In LooseAddits? ");
+                                                                    foreach (ContentAdditionals conAddit in looseConAddits)
+                                                                    {
+                                                                        if (conAddit.ContainsDataID(updtDataID))
+                                                                        {
+                                                                            Dbg.LogPart(ldx, $"Yes  // Found in: '{conAddit}'");
+                                                                            selfUpdatingAllowed = true;
+                                                                            break;
+                                                                        }
+                                                                    }
+                                                                }
+                                                                if (selfUpdatingAllowed)
+                                                                    decodeInfo.NoteIssue(ldx, "Self-updating content: updating content in its introduced version is advised against");
+                                                                Dbg.Log(ldx, $"{(!selfUpdatingAllowed ? "No (Pass)" : "")};");
+                                                            }
+
 
                                                             /// testing... and now enabled, self updating contents aren't loose
                                                             bool isSelfConnected = false;
@@ -2097,9 +2145,8 @@ namespace HCResourceLibraryApp.DataHandling
                                                                         Dbg.LogPart(ldx, $"ConAddits ({subMatchConAdd})");
                                                                     else Dbg.LogPart(ldx, $"ConBase ({matchingResCon.ConBase})");
                                                                     Dbg.Log(ldx, $" [by ID '{newConChanges.RelatedDataID}'] (self-updated)");
-                                                                    decodeInfo.NoteResult($"Connected ConChanges ({newConChanges}) to {(subMatchConAdd.IsSetup() ? $"ConAddits ({subMatchConAdd})" : $"ConBase {matchingResCon.ConBase}")} [by ID '{newConChanges.RelatedDataID}']");
 
-                                                                    decodeInfo.NoteIssue(ldx, "Self-updating content: updating content in its introduced version is advised against");
+                                                                    decodeInfo.NoteResult($"Connected ConChanges ({newConChanges}) to {(subMatchConAdd.IsSetup() ? $"ConAddits ({subMatchConAdd})" : $"ConBase {matchingResCon.ConBase}")} [by ID '{newConChanges.RelatedDataID}']");
                                                                     isSelfConnected = true;
 
                                                                     // these actions just for the decode display on log submission page
@@ -2115,8 +2162,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                             {
                                                                 looseConChanges.Add(newConChanges);
                                                                 looseInfoRCDataIDs.Add(newConChanges.RelatedDataID);
-                                                                //Dbg.LogPart(ldx, $"Storing 'loose' ConChanges [using ID '{newConChanges.RelatedDataID}']");
-                                                                //decodeInfo.NoteResult($"Stored loose ConChanges ({newConChanges}) [using ID '{newConChanges.RelatedDataID}']");
+                                                                
                                                                 Dbg.LogPart(ldx, $"Storing 'loose' ConChanges");
                                                                 decodeInfo.NoteResult($"Stored loose ConChanges ({newConChanges})");
                                                             }

@@ -11,6 +11,7 @@ namespace HCResourceLibraryApp.Layout
 {
     internal static class GenSteamLogPage
     {
+        const string logStateParent = "Generate Steam Log";
         static ResLibrary _resLibrary;
         static SFormatterData _formatterData;
         static readonly char subMenuUnderline = '+';
@@ -27,6 +28,8 @@ namespace HCResourceLibraryApp.Layout
             _editorHistory2.Clear();
             historyActionNumber1 = 0;
             historyActionNumber2 = 0;
+
+            Dbg.SingleLog("GenSteamLogPage.ClearCookies()", "Cleared library references and editor histories.");
         }
         public static void GetResourceLibraryReference(ResLibrary mainLibrary)
         {
@@ -74,7 +77,7 @@ namespace HCResourceLibraryApp.Layout
             {
                 BugIdeaPage.OpenPage();
                 
-                Program.LogState("Generate Steam Log");
+                Program.LogState(logStateParent);
                 Clear();
                 Title("Generate Steam Log", cTHB, 1);
                 FormatLine($"{Ind24}Facilitates generation of a version log using Steam's formatting rules.", ForECol.Accent);
@@ -172,7 +175,7 @@ namespace HCResourceLibraryApp.Layout
             {
                 BugIdeaPage.OpenPage();
 
-                Program.LogState("Generate Steam Log|Log Version");
+                Program.LogState(logStateParent + "|Log Version");
                 Clear();
                 Title("Select Log Version", subMenuUnderline, 2);
 
@@ -562,7 +565,7 @@ namespace HCResourceLibraryApp.Layout
             {
                 BugIdeaPage.OpenPage();
 
-                Program.LogState("Generate Steam Log|Steam Formatter");
+                Program.LogState(logStateParent + "|Steam Formatter");
                 Clear();
                 Title("Steam Formatter", subMenuUnderline, 1);
                 FormatLine("Allows editting and selecting a format to use when generating a steam log.", ForECol.Accent);
@@ -627,6 +630,7 @@ namespace HCResourceLibraryApp.Layout
             do
             {
                 BugIdeaPage.OpenPage();
+                Program.LogState(logStateParent + "|Log Generation");
 
                 /// pre checks
                 bool hasFormatterQ = false, hasLibDataQ = _sfLibraryRef.IsSetup(), isFormatterErrorlessQ = false;
@@ -644,7 +648,7 @@ namespace HCResourceLibraryApp.Layout
 
                 if (hasFormatterQ && hasLibDataQ && isFormatterErrorlessQ)
                 {
-                    Program.LogState("Generate Steam Log|Log Generation");
+                    Program.LogState(logStateParent + "|Log Generation|Generating");
 
                     Format($"{Ind24}Generating Steam Log... ", ForECol.Correction);
                     Wait(0.75f);
@@ -916,7 +920,7 @@ namespace HCResourceLibraryApp.Layout
             const int historyLimit = 25, historyActionInitial = 1;
             int lineToEdit = noLineToEdit, lineToEditSpan = HSNL(3, 7).Clamp(0, 5), countCycles = 0, historySpan = HSNL(1, 5).Clamp(1, 3);
 
-            Program.LogState($"Generate Steam Log|Steam Formatter|Formatting Editor {formatterLanguageVersion}");
+            Program.LogState($"{logStateParent}|Steam Formatter|Formatting Editor {formatterLanguageVersion}");
             Dbg.StartLogging("GenSteamLogPage.FormattingEditor()", out int gslpx);
             Dbg.Log(gslpx, $"RECORDING :: Formatting Editor Actions and processes -- FProfile#1? {isUsingFormatterNo1Q}");
             Dbg.NudgeIndent(gslpx, true);

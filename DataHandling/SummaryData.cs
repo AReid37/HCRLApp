@@ -241,13 +241,17 @@ namespace HCResourceLibraryApp.DataHandling
 		{
 			return _summaryVersion.HasValue() && _ttaNumber >= 0 && _summaryParts.HasElements();
 		}
-		public SummaryData CloneSummary()
+        /// <summary>Clones a summary instance. Static to bypass <c>null</c> value issues.</summary>
+		public static SummaryData CloneSummary(SummaryData sumToClone)
 		{
 			SummaryData clone = null;
-			if (IsSetup())
+			if (sumToClone is not null)
 			{
-                clone = new SummaryData(SummaryVersion, TTANum, SummaryParts.ToArray());
-				clone.AdoptIndex(index);
+                if (sumToClone.IsSetup())
+                {
+                    clone = new SummaryData(sumToClone.SummaryVersion, sumToClone.TTANum, sumToClone.SummaryParts.ToArray());
+                    clone.AdoptIndex(sumToClone.index);
+                }
             }
 			return clone;
         }

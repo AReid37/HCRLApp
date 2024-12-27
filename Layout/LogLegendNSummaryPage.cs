@@ -12,6 +12,7 @@ namespace HCResourceLibraryApp.Layout
     {
         static ResLibrary _resLibrary;
         static readonly char subMenuUnderline = '"';
+        const string logStateParent = "Legend And Summaries View";
 
         public static void GetResourceLibraryReference(ResLibrary mainLibrary)
         {
@@ -56,7 +57,7 @@ namespace HCResourceLibraryApp.Layout
 
         static void SubPage_LogLegend()
         {
-            Program.LogState("Legend And Summaries View|Log Legend View");
+            Program.LogState(logStateParent + "|Log Legend View");
             Clear();
             Title("Version Log Glossary (Legend)", subMenuUnderline, 1);
             FormatLine("A dictionary of all the legend keys and definitions collected from version logs.", ForECol.Accent);
@@ -163,7 +164,7 @@ namespace HCResourceLibraryApp.Layout
             {
                 BugIdeaPage.OpenPage();
 
-                Program.LogState("Legend And Summaries View|Log Summaries View");                
+                Program.LogState(logStateParent + "|Log Summaries View");                
                 Clear();
                 Title("Version Log Summaries", subMenuUnderline, 1);
                 FormatLine("Browse the version summaries obtained from submitted version logs.", ForECol.Accent);
@@ -503,6 +504,7 @@ namespace HCResourceLibraryApp.Layout
                             break;
                     }
                 }
+                Dbg.Log(llspx, $"Able to display contents of version log? {verLogDetails.IsSetup()};");
                 Dbg.EndLogging(llspx);
 
 

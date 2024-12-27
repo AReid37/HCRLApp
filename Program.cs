@@ -12,7 +12,7 @@ namespace HCResourceLibraryApp
     public class Program
     {
         static readonly string consoleTitle = "High Contrast Resource Library App";
-        static readonly string developmentVersion = "[v1.3.3b]";
+        static readonly string developmentVersion = "[v1.3.3c]";
         static readonly string lastPublishedVersion = "[v1.3.1d]";
         /// <summary>If <c>true</c>, the application launches for debugging/development. Otherwise, the application launches for the published version.</summary>
         public static readonly bool isDebugVersionQ = true;
@@ -89,7 +89,16 @@ namespace HCResourceLibraryApp
                     FormatLine($"{Ind24}{crashExInfo.StackTrace}", ForECol.Highlight);
                     Dbg.Log(crashThreadIx, $"STACK TRACE  //  ");
                     Dbg.NudgeIndent(crashThreadIx, true);
-                    Dbg.Log(crashThreadIx, $"{crashExInfo.StackTrace}");
+                    if (crashExInfo.StackTrace.IsNotNEW())
+                    {
+                        string[] stackTraces = crashExInfo.StackTrace.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+                        if (stackTraces.HasElements())
+                        {
+                            foreach (string trace in stackTraces)
+                                Dbg.Log(crashThreadIx, trace.Replace("\n", "").Replace("\r", ""));
+                        }
+                        else Dbg.Log(crashThreadIx, crashExInfo.StackTrace);
+                    }
                     Dbg.NudgeIndent(crashThreadIx, false);
 
                     HorizontalRule('-', 2);
@@ -270,6 +279,7 @@ namespace HCResourceLibraryApp
             if (isDebugVersionQ)
                 TextLine($"\n\n**REMEMBER** Test the published version of the application frequently!!\n\tVersion last tested: {lastPublishedVersion}".ToUpper(), Color.White);
 
+            LogState("Exiting Program...");
             #region report caught errors and warnings
             Dbg.StartLogging("Report Caught Errors and Warnings", out int ewtx);
             /// report errors and warnings
@@ -312,11 +322,10 @@ namespace HCResourceLibraryApp
             Dbg.EndLogging(ewtx);
             #endregion
 
+
             Dbg.ShutDown();
             /// THE TO DO LIST    
-            /// - DEBUG the overwriting system and check for possible errors
-            /// - FURTHER DEBUGGING and fixes from bug / idea submission system on published app
-            /// - ADD MORE LOGSTATE METHODS to every paging class. Gives more context to all the debug threads
+            /// - FURTHER DEBUGGING and fixes from bug / idea submission system on published app (again)
         }
 
 

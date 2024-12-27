@@ -12,6 +12,7 @@ namespace HCResourceLibraryApp.Layout
     {
         static readonly char subMenuUnderline = '*';
         static string pathToVersionLog = null;
+        const string logStateParent = "Log Submission";
 
         public static void OpenPage(ResLibrary mainLibrary)
         {
@@ -20,7 +21,7 @@ namespace HCResourceLibraryApp.Layout
             {
                 BugIdeaPage.OpenPage();
                 
-                Program.LogState("Log Submission");
+                Program.LogState(logStateParent);
                 Clear();
 
                 Title("Version Log Submission", cTHB, 1);
@@ -67,7 +68,7 @@ namespace HCResourceLibraryApp.Layout
                         - Processed version log review (decoded)
                  */
 
-                Program.LogState("Log Submission|Submit A Log");
+                Program.LogState(logStateParent + "|Submit A Log");
                 Clear();
                 Title("Submit a Version Log", subMenuUnderline, 1);
                 FormatLine($"{Ind14}There are a few stages to submitting a version log:", ForECol.Normal);
@@ -91,7 +92,7 @@ namespace HCResourceLibraryApp.Layout
                         string stageName = stageNames[stageNum - 1];
 
                         Clear();
-                        Program.LogState($"Log Submission|Submit A Log|Phase.{stageNum}, {stageName}");
+                        Program.LogState($"{logStateParent}|Submit A Log|Phase.{stageNum}, {stageName}");
                         Title("Log Submission", subMenuUnderline, 2);
                         Important($"STAGE {stageNum}: {stageName}", subMenuUnderline);
                         HorizontalRule(minorChar, 1);
@@ -459,12 +460,6 @@ namespace HCResourceLibraryApp.Layout
             }
             while (!exitSubmissionPage && !Program.AllowProgramRestart);
 
-            // auto-saves: 
-            //      -> LogDecoder recentDirectory
-            //      -> ResLibrary <new data>
-            /// moved to OpenPage()
-            //if (LogDecoder.ChangesMade() || mainLibrary.ChangesMade())
-            //    Program.SaveData(true);
         }
         
         // public, so i may test it
@@ -1023,6 +1018,7 @@ namespace HCResourceLibraryApp.Layout
 
              */
 
+            Dbg.SingleLog("LogSubmissionPage.DisplayIntegrationInfo()", "(Method called)");
             if (integrationInfoDock.HasElements())
             {
                 SourceOverwrite prevSource = SourceOverwrite.Content;
@@ -1110,6 +1106,7 @@ namespace HCResourceLibraryApp.Layout
         }
         static void DisplayLooseIntegrationInfo(ResLibIntegrationInfo[] integrationInfoDock)
         {
+            Dbg.SingleLog("LogSubmissionPage.DisplayLooseIntegrationInfo()", "(Method called)");
             if (integrationInfoDock.HasElements())
             {
                 /** LOOSE CONTENTS CONNECTION REPORT - Display concept
@@ -1220,6 +1217,7 @@ namespace HCResourceLibraryApp.Layout
         }
         static void DisplayOverwritingInfo(ResLibOverwriteInfo[] overwritingInfoDock)
         {
+            Dbg.SingleLog("LogSubmissionPage.DisplayOverwritingInfo()", "(Method called)");
             if (overwritingInfoDock.HasElements())
             {
                 /** OVERWRITTEN CONTENTS REPORT - Display Concept

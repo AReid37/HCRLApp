@@ -81,7 +81,8 @@ namespace HCResourceLibraryApp
         internal const int indentFactor = 4;
         const int noIndex = -1, spamThreadKeywordMinimum = 4;
         const string _keyName = "{tnm}", _keyTime = "{rtn}", _keyLog = "{dlg}", _keyActiveC = "{cat}", _keyThreadCount = "{thc}", _keyThrdNumSym = "'";
-        const string _keyLineStartHeaderDiv = ":", _keyLineNoticeHeaderDiv = ". . . . .";
+        const string _keyLineNoticeHeaderDiv = ". . . . .";
+        const char _keyLineStartHeaderDiv = ':';
         // [hdr]    #### {name} '{onCount} {time} ####
         /// <summary>Needs: <see cref="_keyName"/>, <see cref="_keyThreadCount"/>.</summary>
         static readonly string _keyLineStartLog = $"#### {_keyName} {_keyThrdNumSym}{_keyThreadCount} {_keyTime} ####";
@@ -138,6 +139,7 @@ namespace HCResourceLibraryApp
                         }
                     }
                 }
+                Log(tx, "Spam Keywords ::  " + string.Join("  ", ThreadSpamsKeywordList));
                 EndLogging(tx);
                 _finalFlushHandledQ = true;
             }
@@ -174,7 +176,7 @@ namespace HCResourceLibraryApp
 
                         /// add thread header
                         string headerDiv = "", headerText = GenerateKeyLine(_keyLineStartLog, currThread.Name.ToUpper(), null, currThread.Count);
-                        for (int hx = -1; hx < headerText.Length / _keyLineStartHeaderDiv.Length; hx++)
+                        for (int hx = 0; hx < headerText.Length; hx++)
                             headerDiv += _keyLineStartHeaderDiv;
                         currThread.AddToLog($"\n{headerDiv}");
                         currThread.AddToLog(headerText);
@@ -235,7 +237,7 @@ namespace HCResourceLibraryApp
             }
         }
         /// <summary>
-        ///     Finds a thread instance to add a log to the session.
+        ///     Finds a thread instance to add a log to the active session.
         /// </summary>
         /// <param name="threadIx">Index of the thread to which a log is added.</param>
         /// <param name="log">Required. The log line.</param>
@@ -257,7 +259,7 @@ namespace HCResourceLibraryApp
             }
         }
         /// <summary>
-        ///     Finds a thread instance to add a suspended log to the session.
+        ///     Finds a thread instance to add a suspended log to the active session.
         /// </summary>
         /// <param name="threadIx">Index of the thread to which a partial log is added.</param>
         /// <param name="log">Required. The partial log line.</param>

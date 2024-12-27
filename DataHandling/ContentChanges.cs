@@ -313,7 +313,7 @@
 
         public override string ToString()
         {
-			return EncodeThirdGroup().Replace(Sep, ";").Replace(ccIdentityKey, "");
+			return EncodeThirdGroup().Replace(Sep, ";")[1..]; /// removes identifying '^' for encoding, but not user defined legend which may be '^'
         }
 		public string ToStringShortened()
 		{

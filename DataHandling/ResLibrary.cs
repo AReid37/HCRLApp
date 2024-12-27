@@ -109,7 +109,7 @@ namespace HCResourceLibraryApp.DataHandling
                 Dbg.NudgeIndent(rlx, true);
                 for (int x = 0; x < newContents.Length; x++)
                 {
-                    ResContents newRC = newContents[x].CloneResContent(true);
+                    ResContents newRC = ResContents.CloneResContent(newContents[x], true);
                     if (newRC != null)
                     {
                         // find connections for ConAdts and ConChgs
@@ -468,7 +468,7 @@ namespace HCResourceLibraryApp.DataHandling
             bool foundDupe = false;
             if (Contents.HasElements() && resCon != null)
             {
-                resCon = resCon.CloneResContent(true);
+                resCon = ResContents.CloneResContent(resCon, true);
                 if (resCon.IsSetup())
                 {
                     for (int x = 0; x < Contents.Count && !foundDupe; x++)
@@ -491,7 +491,7 @@ namespace HCResourceLibraryApp.DataHandling
 
                 for (int lx = 0; lx < newLegends.Length; lx++)
                 {
-                    LegendData leg = newLegends[lx].CloneLegend();
+                    LegendData leg = LegendData.CloneLegend(newLegends[lx]);
                     if (leg != null)
                         if (leg.IsSetup())
                         {
@@ -564,7 +564,7 @@ namespace HCResourceLibraryApp.DataHandling
 
                 for (int sx = 0; sx < newSummaries.Length; sx++)
                 {
-                    SummaryData sum = newSummaries[sx].CloneSummary();
+                    SummaryData sum = SummaryData.CloneSummary(newSummaries[sx]);
                     if (sum != null)
                         if (sum.IsSetup())
                         {
@@ -758,7 +758,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                 {
                                                     if (!looseRCEq)
                                                     {
-                                                        resConO = resConO.CloneResContent(true);
+                                                        resConO = ResContents.CloneResContent(resConO, true);
                                                         resConO.ShelfID = resConE.ShelfID;
 
                                                         bool alternateResConMatchQ = false;
@@ -941,7 +941,7 @@ namespace HCResourceLibraryApp.DataHandling
                                         else
                                         {
                                             AddContent(false, out int[] shelfNums, resConO);
-                                            resConO = resConO.CloneResContent(true);
+                                            resConO = ResContents.CloneResContent(resConO, true);
                                             if (shelfNums.HasElements())
                                                 resConO.ShelfID = shelfNums[0];
 
@@ -2157,15 +2157,15 @@ namespace HCResourceLibraryApp.DataHandling
 
                 Dbg.LogPart(rlx, $"Contents [{Contents.Count}] / ");
                 foreach (ResContents rc in Contents)
-                    clone.AddContent(rc.CloneResContent());
+                    clone.AddContent(ResContents.CloneResContent(rc));
 
                 Dbg.LogPart(rlx, $"Legends [{Legends.Count}] / ");
                 foreach (LegendData lg in Legends)
-                    clone.AddLegend(lg.CloneLegend());
+                    clone.AddLegend(LegendData.CloneLegend(lg));
 
                 Dbg.LogPart(rlx, $"Summaries [{Summaries.Count}]");
                 foreach (SummaryData sm in Summaries)
-                    clone.AddSummary(sm.CloneSummary());
+                    clone.AddSummary(SummaryData.CloneSummary(sm));
 
                 Dbg.Log(rlx, $"  //  Clone ResLibrary instance returned [#:{clone.GetHashCode()}]; ");
             }

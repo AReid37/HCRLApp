@@ -12,6 +12,7 @@ namespace HCResourceLibraryApp.Layout
     {
         static BugIdeaData _bugIdeaData;
         static readonly char subMenuUnderline = '^';
+        const string logStateParent = "Bug / Idea";
 
         public static void GetBugIdeaDataReference(BugIdeaData bugIdeaRef)
         {
@@ -27,7 +28,7 @@ namespace HCResourceLibraryApp.Layout
 
                 do
                 {
-                    Program.LogState("Bug / Idea");
+                    Program.LogState(logStateParent);
                     Clear();
                     Title("Bug / Idea", cTHB, 1);
                     FormatLine("Report bugs, suggest ideas, and view previous bug / idea submissions.", ForECol.Accent);
@@ -43,6 +44,7 @@ namespace HCResourceLibraryApp.Layout
                         // -- SUBMIT BUG \ IDEA --
                         if (optNum == 1)
                         {
+                            Program.LogState(logStateParent + "|Submit");
                             Confirmation("Is this a bug report? ", true, out bool isBugQ);
                             FormatLine($"#{(isBugQ ? "Bug" : "Idea")} description may not contain '{DataHandlerBase.Sep}' character.", ForECol.Accent);
                             Format($"{(isBugQ ? "Report bug" : "Suggest idea")} >> ", ForECol.Warning);
@@ -79,6 +81,7 @@ namespace HCResourceLibraryApp.Layout
                         // -- VIEW SUBMISSIONS --
                         if (optNum == 2)
                         {
+                            Program.LogState(logStateParent + "|View Submissions");
                             if (_bugIdeaData.IsSetup())
                             {
                                 /// gather them
@@ -139,6 +142,7 @@ namespace HCResourceLibraryApp.Layout
                         // -- CLEAR ENTRIES --
                         if (optNum == 3)
                         {
+                            Program.LogState(logStateParent + "|Clear Entries");
                             Confirmation($"{Ind14}Clear all bug reports and idea suggestions? ", true, out bool yesNo);
                             bool reYesNo = false;
 

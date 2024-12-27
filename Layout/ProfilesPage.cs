@@ -23,6 +23,7 @@ namespace HCResourceLibraryApp.Layout
 
         static Preferences _preferencesRef;
         static readonly char subMenuUnderline = '~';
+        const string logStateParent = "Profiles Page";
 
 
         public static void GetPreferencesReference(Preferences preferences)
@@ -36,7 +37,7 @@ namespace HCResourceLibraryApp.Layout
             {
                 BugIdeaPage.OpenPage();
 
-                Program.LogState("Profiles Page");
+                Program.LogState(logStateParent);
                 Clear();
                 Title("Profiles Page", cTHB, 1);
                 FormatLine($"{Ind24}This page allow for all things pertaining to profiles: creating, editing, switching, deleting.", ForECol.Accent);
@@ -144,7 +145,7 @@ namespace HCResourceLibraryApp.Layout
             {
                 BugIdeaPage.OpenPage();
                 
-                Program.LogState("Profiles Page|Select");
+                Program.LogState(logStateParent + "|Select");
                 Clear();
                 Title("Profile Selection", subMenuUnderline, 1);
                 FormatLine($"{Ind14}Select a profile. {(!currentProfileExistsQ ? "" : "Switching profiles will require a restart.")}");
@@ -283,10 +284,10 @@ namespace HCResourceLibraryApp.Layout
             {
                 BugIdeaPage.OpenPage();
 
+                const string logStateMethod = logStateParent + "|Editor";
                 if (activeMenuKey.IsNE())
-                    Program.LogState("Profiles Page|Editor");
+                    Program.LogState(logStateMethod);
                 Clear();
-
 
                 string[] profEditMenuOpts = { "Create Profile", "Edit Profile", "Delete Profile", $"{exitSubPagePhrase} [Enter]" };
                 bool validKey = false, quitMenuQ = false;
@@ -318,7 +319,7 @@ namespace HCResourceLibraryApp.Layout
                     // create profile -- simply, register new profile.
                     if (profEditKey.Equals("a"))
                     {
-                        Program.LogState("Profiles Page|Editor|Create");
+                        Program.LogState(logStateMethod + "|Create");
                         FormatLine("A new profile may be created or an existing profile may be duplicated and saved as a new profile.");
                         FormatLine("Creating a profile will require a program restart.", ForECol.Warning);
                         FormatLine($"Remaining Profile Spaces :: '{ProfileHandler.RemainingProfileSpacesLeft}' available.", ForECol.Highlight);
@@ -487,7 +488,7 @@ namespace HCResourceLibraryApp.Layout
                     // edit profile -- all editing, new and old
                     if (profEditKey.Equals("b"))
                     {
-                        Program.LogState("Profiles Page|Editor|Edit");
+                        Program.LogState(logStateMethod + "|Edit");
                         FormatLine($"{Ind14}An active profile may be customized from name to icon color schema on this page.");
 
                         if (anyProfilesDetected)
@@ -930,7 +931,7 @@ namespace HCResourceLibraryApp.Layout
                     // delete profile -- destroy profile
                     if (profEditKey.Equals("c"))
                     {
-                        Program.LogState("Profiles Page|Editor|Delete");
+                        Program.LogState(logStateMethod + "|Delete");
                         FormatLine("The current profile may be deleted.");
                         FormatLine("Deleting a profile is an irreversible action and cannot be undone. Will require a restart.", ForECol.Warning);
                         NewLine();

@@ -16,6 +16,7 @@ namespace HCResourceLibraryApp.Layout
         static ContentValidator _contentValidator;
         static readonly char subMenuUnderline = '=';
         static bool enterCivFilesTransferPageQ = false;
+        const string logStateParent = "Settings";
 
         public static void GetPreferencesReference(Preferences preferences)
         {
@@ -36,7 +37,7 @@ namespace HCResourceLibraryApp.Layout
             {
                 BugIdeaPage.OpenPage();
 
-                Program.LogState("Settings");
+                Program.LogState(logStateParent);
                 Clear();
                 Title("Application Settings", cTHB, 1);
                 FormatLine($"{Ind24}Facilitates customization of visual preferences, and has additional tools for content verification and save state reversions.", ForECol.Accent);
@@ -84,12 +85,13 @@ namespace HCResourceLibraryApp.Layout
             bool exitSetPrefsMenu = false;
             string activeMenuKey = null;
             Preferences newForeCols = _preferencesRef.ShallowCopy();
+            const string logStateMethod = logStateParent + "|Preferences";
             do
             {
                 BugIdeaPage.OpenPage();
 
                 if (activeMenuKey.IsNE())
-                    Program.LogState("Settings|Preferences");
+                    Program.LogState(logStateMethod);
 
                 // settings - preferences main menu
                 Clear();
@@ -122,7 +124,7 @@ namespace HCResourceLibraryApp.Layout
                     // window dimensions editor
                     if (setPrefsKey.Equals("a"))
                     {
-                        Program.LogState("Settings|Preferences|Window Dimensions Editor");
+                        Program.LogState(logStateMethod + "|Window Dimensions Editor");
                         DimHeight currHeightScale = _preferencesRef.HeightScale;
                         DimWidth currWidthScale = _preferencesRef.WidthScale;
                         string dimsPercents = $"{currHeightScale.GetScaleFactorH() * 100:0}% {currWidthScale.GetScaleFactorW() * 100:0}%";
@@ -264,7 +266,7 @@ namespace HCResourceLibraryApp.Layout
                     // foreground elements (color) editor
                     else if (setPrefsKey.Equals("b"))
                     {
-                        Program.LogState("Settings|Preferences|Foreground Elements Color Editor");
+                        Program.LogState(logStateMethod + "|Foreground Elements Color Editor");
                         
                         // foreground preview visual
                         #region foreground preview
@@ -413,6 +415,7 @@ namespace HCResourceLibraryApp.Layout
         {
             bool exitContentIntegrityMenu = false;            
             string activeMenuKey = null;
+            const string logStateMethod = logStateParent + "|Content Integrity";
 
             VerNum verLow, verHigh = verLow = VerNum.None;
             List<string> folderPaths = new(), fileExtensions = new();
@@ -434,7 +437,7 @@ namespace HCResourceLibraryApp.Layout
 
                 // settings - ConInt main menu
                 if (activeMenuKey.IsNE())
-                    Program.LogState("Settings|Content Integrity");
+                    Program.LogState(logStateMethod);
                 Clear();
 
                 string[] conIntOptions = { "Verify Content Integrity", "View All Data IDs", $"{exitSubPagePhrase} [Enter]" };
@@ -467,9 +470,9 @@ namespace HCResourceLibraryApp.Layout
                     // verify content integrity
                     if (setConIntKey.Equals("a") && librarySetup)
                     {
-                        Program.LogState("Settings|Content Integrity|Verify Content Integrity");
-                        //NewLine();
-                        FormatLine($"{Ind24}Content Integrity Verification (CIV) is a process that validates the existence of contents in the resource library within a given folder.", ForECol.Normal);
+                        const string logStateMethodSub = logStateMethod + "|Verify Content Integrity";
+                        Program.LogState(logStateMethodSub);
+                        FormatLine($"{Ind24}Content Integrity Verification (CIV) is a process that validates the existence of contents in the resource library within a given folder. [TO BE IMPLEMENTED] Validated contents can be moved to another folder after running the CIV process.", ForECol.Normal);
                         NewLine();
 
                         /** Verification Location Review (snippet) [from Design Doc] + Planning
@@ -624,6 +627,7 @@ namespace HCResourceLibraryApp.Layout
                                 // version range edit
                                 if (optNum == 1)
                                 {
+                                    Program.LogState(logStateMethodSub + "|Version Range Edit");
                                     if (!verEarliest.Equals(verLatest))
                                     {
                                         const string rngSplit = "-";
@@ -702,6 +706,7 @@ namespace HCResourceLibraryApp.Layout
                                 // folder path edits
                                 else if (optNum == 2)
                                 {
+                                    Program.LogState(logStateMethodSub + "|Folder Path Edits");
                                     int folderCondensingDist = WSLL(64, Console.LargestWindowWidth - 10);
                                     const int endPeekNum = 8;
                                     FormatLine("Folder paths provide the CIV process with a destination to execute content validation. Multiple folder paths may be provided for content validation.", ForECol.Normal);
@@ -859,6 +864,7 @@ namespace HCResourceLibraryApp.Layout
                                 // file extension edits
                                 else if (optNum == 3)
                                 {
+                                    Program.LogState(logStateMethodSub + "|File Extension Edits");
                                     FormatLine("A file extension is a suffix of a file name that relates to the file type. Providing file extensions allows the CIV process to target only specific kinds of files for content validation.", ForECol.Normal);
                                     NewLine();
 
@@ -908,11 +914,19 @@ namespace HCResourceLibraryApp.Layout
                             }
                             else
                             {
-                                /// IF no input: prompt to move contents 'and' exit page; 
+                                /// CONTEXT -> User chooses to exit page or run CIV process
+                                /// IF no input: 
+                                ///     IF (if CIV ran: prompt to move contents 'and' exit page; ELSE exit page)
                                 /// ELSE check data and run content integrity
                                 if (LastInput.IsNE())
                                 {
-
+                                    // tbd...
+                                    if (ranCIVq)
+                                    {
+                                        NewLine();
+                                        Format("-- [TBD] Prompt to move contents after running CIV goes here... -- ", ForECol.Accent);
+                                        Wait(1.2f);
+                                    }
 
                                     endActiveMenuKey = true;
                                 }
@@ -941,7 +955,7 @@ namespace HCResourceLibraryApp.Layout
                                         Format($"{Ind14}Running CIV process... ", ForECol.Correction);
                                         Wait(1f);
                                         Format($"Please wait...", ForECol.Normal);
-                                        Program.LogState("Settings|Content Integrity|Verify Content Integrity - Executed");
+                                        Program.LogState(logStateMethod + "|Verify Content Integrity - Executed");
                                         ranCIVq = _contentValidator.Validate(new VerNum[] { verLow, verHigh }, folderPaths.ToArray(), fileExtensions.ToArray());
                                     }
                                 }
@@ -1028,6 +1042,8 @@ namespace HCResourceLibraryApp.Layout
                             }
                             while (!exitCivResultPageQ);
                             
+
+
                         }
                         else if (prepToRunCivq)
                         {
@@ -1045,7 +1061,7 @@ namespace HCResourceLibraryApp.Layout
                     else if (setConIntKey.Equals("b") && librarySetup)
                     {
                         endActiveMenuKey = true;
-                        Program.LogState("Settings|Content Integrity|View All Data IDs");
+                        Program.LogState(logStateMethod + "|View All Data IDs");
                         Dbg.StartLogging("SettingsPage.SubPage_ContentIntegrity():ViewAllDataIds", out int stpgx);
 
                         // gather data
@@ -1330,8 +1346,9 @@ namespace HCResourceLibraryApp.Layout
             do
             {
                 BugIdeaPage.OpenPage();
-                
-                Program.LogState("Settings|Reversion");
+
+                const string logStateMethod = logStateParent + "|Reversion";
+                Program.LogState(logStateMethod);
                 Clear();
 
                 string[] revertMenuOpts = { "File Save Reversion", "Version Reversion", $"{exitSubPagePhrase} [Enter]" };
@@ -1354,7 +1371,7 @@ namespace HCResourceLibraryApp.Layout
                         // continue to reversion
                         if (DataHandlerBase.AvailableReversion)
                         {
-                            Program.LogState("Settings|Reversion|File Save Revert - Allowed");
+                            Program.LogState(logStateMethod + "|File Save Revert - Allowed");
                             NewLine();
                             FormatLine("NOTE :: A file save reversion will require a program restart.", ForECol.Accent);
 
@@ -1386,7 +1403,7 @@ namespace HCResourceLibraryApp.Layout
                         // deny reversion access
                         else
                         {
-                            Program.LogState("Settings|Reversion|File Save Revert - Denied");
+                            Program.LogState(logStateMethod + "|File Save Revert - Denied");
                             NewLine();
                             Format("File reversion is not available (no save state to revert to).", ForECol.Normal);
                             Pause();

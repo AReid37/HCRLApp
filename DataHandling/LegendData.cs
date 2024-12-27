@@ -325,13 +325,17 @@ namespace HCResourceLibraryApp.DataHandling
         {
             return _key.IsNotNEW() && _definitions.HasElements();
         }
-        public LegendData CloneLegend()
+        /// <summary>Clones a legend instance. Static to bypass <c>null</c> value issues.</summary>
+        public static LegendData CloneLegend(LegendData legToClone)
         {
             LegendData clone = null;
-            if (IsSetup())
+            if (legToClone is not null)
             {
-                clone = new LegendData(Key, VersionIntroduced, _definitions.ToArray());
-                clone.AdoptIndex(index);
+                if (legToClone.IsSetup())
+                {
+                    clone = new LegendData(legToClone.Key, legToClone.VersionIntroduced, legToClone._definitions.ToArray());
+                    clone.AdoptIndex(legToClone.Index);
+                }
             }
             return clone;
         }
@@ -352,7 +356,7 @@ namespace HCResourceLibraryApp.DataHandling
                 {
                     if (Key == legNew.Key)
                     {
-                        LegendData prevSelf = CloneLegend();
+                        LegendData prevSelf = CloneLegend(this);
                         if (VersionIntroduced.AsNumber >= legNew.VersionIntroduced.AsNumber)
                         {
                             /// This might have seemed easy, but after breaking it down, it's got a couple steps
