@@ -1142,12 +1142,11 @@ namespace HCResourceLibraryApp.Layout
                             Dbg.Log(stpgx, "; ");
 
                             TaskNum++;
-                            ProgressBarUpdate(TaskNum / TaskCount, true);
+                            ProgressBarUpdate(TaskNum / TaskCount, true, false, "Fetching IDs");
                         }
                         Dbg.NudgeIndent(stpgx, false);
                         Dbg.Log(stpgx, "Done, and sorted; ");
                         allDataIds = allDataIds.ToArray().SortWords();
-
                         ProgressBarUpdate(1, true);
 
 
@@ -1159,6 +1158,9 @@ namespace HCResourceLibraryApp.Layout
 
                             Dbg.Log(stpgx, "Printing Data ID categories; Data IDs in angled brackets '<>' are misc. IDs that required disassembling; ");
                             Dbg.NudgeIndent(stpgx, true);
+                            int numOfDataIDsProcessed = 0;
+                            int lastSuccessfulFindIx = 0; /// this counter the no-find timer by skipping the ones that were found, also noting that it is sorted.
+
                             for (int lx = 0; lx < legendKeys.Count; lx++)
                             {
                                 string legendDef = legendDefs[lx];
@@ -1170,7 +1172,11 @@ namespace HCResourceLibraryApp.Layout
                                 // get data IDs for category (legend key)
                                 string dataIDList = "";
                                 int dataIDCount = 0;
-                                for (int dx = 0; dx < allDataIds.Count; dx++)
+                                string progressBarLabel = $"Category {lx + 1}/{legendKeys.Count} '{legendDef}'";
+
+                                ProgressBarInitialize(true, false, 25);
+                                int noFindTimer = 25;  /// they are all sorted, so if no more are found then this ends
+                                for (int dx = isMiscCategoryQ ? 0 : lastSuccessfulFindIx; dx < allDataIds.Count && noFindTimer > 0; dx++)
                                 {
                                     bool disableOrignalLogPrintQ = false;
                                     string datIDToPrint = "";
@@ -1211,8 +1217,27 @@ namespace HCResourceLibraryApp.Layout
                                     {
                                         dataIDList += $"{datIDToPrint} ";
                                         dataIDCount++;
+                                        numOfDataIDsProcessed++;
+
+                                        if (!isMiscCategoryQ)
+                                            lastSuccessfulFindIx = dx;
                                     }
+                                    else if (!isMiscCategoryQ)
+                                        noFindTimer--;
+
+                                    if (noFindTimer <= 0)
+                                        Dbg.LogPart(stpgx, " --  No-find timer ended");
+
+                                    /// DUAL PROGRESS
+                                    /// Dividend :: (A - legend number) + (B - data Ids processed)
+                                    /// Divider :: (A - legends count) + (B - all data Ids count)
+                                    float dividend = (lx + 1) + numOfDataIDsProcessed;
+                                    float divider = legendKeys.Count + allDataIds.Count;
+                                    ProgressBarUpdate(dividend / divider, true, false, progressBarLabel);
                                 }
+                                Wait(0.05f);
+                                ProgressBarUpdate(1, true, true, progressBarLabel);
+
 
                                 // condense string of numbers (and stuff) with ranges
                                 if (dataIDList.IsNotNE())
@@ -1293,12 +1318,6 @@ namespace HCResourceLibraryApp.Layout
                                 LogDecoder.DisassembleDataID(str, out string dk, out string db, out _);
                                 str = dk + db;
                             }
-                            //if (legendSymbols.HasElements() && str.IsNotNE())
-                            //{
-                            //    foreach (string legSym in legendSymbols)
-                            //        str = str.Replace(legSym, "");
-                            //    str = str.Trim();
-                            //}
                             return str;
                         }
                     }

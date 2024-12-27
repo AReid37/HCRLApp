@@ -1319,7 +1319,7 @@ namespace HCResourceLibraryApp.Layout
 
                 /// mostly for checking placement within processes
                 if (Program.isDebugVersionQ)
-                    Wait(0.075f);
+                    Wait(0.025f);
             }            
         }
         public static void QueueEnterFileChooserPage()

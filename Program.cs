@@ -12,8 +12,8 @@ namespace HCResourceLibraryApp
     public class Program
     {
         static readonly string consoleTitle = "High Contrast Resource Library App";
-        static readonly string developmentVersion = "[v1.3.3c]";
-        static readonly string lastPublishedVersion = "[v1.3.1d]";
+        static readonly string developmentVersion = "[v1.3.3d]";
+        static readonly string lastPublishedVersion = "[v1.3.3c]";
         /// <summary>If <c>true</c>, the application launches for debugging/development. Otherwise, the application launches for the published version.</summary>
         public static readonly bool isDebugVersionQ = true;
         static readonly bool verifyFormatUsageBase = false;
@@ -123,13 +123,14 @@ namespace HCResourceLibraryApp
             {
                 Clear();
                 AllowProgramRestart = false;
-                LogState($"Start Up - {consoleTitle + (isDebugVersionQ ? $" {developmentVersion} (debug)" : $" {lastPublishedVersion}")}");
 
                 // setup                
                 /// program function
                 Console.Title = consoleTitle + (isDebugVersionQ ? $" {developmentVersion} (debug)" : $" {lastPublishedVersion}");
                 Tools.DisableWarnError = !isDebugVersionQ ? DisableWE.All : DisableWE.None;
                 VerifyFormatUsage = verifyFormatUsageBase && isDebugVersionQ;
+                LogState($"Start Up - {consoleTitle + (isDebugVersionQ ? $" {developmentVersion} (debug)" : $" {lastPublishedVersion}")}");
+
                 /// data loading
                 ProfileHandler.Initialize();
                 ProfileHandler.FetchProfiles(); // the initial load is handled by ProfileHandler.FetchProfiles() [..Switch() -> ..Load()] when profile ID is valid
