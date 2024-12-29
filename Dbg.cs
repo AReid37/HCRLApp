@@ -349,6 +349,7 @@ namespace HCResourceLibraryApp
             const int spamThreadMinKeyword = spamThreadKeywordMinimum;
             if (threadNames.HasElements() && ThreadSpamsKeywordList is not null)
             {
+                ThreadSpamsKeywordList.Clear();
                 foreach (string threadName in threadNames)
                 {
                     if (threadName.IsNotNEW())

@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using ConsoleFormat;
 using HCResourceLibraryApp.DataHandling;
+using static HCResourceLibraryApp.Layout.PageBase;
 
 namespace HCResourceLibraryApp
 {
@@ -691,7 +692,7 @@ namespace HCResourceLibraryApp
         ///     Sorts all words and characters (alphabets, numerics, symbols) and returns a list of them in symbolic then alphanumeric order. <c>Null</c> or <c>Empty/Whitespaced</c> elements are skipped in sorting.
         /// </summary>
         /// <remarks>Sorting groups precedence: symbols, numbers, letters</remarks>
-        public static List<string> SortWords(this string[] words)
+        public static List<string> SortWords(this string[] words, bool showPercentageQ = false)
         {
             /** PLANNING
             We've done this twice already so let's get right into it...
@@ -759,14 +760,21 @@ namespace HCResourceLibraryApp
 
             Dbg.StartLogging("Extensions.SortWords(this str[])", out int tx);
             Dbg.ToggleThreadOutputOmission(tx);
-            Dbg.Log(tx, $"Recieved words to sort... are there really any words to sort? {(words.HasElements() ? "Yes" : "No")}");
+            Dbg.Log(tx, $"Recieved words to sort... are there really any words to sort? {(words.HasElements() ? "Yes" : "No")}{(showPercentageQ ? " (Showing Progress)" : "")}");
             List<string> orderedWords = new();
+            const string progressBarState = "Sorting Words";
 
             if (words.HasElements())
             {
                 // filter words and find longest word
                 int lengthiestWordLength = 0, nullWordsCount = 0;
                 List<string> filteredWords = new List<string>();
+                if (showPercentageQ)
+                {
+                    ProgressBarInitialize(false, false, 10, 0, 0, Layout.ForECol.Accent, Layout.ForECol.Normal);
+                    ProgressBarUpdate(0, false, false, progressBarState);
+                }
+
                 foreach (string word in words)
                 {
                     if (word.IsNotNEW())
@@ -779,6 +787,9 @@ namespace HCResourceLibraryApp
                     }
                     else nullWordsCount++;
                 }
+                if (showPercentageQ)
+                    ProgressBarUpdate(0.33f, false, false, progressBarState);
+
                 Dbg.Log(tx, $"Completed filtering the array of words (removed NEWs, replaced \\0, trimmed) --> Original word count [{words.Length}]; Filtered word count[{filteredWords.Count}]; Lengthiest word length [{lengthiestWordLength}]; Skipped words count [{nullWordsCount}]");
 
                 if (filteredWords.HasElements())
@@ -884,6 +895,8 @@ namespace HCResourceLibraryApp
                         scoredWords.Add(scoredWordArr);
                         Dbg.Log(tx, "]");
                     }
+                    if (showPercentageQ)
+                        ProgressBarUpdate(0.67f, false, false, progressBarState);
                     Dbg.NudgeIndent(tx, false);
 
 
@@ -1141,6 +1154,8 @@ namespace HCResourceLibraryApp
                         Dbg.Log(tx, "]");
                         Dbg.NudgeIndent(tx, false);
                     }
+                    if (showPercentageQ)
+                        ProgressBarUpdate(0.99f, false, false, progressBarState);
                     Dbg.NudgeIndent(tx, false);
 
 
@@ -1167,6 +1182,10 @@ namespace HCResourceLibraryApp
                     orderedWords.AddRange(words);
                     Dbg.Log(tx, "Returning array of words as is (no filtered words)");
                 }
+
+                if (showPercentageQ)
+                    ProgressBarUpdate(1, true, true, progressBarState);
+
             }
 
             /// nothing to sort

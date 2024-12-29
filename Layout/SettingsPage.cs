@@ -17,6 +17,7 @@ namespace HCResourceLibraryApp.Layout
         static readonly char subMenuUnderline = '=';
         static bool enterCivFilesTransferPageQ = false;
         const string logStateParent = "Settings";
+        const int viewAllDataIDs_SorterDelayNotice_contentCountLimit = 250;
 
         public static void GetPreferencesReference(Preferences preferences)
         {
@@ -1144,11 +1145,14 @@ namespace HCResourceLibraryApp.Layout
                             TaskNum++;
                             ProgressBarUpdate(TaskNum / TaskCount, true, false, "Fetching IDs");
                         }
+                        ProgressBarUpdate(1, true, true, "Fetching IDs");
                         Dbg.NudgeIndent(stpgx, false);
                         Dbg.Log(stpgx, "Done, and sorted; ");
-                        allDataIds = allDataIds.ToArray().SortWords();
-                        ProgressBarUpdate(1, true);
 
+                        /// i guess i just gotta do this now
+                        if (_resLibrary.Contents.Count > viewAllDataIDs_SorterDelayNotice_contentCountLimit)
+                        FormatLine($"Sorting all data IDs... If you have a large library, this may take a few minutes...", ForECol.Accent);
+                        allDataIds = allDataIds.ToArray().SortWords(true);
 
                         // print data IDs in categories by legend
                         if (legendKeys.HasElements() && legendDefs.HasElements() && allDataIds.HasElements())
@@ -1231,13 +1235,10 @@ namespace HCResourceLibraryApp.Layout
                                     /// DUAL PROGRESS
                                     /// Dividend :: (A - legend number) + (B - data Ids processed)
                                     /// Divider :: (A - legends count) + (B - all data Ids count)
-                                    float dividend = (lx + 1) + numOfDataIDsProcessed;
+                                    float dividend = lx + 1 + numOfDataIDsProcessed;
                                     float divider = legendKeys.Count + allDataIds.Count;
                                     ProgressBarUpdate(dividend / divider, true, false, progressBarLabel);
                                 }
-                                Wait(0.05f);
-                                ProgressBarUpdate(1, true, true, progressBarLabel);
-
 
                                 // condense string of numbers (and stuff) with ranges
                                 if (dataIDList.IsNotNE())
@@ -1283,6 +1284,10 @@ namespace HCResourceLibraryApp.Layout
                                 }
                                 else Dbg.LogPart(stpgx, " .. No data IDs to condense .."); 
                                 Dbg.LogPart(stpgx, $" .. Counted '{dataIDCount}' data IDs; ");
+
+                                /// doesn't disappear until finished condensing
+                                Wait(0.05f);
+                                ProgressBarUpdate(1, true, true, progressBarLabel);
 
                                 // all printing here
                                 if (!isMiscCategoryQ || (isMiscCategoryQ && dataIDList.IsNotNE()))

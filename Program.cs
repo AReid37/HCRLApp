@@ -12,8 +12,8 @@ namespace HCResourceLibraryApp
     public class Program
     {
         static readonly string consoleTitle = "High Contrast Resource Library App";
-        static readonly string developmentVersion = "[v1.3.3d]";
-        static readonly string lastPublishedVersion = "[v1.3.3c]";
+        static readonly string developmentVersion = "[v1.3.3e]";
+        static readonly string lastPublishedVersion = "[v1.3.3e]";
         /// <summary>If <c>true</c>, the application launches for debugging/development. Otherwise, the application launches for the published version.</summary>
         public static readonly bool isDebugVersionQ = true;
         static readonly bool verifyFormatUsageBase = false;
@@ -327,6 +327,7 @@ namespace HCResourceLibraryApp
             Dbg.ShutDown();
             /// THE TO DO LIST    
             /// - FURTHER DEBUGGING and fixes from bug / idea submission system on published app (again)
+            /// - SHORTEN the time of the sort-words extension. It is eating ALOT of time for CIV and View Data IDs with big libraries
         }
 
 

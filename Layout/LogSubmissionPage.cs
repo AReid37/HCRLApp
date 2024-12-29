@@ -51,7 +51,7 @@ namespace HCResourceLibraryApp.Layout
             // auto-saves: 
             //      -> LogDecoder recentDirectory
             //      -> ResLibrary <new data>
-            if (LogDecoder.ChangesMade() || mainLibrary.ChangesMade())
+            if (mainLibrary.ChangesMade() || LogDecoder.ChangesMade())
                 Program.SaveData(false);
         }
 
@@ -92,7 +92,8 @@ namespace HCResourceLibraryApp.Layout
                         string stageName = stageNames[stageNum - 1];
 
                         Clear();
-                        Program.LogState($"{logStateParent}|Submit A Log|Phase.{stageNum}, {stageName}");
+                        string logStatePhase = $"{logStateParent}|Submit A Log|Phase.{stageNum}, {stageName}";
+                        Program.LogState(logStatePhase);
                         Title("Log Submission", subMenuUnderline, 2);
                         Important($"STAGE {stageNum}: {stageName}", subMenuUnderline);
                         HorizontalRule(minorChar, 1);
@@ -279,6 +280,8 @@ namespace HCResourceLibraryApp.Layout
                                 }
                                 else
                                 {
+                                    Program.LogState(logStatePhase + "|Integration Evaluation");
+
                                     bool notNormalIntegrationQ = false, overwriteNetChangeQ = false;
                                     NewLine(3);
                                     Title("Content Integration Evaluation", subMenuUnderline, 0);
@@ -359,6 +362,7 @@ namespace HCResourceLibraryApp.Layout
 
                                             if (yesNoProcess)
                                             {
+                                                Program.LogState(logStatePhase + "|Overwritting / Loose Integration Cancelled");
                                                 stopSubmission = true;
                                                 pathToVersionLog = null;
                                             }
@@ -367,6 +371,8 @@ namespace HCResourceLibraryApp.Layout
 
                                         if (yesNo)
                                         {
+                                            Program.LogState(logStatePhase + "|Overwrite / Loose Integration Confirmed");
+
                                             /// OVERWRITE integration
                                             if (logDecoder.OverwriteWarning)
                                                 mainLibrary.Overwrite(logDecoder.DecodedLibrary, out _, out _);
@@ -393,6 +399,7 @@ namespace HCResourceLibraryApp.Layout
                                     }
                                     else
                                     {
+                                        Program.LogState(logStatePhase + "|Auto-Integration");
                                         FormatLine($"{Ind24}Evaluation complete. No additional steps required.");
 
                                         mainLibrary.Integrate(logDecoder.DecodedLibrary, out _, out _);

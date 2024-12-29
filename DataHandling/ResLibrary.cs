@@ -45,8 +45,8 @@ namespace HCResourceLibraryApp.DataHandling
         List<ResContents> _contents, _prevContents;
         List<LegendData> _legends, _prevLegends;
         List<SummaryData> _summaries, _prevSummaries;
-        List<ResLibIntegrationInfo> rliInfoDock;
-        List<ResLibAddInfo> rlaInfoDock;
+        List<ResLibIntegrationInfo> rliInfoDock = new();
+        List<ResLibAddInfo> rlaInfoDock = new();
         //List<ResLibOverwriteInfo> rloInfoDock;
 
         // public
@@ -2430,17 +2430,24 @@ namespace HCResourceLibraryApp.DataHandling
             if (_contents != null)
             {
                 _prevContents = new List<ResContents>();
-                _prevContents.AddRange(_contents.ToArray());
+                foreach (ResContents resCon in _contents)
+                    _prevContents.Add(ResContents.CloneResContent(resCon));
+                /// uugh! stupid reference issues, hidden and catastrophic!
+                //_prevContents.AddRange(_contents.ToArray());
             }
             if (_legends != null)
             {
                 _prevLegends = new List<LegendData>();
-                _prevLegends.AddRange(_legends.ToArray());
+                foreach (LegendData legDat in _legends)
+                    _prevLegends.Add(LegendData.CloneLegend(legDat));
+                //_prevLegends.AddRange(_legends.ToArray());
             }
             if (_summaries != null)
             {
                 _prevSummaries = new List<SummaryData>();
-                _prevSummaries.AddRange(_summaries.ToArray());
+                foreach (SummaryData sumDat in _summaries)
+                    _prevSummaries.Add(SummaryData.CloneSummary(sumDat));
+                //_prevSummaries.AddRange(_summaries.ToArray());
             }
         }
         ResLibrary GetPreviousSelf()
@@ -2461,7 +2468,7 @@ namespace HCResourceLibraryApp.DataHandling
         /// <param name="text">The text to check for any matches against <paramref name="arg"/>.</param>
         /// <param name="caseSensitiveQ">Whether to make a case-sensitive check.</param>
         /// <returns>A nullable boolean defining the results of the check: <c>TRUE</c> - exact match, <c>FALSE</c> - partial match, <c>NULL</c> - no matches.</returns>
-        bool? CheckMatch(string arg, string text, bool caseSensitiveQ)
+        static bool? CheckMatch(string arg, string text, bool caseSensitiveQ)
         {
             /// null (no match at all)  /  false (partial match)  /  true (exact match)
             bool? matchingQ = null;
