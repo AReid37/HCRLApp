@@ -38,7 +38,11 @@
 
 [X] 14# The Dbug.cs class will need to be revamped. The nested debug session have certainly hit their limit before, and now disable good-to-know debug session due to its incapacity. I put forth a threading idea. Where each session is logged uninterupted (except to note that a certain session triggered at a time within an ongoing 'thread' duration). They can be given an ID or just simply noted by name. Each should have a time stamp of when it was ran. All sessions occur in parallel but are individual from each other. Also, before exiting appilication, the sessions can be listed by name in the order that they were identified (may be helpful for browing debug file).
 
-[ ] 15# ...
+[ ] 15# The SortWords method seems to be jamming up and slowing down some processes. Will have to rework for larger list of words. I think implementing some sort of mass skip per check will do the trick. For example, with a growing list of over 10 elements to compare, the comparison can skip to every 10th until the word is to be placed before. One the last iteration of 10's gap, the iteration back cycles and compares those last 10s to find where that word should be inserted.
+
+[ ] 16# A revamped and simplified syntax for version logs. The current version log template and syntax has some redundancies that tend to become clutter. The syntax does not change the information that is to be decoded, but the way to input the logs information. This should be done especially if planning to publicize this application.
+
+[ ] 17# ...
 
 
 ----- F R O M   B U G / I D E A   S U B M I S S I O N   S Y S T E M -----
@@ -60,7 +64,9 @@
 [X] 8# Generate Steam Log is still receiving no related name for additional contents. It keeps showing up as '/?'.
         DEV_NOTE - This has been a persistent bug that is hard to test for. I have conducted a more thorough revision of the related code and fixed a few issues. This SHOULD NOT be happening anymore.
 
-[ ] 9# ...
+[ ] 9# I changed the legend key in one of my previous logs and the contents I added didn't detect that change when went to overwrite that log. 
+
+[ ] 10# ...
 
 
 
@@ -117,7 +123,11 @@
 
 [ ] 22# Could I know when the steam log generator hits the limit? I've been making pretty lengthy logs and the limit seems to be 8.18k characters.
 
-[ ] 23# ...
+[ ] 23# I would like the option to skip the title screen and get right to the main menu. 
+
+[ ] 24# 
+
+[ ] 25# ...
 
 
 ----- F R O M   B U G / I D E A   S U B M I S S I O N   S Y S T E M -----

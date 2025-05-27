@@ -1,0 +1,104 @@
+﻿-- !open --
+A new logging template with revised syntax for readability. 
+Functionally similar to first, objectively less headache.
+
+This file is only for describing the new log template syntax. 
+Create a new file and follow the guidelines that follow.
+
+The original syntax will remain functional but is highly advised against as it is considerably limited in capabilities and 
+-- !close --
+
+
+-- !open --
+COMMENTING
+A single line log comment starts with '--'.
+A multiline log comment starts with '-- !open --' and ends with '-- !close --', each on a line of their own.
+
+GUIDELINES
+* The '%' character is not accepted within logs, will invalidate your log.
+* Log decoding ends after every section has been identified and parsed.
+* Each log has a line limit of 1000 lines. Encourages smaller batches but not too limiting
+* Use the following to bypass syntax-regulated characters in Added, Additional, or Updated sections:
+		'&00' for '-'
+		'&01' for ','
+		'&03' for '~'
+		'&99' for '' (no character)
+
+SECTIONS AND NEW SYNTAX
+* Each section is called by name on their own line, no additional parameters. They can be organized in any order in your log except the Version section which must be the first.
+* Fully capitalized words are keywords for logger to decode. Avoid using all capitals within your log that would match any of the keywords.
+* Each section must be preceded by an empty line
+* For the syntaxes and explanations below: elements marked with '*' are required
+
+
+_____
+Syntax for Version Section:
+L1  VERSION
+L2a  MAJOR {a}* MINOR {bb}*  
+L2b  {a}*.{bb}* 
+
+L1 : Version section tag for identification. Must be the first section.
+L2 : Version number declaration, two syntaxes for preference. 
+	- 'a' is major number (0 or positive number).
+	- 'bb' is minor number (0 to 99).
+	NOTE: Entering either '1.1' and '1.01' registers as version '1.01'.
+
+Example: 
+	VERSION
+	MAJOR 1 MINOR 21
+
+
+-----
+Syntax for Added Section:
+L1  ADDED
+LN	REPLACE {placeholder}* WITH {substitute}*
+LX  {InternalName}* AS {DataIDs}*
+
+L1 : Added section tag for identification.
+LN : (Optional) Repeatable replacement lines that accept a placeholder phrase which is replaced with a given substitution phrase during log decoding.
+	- {placeholder} cannot be plain numbers.
+	- {substitute} cannot be plain numbers.
+LX : Repeatable added content lines which adds the new content by internal name and identifies it as its data ids.
+	- {InternalName} cannot be plain numbers and must not be data ids.
+	- {DataIDs} cannot be plain numbers and must not be internal name.
+	NOTE: You may use any {placeholders} defined earlier within either of the two parameters above. 
+	NOTE FOR DATA IDS: Your data ID type must match with the items in the Legend section. Multiple ids are seperated by spaces, and groups of the same type can be condensed as 'x#,#' or 'x#~#'. 
+	NOTE FOR INTERNAL NAME: The logger will attempt to capitalize and space your internal content names. Using the '&99' before certain characters can be used to negate this effect.
+
+Example:
+	ADDED
+	REPLACE m> WITH Marshwood
+	REPLACE # WITH t32
+	m> Chair		AS i345 #
+	m> Lantern		AS i351 f10,26
+	Feather Bill AS i890 t178,179 p60~62
+	N&99P&99C 3	AS n2	
+
+
+_____
+Syntax for Additional Section:
+
+
+
+_____
+Syntax for Total Textures/Contents Added Section:
+
+
+
+_____
+Syntax for Updated Section:
+
+
+
+_____
+Syntax for Legend Section:
+
+
+
+_____
+Syntax for Summary Section:
+
+
+
+
+-- !close --
