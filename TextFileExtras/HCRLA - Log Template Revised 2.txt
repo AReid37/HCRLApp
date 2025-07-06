@@ -1,11 +1,13 @@
 ﻿-- !open --
+Logging Syntax v2
+
 A new logging template with revised syntax for readability. 
 Functionally similar to first, objectively less headache.
 
 This file is only for describing the new log template syntax. 
-Create a new file and follow the guidelines that follow.
+Create a new file and follow the guidelines described below.
 
-The original syntax will remain functional but is highly advised against as it is considerably limited in capabilities and 
+The original syntax will remain functional but is highly advised against as it is considerably limited in capabilities and may be unpredictable at times. The new syntaxes are designed to be robust and efficient.
 -- !close --
 
 
@@ -17,7 +19,7 @@ A multiline log comment starts with '-- !open --' and ends with '-- !close --', 
 GUIDELINES
 * The '%' character is not accepted within logs, will invalidate your log.
 * Log decoding ends after every section has been identified and parsed.
-* Each log has a line limit of 1000 lines. Encourages smaller batches but not too limiting
+* Each log has a line limit of 1000 lines. Smaller log batches are encouraged. 
 * Use the following to bypass syntax-regulated characters in Added, Additional, or Updated sections:
 		'&00' for '-'
 		'&01' for ','
@@ -27,21 +29,22 @@ GUIDELINES
 SECTIONS AND NEW SYNTAX
 * Each section is called by name on their own line, no additional parameters. They can be organized in any order in your log except the Version section which must be the first.
 * Fully capitalized words are keywords for logger to decode. Avoid using all capitals within your log that would match any of the keywords.
-* Each section must be preceded by an empty line
-* For the syntaxes and explanations below: elements marked with '*' are required
+* Each section must be preceeded by an empty line.
+* For the syntaxes and explanations below: elements marked with '*' are required.
 
 
 _____
+"Version": For identifying the version of this log. 
 Syntax for Version Section:
-L1  VERSION
-L2a  MAJOR {a}* MINOR {bb}*  
-L2b  {a}*.{bb}* 
+L1	VERSION
+L2a	MAJOR {a}* MINOR {bb}*  
+L2b	{a}*.{bb}* 
 
 L1 : Version section tag for identification. Must be the first section.
 L2 : Version number declaration, two syntaxes for preference. 
 	- 'a' is major number (0 or positive number).
 	- 'bb' is minor number (0 to 99).
-	NOTE: Entering either '1.1' and '1.01' registers as version '1.01'.
+	NOTE: Entering either '1.1' or '1.01' registers as version '1.01'.
 
 Example: 
 	VERSION
@@ -49,6 +52,7 @@ Example:
 
 
 -----
+"Added": For all contents regarding this version of the log.
 Syntax for Added Section:
 L1  ADDED
 LN	REPLACE {placeholder}* WITH {substitute}*
@@ -56,11 +60,11 @@ LX  {InternalName}* AS {DataIDs}*
 
 L1 : Added section tag for identification.
 LN : (Optional) Repeatable replacement lines that accept a placeholder phrase which is replaced with a given substitution phrase during log decoding.
-	- {placeholder} cannot be plain numbers.
-	- {substitute} cannot be plain numbers.
+	- {placeholder} the phrase to be replaced, cannot be plain numbers.
+	- {substitute} the phrase to substitute with, cannot be plain numbers.
 LX : Repeatable added content lines which adds the new content by internal name and identifies it as its data ids.
-	- {InternalName} cannot be plain numbers and must not be data ids.
-	- {DataIDs} cannot be plain numbers and must not be internal name.
+	- {InternalName} name of content being added, cannot be plain numbers and must not be the data ids.
+	- {DataIDs} the data ids that identify this added content, cannot be plain numbers and must not be internal name.
 	NOTE: You may use any {placeholders} defined earlier within either of the two parameters above. 
 	NOTE FOR DATA IDS: Your data ID type must match with the items in the Legend section. Multiple ids are seperated by spaces, and groups of the same type can be condensed as 'x#,#' or 'x#~#'. 
 	NOTE FOR INTERNAL NAME: The logger will attempt to capitalize and space your internal content names. Using the '&99' before certain characters can be used to negate this effect.
@@ -76,29 +80,122 @@ Example:
 
 
 _____
+"Additional": For any contents relating to contents of previous log versions.
 Syntax for Additional Section:
+L1	ADDITIONAL
+LX	{DataIDs}* AS {OptName} TO {RelatedInternalName} BY {RelatedDataID}*
 
+L1 : Additional section tag for identification.
+LX : Repeatable additional content lines which adds the related to an existing content using mainly the related data ID.	
+	- {DataIDs} the data ids relating to a previous content, cannot be plain numbers and must not be the related data id.
+	- {OptName} an optional name for this group of additional content, cannot be related internal name or plain numbers.
+	- {RelatedInternalName} the internal name of the existing object the data IDs are to be paired with, cannot be plain numbers and must match with related data ID provided.
+	- {RelatedDataID} the single data ID which the additional data IDs are related, cannot be plain numbers.
+	NOTE FOR DATA IDS: Your data ID type must match with the items in the Legend section. Multiple ids are seperated by spaces, and groups of the same type can be condensed as 'x#,#' or 'x#~#'. 
+	NOTE FOR OPTIONAL AND RELATED INTERNAL NAME: The logger will attempt to capitalize and space your internal content names. Using the '&99' before certain characters can be used to negate this effect.
+
+Example: 
+	ADDITIONAL
+	WaterMelonChunk AS Watermelon Chunk TO Watermelon BY i167
+	t46 AS TO Marshwood Lantern BY i351
+	WaterMelonChunk2 BY i167
+
+	NOTE: Notice that some keywords that don't have an arguement are still included. It is encouraged to do so for readability sake until a good understanding of the syntax. If the keyword is not followed by an arguement (or value) it may be omitted. 
 
 
 _____
+"TTA or TCA": The actual number of contents introduced in this version.
 Syntax for Total Textures/Contents Added Section:
+L1a TTA
+L1b	TCA
+L2	{Texture/ContentCountNumber}*
 
+L1 : Total Texture/Content count section tag for identification.
+	 Using either "TTA" or "TCA" will count as identification for this tag.
+L2 : The number of new contents that have been added through this version log.
+	- {Texture/ContentCountNumber} can only be plain numbers.
+		NOTE: This number is required as the logger will attempt to tally contents added for verification. It will be incorrect in instances such as referencing data IDs from previous versions which do not count towards the actual number of contents added in a version log.
+
+Example:
+	TCA
+	22
 
 
 _____
+"Updated": The changes made to (previously) introduced contents
 Syntax for Updated Section:
+L1	UPDATED
+LX	{RelatedName} BY {RelatedDataID}* WITH {ChangeDesc}*
 
+L1 : Updated section tag for identification.
+LX : Repeatable updated lines that identify the data ID and the related content name followed by a description of the changes made to that content
+	- {RelatedName} the related (internal) name of the content being updated, cannot be plain numbers.
+	- {RelatedDataID} the single data ID to which changes are being made, cannot be plain numbers.
+	- {ChangeDesc} a description of the change(s) made to this piece of content.
 
+	NOTE: You may create an updated entry for any content that was added in the same version as its update, although advised against (updates usually follow after the initial addition, just an ethical warning). The decoder will automatically detect and notify of this possibility, however there will be no impact on the outcome of your logging.
+
+Example: 
+	UPDATED
+	PotPie BY i42 WITH Crispier looking surface and creamier filling
+	PotPie BY t23 WITH Changed texture to match new item design
+	t23 WITH Fixed an issue where parts of the texture were missing
+
+	NOTE: Notice that some keywords that don't have an arguement are still included. It is encouraged to do so for readability sake until a good understanding of the syntax. If the keyword is not followed by an arguement (or value) it may be omitted. 
+	
 
 _____
+"Legend": A list of the relavant symbols (for data IDs or miscellaneous information) used in this version log.
 Syntax for Legend Section:
+L1	LEGEND
+LX	{Key}* AS {Definition}*
 
+L1 : Legend section tag for identification.
+LX : Repeatble legend lines of the symbol and the extended definition of the symbol that has been used within your log.
+	- {Key} the short string of characters used within your log. Cannot be plain numbers or contain numbers.
+	- {Definition} the extended description of which your legend Key represents. Cannot be plain number or contain numbers.
+	NOTE FOR DEFINITION: When using the legend to shorthand content IDs (data IDs), the definition of legend key should match the phrase which is replaced by your legend key. For example, if the common prefix of a set of data IDs is "Tree_Tops_", your legend key may be "tt" and your definition could be either "Tree Tops" or "Tree_Tops_". This simplifies and gives use to the content integrity verification feature of the logger application.
+
+	NOTE ON BEST USE FOR LEGEND: The legend keys are used to represent numbered contents with a common prefix. Take for example the phrase "Item_"; this phrase prefixes and ascending number of contents in Terraria. Instead of listing "Item_1, Item_2, Item_4" you can create a legend key and shorten this listing to "i1, i2, i4". It simplifies the logging process.
+		- If it starts with a common phrase and ends with numbers, a legend entry may be ideal.
+		- Best to use letters as keys for common contents and use symbols as keys for miscellaneous things such as labelling specific contents.
+
+	NOTE: The tilde symbol (~) may be troublesome to use as a legend key as it is already identified as a numeric range symbol in the log decoder. Suggested to avoid using this symbol.
+
+Example: 
+	LEGEND
+	i	AS Item
+	t	AS Tiles
+	f AS Item Flame
+	* AS Introduced In Earlier Version
 
 
 _____
+"Summary": A section to summarize the additions and changes in this version log.
 Syntax for Summary Section:
+L1	SUMMARY
+LX	{SummaryPart}*
+
+L1 : Summary section tag for identification.
+LX : Repeatable summary lines that summarize the additions or changes made in a version log.
+	- {SummaryPart} a single line the describes the (some of the) contents in a version log.
+
+Example: 
+	SUMMARY
+	Brocolli, Cabbage, and few other green veggies, Veggie seeds (P1).
+	Carrot, Pumpkins (pumpkin, squash), soil (and variants).
+
+-- !close --
 
 
+-- !open --
+List of syntax-regulating keywords and symbols so far: 
 
+VERSION   MAJOR   MINOR   .
+REPLACE   WITH   AS   ~   ,
+ADDITIONAL   TO   BY
+UPDATED
+LEGEND
+SUMMARY
 
 -- !close --
