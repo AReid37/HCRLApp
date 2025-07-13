@@ -38,11 +38,13 @@
 
 [X] 14# The Dbug.cs class will need to be revamped. The nested debug session have certainly hit their limit before, and now disable good-to-know debug session due to its incapacity. I put forth a threading idea. Where each session is logged uninterupted (except to note that a certain session triggered at a time within an ongoing 'thread' duration). They can be given an ID or just simply noted by name. Each should have a time stamp of when it was ran. All sessions occur in parallel but are individual from each other. Also, before exiting appilication, the sessions can be listed by name in the order that they were identified (may be helpful for browing debug file).
 
-[ ] 15# The SortWords method seems to be jamming up and slowing down some processes. Will have to rework for larger list of words. I think implementing some sort of mass skip per check will do the trick. For example, with a growing list of over 10 elements to compare, the comparison can skip to every 10th until the word is to be placed before. One the last iteration of 10's gap, the iteration back cycles and compares those last 10s to find where that word should be inserted.
+[X] 15# The SortWords method seems to be jamming up and slowing down some processes. Will have to rework for larger list of words. I think implementing some sort of mass skip per check will do the trick. For example, with a growing list of over 10 elements to compare, the comparison can skip to every 10th until the word is to be placed before. One the last iteration of 10's gap, the iteration back cycles and compares those last 10s to find where that word should be inserted.
 
 [ ] 16# A revamped and simplified syntax for version logs. The current version log template and syntax has some redundancies that tend to become clutter. The syntax does not change the information that is to be decoded, but the way to input the logs information. This should be done especially if planning to publicize this application.
 
-[ ] 17# ...
+[ ] 17# The view all data IDs is the worst known page to man. Fix it. I'd be stuck for over 15 minutes just waiting for the entire thing to actually print out. I'd rather use the flippin' content verification system than the junk this thing is. 
+
+[ ] 18# ...
 
 
 ----- F R O M   B U G / I D E A   S U B M I S S I O N   S Y S T E M -----
@@ -66,7 +68,9 @@
 
 [ ] 9# I changed the legend key in one of my previous logs and the contents I added didn't detect that change when went to overwrite that log. 
 
-[ ] 10# ...
+[ ] 10# Visual bug, log submission ::  ## Connected updated: Dust; Edited dust parti...' to 'Dusts' by 'Dust'.  {Missing first openning single quote}
+
+[ ] 11# ...
 
 
 
@@ -125,9 +129,14 @@
 
 [ ] 23# I would like the option to skip the title screen and get right to the main menu. 
 
-[ ] 24# 
+[ ] 24# Ability to copy the code from one formatter page to the other formatter page.
 
-[ ] 25# ...
+[ ] 25# Ability to submit a version log only to check for syntax and compile errors without going through full submission process
+
+[ ] 26# Can the middle page in log submission telling me about the "few stages to submission" be skipped? I've submitted like 10 logs and its starting to get annoying. That ontop of the triple confirmation with the "enter any key to continue submission thing"
+    DEV_NOTE I'll just count the number of log submission made and let it disappear after the first few submission (after 3 submits you've definitely got the idea!). The enter to continue exists to safegaurd accidental doubled-inputs on "Enter". I'll look into a way to alleviate this issue across the whole program (Idea, delay after pressing "Enter", lol)
+
+[ ] 27# ...
 
 
 ----- F R O M   B U G / I D E A   S U B M I S S I O N   S Y S T E M -----

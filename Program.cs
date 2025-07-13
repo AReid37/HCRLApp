@@ -12,10 +12,10 @@ namespace HCResourceLibraryApp
     public class Program
     {
         static readonly string consoleTitle = "High Contrast Resource Library App";
-        static readonly string developmentVersion = "[v1.3.3e]";
+        static readonly string developmentVersion = "[v1.3.4]";
         static readonly string lastPublishedVersion = "[v1.3.3e]";
         /// <summary>If <c>true</c>, the application launches for debugging/development. Otherwise, the application launches for the published version.</summary>
-        public static readonly bool isDebugVersionQ = false;
+        public static readonly bool isDebugVersionQ = true;
         static readonly bool verifyFormatUsageBase = false;
 
         #region fields / props
@@ -116,11 +116,15 @@ namespace HCResourceLibraryApp
         {
             // Lvl.0 - program launch
             Dbg.Initialize();
-            Dbg.SetThreadsKeywordSpamList("Extensions.", "PageBase.");
+            if (!runTest)
+                Dbg.SetThreadsKeywordSpamList("Extensions.", "PageBase.");
 
             bool restartProgram;
             do
             {
+                // i should still test this
+                //Console.SetWindowPosition(0, 0);
+                //Console.SetWindowSize(Console.LargestWindowWidth, Console.LargestWindowHeight);
                 Clear();
                 AllowProgramRestart = false;
 
@@ -130,6 +134,9 @@ namespace HCResourceLibraryApp
                 Tools.DisableWarnError = !isDebugVersionQ ? DisableWE.All : DisableWE.None;
                 VerifyFormatUsage = verifyFormatUsageBase && isDebugVersionQ;
                 LogState($"Start Up - {consoleTitle + (isDebugVersionQ ? $" {developmentVersion} (debug)" : $" {lastPublishedVersion}")}");
+
+                /// display fix :: F11 x2
+                // a method for this *important* prompt goes here. Can be bypassed with "Enter" or pressing "F11" twice
 
                 /// data loading
                 ProfileHandler.Initialize();
@@ -426,7 +433,7 @@ namespace HCResourceLibraryApp
 
         // TESTING STUFF
         static readonly bool runTest = false;
-        static readonly Tests testToRun = Tests.Dbg_Revised;
+        static readonly Tests testToRun = Tests.Extensions_SortWords;
         enum Tests
         {
             /// <summary>For random tests that need their own space, but no specific test name (variable tests)</summary>

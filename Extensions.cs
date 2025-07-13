@@ -692,7 +692,7 @@ namespace HCResourceLibraryApp
         ///     Sorts all words and characters (alphabets, numerics, symbols) and returns a list of them in symbolic then alphanumeric order. <c>Null</c> or <c>Empty/Whitespaced</c> elements are skipped in sorting.
         /// </summary>
         /// <remarks>Sorting groups precedence: symbols, numbers, letters</remarks>
-        public static List<string> SortWords(this string[] words, bool showPercentageQ = false)
+        public static List<string> SortWords(this string[] words)
         {
             /** PLANNING
             We've done this twice already so let's get right into it...
@@ -760,20 +760,14 @@ namespace HCResourceLibraryApp
 
             Dbg.StartLogging("Extensions.SortWords(this str[])", out int tx);
             Dbg.ToggleThreadOutputOmission(tx);
-            Dbg.Log(tx, $"Recieved words to sort... are there really any words to sort? {(words.HasElements() ? "Yes" : "No")}{(showPercentageQ ? " (Showing Progress)" : "")}");
+            Dbg.Log(tx, $"Recieved words to sort... are there really any words to sort? {(words.HasElements() ? "Yes" : "No")}");
             List<string> orderedWords = new();
-            const string progressBarState = "Sorting Words";
 
             if (words.HasElements())
             {
                 // filter words and find longest word
                 int lengthiestWordLength = 0, nullWordsCount = 0;
                 List<string> filteredWords = new List<string>();
-                if (showPercentageQ)
-                {
-                    ProgressBarInitialize(false, false, 10, 0, 0, Layout.ForECol.Accent, Layout.ForECol.Normal);
-                    ProgressBarUpdate(0, false, false, progressBarState);
-                }
 
                 foreach (string word in words)
                 {
@@ -787,8 +781,6 @@ namespace HCResourceLibraryApp
                     }
                     else nullWordsCount++;
                 }
-                if (showPercentageQ)
-                    ProgressBarUpdate(0.33f, false, false, progressBarState);
 
                 Dbg.Log(tx, $"Completed filtering the array of words (removed NEWs, replaced \\0, trimmed) --> Original word count [{words.Length}]; Filtered word count[{filteredWords.Count}]; Lengthiest word length [{lengthiestWordLength}]; Skipped words count [{nullWordsCount}]");
 
@@ -895,8 +887,6 @@ namespace HCResourceLibraryApp
                         scoredWords.Add(scoredWordArr);
                         Dbg.Log(tx, "]");
                     }
-                    if (showPercentageQ)
-                        ProgressBarUpdate(0.67f, false, false, progressBarState);
                     Dbg.NudgeIndent(tx, false);
 
 
@@ -904,14 +894,22 @@ namespace HCResourceLibraryApp
                     Dbg.Log(tx, $"Comparing scores of {filteredWords.Count} filtered words and sorting them into order;");
                     Dbg.NudgeIndent(tx, true);
                     List<int> wordOrderByIndex = new List<int>();
+                    const int skipIntervalsDefault = 7;
+                    int skipInterval = (filteredWords.Count / (skipIntervalsDefault * skipIntervalsDefault)).Clamp(skipIntervalsDefault, (int)Math.Pow(skipIntervalsDefault, 3));
+                    /** skipIntervals - For quickly sorting large word groups
+                            When the word array grows larger than double the skipInterval number, we start jumping over other comparisons until we fine a place where the word can be inserted. When the placement is found, we backpedal and find where in the last that were skipped the word being compared is to be placed.
+
+                        skipInterval value :: minimum 7, unless list is way past 343 items, to a maximum of 343 items per skip
+                     */
                     for (int thisIx = 0; thisIx < filteredWords.Count; thisIx++)
                     {
                         string thisWord = filteredWords[thisIx];
                         int[] thisWordArr = scoredWords[thisIx];
+                        bool skippingAllowedQ = wordOrderByIndex.Count > skipInterval * 2;
 
                         Dbg.LogPart(tx, $"Sorting word at ix#{thisIx} '{thisWord}' as score array --> [");
                         foreach (int score in thisWordArr) { Dbg.LogPart(tx, $"{score} "); }
-                        Dbg.Log(tx, "]");
+                        Dbg.Log(tx, $"]{(skippingAllowedQ ? $" (skipping-by-{skipInterval}s)" : "")}");
 
                         // words to compare...
                         Dbg.NudgeIndent(tx, true);
@@ -924,6 +922,7 @@ namespace HCResourceLibraryApp
                                 int otherIx = wordOrderByIndex[wobIx];
                                 string otherWord = filteredWords[otherIx];
                                 int[] otherWordArr = scoredWords[otherIx];
+                                bool noSkippingToEndq = wobIx + skipInterval + 1 >= wordOrderByIndex.Count;
                                 Dbg.LogPart(tx, $"Comparing '{thisWord}' to '{otherWord}' (as this#|other#) --> "); // left off here
 
 
@@ -1118,11 +1117,45 @@ namespace HCResourceLibraryApp
                                         Dbg.LogPart(tx, true ? $"[{dbgCodePathName}] " : "");
                                 }
 
+
                                 if (endComparisons)
                                 {
-                                    if (insertIndex != noInsertIndex)
-                                        Dbg.Log(tx, " --> <O>");
-                                    else Dbg.Log(tx, " --> <X>");
+                                    /// IF skipping allowed: 
+                                    ///     IF can insert word: backpedal
+                                    ///     ELSE (IF too close to end of words: release skipping do normal sorting relay; ELSE skip words)
+                                    /// ELSE normal sorting relay
+                                    if (skippingAllowedQ)
+                                    {
+                                        if (insertIndex != noInsertIndex)
+                                        {
+                                            wobIx -= skipInterval + 1;
+                                            if (wobIx < 0)
+                                                wobIx = -1; /// it's gonna be plus one'd anyway.
+
+                                            skippingAllowedQ = false;
+                                            insertIndex = noInsertIndex;
+                                            Dbg.Log(tx, $" --> <!> {{backpedal {skipInterval + 1}}}");
+                                        }
+                                        else
+                                        {
+                                            if (noSkippingToEndq)
+                                            {
+                                                skippingAllowedQ = false;
+                                                Dbg.Log(tx, " --> <X> {cannot skip to end}");
+                                            }
+                                            else
+                                            {
+                                                wobIx += skipInterval;
+                                                Dbg.Log(tx, $" --> <X> {{skip {skipInterval}}}");
+                                            }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        if (insertIndex != noInsertIndex)
+                                            Dbg.Log(tx, " --> <O>");
+                                        else Dbg.Log(tx, " --> <X>");
+                                    }
                                 }
                             }
 
@@ -1154,8 +1187,6 @@ namespace HCResourceLibraryApp
                         Dbg.Log(tx, "]");
                         Dbg.NudgeIndent(tx, false);
                     }
-                    if (showPercentageQ)
-                        ProgressBarUpdate(0.99f, false, false, progressBarState);
                     Dbg.NudgeIndent(tx, false);
 
 
@@ -1182,10 +1213,6 @@ namespace HCResourceLibraryApp
                     orderedWords.AddRange(words);
                     Dbg.Log(tx, "Returning array of words as is (no filtered words)");
                 }
-
-                if (showPercentageQ)
-                    ProgressBarUpdate(1, true, true, progressBarState);
-
             }
 
             /// nothing to sort

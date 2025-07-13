@@ -152,7 +152,9 @@ namespace HCResourceLibraryApp
         /// </summary>
         /// <param name="name">Required. The name of the session thread to activate.</param>
         /// <param name="threadIx">The index of this session's thread. Used in other logging methods.</param>
-        /// <remarks>Only assigns <paramref name="threadIx"/> if thread is already generated and active.</remarks>
+        /// <remarks>Only assigns <paramref name="threadIx"/> if thread is already generated and active. 
+        ///     <br></br>Threads marked as spam will begin their session but will not add any logs.
+        /// </remarks>
         public static void StartLogging(string name, out int threadIx)
         {
             threadIx = noIndex;
@@ -239,12 +241,13 @@ namespace HCResourceLibraryApp
         /// <summary>
         ///     Finds a thread instance to add a log to the active session.
         /// </summary>
+        /// <remarks>If a thread is marked as spam, then its log is skipped.</remarks>
         /// <param name="threadIx">Index of the thread to which a log is added.</param>
         /// <param name="log">Required. The log line.</param>
         public static void Log(int threadIx, string log)
         {
             DbgThread currThread = FindThread(threadIx);
-            if (currThread is not null && log.IsNotNEW())
+            if (currThread is not null && log.IsNotNEW() && !IsMarkedAsSpam(threadIx))
             {
                 if (currThread.IsActiveQ)
                 {
@@ -261,12 +264,13 @@ namespace HCResourceLibraryApp
         /// <summary>
         ///     Finds a thread instance to add a suspended log to the active session.
         /// </summary>
+        /// <remarks>If a thread is marked as spam, then its partial log is skipped.</remarks>
         /// <param name="threadIx">Index of the thread to which a partial log is added.</param>
         /// <param name="log">Required. The partial log line.</param>
         public static void LogPart(int threadIx, string log)
         {
             DbgThread currThread = FindThread(threadIx);
-            if (currThread is not null && log.IsNotNEW())
+            if (currThread is not null && log.IsNotNEW() && !IsMarkedAsSpam(threadIx))
             {
                 if (currThread.IsActiveQ)
                     currThread.AddToLog(log, true);
@@ -340,7 +344,7 @@ namespace HCResourceLibraryApp
         /// <summary>
         ///     Recieves a list of keywords, each of which will be used case-insensitively to find matches within the name of a thread.
         ///     <br></br>If the thread's name contains any keywords in the list, it will be identified as a 'spam thread'.
-        ///     <br></br>If a thread is seen as a 'spam thread' then it is not printed to output, not saved to file, does not trigger notice in other ongoing threads, and is uncounted from active threads.
+        ///     <br></br>If a thread is seen as a 'spam thread' then thread instance will be created for it, but it does not recieve any logs, is not printed to output, not saved to file, does not trigger notice in other ongoing threads, and is uncounted from active threads.
         /// </summary>
         /// <param name="threadNames">The keywords to match and disable spammy threads. Each must be at least <see cref="spamThreadKeywordMinimum"/> (4) characters in length.</param>
         /// <remarks>Use just after <see cref="Initialize"/> if it is known which threads to ignore. Being specific means more entries, but less accidental omissions.</remarks>
@@ -377,7 +381,7 @@ namespace HCResourceLibraryApp
                     threadIx = Threads.Count;
 
                 thread = new DbgThread(name, threadIx);
-                if (thread.IsSetup())
+                if (thread.IsSetup() && FindThread(name) is null)
                     Threads.Add(thread);
                 else thread = null;
             }
@@ -470,7 +474,7 @@ namespace HCResourceLibraryApp
         /// <summary>
         ///     Searches for the <see cref="DbgThread"/> at index <paramref name="threadIx"/> and prints its session logs to console output and file.
         /// </summary>
-        /// <remarks>Will always print to file, but output prints can be bypassed by using <see cref="ToggleThreadOutputOmission(int)"/>.</remarks>
+        /// <remarks>Will always print to file, but output prints can be bypassed by using <see cref="ToggleThreadOutputOmission(int)"/>. Spammy threads are not printed to file or output.</remarks>
         /// <param name="threadIx">Index of thread to print and save.</param>
         static void PrintAndSaveThread(int threadIx)
         {

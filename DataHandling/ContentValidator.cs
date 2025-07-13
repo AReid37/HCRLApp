@@ -404,7 +404,7 @@ namespace HCResourceLibraryApp.DataHandling
 
                     Dbg.Log(cvx, $"Gathering and expanding all Data IDs within version range: {(verLow.Equals(verHigh)? $"{verLow} only" : $"{verLow} to {verHigh}")}; ");
                     Dbg.NudgeIndent(cvx, true);
-                    Dbg.Log(cvx, $"Gathering Data IDs from library shelves; ");
+                    Dbg.Log(cvx, $"Gathering Data IDs from library shelves; (NOTE: some CAs may be empty due to its Data IDs already being added); ");
 
                     /// gather data IDs
                     Dbg.NudgeIndent(cvx, true);
@@ -469,7 +469,7 @@ namespace HCResourceLibraryApp.DataHandling
                     Dbg.NudgeIndent(cvx, false);
 
                     /// expand the data IDs
-                    allDataIDs = allDataIDs.ToArray().SortWords();
+                    allDataIDs = allDataIDs.ToArray().SortWords(); // I am fully certain, the extended wait time is right here
                     ConValInfo[] preExpandedIDs = new ConValInfo[allDataIDs.Count];
                     Dbg.Log(cvx, $"Gathered and sorted '{allDataIDs.Count}' Data IDs; Proceeding to expand data IDs by legend datas and create ConValInfo instances; ");
                     Dbg.NudgeIndent(cvx, true);

@@ -1058,7 +1058,15 @@ namespace HCResourceLibraryApp.Layout
                             endActiveMenuKey = true;
                     }
 
-                    // view all data Ids
+
+                    else if (setConIntKey.Equals("b"))
+                    {
+                        endActiveMenuKey = true;
+                        NewLine(2);
+                        Format("The selected page has been shutdown for rework and maintenance. Please use the verification system instead.", ForECol.Warning);
+                        Pause();
+                    }
+                    // view all data Ids // REQUIRES A GREAT REWORK //
                     else if (setConIntKey.Equals("b") && librarySetup)
                     {
                         endActiveMenuKey = true;
@@ -1109,7 +1117,7 @@ namespace HCResourceLibraryApp.Layout
                         Dbg.NudgeIndent(stpgx, true);
                         foreach (ResContents resCon in _resLibrary.Contents)
                         {
-                            Dbg.LogPart(stpgx, $"From #{resCon.ShelfID} {$"'{resCon.ContentName}'", -30}  //  CBG :: ");
+                            Dbg.LogPart(stpgx, $"From #{resCon.ShelfID} {$"'{resCon.ContentName}'",-30}  //  CBG :: ");
                             for (int cbx = 0; cbx < resCon.ConBase.CountIDs; cbx++)
                             {
                                 string datID = RemoveLegendSymbols(resCon.ConBase[cbx]);
@@ -1151,8 +1159,8 @@ namespace HCResourceLibraryApp.Layout
 
                         /// i guess i just gotta do this now
                         if (_resLibrary.Contents.Count > viewAllDataIDs_SorterDelayNotice_contentCountLimit)
-                        FormatLine($"Sorting all data IDs... If you have a large library, this may take a few minutes...", ForECol.Accent);
-                        allDataIds = allDataIds.ToArray().SortWords(true);
+                            FormatLine($"Sorting all data IDs... If you have a large library, this may take a few minutes...", ForECol.Accent);
+                        allDataIds = allDataIds.ToArray().SortWords();
 
                         // print data IDs in categories by legend
                         if (legendKeys.HasElements() && legendDefs.HasElements() && allDataIds.HasElements())
@@ -1163,7 +1171,8 @@ namespace HCResourceLibraryApp.Layout
                             Dbg.Log(stpgx, "Printing Data ID categories; Data IDs in angled brackets '<>' are misc. IDs that required disassembling; ");
                             Dbg.NudgeIndent(stpgx, true);
                             int numOfDataIDsProcessed = 0;
-                            int lastSuccessfulFindIx = 0; /// this counter the no-find timer by skipping the ones that were found, also noting that it is sorted.
+                            //int lastSuccessfulFindIx = 0; /// this counter the no-find timer by skipping the ones that were found, also noting that it is sorted.
+                            int allDataIDsOGcount = allDataIds.Count;
 
                             for (int lx = 0; lx < legendKeys.Count; lx++)
                             {
@@ -1180,7 +1189,7 @@ namespace HCResourceLibraryApp.Layout
 
                                 ProgressBarInitialize(true, false, 25);
                                 int noFindTimer = 25;  /// they are all sorted, so if no more are found then this ends
-                                for (int dx = isMiscCategoryQ ? 0 : lastSuccessfulFindIx; dx < allDataIds.Count && noFindTimer > 0; dx++)
+                                for (int dx = /*isMiscCategoryQ ? 0 : lastSuccessfulFindIx*/ 0; dx < allDataIds.Count && noFindTimer > 0; dx++)
                                 {
                                     bool disableOrignalLogPrintQ = false;
                                     string datIDToPrint = "";
@@ -1208,7 +1217,7 @@ namespace HCResourceLibraryApp.Layout
                                             if (!legendKeysString.Contains($"{dk} ") && db.IsNotNE())
                                             {
                                                 datIDToPrint = datID;
-                                                
+
                                                 disableOrignalLogPrintQ = true;
                                                 Dbg.LogPart(stpgx, $"<{datIDToPrint}> ");
                                             }
@@ -1223,8 +1232,11 @@ namespace HCResourceLibraryApp.Layout
                                         dataIDCount++;
                                         numOfDataIDsProcessed++;
 
-                                        if (!isMiscCategoryQ)
-                                            lastSuccessfulFindIx = dx;
+                                        allDataIds.RemoveAt(dx);
+                                        dx = -1;
+
+                                        //if (!isMiscCategoryQ)
+                                        //    lastSuccessfulFindIx = dx;
                                     }
                                     else if (!isMiscCategoryQ)
                                         noFindTimer--;
@@ -1236,7 +1248,7 @@ namespace HCResourceLibraryApp.Layout
                                     /// Dividend :: (A - legend number) + (B - data Ids processed)
                                     /// Divider :: (A - legends count) + (B - all data Ids count)
                                     float dividend = lx + 1 + numOfDataIDsProcessed;
-                                    float divider = legendKeys.Count + allDataIds.Count;
+                                    float divider = legendKeys.Count + allDataIDsOGcount;
                                     ProgressBarUpdate(dividend / divider, true, false, progressBarLabel);
                                 }
 
@@ -1282,7 +1294,7 @@ namespace HCResourceLibraryApp.Layout
                                         }
                                     }
                                 }
-                                else Dbg.LogPart(stpgx, " .. No data IDs to condense .."); 
+                                else Dbg.LogPart(stpgx, " .. No data IDs to condense ..");
                                 Dbg.LogPart(stpgx, $" .. Counted '{dataIDCount}' data IDs; ");
 
                                 /// doesn't disappear until finished condensing
