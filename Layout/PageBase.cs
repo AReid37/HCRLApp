@@ -674,7 +674,7 @@ namespace HCResourceLibraryApp.Layout
                 FileChooserPage.SetInitialCursorPos();
 
             string input = Input(placeholder, _preferencesRef.Input);
-            Wait(0.1f); // this may help with the accidental skips...
+            Wait(0.15f); // this may help with the accidental skips...
 
             /// queue bug / idea page
             if (input == openBugIdeaPagePhrase && !IsEnterBugIdeaPageQueued())

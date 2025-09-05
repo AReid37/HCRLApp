@@ -12,7 +12,7 @@ namespace HCResourceLibraryApp
     public class Program
     {
         static readonly string consoleTitle = "High Contrast Resource Library App";
-        static readonly string developmentVersion = "[v1.3.4]";
+        static readonly string developmentVersion = "[v1.3.4a]";
         static readonly string lastPublishedVersion = "[v1.3.3e]";
         /// <summary>If <c>true</c>, the application launches for debugging/development. Otherwise, the application launches for the published version.</summary>
         public static readonly bool isDebugVersionQ = true;
@@ -215,7 +215,7 @@ namespace HCResourceLibraryApp
                         Clear();
 
                         // reminder and profile display
-                        BugIdeaSubmissionReminder();
+                        HintsAndReminders();
                         DisplayCurrentProfile();
                         
 
@@ -409,11 +409,22 @@ namespace HCResourceLibraryApp
                 }
             }            
         }
-        public static void BugIdeaSubmissionReminder()
+        public static void HintsAndReminders()
         {
-            if (Extensions.Random(0, 5) < 2)
+            int reminderHintRnd = Extensions.Random(0, 7);
+            string reminderHintMessage = null;
+
+            /// bug/idea reports
+            if (reminderHintRnd < 2)
+                reminderHintMessage = $"{Ind14}Report bugs or suggest ideas by entering the phrase '{openBugIdeaPagePhrase}' in any input.";
+            /// f11 if displays are wonky
+            if (reminderHintRnd == 5)
+                reminderHintMessage = "Double-press F11 to fix strange display issues on console.";
+
+
+            if (reminderHintMessage.IsNotNE())
             {
-                FormatLine($"{Ind14}Report bugs or suggest ideas by entering the phrase '{openBugIdeaPagePhrase}' in any input.", ForECol.Accent);
+                FormatLine(reminderHintMessage, ForECol.Accent);
                 if (HSNL(1, 5) >= 2)
                     NewLine();
             }

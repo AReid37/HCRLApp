@@ -21,7 +21,6 @@ GUIDELINES
 * Log decoding ends after every section has been identified and parsed.
 * Each log has a line limit of 1000 lines. Smaller log batches are encouraged. 
 * Use the following to bypass syntax-regulated characters in Added, Additional, or Updated sections:
-		'&00' for '-'
 		'&01' for ','
 		'&03' for '~'
 		'&99' for '' (no character)
@@ -29,7 +28,7 @@ GUIDELINES
 SECTIONS AND NEW SYNTAX
 * Each section is called by name on their own line, no additional parameters. They can be organized in any order in your log except the Version section which must be the first.
 * Fully capitalized words are keywords for logger to decode. Avoid using all capitals within your log that would match any of the keywords.
-* Each section must be preceeded by an empty line.
+* Each section must be preceeded and followed by an empty line.
 * For the syntaxes and explanations below: elements marked with '*' are required.
 
 
@@ -77,6 +76,7 @@ Example:
 	m> Lantern		AS i351 f10,26
 	Feather Bill AS i890 t178,179 p60~62
 	N&99P&99C 3	AS n2	
+	A&99SMandible	AS n5 p8
 
 
 _____
@@ -178,7 +178,7 @@ LX	{SummaryPart}*
 
 L1 : Summary section tag for identification.
 LX : Repeatable summary lines that summarize the additions or changes made in a version log.
-	- {SummaryPart} a single line the describes the (some of the) contents in a version log.
+	- {SummaryPart} a single line that describes (some of the) contents in a version log.
 
 Example: 
 	SUMMARY
@@ -192,8 +192,9 @@ Example:
 List of syntax-regulating keywords and symbols so far: 
 
 VERSION   MAJOR   MINOR   .
-REPLACE   WITH   AS   ~   ,
+ADDED   REPLACE   WITH   AS   ~   ,
 ADDITIONAL   TO   BY
+TTA   TCA
 UPDATED
 LEGEND
 SUMMARY

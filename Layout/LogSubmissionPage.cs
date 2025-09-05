@@ -469,6 +469,7 @@ namespace HCResourceLibraryApp.Layout
 
         }
         
+
         // public, so i may test it
         public static void DisplayLogInfo(LogDecoder logDecoder, bool showDecodeInfosQ)
         {
@@ -1207,17 +1208,18 @@ namespace HCResourceLibraryApp.Layout
                         if (!compactFormQ)
                         {
                             NewLine();
-                            Format($"{Ind34}'", ForECol.Normal);
+                            Format($"{Ind34}'");
                         }
+                        else Format("'");
 
-                        
+
                         if (isAdtq)
                             Format($"{(rlii.adtOptName.IsNE() ? "" : $"{rlii.adtOptName.Clamp(adtNameLim, "...")}; ")}{rlii.adtDataIDs.Clamp(adtIDsLim, "...")}", ForECol.Highlight);
                         else Format($"{rlii.updDataID}; {rlii.updShortDesc.Clamp((!rlii.isConnectedQ && !compactFormQ ? (int)(updtDescLim * 1.25f) : updtDescLim), "...")}", ForECol.Highlight);
 
                         if (rlii.isConnectedQ)
-                            Format($"' to '{rlii.connectionName}' by '{rlii.connectionDataID}", ForECol.Normal);                    
-                        FormatLine("'.", ForECol.Normal);
+                            Format($"' to '{rlii.connectionName}' by '{rlii.connectionDataID}");                    
+                        FormatLine("'.");
                     }
                 }
             }

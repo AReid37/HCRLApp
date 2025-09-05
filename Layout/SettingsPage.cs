@@ -625,6 +625,9 @@ namespace HCResourceLibraryApp.Layout
                                 HorizontalRule(cTHB, 0);
                                 Important($"Edit {options[optNum - 1]}");
 
+                                IncorrectionMessageQueue(null); /// to clear any leftover messages
+
+
                                 // version range edit
                                 if (optNum == 1)
                                 {
@@ -915,22 +918,9 @@ namespace HCResourceLibraryApp.Layout
                             }
                             else
                             {
-                                /// CONTEXT -> User chooses to exit page or run CIV process
-                                /// IF no input: 
-                                ///     IF (if CIV ran: prompt to move contents 'and' exit page; ELSE exit page)
-                                /// ELSE check data and run content integrity
                                 if (LastInput.IsNE())
-                                {
-                                    // tbd...
-                                    if (ranCIVq)
-                                    {
-                                        NewLine();
-                                        Format("-- [TBD] Prompt to move contents after running CIV goes here... -- ", ForECol.Accent);
-                                        Wait(1.2f);
-                                    }
-
                                     endActiveMenuKey = true;
-                                }
+
                                 else
                                 {
                                     NewLine();
@@ -1042,9 +1032,6 @@ namespace HCResourceLibraryApp.Layout
                                 else exitCivResultPageQ = true;
                             }
                             while (!exitCivResultPageQ);
-                            
-
-
                         }
                         else if (prepToRunCivq)
                         {
@@ -1052,6 +1039,20 @@ namespace HCResourceLibraryApp.Layout
                             Format($"{Ind24}Unable to collect and display CIV results. Please try again.", ForECol.Incorrection);
                             Pause();
                         }
+
+
+                        // Move validated CIV contents   /// just before fully exitting result page
+                        if (ranCIVq)
+                        {
+                            /// CONTEXT -> User chooses to exit civ results page
+                            /// IF CIV ran: prompt to move contents (IF allow moving contents: ...copy/move contents...);  
+                            /// ELSE continue to next page;
+
+                            NewLine();
+                            Format("-- [TBD] Prompt to move contents after running CIV goes here... -- ", ForECol.Accent);
+                            Wait(1.5f);
+                        }
+
 
                         /// exit page
                         if (!createdDisplayQ)

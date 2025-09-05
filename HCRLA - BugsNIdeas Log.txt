@@ -68,7 +68,7 @@
 
 [ ] 9# I changed the legend key in one of my previous logs and the contents I added didn't detect that change when went to overwrite that log. 
 
-[ ] 10# Visual bug, log submission ::  ## Connected updated: Dust; Edited dust parti...' to 'Dusts' by 'Dust'.  {Missing first openning single quote}
+[X] 10# Visual bug, log submission ::  ## Connected updated: Dust; Edited dust parti...' to 'Dusts' by 'Dust'.  {Missing first openning single quote}
 
 [ ] 11# ...
 
