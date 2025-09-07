@@ -12,7 +12,7 @@ namespace HCResourceLibraryApp
     public class Program
     {
         static readonly string consoleTitle = "High Contrast Resource Library App";
-        static readonly string developmentVersion = "[v1.3.4a]";
+        static readonly string developmentVersion = "[v1.3.4b]";
         static readonly string lastPublishedVersion = "[v1.3.3e]";
         /// <summary>If <c>true</c>, the application launches for debugging/development. Otherwise, the application launches for the published version.</summary>
         public static readonly bool isDebugVersionQ = true;
@@ -116,8 +116,7 @@ namespace HCResourceLibraryApp
         {
             // Lvl.0 - program launch
             Dbg.Initialize();
-            if (!runTest)
-                Dbg.SetThreadsKeywordSpamList("Extensions.", "PageBase.");
+            Dbg.SetThreadsKeywordSpamList("Extensions.", "PageBase.");
 
             bool restartProgram;
             do
@@ -443,8 +442,8 @@ namespace HCResourceLibraryApp
 
 
         // TESTING STUFF
-        static readonly bool runTest = false;
-        static readonly Tests testToRun = Tests.Extensions_SortWords;
+        static readonly bool runTest = true;
+        static readonly Tests testToRun = Tests.LogSubmissionPage_DisplayLogInfo_Legacy_Ex1;
         enum Tests
         {
             /// <summary>For random tests that need their own space, but no specific test name (variable tests)</summary>
@@ -459,10 +458,11 @@ namespace HCResourceLibraryApp
             Extensions_SortWords,
 
             LogDecoder_DecodeLogInfo,
-            LogSubmissionPage_DisplayLogInfo_Ex1,
-            LogSubmissionPage_DisplayLogInfo_Ex3,
-            LogSubmissionPage_DisplayLogInfo_AllTester,
-            LogSubmissionPage_DisplayLogInfo_ErrorTester,
+            LogSubmissionPage_DisplayLogInfo_Legacy_Ex1,
+            LogSubmissionPage_DisplayLogInfo_Legacy_Ex3,
+            LogSubmissionPage_DisplayLogInfo_Legacy_AllTester,
+            LogSubmissionPage_DisplayLogInfo_Legacy_ErrorTester,
+            LogSubmissionPage_DisplayLogInfo_Ex1B,
 
             ContentValidator_Validate,
 
@@ -704,19 +704,25 @@ namespace HCResourceLibraryApp
                             logDecoder_.DecodeLogInfo(testLogData);
                 }
                 /// Log Submission Page
-                else if (testToRun == Tests.LogSubmissionPage_DisplayLogInfo_Ex1 || testToRun == Tests.LogSubmissionPage_DisplayLogInfo_Ex3 || testToRun == Tests.LogSubmissionPage_DisplayLogInfo_AllTester || testToRun == Tests.LogSubmissionPage_DisplayLogInfo_ErrorTester)
+                else if (testToRun.GetHashCode().IsWithin(Tests.LogSubmissionPage_DisplayLogInfo_Legacy_Ex1.GetHashCode(), Tests.LogSubmissionPage_DisplayLogInfo_Ex1B.GetHashCode()))
                 {
                     hasDebugQ = false;
                     TextLine("Displays information from a log decoder", Color.DarkGray);
 
-                    bool locationSet;
-                    if (testToRun == Tests.LogSubmissionPage_DisplayLogInfo_Ex1)
-                        locationSet = SetFileLocation(@"C:\Users\ntrc2\source\repos\HCResourceLibraryApp\TextFileExtras\HCRLA - Ex1 Version Log.txt");
-                    else if (testToRun == Tests.LogSubmissionPage_DisplayLogInfo_Ex3)
-                        locationSet = SetFileLocation(@"C:\Users\ntrc2\source\repos\HCResourceLibraryApp\TextFileExtras\HCRLA - Ex3 Version Log.txt");
-                    else if (testToRun == Tests.LogSubmissionPage_DisplayLogInfo_ErrorTester)
-                        locationSet = SetFileLocation(@"C:\Users\ntrc2\source\repos\HCResourceLibraryApp\TextFileExtras\HCRLA - Error Tester Version Log.txt");
-                    else locationSet = SetFileLocation(@"C:\Users\ntrc2\source\repos\HCResourceLibraryApp\TextFileExtras\HCRLA - All-Tester Version Log.txt");
+                    const string parentDir = @"C:\Users\ntrc2\source\repos\HCRLApp\TextFileExtras\VerLogs\";
+                    bool locationSet = testToRun switch
+                    {
+                        /// legacy tests
+                        Tests.LogSubmissionPage_DisplayLogInfo_Legacy_Ex1 => SetFileLocation(parentDir + "HCRLA - Ex1 Version Log.txt"),
+                        Tests.LogSubmissionPage_DisplayLogInfo_Legacy_Ex3 => SetFileLocation(parentDir + "HCRLA - Ex3 Version Log.txt"),
+                        Tests.LogSubmissionPage_DisplayLogInfo_Legacy_ErrorTester => SetFileLocation(parentDir + "HCRLA - Error Tester Version Log.txt"),
+                        Tests.LogSubmissionPage_DisplayLogInfo_Legacy_AllTester => SetFileLocation(parentDir + "HCRLA - All-Tester Version Log.txt"),
+
+                        /// syntax v2 tests
+                        Tests.LogSubmissionPage_DisplayLogInfo_Ex1B => SetFileLocation(parentDir + "HCRLA VL2 Ex1b.txt"),
+
+                        _ => false
+                    };
 
                     if (locationSet)
                         if (FileRead(null, out string[] testLogData))
