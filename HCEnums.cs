@@ -23,6 +23,10 @@ namespace HCResourceLibraryApp.DataHandling
     /// <summary>Specifies to which category of information a <see cref="DecodeInfo"/> instance corresponds.</summary>
     public enum DecodedSection
     {
+        /// <summary>Main Decoding (not actually a section)</summary>
+        MainDecoding,
+
+
         /// <summary>Version</summary>
         Version,
         /// <summary>Added</summary>

@@ -7,7 +7,7 @@ Functionally similar to first, objectively less headache.
 This file is only for describing the new log template syntax. 
 Create a new file and follow the guidelines described below.
 
-The original syntax will remain functional but is highly advised against as it is considerably limited in capabilities and may be unpredictable at times. The new syntaxes are designed to be robust and efficient.
+The original (legacy) syntax will remain functional but is highly advised against as it is considerably limited in capabilities and may be unpredictable at times. The new syntaxes are designed to be robust and efficient.
 -- !close --
 
 
@@ -17,24 +17,24 @@ COMMENTING
 * A multiline log comment starts with '-- !open --' and ends with '-- !close --', each on a line of their own.
 
 GUIDELINES
-* The '%' character is not accepted within logs, will invalidate your log.
+* The '%' character is not accepted within logs; any log lines containing this symbol will be skipped.
 * Log decoding ends after every section has been identified and parsed.
-* Each log has a line limit of 1000 lines. Smaller log batches are encouraged. 
-* Use the following to bypass syntax-regulated characters in Added, Additional, Updated, or Summary sections:
+* Each log has a line limit of 1250 lines. Smaller log batches are encouraged. 
+* Use the following to bypass syntax-regulated characters in Added, Additional, or Updated sections:
 		'&01' for ','
 		'&03' for '~'
 		'&99' for '' (no character)
 
 SECTIONS AND NEW SYNTAX
-* Each section is called by name on their own line, no additional parameters. They can be organized in any order in your log except the Version section which must be the first.
+* Each section is called by name on their own line, no additional parameters. They are to remain in the order by which they are explained below.
 * Fully capitalized words are keywords for logger to decode. Avoid using all capitals within your log that would match any of the keywords.
 * Each section must be preceeded and followed by an empty line.
 * For the syntaxes and explanations below: elements marked with '*' are required.
-* The following sections must be completed to have a submittable log: Version, Added, TTA/TCA, Legend, Summary
+* The following sections are not required for a complete log submission: Additional, Updated
 
 USING LEGACY DECODER SYNTAX
 * The logger will assume usage of the newer syntax (v2). Although advised against, the legacy syntax is still supported.
-* To use the legacy decoder, the original syntax declaration "Version ([Version : a.bb])" must be at the top of the log. The syntax will automatically detect which syntax to use based on this.
+* To use the legacy decoder, the original syntax declaration "Version ([Version : a.bb])" must be at the top of the log. The syntax is automatically detected based on this.
 
 
 _____
@@ -71,7 +71,7 @@ LX : Repeatable added content lines which adds the new content by internal name 
 	- {InternalName} name of content being added, cannot be plain numbers and must not be the data ids.
 	- {DataIDs} the data ids that identify this added content, cannot be plain numbers and must not be internal name.
 	NOTE: You may use any {placeholders} defined earlier within either of the two parameters above. 
-	NOTE FOR DATA IDS: Your data ID type must match with the items in the Legend section. Multiple ids are seperated by spaces, and groups of the same type can be condensed as 'x#,#' or 'x#~#'. 
+	NOTE FOR DATA IDS: Your data ID type must match with the items in the Legend section. Multiple ids are seperated by spaces, and groups of the same type can be condensed as 'x#,#' or 'x#~#'. Warning: Do NOT combine these grouping syntaxes (such as x#,#~#).
 	NOTE FOR INTERNAL NAME: The logger will attempt to capitalize and space your internal content names. Using the '&99' before certain characters can be used to negate this effect.
 
 Example:
@@ -80,7 +80,7 @@ Example:
 	REPLACE # WITH t32
 	m> Chair		AS i345 #
 	m> Lantern		AS i351 f10,26
-	Feather Bill AS i890 t178,179 p60~62
+	Feather Bill AS i890 t178,179 p60~62 p65,66
 	N&99P&99CTres AS n2 npc_two
 
 
@@ -96,7 +96,7 @@ LX : Repeatable additional content lines which adds the related to an existing c
 	- {OptName} an optional name for this group of additional content, cannot be related internal name or plain numbers.
 	- {RelatedInternalName} the internal name of the existing object the data IDs are to be paired with, cannot be plain numbers and must match with related data ID provided.
 	- {RelatedDataID} the single data ID which the additional data IDs are related, cannot be plain numbers.
-	NOTE FOR DATA IDS: Your data ID type must match with the items in the Legend section. Multiple ids are seperated by spaces, and groups of the same type can be condensed as 'x#,#' or 'x#~#'. 
+	NOTE FOR DATA IDS: Your data ID type must match with the items in the Legend section. Multiple ids are seperated by spaces, and groups of the same type can be condensed as 'x#,#' or 'x#~#'. Warning: Do NOT combine these grouping syntaxes (such as x#,#~#).
 	NOTE FOR OPTIONAL AND RELATED INTERNAL NAME: The logger will attempt to capitalize and space your internal content names. Using the '&99' before certain characters can be used to negate this effect.
 
 Example: 
@@ -105,7 +105,7 @@ Example:
 	t46,47 AS TO Marshwood Lantern BY i351
 	WaterMelonChunk2 BY i167
 
-	NOTE: Notice that some keywords that don't have an arguement are still included. It is encouraged to do so for readability sake until a good understanding of the syntax. If the keyword is not followed by an arguement (or value) it may be omitted. 
+	NOTE: Keywords that don't have an arguement can be either included or omitted. Encouraged to include until having a good understanding of syntax.
 
 
 _____
@@ -146,8 +146,7 @@ Example:
 	PotPie BY t23 WITH Changed texture to match new item design
 	t23 WITH Fixed an issue where parts of the texture were missing
 
-	NOTE: Notice that some keywords that don't have an arguement are still included. It is encouraged to do so for readability sake until a good understanding of the syntax. If the keyword is not followed by an arguement (or value) it may be omitted. 
-	
+	NOTE: Keywords that don't have an arguement can be either included or omitted. Encouraged to include until having a good understanding of syntax.
 
 _____
 "Legend": A list of the relavant symbols (for data IDs or miscellaneous information) used in this version log.
@@ -170,7 +169,7 @@ Example:
 	LEGEND
 	i	AS Item
 	t	AS Tiles
-	f AS Item Flame
+	tt AS Tree Tops
 	* AS Introduced In Earlier Version
 
 
@@ -204,3 +203,11 @@ LEGEND
 SUMMARY
 
 -- !close --
+
+
+-- !open -- 
+LINK TO STEAM TEXT FORMATTING
+https://steamcommunity.com/comment/Guide/formattinghelp
+-- !close --
+
+-- This file is included in publish --

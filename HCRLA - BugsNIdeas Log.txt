@@ -40,7 +40,7 @@
 
 [X] 15# The SortWords method seems to be jamming up and slowing down some processes. Will have to rework for larger list of words. I think implementing some sort of mass skip per check will do the trick. For example, with a growing list of over 10 elements to compare, the comparison can skip to every 10th until the word is to be placed before. One the last iteration of 10's gap, the iteration back cycles and compares those last 10s to find where that word should be inserted.
 
-[ ] 16# A revamped and simplified syntax for version logs. The current version log template and syntax has some redundancies that tend to become clutter. The syntax does not change the information that is to be decoded, but the way to input the logs information. This should be done especially if planning to publicize this application.
+[X] 16# A revamped and simplified syntax for version logs. The current version log template and syntax has some redundancies that tend to become clutter. The syntax does not change the information that is to be decoded, but the way to input the logs information. This should be done especially if planning to publicize this application.
 
 [ ] 17# The view all data IDs is the worst known page to man. Fix it. I'd be stuck for over 15 minutes just waiting for the entire thing to actually print out. I'd rather use the flippin' content verification system than the junk this thing is. 
 
@@ -134,7 +134,8 @@
 [ ] 25# Ability to submit a version log only to check for syntax and compile errors without going through full submission process
 
 [ ] 26# Can the middle page in log submission telling me about the "few stages to submission" be skipped? I've submitted like 10 logs and its starting to get annoying. That ontop of the triple confirmation with the "enter any key to continue submission thing"
-    DEV_NOTE I'll just count the number of log submission made and let it disappear after the first few submission (after 3 submits you've definitely got the idea!). The enter to continue exists to safegaurd accidental doubled-inputs on "Enter". I'll look into a way to alleviate this issue across the whole program (Idea, delay after pressing "Enter", lol)
+    DEV_NOTE I'll just count the number of log submission made and let it disappear after the first few submission (after 3 submits you've definitely got the idea!). The enter to continue exists to safegaurd accidental doubled-inputs on "Enter". I'll look into a way to alleviate this issue across the whole program (Idea, delay after pressing "Enter", lol). 
+    DEV_NOTE Nevermind, this will be added to preferences settings
 
 [ ] 27# ...
 
@@ -145,6 +146,7 @@
 [X] 2# I think the library search page is pretty awesome at its job. If possible, I'd like to see a filter specifically for data ids. It can get pretty tough sorting through a thousand entries and having all the content names and stuff mixed in to the fray.
 
 [ ] 3# Library Search idea. When a search result pops up, using displaying the first (expanded) data ID of the item could be really helpful and really cool. For example, the Dirt Block would show its first data ID like 'Item_0'.
+        DEV_NOTE May do you one better: a preference option to include first few data IDs at end of search result lines (for base content result only). It has to be preferences because it is not a search filter option
 
 [ ] 4# The file reversion thing is cool but is there a way to save a specific, non-overwritten file that I can guarantee as a safe return place? That wouuld be hella cool if I could do that.
 

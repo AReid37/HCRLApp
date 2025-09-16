@@ -3,7 +3,20 @@ HCRLA Version Log Syntax v2, Example Log 1B
 	PURPOSE: 
 	Correctly entered version log syntax. Tests for ideal function with respect to legacy decoding
 	Matches with the Example 1 Log for legacy syntax
+
+	1st test
 -- !close --
+
+
+
+-- the following are solely for a test for invalid character proper detection (and main decoding section)
+%
+-- %
+-- !open --
+%
+-- !close --
+
+
 
 
 -- -- --
@@ -24,6 +37,7 @@ Walnut			AS i79 t115
 Almond			AS i77 t113
 Large Macadamia Nut AS i80 t117,118
 Garlic Clove	AS i69 d11 t46~48
+-- Counted '26' ids from #1 to #10
 -- #11
 Turnip			AS i14 p1 d6,7
 AppleSauce Block AS i68 t68
@@ -35,12 +49,17 @@ Steamed t>		AS i103 t95
 Rice			AS i9 t14` p5
 Lettuce			AS i214 t172
 Apple			AS i24 t18`,18_2`
+-- Counted '23' ids from #11 to #20
 -- #21
 Bluberry		AS i42 p6
 Passion Fruit	AS i43 t31
 Strawberry		AS i115 t128
 -- from legacy additional section --
-Grains Biome Backgrounds AS b5,11',13,19~21
+-- Grains Biome Backgrounds AS b5,11`,13,19~21   
+--		^^						^^ this is a grouping syntax error, should be noted and warned in decoding messages, proper way below
+Grains Biome Backgrounds AS b5,11`,13 b19~21
+-- Counted '12' ids from #21 to #24
+
 
 ADDITIONAL
 t23 AS Mashed Potato TO Potato BY i34
@@ -50,12 +69,20 @@ d18 AS Garlic Stem TO GarlicClove BY t46
 AppleSauce_Chunks TO BY i68
 t56 AS OnionShell BY i76
 d29,30 AS Tomato Stem Dust BY t93
+-- Counted '8' ids from this section
 
 TTA
 70
+-- !open --
+	I counted 69 data IDs, original says there are 70, verification says there's 67  ... oh boi
+	This issue has been figured out above: a grouping syntax error x#,#~#
+
+	Recounting all the data IDs above: 26 + 23 + 12 + 8 = 69
+	Okay, so I think the legacy decoder also counted IDs incorrectly. We shall see in other tests
+-- !close --
 
 UPDATED
--- n/a
+-- n/a  -- could also be omitted entirely
 
 LEGEND
 i AS Item

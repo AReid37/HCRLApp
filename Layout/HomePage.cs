@@ -19,6 +19,7 @@ namespace HCResourceLibraryApp.Layout
             Program.LogState("Title Page");
             bool riggedStyleIndexQ = rigStyleSheetIndex != -1;
             bool colorsAsRGBq = riggedStyleIndexQ && rigDefaultCols;
+            bool foolProofPrintingQ = !Program.isDebugVersionQ || riggedStyleIndexQ; /// since it doesn't print right on release for some reason
             const int inkCount = 12;
             const string _10thInkKey = "-", _11thInkKey = ".";
             /// INKING IDS
@@ -616,7 +617,7 @@ namespace HCResourceLibraryApp.Layout
                             // center align style                            
                             int bufferWidth = Console.WindowWidth;
                             int lineWidth = chosenStyle[csi].Length * 2;
-                            int padding = (bufferWidth - lineWidth) / 2; //(int)((bufferWidth - lineWidth) / 4f);
+                            int padding = (bufferWidth - lineWidth) / 2 - (foolProofPrintingQ ? 1 : 0); //(int)((bufferWidth - lineWidth) / 4f);
                             string styleLine;
                             /// indent
                             if (padding > 0)
@@ -634,6 +635,9 @@ namespace HCResourceLibraryApp.Layout
                             // print style
                             for (int csix = 0; csix < styleLine.Length; csix++)
                             {
+                                if (csix == 0 && foolProofPrintingQ)
+                                    Text(" "); // Text(">");
+
                                 HPInk? inkToUse = GetInk(styleLine[csix].ToString());
                                 if (inkToUse.HasValue)
                                 {

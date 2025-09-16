@@ -131,3 +131,5 @@ Syntax: > {SummaryPart}*
 LINK TO STEAM TEXT FORMATTING
 https://steamcommunity.com/comment/Guide/formattinghelp
 -- !close --
+
+-- This file is included in publish --

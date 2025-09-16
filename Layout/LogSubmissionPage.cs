@@ -68,15 +68,23 @@ namespace HCResourceLibraryApp.Layout
                         - Processed version log review (decoded)
                  */
 
+                string input = null;
                 Program.LogState(logStateParent + "|Submit A Log");
-                Clear();
-                Title("Submit a Version Log", subMenuUnderline, 1);
-                FormatLine($"{Ind14}There are a few stages to submitting a version log:", ForECol.Normal);
-                List(OrderType.Ordered_Numeric, "Provide file path to log,Original log review (raw),Processed log review (decoded)".Split(','));
-                NewLine();
 
-                Format($"{Ind24}Enter any key to continue to log submission >> ", ForECol.Normal);
-                string input = StyledInput(null);
+                // initial introductory section  // skipped if library has at least 10 contents (easy pass)
+                if (!mainLibrary.Contents.HasElements(10))
+                {
+                    Clear();
+                    Title("Submit a Version Log", subMenuUnderline, 1);
+                    FormatLine($"{Ind14}There are a few stages to submitting a version log:", ForECol.Normal);
+                    List(OrderType.Ordered_Numeric, "Provide file path to log,Original log review (raw),Processed log review (decoded)".Split(','));
+                    NewLine();
+                    Format($"{Ind24}Enter any key to continue to log submission >> ", ForECol.Normal);
+                    input = StyledInput(null);
+                }
+                else input = LastInput;
+
+                // log submission section
                 if (input.IsNotNEW())
                 {
                     LogDecoder logDecoder = new();
@@ -85,8 +93,8 @@ namespace HCResourceLibraryApp.Layout
                     const char minorChar = '-';
                     while (stageNum <= 3 && !stopSubmission)
                     {
-                        string[] stageNames = 
-                        { 
+                        string[] stageNames =
+                        {
                             "Provide File Path", "Log Review (Raw)", "Log Review (Decoded)"
                         };
                         string stageName = stageNames[stageNum - 1];
@@ -143,7 +151,7 @@ namespace HCResourceLibraryApp.Layout
                                 // validation
                                 if (inputPath.Contains(":\\"))
                                 {
-                                    if (inputPath.Replace(":\\","").Contains("\\"))
+                                    if (inputPath.Replace(":\\", "").Contains("\\"))
                                     {
                                         if (inputPath.Contains("."))
                                         {
@@ -176,7 +184,7 @@ namespace HCResourceLibraryApp.Layout
                                 IncorrectionMessageQueue("No path entered.");
                                 stopSubmission = true;
                             }
-                            
+
                             /// file path confirmation
                             if (validPath)
                             {
@@ -189,7 +197,7 @@ namespace HCResourceLibraryApp.Layout
                                 Confirmation($"{Ind14}Confirm path submission? \n{Ind24}Yes / No >> ", false, out bool yesNo);
 
                                 if (yesNo)
-                                {                                    
+                                {
                                     pathToVersionLog = inputPath;
                                     SetFileLocation(pathToVersionLog);
                                     LogDecoder.RecentDirectory = Directory;
@@ -214,7 +222,7 @@ namespace HCResourceLibraryApp.Layout
                                     // display file info
                                     bool omitBlock = false;
                                     for (int lx = 0; lx < logLines.Length; lx++)
-                                    {                                        
+                                    {
                                         string line = logLines[lx];
                                         /// omit block detect
                                         if (line.StartsWith(LogDecoder.omitBlockOpen))
@@ -226,9 +234,9 @@ namespace HCResourceLibraryApp.Layout
                                             NewLine();
                                         /// omit line detect
                                         bool omit = line.StartsWith(LogDecoder.omit);
-                                        bool invalidLine = line.Contains(DataHandlerBase.Sep);                                                                                      
+                                        bool invalidLine = line.Contains(DataHandlerBase.Sep);
 
-                                        FormatLine(line, invalidLine? ForECol.Incorrection : (omit || omitBlock ? ForECol.Normal : ForECol.Highlight));
+                                        FormatLine(line, invalidLine ? ForECol.Incorrection : (omit || omitBlock ? ForECol.Normal : ForECol.Highlight));
                                     }
                                     HorizontalRule(minorChar, 1);
 
@@ -241,7 +249,7 @@ namespace HCResourceLibraryApp.Layout
                                         stagePass = true;
                                     else stageNum = 1;
                                     ConfirmationResult(yesNo, $"{Ind34}", "Version log contents have been confirmed.", "Version log contents unconfirmed. Returning to previous stage.");
-                                }                             
+                                }
                             }
                             else
                                 DataReadingIssue();
@@ -249,7 +257,7 @@ namespace HCResourceLibraryApp.Layout
                         }
                         // 3 - processed log review (decoded)
                         else if (stageNum == 3)
-                        {     
+                        {
                             bool unallowStagePass = false;
                             if (!logDecoder.HasDecoded)
                             {
@@ -293,7 +301,7 @@ namespace HCResourceLibraryApp.Layout
 
                                     if (tangentLibrary != null)
                                     { /// wrapping
-                                        /// IF; integrate overwrite - evaluation
+                                      /// IF; integrate overwrite - evaluation
                                         if (logDecoder.OverwriteWarning)
                                         {
                                             tangentLibrary.Overwrite(logDecoder.DecodedLibrary, out ResLibOverwriteInfo[] resLibOverInfoDock, out ResLibIntegrationInfo[] looseIntegrationInfoDock);
@@ -427,7 +435,7 @@ namespace HCResourceLibraryApp.Layout
                                     NewLine();
                                     FormatLine($"{Ind24}Hint: {possibleReason}", ForECol.Incorrection);
                                     Format($"{Ind34}Also ensure all sections are separated from each other.", ForECol.Incorrection);
-                                }    
+                                }
                                 Pause();
                             }
 
@@ -435,7 +443,7 @@ namespace HCResourceLibraryApp.Layout
                                 stagePass = true;
                         }
 
-                                                
+
                         /// pause and continue
                         if (stageNum < 3 && stagePass)
                         {
@@ -656,6 +664,7 @@ namespace HCResourceLibraryApp.Layout
                         ForECol colSourceLine = ForECol.Accent, colIssueMsg = ForECol.Incorrection, colResultMsg = ForECol.Correction;
 
                         ResLibrary decLibrary = logDecoder.DecodedLibrary;
+                        bool isUsingLegacyDecodeQ = logDecoder.LegacyDecoding;
                         const int sectionNewLines = 1;
                         const string looseContentIndicator = "{l~}";
                         DecodedSection[] sections = (DecodedSection[])typeof(DecodedSection).GetEnumValues();
@@ -664,18 +673,41 @@ namespace HCResourceLibraryApp.Layout
                             List<string> reviewTexts = new();
                             string sectionName = section.ToString();
 
+                            // need to find a way to display both legacy and current without breaking either
+                            if (!isUsingLegacyDecodeQ)
+                            {
+                                if (section == DecodedSection.TTA)
+                                    reviewTexts.Add(sectionName);
+                                else reviewTexts.Add(LogDecoder.FixContentName(sectionName, false).ToUpper());
+                            }
+                            else
+                            {
+                                /// legacy does its own thing for: version, tta  (main decoding DNE in legacy)
+                                if (section != DecodedSection.Version && section != DecodedSection.TTA && section != DecodedSection.MainDecoding)
+                                    reviewTexts.Add(LogDecoder.FixContentName(sectionName).ToUpper());
+                            }
+
+
                             // get text to print
+                            /// MAIN DECODING
+                            if (section == DecodedSection.MainDecoding)
+                            {
+                                /// Legacy does not have a "Main Decoding" section, so manually (and always) recommend using newer syntax
+                                if (isUsingLegacyDecodeQ)
+                                {
+                                    reviewTexts.Add(LogDecoder.FixContentName(sectionName).ToUpper());
+                                }
+                            }
+
                             /// VERSION 
                             if (section == DecodedSection.Version)
                             {
                                 /** VER FORMAT
                                     Version Number: 1.02
                                  */
-                                //ResContents anyRC = decLibrary.Contents[0];
-                                //if (anyRC.IsSetup())
-                                //    reviewTexts.Add($"Version Number: {anyRC.ConBase.VersionNum.ToStringNumbersOnly()}");
-                                reviewTexts.Add($"Version Number: {decLibrary.Summaries[0].SummaryVersion.ToStringNums()}");
-
+                                if (isUsingLegacyDecodeQ)
+                                    reviewTexts.Add($"Version Number: {decLibrary.Summaries[0].SummaryVersion.ToStringNums()}");
+                                else reviewTexts.Add(decLibrary.Summaries[0].SummaryVersion.ToStringNums());
                             }
                             /// ADDED
                             if (section == DecodedSection.Added)
@@ -688,7 +720,9 @@ namespace HCResourceLibraryApp.Layout
                                     #4 Large Macadamia Nut	i80 t117 t118
                                  */
 
-                                reviewTexts.Add(sectionName.ToUpper());
+                                //if (isUsingLegacyDecodeQ)
+                                //    reviewTexts.Add(sectionName.ToUpper());
+                                /// getting added info
                                 int addedItemNum = 1;
                                 for (int aix = 0; aix < decLibrary.Contents.Count; aix++)
                                 {
@@ -696,11 +730,6 @@ namespace HCResourceLibraryApp.Layout
                                     if (resCon.IsSetup())
                                         if (resCon.ContentName != ResLibrary.LooseResConName)
                                         {
-                                            //const int autoPadNum = 16;
-                                            //int conNameLen = resCon.ContentName.Length;
-                                            //int padFactor = (int)Math.Ceiling((conNameLen) / (float)autoPadNum);
-                                            //reviewTexts.Add($"#{aix, -2} {resCon.ContentName.PadRight(padFactor * autoPadNum)}{Ind14}{resCon.ConBase.DataIDString}");
-
                                             reviewTexts.Add($"#{addedItemNum} {resCon.ContentName} {Ind14}{resCon.ConBase.DataIDString}");
                                             addedItemNum++;
                                         }
@@ -716,7 +745,7 @@ namespace HCResourceLibraryApp.Layout
                                  */
 
                                 // connected ConAddits
-                                reviewTexts.Add(sectionName.ToUpper());
+                                //reviewTexts.Add(sectionName.ToUpper());
                                 List<string> rTextsMatcher = new()
                                 {
                                     sectionName.ToUpper()
@@ -747,42 +776,50 @@ namespace HCResourceLibraryApp.Layout
                                         }
                                 }
 
-                                // reorganize reviewTexts order just for additionals
-                                string[] newReviewTexts = new string[reviewTexts.Count];
-                                for (int nrx = 0; nrx < reviewTexts.Count && reviewTexts.Count == rTextsMatcher.Count; nrx++)
-                                {
-                                    string ogReviewText = reviewTexts[nrx];
-                                    string rtMatcher = rTextsMatcher[nrx];
+                                /// can i just skip this if not legacy build, for the purpose of this is confusing... so confusing, it LOOKS REDUNDANT
+                                /// I suspect this is for conAddits that became conBase, which is no longer supported in log syntax v2
+                                #region what_is_this_region_of_redundancy_questionMark_?
+                                //// reorganize reviewTexts order just for additionals
+                                //string[] newReviewTexts = new string[reviewTexts.Count];
+                                //for (int nrx = 0; nrx < reviewTexts.Count && reviewTexts.Count == rTextsMatcher.Count; nrx++)
+                                //{
+                                //    string ogReviewText = reviewTexts[nrx];
+                                //    string rtMatcher = rTextsMatcher[nrx];
 
-                                    bool foundMatch = false;
-                                    int trueIx = -1;
-                                    if (nrx != 0)
-                                    {
-                                        for (int dx = 0; !foundMatch; dx++)
-                                        {
-                                            DecodeInfo decodeInfo = logDecoder.GetDecodeInfo(section, dx, out _);
-                                            if (decodeInfo.resultingInfo.Contains(rtMatcher))
-                                            {
-                                                trueIx = dx;
-                                                foundMatch = true;
-                                            }
-                                        }
-                                    }
-                                    else
-                                    {
-                                        // just for the header
-                                        foundMatch = true;
-                                        trueIx = 0;
-                                    }
+                                //    bool foundMatch = false;
+                                //    int trueIx = -1;
+                                //    if (nrx != 0)
+                                //    {
+                                //        for (int dx = 0; !foundMatch; dx++)
+                                //        {
+                                //            DecodeInfo decodeInfo = logDecoder.GetDecodeInfo(section, dx, out _);
+                                //            if (decodeInfo.IsSetup())
+                                //            {
+                                //                if (decodeInfo.resultingInfo.Contains(rtMatcher))
+                                //                {
+                                //                    trueIx = dx;
+                                //                    foundMatch = true;
+                                //                }
+                                //            }
+                                //            else break; /// not sure what's happening here, with the entire loop
+                                //        }
+                                //    }
+                                //    else
+                                //    {
+                                //        // just for the header
+                                //        foundMatch = true;
+                                //        trueIx = 0;
+                                //    }
 
-                                    if (foundMatch && trueIx.IsWithin(0, newReviewTexts.Length - 1))
-                                        newReviewTexts[trueIx] = ogReviewText;
-                                }
-                                if (newReviewTexts.HasElements())
-                                {
-                                    reviewTexts.Clear();
-                                    reviewTexts.AddRange(newReviewTexts);
-                                }
+                                //    if (foundMatch && trueIx.IsWithin(0, newReviewTexts.Length - 1))
+                                //        newReviewTexts[trueIx] = ogReviewText;
+                                //}
+                                //if (newReviewTexts.HasElements())
+                                //{
+                                //    reviewTexts.Clear();
+                                //    reviewTexts.AddRange(newReviewTexts);
+                                //}
+                                #endregion
                             }
                             /// TTA
                             if (section == DecodedSection.TTA)
@@ -792,7 +829,9 @@ namespace HCResourceLibraryApp.Layout
                                  */
                                                                 
                                 SummaryData summary = decLibrary.Summaries[0];
-                                reviewTexts.Add($"TTA: {summary.TTANum}");
+                                if (isUsingLegacyDecodeQ)
+                                    reviewTexts.Add($"TTA: {summary.TTANum}");
+                                else reviewTexts.Add(summary.TTANum.ToString());
                             }
                             /// UPDATED
                             if (section == DecodedSection.Updated)
@@ -806,8 +845,9 @@ namespace HCResourceLibraryApp.Layout
                                  */
 
                                 //reviewTexts.Add($"{sectionName.ToUpper()} [loose]");
-                                reviewTexts.Add(sectionName.ToUpper());
+                                //reviewTexts.Add(sectionName.ToUpper());
                                 ResContents looseResCon = decLibrary.Contents[0];
+                                /// there is also a copy of self-connected updated infos in the looseResCon CC list
                                 if (looseResCon.ContentName == ResLibrary.LooseResConName)
                                 {
                                     if (looseResCon.ConChanges.HasElements())
@@ -837,7 +877,7 @@ namespace HCResourceLibraryApp.Layout
                                     `/LOTB
                                  */
 
-                                reviewTexts.Add(sectionName.ToUpper());
+                                //reviewTexts.Add(sectionName.ToUpper());
                                 if (decLibrary.Legends.HasElements())
                                 {
                                     foreach (LegendData legDat in decLibrary.Legends)
@@ -858,7 +898,7 @@ namespace HCResourceLibraryApp.Layout
                                     - Nuts, Mash Potato redesign, Spoiled Potato redesign
                                     - Grains Biome Backgrounds
                                  */
-                                reviewTexts.Add(sectionName.ToUpper());
+                                //reviewTexts.Add(sectionName.ToUpper());
                                 SummaryData summary = decLibrary.Summaries[0];
                                 if (summary.IsSetup())
                                 {
@@ -872,16 +912,42 @@ namespace HCResourceLibraryApp.Layout
                             if (reviewTexts.HasElements())
                             {
                                 /// text printing
-                                bool bypassLoopMax = showDecodeInfosQ == true;
+                                bool bypassLoopMax = showDecodeInfosQ == true, warnedOfLegacyQ = false;
+                                int rtxOffset = 0;
                                 for (int rtx = 0; rtx < reviewTexts.Count || bypassLoopMax; rtx++)
                                 {
                                     DecodeInfo decodeInfo = logDecoder.GetDecodeInfo(section, rtx, out int issueCount);
+                                    
+                                    /// legacy decoding issue, manual entry
+                                    if (isUsingLegacyDecodeQ && !warnedOfLegacyQ && section == DecodedSection.MainDecoding)
+                                    {
+                                        decodeInfo = new("n/a", DecodedSection.MainDecoding.ToString());
+                                        decodeInfo.decodeIssue = "Using the legacy logging syntax is not recommended.";
+                                        issueCount = 1;
+
+                                        warnedOfLegacyQ = true;
+                                    }
+
+                                    /// special no-review-print cases (not legacy)
+                                    /// 1. Added: placehohlder/substituiton replacements
+                                    bool printNonReviewLineQ = false;
+                                    if (decodeInfo.logLine.IsNotNEW() && !isUsingLegacyDecodeQ)
+                                    { /// mostly just a wrapper
+
+                                        // for Added: PH/SUB lines
+                                        if (showDecodeInfosQ && section == DecodedSection.Added && decodeInfo.logLine.Trim().StartsWith(LogDecoder.Keyword_Replace))
+                                            printNonReviewLineQ = true;
+
+
+                                        if (printNonReviewLineQ)
+                                            rtxOffset += 1;
+                                    }
 
                                     /// review line
                                     bool reviewLinePrintedQ = false;
-                                    if (rtx < reviewTexts.Count)
+                                    if (rtx - rtxOffset < reviewTexts.Count && !printNonReviewLineQ)
                                     {
-                                        string rtext = reviewTexts[rtx].ToString();
+                                        string rtext = reviewTexts[rtx - rtxOffset].ToString();
                                         Format(rtext, colReviewLine);
                                         reviewLinePrintedQ = true;
                                     }
@@ -889,7 +955,8 @@ namespace HCResourceLibraryApp.Layout
                                     /// section issues count
                                     if (rtx == 0)
                                         Format($" {{!{issueCount}}}", colIssueNumber);
-                                    NewLine();
+                                    if (!printNonReviewLineQ) 
+                                        NewLine();
 
                                     if (showDecodeInfosQ)
                                     {
@@ -911,7 +978,7 @@ namespace HCResourceLibraryApp.Layout
                                 }
 
                                 /// newline per section
-                                if (section != DecodedSection.Summary)
+                                if (section != sections[^1])
                                 {
                                     if (showDecodeInfosQ)
                                         NewLine(2);

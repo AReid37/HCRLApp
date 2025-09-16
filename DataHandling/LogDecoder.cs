@@ -75,8 +75,10 @@ namespace HCResourceLibraryApp.DataHandling
          *****/
         const string kwV = "VERSION", kwMaj = "MAJOR", kwMin = "MINOR", kwA = "ADDED", kwRep = "REPLACE", kwWit = "WITH", kwAs = "AS",
             kwD = "ADDITIONAL", kwT = "TTA", kwT2 = "TCA", kwTo = "TO", kwBy = "BY", kwU = "UPDATED", kwL = "LEGEND", kwS = "SUMMARY";
-        const char kVerShort = '.'; //, kIdsSplit = ',';
+        const char kVerShort = '.', kIdsSplit = ',';
         const char legRangeKey = '~', updtSelfKey = ':';
+        const string sectionName_mainDecoding = "Main Decoding";
+        public const string Keyword_Replace = kwRep;
         readonly bool enableSelfUpdatingFunction = true, testLibConAddUpdConnectionQ = false;
         static string _prevRecentDirectory, _recentDirectory;
         bool _hasDecodedQ, _versionAlreadyExistsQ, _usingLegacyDecoder;
@@ -417,6 +419,8 @@ namespace HCResourceLibraryApp.DataHandling
                                     }
                                     
                                     EndSectionDbugLog("version", null);
+
+                                    //sectionIssueQ = false;
                                 }
 
                                 /// ADDED
@@ -2998,7 +3002,6 @@ namespace HCResourceLibraryApp.DataHandling
             Dbg.EndLogging(ldx);
             return hasFullyDecodedLogQ;            
         }
-
         public bool DecodeLogInfo(string[] logData, VerNum earliestLibVersion, VerNum latestLibVersion)
         {
             bool hasFullyDecodedLogQ = false;
@@ -3013,14 +3016,13 @@ namespace HCResourceLibraryApp.DataHandling
             if (logData.HasElements())
             {
                 bool isLegacyQ = false, isVer2Q = false;
-                for (int llx = 0; isLegacyQ ^ isVer2Q == true && llx < 25; llx++)
+                for (int lcx = 0; isLegacyQ ^ isVer2Q == false && lcx < logData.Length.Clamp(0, 25); lcx++)
                 {
-                    string logline = logData[llx].Trim();
+                    string logline = logData[lcx].Trim();
                     if (logline.ToLower().Contains("version"))
                     {
                         isLegacyQ = logline.StartsWith("[");
                         isVer2Q = logline.StartsWith(kwV);
-                        break;
                     }
                 }
                 _usingLegacyDecoder = isLegacyQ;
@@ -3030,11 +3032,12 @@ namespace HCResourceLibraryApp.DataHandling
             if (!_usingLegacyDecoder && logData.HasElements())
             {
                 Dbg.Log(ldx, $"Recieved {logData.Length} lines of log data; proceeding to decode information...");
-                const string sectionName_mainDecoding = "Main Decoding", decodeIssue_imparsibleLine = "Log data line is imparsible by current section's required syntax"; 
-                const int newResConShelfNumber = 0, maxSectionsCount = 7;
+                const string decodeIssue_imparsibleLine = "Log data line is imparsible by current section's required syntax", 
+                    decodeResult_genSuccess = "Generated info :: ", decodeResult_genSuccessSum = "Obtained summary part :: "; 
+                const int maxReadingLines = 1250, newResConShelfNumber = 0, maxSectionsCount = 7;
                 bool withinASectionQ = false, parsedSectionTagQ = false, withinOmitBlock = false;
-                string currentSectionName = null;
-                int[] countSectionIssues = new int[8];
+                string currentSectionName = null, currentSectionKeyword = null;
+                int[] countSectionIssues = new int[Enum.GetValues(typeof(DecodedSection)).Length];
                 short currentSectionNumber = 0;
                 List<string> foundSectionsTracker = new();
                 List<DecodeInfo> decodingInfoDock = new(), prevDecodingInfoDock = new();
@@ -3065,7 +3068,6 @@ namespace HCResourceLibraryApp.DataHandling
 
                 // -- reading version log file --
                 Dbg.NudgeIndent(ldx, true);
-                const int maxReadingLines = 1000;
                 for (int llx = 0; llx < logData.Length && llx < maxReadingLines && !endFileReading; llx++)
                 {
                     // setup
@@ -3073,18 +3075,9 @@ namespace HCResourceLibraryApp.DataHandling
                     string logDataLine = logData[llx];
                     bool hasFoundFirstSection_VerQ = currentSectionNumber > 0;
 
-                    bool firstSearchingDbgRanQ = false;
                     if (!withinASectionQ)
-                    {
-                        if (!withinOmitBlock)
-                        {
-                            if (!hasFoundFirstSection_VerQ)
-                                Dbg.LogPart(ldx, $"Searching for first section: '{kwV}'...");
-                            else Dbg.LogPart(ldx, $"Searching for another section...");
-                            firstSearchingDbgRanQ = true;
-                        }
                         endFileReading = currentSectionNumber >= maxSectionsCount;
-                    }
+
 
                     // ++ DECODING SECTIONS AND DATA ++ //
                     Dbg.NudgeIndent(ldx, true);
@@ -3145,7 +3138,8 @@ namespace HCResourceLibraryApp.DataHandling
                                         if (!alreadyFoundThisSectionQ)
                                         {
                                             currentSectionNumber++;
-                                            currentSectionName = sectionName;
+                                            currentSectionName = SafeSectionName(sectionName);
+                                            currentSectionKeyword = sectionName;
                                             withinASectionQ = true;
                                             parsedSectionTagQ = false;
 
@@ -3157,7 +3151,7 @@ namespace HCResourceLibraryApp.DataHandling
                                 /// just issue messages on detected keywords
                                 else if (ContainsKeywordQ(out bool isSectionKeywordQ))
                                 {
-                                    DecodeInfo diMain = new($"L{lineNum}| {logDataLine}", sectionName_mainDecoding);
+                                    DecodeInfo diMain = new($"L{lineNum}| {logDataLine}", SafeSectionName(sectionName_mainDecoding));
                                     if (isSectionKeywordQ)
                                     {
                                         diMain.NoteIssue(ldx, "Section keyword must be on its own line");
@@ -3177,11 +3171,35 @@ namespace HCResourceLibraryApp.DataHandling
                             {
                                 DecodeInfo decodeInfo = new($"{logDataLine}", currentSectionName);
                                 Dbg.Log(ldx, $"{{{(currentSectionName.Length > 5 ? currentSectionName.Remove(5) : currentSectionName)}}}  L{lineNum,-2}| {logDataLine}");
+                                logDataLine = RemoveEscapeCharacters(logDataLine);
                                 Dbg.NudgeIndent(ldx, true);
                                 bool sectionIssueQ = false, imparsibleIssueQ = false;
 
+                                /** SECTION DEPENDENCIES AND ORDERING
+                                 *      Goal: sections can be placed in any order except for Version at top (first)
+                                 *      
+                                 *      Section Dependencies
+                                 *      ---
+                                 *      Version: none, must be first
+                                 *      Added: none
+                                 *      Additional: none
+                                 *      TTA/TCA: Depends on Added and Additional for content count verification
+                                 *      Updated: Added and Additional for self-updating contents, otherwise none
+                                 *      Legend: none  
+                                 *          > LegendChecks: Dependes on Added, Additional, and Updated for confirming noted/generated legend keys
+                                 *      Summary: Depends on TTA/TCA for content number
+                                 *      
+                                 *      Feasible? It would take too much time. This choice of sections placement should be ditched. It was added on a whim not fully understanding/remebering the workings of the decoder
+                                 *      
+                                 *      
+                                 *      Omittable / Unrequired sections: Updated and Additional (this should work no problem)
+                                 *      
+                                 *      
+                                 *      Delete Later?
+                                 **/
+
                                 /// VERSION
-                                if (currentSectionName == kwV)
+                                if (currentSectionKeyword == kwV)
                                 {
                                     /** VERSION - SYNTAX V2
                                      _____
@@ -3227,15 +3245,24 @@ namespace HCResourceLibraryApp.DataHandling
                                         /// using expanded syntax
                                         if (logDataLine.StartsWith(kwMaj) && logDataLine.Contains(kwMin))
                                         {
-                                            argA = logDataLine.SnippetText(kwMaj, kwMin, Snip.EndAft);
-                                            argBB = logDataLine.SnippetText(kwMin, logDataLine[^1].ToString(), Snip.Inc).Replace(kwMin, "");
+                                            /// that SnippetText method of mine is a bit bugged... and I'm scared that when i fix it, all of the SFormatter class breaks  (' ~ ')
+                                            /// I'm not quite ready or wanting to do all that all over again
+                                            //argA = logDataLine.SnippetText(kwMaj, kwMin, Snip.EndLast);
+                                            //argBB = logDataLine.SnippetText(kwMin, logDataLine[^1].ToString(), Snip.Inc).Replace(kwMin, "");
+                                            
+                                            string[] args = logDataLine.Replace(kwMaj, "").Split(kwMin);
+                                            if (args.Length == 2)
+                                            {
+                                                argA = args[0];
+                                                argBB = args[1];
+                                            }
                                             Dbg.LogPart(ldx, "By expanded syntax: ");
                                         }
                                         /// using shortened syntax
                                         else if (logDataLine.Contains(kVerShort))
                                         {
                                             string[] args = logDataLine.Split(kVerShort);
-                                            if (args.HasElements(2))
+                                            if (args.Length == 2)
                                             {
                                                 argA = args[0];
                                                 argBB = args[1];
@@ -3256,7 +3283,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                     {
                                                         /// generate version number instance
                                                         VerNum verNum = new(verA, verBB);
-                                                        decodeInfo.NoteResult($"Generated info :: {verNum}");
+                                                        decodeInfo.NoteResult($"{decodeResult_genSuccess}{verNum}");
                                                         Dbg.LogPart(ldx, $"--> Generated instance (VN): {verNum}");
                                                         logVersion = verNum;
                                                         sectionIssueQ = false;
@@ -3346,7 +3373,7 @@ namespace HCResourceLibraryApp.DataHandling
                                 }
 
                                 /// ADDED
-                                if (currentSectionName == kwA)
+                                if (currentSectionKeyword == kwA)
                                 {
                                     /** ADDED - SYNTAX V2
                                      -----
@@ -3402,8 +3429,17 @@ namespace HCResourceLibraryApp.DataHandling
                                         Dbg.LogPart(ldx, "Placeholder/substitution line identified; ");
                                         if (logDataLine.Contains(kwWit))
                                         {
-                                            string argPh = logDataLine.SnippetText(kwRep, kwWit, Snip.EndAft);
-                                            string argSub = logDataLine.SnippetText(kwWit, logDataLine[^1].ToString(), Snip.EndAft);
+                                            /// that SnippetText method of mine is a bit bugged... and I'm scared that when i fix it, all of the SFormatter class breaks  (' ~ ')
+                                            /// I'm not quite ready or wanting to do all that all over again
+                                            //string argPh = logDataLine.SnippetText(kwRep, kwWit, Snip.EndAft);
+                                            //string argSub = logDataLine.SnippetText(kwWit, logDataLine[^1].ToString(), Snip.EndAft);
+                                            string argPh = null, argSub = null;
+                                            string[] args = logDataLine.Replace(kwRep, "").Split(kwWit);
+                                            if (args.Length == 2)
+                                            {
+                                                argPh = args[0].Trim();
+                                                argSub = args[1].Trim();
+                                            }
 
                                             // validate and parse placeholder/substitute values then store them
                                             if (argPh.IsNotNEW() && argSub.IsNotNEW())
@@ -3411,7 +3447,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                 if (!int.TryParse(argPh, out _) && !int.TryParse(argSub, out _))
                                                 {
                                                     addedPholderNSubTags.Add(new string[] { argPh, argSub });
-                                                    decodeInfo.NoteResult($"Got placeholder/substitute group: '{argPh}' / '{argSub}'; ");
+                                                    decodeInfo.NoteResult($"Got placeholder/substitute group: '{argPh}' / '{argSub}'");
                                                     Dbg.LogPart(ldx, $"Saved placeholder/substitute group as 'ph/sub': '{argPh}'/'{argSub}'; ");
                                                     sectionIssueQ = false;
                                                 }
@@ -3423,9 +3459,8 @@ namespace HCResourceLibraryApp.DataHandling
                                             }
                                             else
                                             {
-
                                                 decodeInfo.NoteIssue(ldx, $"Could not get {ConditionalText(argPh.IsNEW(), "substitute", "placeholder")} value");
-                                                Dbg.LogPart(ldx, $"Could not get {ConditionalText(argPh.IsNEW(), "substitute", "placeholder")} value ");                                      
+                                                Dbg.LogPart(ldx, $"Could not get {ConditionalText(argPh.IsNEW(), "substitute", "placeholder")} value ");
                                             }
                                         }
                                         else
@@ -3667,7 +3702,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                     // generate a content base group
                                                     ContentBaseGroup newContent = new(logVersion, addedContentName, addedDataIDs.ToArray());
                                                     resourceContents.Add(new ResContents(newResConShelfNumber, newContent));
-                                                    decodeInfo.NoteResult($"Generated info :: {newContent}");
+                                                    decodeInfo.NoteResult($"{decodeResult_genSuccess}{CleanInfoDisplay(newContent)}");
                                                     Dbg.LogPart(ldx, $"--> Generated instance (CBG) :: {newContent}; ");
 
                                                     sectionIssueQ = false;
@@ -3721,7 +3756,7 @@ namespace HCResourceLibraryApp.DataHandling
                                 }
 
                                 /// ADDITIONAL
-                                if (currentSectionName == kwD)
+                                if (currentSectionKeyword == kwD)
                                 {
                                     /** ADDITIONAL - SYNTAX V2
                                      _____
@@ -3964,7 +3999,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                     {
                                                         matchingResCon.StoreConAdditional(newAdditCon);
                                                         Dbg.LogPart(ldx, $"Completed connection of ConAddits ({newAdditCon}) to ConBase ({matchingResCon.ConBase}) [through ID '{newAdditCon.RelatedDataID}']; ");
-                                                        decodeInfo.NoteResult($"Generated Info :: {newAdditCon}, connected to '{matchingResCon.ConBase.ContentName}' by ID '{newAdditCon.RelatedDataID}'");
+                                                        decodeInfo.NoteResult($"{decodeResult_genSuccess}{CleanInfoDisplay(newAdditCon)}, connected to '{matchingResCon.ConBase.ContentName}' by ID '{newAdditCon.RelatedDataID}'");
                                                     }
                                                     /// to be connected with ConBase from library
                                                     else
@@ -3972,7 +4007,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                         looseConAddits.Add(newAdditCon);
                                                         looseInfoRCDataIDs.Add(newAdditCon.RelatedDataID);
                                                         Dbg.LogPart(ldx, $"No connection found: storing 'loose' ConAddits ({newAdditCon}) [using ID '{newAdditCon.RelatedDataID}']");
-                                                        decodeInfo.NoteResult($"Generate Info :: {newAdditCon}, storing as loose by ID '{newAdditCon.RelatedDataID}'");
+                                                        decodeInfo.NoteResult($"{decodeResult_genSuccess}{CleanInfoDisplay(newAdditCon)}, storing as loose by ID '{newAdditCon.RelatedDataID}'");
                                                     }
 
                                                     sectionIssueQ = false;
@@ -4000,7 +4035,7 @@ namespace HCResourceLibraryApp.DataHandling
                                 }
 
                                 /// TOTAL TEXTURES/CONTENTS ADDED
-                                if (currentSectionName == kwT || currentSectionName == kwT2)
+                                if (currentSectionKeyword == kwT || currentSectionKeyword == kwT2)
                                 {
                                     /** TTA / TCA - SYNTAX V2
                                      _____
@@ -4108,7 +4143,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                         decodeInfo.NoteIssue(ldx, $"TTA/TCA verification counted '{countedTTANum}' instead of obtained number '{tNum}'");
                                                     }
                                                 }
-                                                decodeInfo.NoteResult($"Generated Info :: Total texture/content count of '{tNum}'");
+                                                decodeInfo.NoteResult($"{decodeResult_genSuccess}Total texture/content count of '{tNum}'");
 
                                                 ttaNumber = tNum;
                                                 sectionIssueQ = !checkVerifiedQ;
@@ -4129,7 +4164,7 @@ namespace HCResourceLibraryApp.DataHandling
                                 }
 
                                 /// UPDATED 
-                                if (currentSectionName == kwU)
+                                if (currentSectionKeyword == kwU)
                                 {
                                     /** UPDATED - SYNTAX V2
                                      _____
@@ -4361,7 +4396,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                             Dbg.Log(ldx, $" [by ID '{newConChanges.RelatedDataID}'] (self-updated)");
 
                                                             string additConnectionTxt = subMatchConAdd.IsSetup() && subMatchConAdd.OptionalName.IsNotNEW() ? $"'{subMatchConAdd.OptionalName}' from " : $"an additional content in ";
-                                                            decodeInfo.NoteResult($"Generated Info :: {newConChanges}, connected to {additConnectionTxt}'{matchingResCon.ConBase.ContentName}' by ID '{newConChanges.RelatedDataID}'");
+                                                            decodeInfo.NoteResult($"{decodeResult_genSuccess}{CleanInfoDisplay(newConChanges)}, connected to {additConnectionTxt}'{matchingResCon.ConBase.ContentName}' by ID '{newConChanges.RelatedDataID}'");
                                                             isSelfConnected = true;
 
                                                             // these actions just for the decode display on log submission page
@@ -4378,7 +4413,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                         looseInfoRCDataIDs.Add(newConChanges.RelatedDataID);
 
                                                         Dbg.LogPart(ldx, $"Storing 'loose' ConChanges");
-                                                        decodeInfo.NoteResult($"Generate Info :: {newConChanges}, storing as loose by ID '{newConChanges.RelatedDataID}'");
+                                                        decodeInfo.NoteResult($"{decodeResult_genSuccess}{CleanInfoDisplay(newConChanges)}, storing as loose by ID '{newConChanges.RelatedDataID}'");
                                                     }
 
                                                     sectionIssueQ = false;
@@ -4406,7 +4441,7 @@ namespace HCResourceLibraryApp.DataHandling
                                 }
 
                                 /// LEGEND
-                                if (currentSectionName == kwL)
+                                if (currentSectionKeyword == kwL)
                                 {
                                     /** LEGEND - SYNTAX V2
                                      _____
@@ -4519,7 +4554,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                 {
                                                     LegendData newLegData = new(legendKey, logVersion, legendDefinition);
                                                     Dbg.Log(ldx, $"--> Generated instance (LD) :: {newLegData}; ");
-                                                    decodeInfo.NoteResult($"Generated info :: {newLegData}");
+                                                    decodeInfo.NoteResult($"{decodeResult_genSuccess}{CleanInfoDisplay(newLegData)}");
 
                                                     // final steps
                                                     /// check for duplicate legend data in this log, edit by definition as required (including decode info)
@@ -4618,7 +4653,7 @@ namespace HCResourceLibraryApp.DataHandling
                                 }
 
                                 /// SUMMARY 
-                                if (currentSectionName == kwS)
+                                if (currentSectionKeyword == kwS)
                                 {
                                     /** SUMMARY - SYNTAX V2
                                      _____
@@ -4664,7 +4699,7 @@ namespace HCResourceLibraryApp.DataHandling
                                             if (sumParts.Length == 2)
                                             {
                                                 string sum_part = sumParts[1].Trim();
-                                                sum_part = FullstopCheck(CharacterKeycodeSubstitution(sum_part));
+                                                sum_part = FullstopCheck(sum_part);
                                                 
                                                 if (sum_part.IsNotNEW() && !int.TryParse(sum_part, out _))
                                                 {
@@ -4694,7 +4729,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                     {
                                                         summaryDataParts.Add(summaryPart);
                                                         Dbg.LogPart(ldx, $"--> Obtained summary part :: {summaryPart}");
-                                                        decodeInfo.NoteResult($"Obtained summary part :: {summaryPart}");
+                                                        decodeInfo.NoteResult($"{decodeResult_genSuccessSum}{summaryPart}");
 
                                                         sectionIssueQ = false;
                                                     }
@@ -4802,171 +4837,185 @@ namespace HCResourceLibraryApp.DataHandling
                                 {
                                     List<string> parsedDataIDs = new();
                                     string[] dataIdGroups = dataIdsLineGroup.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
                                     if (dataIdGroups.HasElements())
                                         foreach (string dataIDGroup in dataIdGroups)
                                         {
                                             // For invalid id groups
+                                            bool validIDsGroup = true;
                                             /// yxx,tyy  (cannot be grouped)
-                                            if (IsNumberless(dataIDGroup) && (dataIDGroup.Contains(",") || dataIDGroup.Contains("~")))
+                                            if (IsNumberless(dataIDGroup) && (dataIDGroup.Contains(kIdsSplit) || dataIDGroup.Contains(legRangeKey)))
                                             {
                                                 decodeInfo.NoteIssue(ldx, $"Numberless data IDs '{dataIDGroup}' cannot be grouped");
                                                 Dbg.Log(ldx, $"Numberless data IDs '{dataIDGroup}' cannot be grouped; ");
+                                                validIDsGroup = false;
                                             }
                                             /// 100, 23
-                                            if (RemoveNumbers(dataIDGroup.Replace(",", "").Replace(legRangeKey.ToString(), "")).IsNEW())
+                                            if (RemoveNumbers(dataIDGroup.Replace(kIdsSplit.ToString(), "").Replace(legRangeKey.ToString(), "")).IsNEW())
                                             {
                                                 decodeInfo.NoteIssue(ldx, $"Data ID group '{dataIDGroup}' is just numbers (invalid)");
                                                 Dbg.LogPart(ldx, $"Data ID group '{dataIDGroup}' is not a data ID (just numbers); ");
+                                                validIDsGroup = false;
+                                            }
+                                            /// s212,213,218~220
+                                            if (dataIDGroup.Contains(kIdsSplit) && dataIDGroup.Contains(legRangeKey))
+                                            {
+                                                decodeInfo.NoteIssue(ldx, $"Data ID group '{dataIDGroup}' contains mixed grouping syntax  ('{kIdsSplit}' and '{legRangeKey}') (invalid)");
+                                                Dbg.LogPart(ldx, $"Data ID group '{dataIDGroup}' contains mixed grouping syntax ('{kIdsSplit}' and '{legRangeKey}') (invalid); ");
+                                                validIDsGroup = false;
                                             }
 
                                             // for valid id groups
-                                            /// y32,33
-                                            else if (dataIDGroup.Contains(','))
+                                            if (validIDsGroup)
                                             {
-                                                Dbg.LogPart(ldx, $"Got multi-ID group '{dataIDGroup}'");
-                                                string[] dataIDs = dataIDGroup.Split(',', StringSplitOptions.RemoveEmptyEntries);
-                                                if (dataIDs.HasElements(2))
+                                                /// y32,33
+                                                if (dataIDGroup.Contains(kIdsSplit))
                                                 {
-                                                    Dbg.LogPart(ldx, "; ");
-                                                    DisassembleDataID(dataIDs[0], out string dataKey, out _, out string suffix);
-                                                    NoteLegendKey(dataKey, dataIDs[0]);
-                                                    NoteLegendKey(suffix, dataIDs[0]);
-                                                    if (dataKey.IsNotNEW())
+                                                    Dbg.LogPart(ldx, $"Got multi-ID group '{dataIDGroup}'");
+                                                    string[] dataIDs = dataIDGroup.Split(kIdsSplit, StringSplitOptions.RemoveEmptyEntries);
+                                                    if (dataIDs.HasElements(2))
                                                     {
-                                                        Dbg.Log(ldx, $"Retrieved data key '{dataKey}'; ");
-                                                        foreach (string datId in dataIDs)
+                                                        Dbg.LogPart(ldx, "; ");
+                                                        DisassembleDataID(dataIDs[0], out string dataKey, out _, out string suffix);
+                                                        NoteLegendKey(dataKey, dataIDs[0]);
+                                                        NoteLegendKey(suffix, dataIDs[0]);
+                                                        if (dataKey.IsNotNEW())
                                                         {
-                                                            Dbg.LogPart(ldx, ". Adding ID; ");
-                                                            DisassembleDataID(datId, out _, out string dataBody, out string sfx);
-                                                            NoteLegendKey(sfx, datId);
-                                                            string datToAdd = dataKey + dataBody + sfx;
-                                                            if (!IsNumberless(datToAdd))
+                                                            Dbg.Log(ldx, $"Retrieved data key '{dataKey}'; ");
+                                                            foreach (string datId in dataIDs)
                                                             {
-                                                                parsedDataIDs.Add(datToAdd);
-                                                                Dbg.LogPart(ldx, $"Got and added '{datToAdd}'");
-                                                            }
-                                                            else
-                                                            {
-                                                                decodeInfo.NoteIssue(ldx, $"Data ID '{datId}' is numberless (invalid)");
-                                                                Dbg.LogPart(ldx, $"Data ID '{datId}' is numberless");
-                                                            }
-                                                            Dbg.Log(ldx, "; ");
-                                                        }
-                                                    }
-                                                    else
-                                                    {
-                                                        decodeInfo.NoteIssue(ldx, $"Multi-ID group '{dataIDGroup}' does not have a legend key prefix");
-                                                        Dbg.LogPart(ldx, "; This multi-ID group does not have a legend key prefix; ");
-                                                    }
-                                                }
-                                                else
-                                                {
-                                                    decodeInfo.NoteIssue(ldx, $"Multi-ID group '{dataIDGroup}' does not have at least 2 IDs");
-                                                    Dbg.LogPart(ldx, "; This multi-ID group does not have at least 2 IDs; ");
-                                                }
-                                            }
-                                            /// r20~22
-                                            /// q21`~24`
-                                            else if (dataIDGroup.Contains(legRangeKey))
-                                            {
-                                                Dbg.LogPart(ldx, $"Got range ID group '{dataIDGroup}'; ");
-                                                NoteLegendKey(legRangeKey.ToString(), dataIDGroup);
-
-                                                string[] dataIdRng = dataIDGroup.Split(legRangeKey);
-                                                if (dataIdRng.HasElements() && dataIDGroup.CountOccuringCharacter(legRangeKey) == 1)
-                                                {
-                                                    DisassembleDataID(dataIdRng[0], out string dataKey, out _, out string dkSuffix);
-                                                    NoteLegendKey(dataKey, dataIdRng[0]);
-                                                    NoteLegendKey(dkSuffix, dataIdRng[0]);
-                                                    if (dataKey.IsNotNEW())
-                                                    {
-                                                        Dbg.LogPart(ldx, $"Retrieved data key '{dataKey}' and suffix [{(dkSuffix.IsNEW() ? "n/a" : dkSuffix)}]; ");
-
-                                                        dataIdRng[0] = dataIdRng[0].Replace(dataKey, "");
-                                                        dataIdRng[1] = dataIdRng[1].Replace(dataKey, "");
-                                                        if (dkSuffix.IsNotNEW())
-                                                        {
-                                                            dataIdRng[0] = dataIdRng[0].Replace(dkSuffix, "");
-                                                            dataIdRng[1] = dataIdRng[1].Replace(dkSuffix, "");
-                                                        }
-
-                                                        bool parseRngA = int.TryParse(dataIdRng[0], out int rngA);
-                                                        bool parseRngB = int.TryParse(dataIdRng[1], out int rngB);
-                                                        if (parseRngA && parseRngB)
-                                                        {
-                                                            if (rngA != rngB)
-                                                            {
-                                                                int lowBound = Math.Min(rngA, rngB), highBound = Math.Max(rngA, rngB);
-                                                                Dbg.LogPart(ldx, $"Parsed range numbers: {lowBound} up to {highBound}; Adding IDs :: ");
-
-                                                                for (int rnix = lowBound; rnix <= highBound; rnix++)
+                                                                Dbg.LogPart(ldx, ". Adding ID; ");
+                                                                DisassembleDataID(datId, out _, out string dataBody, out string sfx);
+                                                                NoteLegendKey(sfx, datId);
+                                                                string datToAdd = dataKey + dataBody + sfx;
+                                                                if (!IsNumberless(datToAdd))
                                                                 {
-                                                                    string dataID = $"{dataKey}{rnix}{dkSuffix}".Trim();
-                                                                    parsedDataIDs.Add(dataID);
-                                                                    Dbg.LogPart(ldx, $"{dataID} - ");
+                                                                    parsedDataIDs.Add(datToAdd);
+                                                                    Dbg.LogPart(ldx, $"Got and added '{datToAdd}'");
                                                                 }
-                                                            }
-                                                            else
-                                                            {
-                                                                Dbg.LogPart(ldx, "Both range values cannot be equal");
-                                                                decodeInfo.NoteIssue(ldx, $"At '{dataIDGroup}': Both range values cannot be equal");
+                                                                else
+                                                                {
+                                                                    decodeInfo.NoteIssue(ldx, $"Data ID '{datId}' is numberless (invalid)");
+                                                                    Dbg.LogPart(ldx, $"Data ID '{datId}' is numberless");
+                                                                }
+                                                                Dbg.Log(ldx, "; ");
                                                             }
                                                         }
                                                         else
                                                         {
-                                                            Dbg.LogPart(ldx, $"{ConditionalText(parseRngA, "Right", "Left")} range value '{dataIdRng[1]}' is an invalid number");
-                                                            decodeInfo.NoteIssue(ldx, $"{ConditionalText(parseRngA, "Right", "Left")} range value '{dataIdRng[1]}' is an invalid number");
-
-                                                            //if (parseRngA)
-                                                            //{
-                                                            //    Dbg.LogPart(ldx, $"Right range value '{dataIdRng[1]}' was an invalid number");
-                                                            //    decodeInfo.NoteIssue(ldx, $"At '{dataIDGroup}': Right range value '{dataIdRng[1]}' is an invalid number");
-                                                            //}
-                                                            //else
-                                                            //{
-                                                            //    Dbg.LogPart(ldx, $"Left range value '{dataIdRng[0]}' was an invalid number");
-                                                            //    decodeInfo.NoteIssue(ldx, $"At '{dataIDGroup}': Left range value '{dataIdRng[0]}' is an invalid number");
-                                                            //}
+                                                            decodeInfo.NoteIssue(ldx, $"Multi-ID group '{dataIDGroup}' does not have a legend key prefix");
+                                                            Dbg.LogPart(ldx, "; This multi-ID group does not have a legend key prefix; ");
                                                         }
                                                     }
+                                                    else
+                                                    {
+                                                        decodeInfo.NoteIssue(ldx, $"Multi-ID group '{dataIDGroup}' does not have at least 2 IDs");
+                                                        Dbg.LogPart(ldx, "; This multi-ID group does not have at least 2 IDs; ");
+                                                    }
                                                 }
+                                                /// r20~22
+                                                /// q21`~24`
+                                                else if (dataIDGroup.Contains(legRangeKey))
+                                                {
+                                                    Dbg.LogPart(ldx, $"Got range ID group '{dataIDGroup}'; ");
+                                                    NoteLegendKey(legRangeKey.ToString(), dataIDGroup);
+
+                                                    string[] dataIdRng = dataIDGroup.Split(legRangeKey);
+                                                    if (dataIdRng.HasElements() && dataIDGroup.CountOccuringCharacter(legRangeKey) == 1)
+                                                    {
+                                                        DisassembleDataID(dataIdRng[0], out string dataKey, out _, out string dkSuffix);
+                                                        NoteLegendKey(dataKey, dataIdRng[0]);
+                                                        NoteLegendKey(dkSuffix, dataIdRng[0]);
+                                                        if (dataKey.IsNotNEW())
+                                                        {
+                                                            Dbg.LogPart(ldx, $"Retrieved data key '{dataKey}' and suffix [{(dkSuffix.IsNEW() ? "n/a" : dkSuffix)}]; ");
+
+                                                            dataIdRng[0] = dataIdRng[0].Replace(dataKey, "");
+                                                            dataIdRng[1] = dataIdRng[1].Replace(dataKey, "");
+                                                            if (dkSuffix.IsNotNEW())
+                                                            {
+                                                                dataIdRng[0] = dataIdRng[0].Replace(dkSuffix, "");
+                                                                dataIdRng[1] = dataIdRng[1].Replace(dkSuffix, "");
+                                                            }
+
+                                                            bool parseRngA = int.TryParse(dataIdRng[0], out int rngA);
+                                                            bool parseRngB = int.TryParse(dataIdRng[1], out int rngB);
+                                                            if (parseRngA && parseRngB)
+                                                            {
+                                                                if (rngA != rngB)
+                                                                {
+                                                                    int lowBound = Math.Min(rngA, rngB), highBound = Math.Max(rngA, rngB);
+                                                                    Dbg.LogPart(ldx, $"Parsed range numbers: {lowBound} up to {highBound}; Adding IDs :: ");
+
+                                                                    for (int rnix = lowBound; rnix <= highBound; rnix++)
+                                                                    {
+                                                                        string dataID = $"{dataKey}{rnix}{dkSuffix}".Trim();
+                                                                        parsedDataIDs.Add(dataID);
+                                                                        Dbg.LogPart(ldx, $"{dataID} - ");
+                                                                    }
+                                                                }
+                                                                else
+                                                                {
+                                                                    Dbg.LogPart(ldx, "Both range values cannot be equal");
+                                                                    decodeInfo.NoteIssue(ldx, $"At '{dataIDGroup}': Both range values cannot be equal");
+                                                                }
+                                                            }
+                                                            else
+                                                            {
+                                                                Dbg.LogPart(ldx, $"{ConditionalText(parseRngA, "Right", "Left")} range value '{dataIdRng[1]}' is an invalid number");
+                                                                decodeInfo.NoteIssue(ldx, $"{ConditionalText(parseRngA, "Right", "Left")} range value '{dataIdRng[1]}' is an invalid number");
+
+                                                                //if (parseRngA)
+                                                                //{
+                                                                //    Dbg.LogPart(ldx, $"Right range value '{dataIdRng[1]}' was an invalid number");
+                                                                //    decodeInfo.NoteIssue(ldx, $"At '{dataIDGroup}': Right range value '{dataIdRng[1]}' is an invalid number");
+                                                                //}
+                                                                //else
+                                                                //{
+                                                                //    Dbg.LogPart(ldx, $"Left range value '{dataIdRng[0]}' was an invalid number");
+                                                                //    decodeInfo.NoteIssue(ldx, $"At '{dataIDGroup}': Left range value '{dataIdRng[0]}' is an invalid number");
+                                                                //}
+                                                            }
+                                                        }
+                                                    }
+                                                    else
+                                                    {
+                                                        decodeInfo.NoteIssue(ldx, $"At '{dataIDGroup}': Could not fetch range of values for this data ID group");
+                                                        Dbg.LogPart(ldx, "Could not fetch range of values for this data ID group");
+
+                                                        //if (dataIdRng.HasElements())
+                                                        //{
+                                                        //    Dbg.LogPart(ldx, $"This range group has too many '{legRangeKey}'");
+                                                        //    decodeInfo.NoteIssue(ldx, $"At '{dataIDGroup}': This range group has too many '{legRangeKey}'");
+                                                        //}
+                                                        //else
+                                                        //{
+                                                        //    Dbg.LogPart(ldx, $"This range is missing values or missing '{legRangeKey}'");
+                                                        //    decodeInfo.NoteIssue(ldx, $"At '{dataIDGroup}': This range is missing values or missing '{legRangeKey}'");
+                                                        //}
+                                                    }
+                                                    Dbg.Log(ldx, "; ");
+                                                }
+                                                /// x25 q14 ...
+                                                else if (RemoveNumbers(dataIDGroup) != dataIDGroup)
+                                                {
+                                                    //GetDataKeyAndSuffix(dataIDGroup, out string dataKey, out string suffix);
+                                                    DisassembleDataID(dataIDGroup, out string dataKey, out _, out string suffix);
+                                                    NoteLegendKey(dataKey, dataIDGroup);
+                                                    NoteLegendKey(suffix, dataIDGroup);
+
+                                                    parsedDataIDs.Add(dataIDGroup.Trim());
+                                                    Dbg.Log(ldx, $"Got and added ID '{dataIDGroup.Trim()}'; ");
+                                                }
+                                                /// qes Codtail tunaChunks ...
                                                 else
                                                 {
-                                                    decodeInfo.NoteIssue(ldx, $"At '{dataIDGroup}': Could not fetch range of values for this data ID group");
-                                                    Dbg.LogPart(ldx, "Could not fetch range of values for this data ID group");
+                                                    DisassembleDataID(dataIDGroup, out _, out _, out string sf);
+                                                    NoteLegendKey(sf, dataIDGroup);
 
-                                                    //if (dataIdRng.HasElements())
-                                                    //{
-                                                    //    Dbg.LogPart(ldx, $"This range group has too many '{legRangeKey}'");
-                                                    //    decodeInfo.NoteIssue(ldx, $"At '{dataIDGroup}': This range group has too many '{legRangeKey}'");
-                                                    //}
-                                                    //else
-                                                    //{
-                                                    //    Dbg.LogPart(ldx, $"This range is missing values or missing '{legRangeKey}'");
-                                                    //    decodeInfo.NoteIssue(ldx, $"At '{dataIDGroup}': This range is missing values or missing '{legRangeKey}'");
-                                                    //}
+                                                    parsedDataIDs.Add(dataIDGroup);
+                                                    Dbg.LogPart(ldx, $"Got and added wordy ID '{dataIDGroup}'");
                                                 }
-                                                Dbg.Log(ldx, "; ");
-                                            }
-                                            /// x25 q14 ...
-                                            else if (RemoveNumbers(dataIDGroup) != dataIDGroup)
-                                            {
-                                                //GetDataKeyAndSuffix(dataIDGroup, out string dataKey, out string suffix);
-                                                DisassembleDataID(dataIDGroup, out string dataKey, out _, out string suffix);
-                                                NoteLegendKey(dataKey, dataIDGroup);
-                                                NoteLegendKey(suffix, dataIDGroup);
-
-                                                parsedDataIDs.Add(dataIDGroup.Trim());
-                                                Dbg.Log(ldx, $"Got and added ID '{dataIDGroup.Trim()}'; ");
-                                            }                                            
-                                            /// qes Codtail tunaChunks ...
-                                            else
-                                            {
-                                                DisassembleDataID(dataIDGroup, out _, out _, out string sf);
-                                                NoteLegendKey(sf, dataIDGroup);
-
-                                                parsedDataIDs.Add(dataIDGroup);
-                                                Dbg.LogPart(ldx, $"Got and added wordy ID '{dataIDGroup}'");
                                             }
                                         }
 
@@ -5072,7 +5121,15 @@ namespace HCResourceLibraryApp.DataHandling
 
                                 ////Dbg.Log(ldx, $"{preText}End {section} {subText}");
                                 //Dbg.LogPart(ldx, $"{preText}End {section} {subText}");
-                            }                            
+                            }  
+                            string CleanInfoDisplay(object resultInfoFromRawData)
+                            {
+                                string cleanerData = resultInfoFromRawData.ToString();
+                                if (resultInfoFromRawData is not null)
+                                    if (resultInfoFromRawData.ToString().IsNotNEW())
+                                        cleanerData = $"\"{resultInfoFromRawData.ToString().Replace(";", " | ")}\"";
+                                return cleanerData;
+                            }
                         }
                         else
                         {
@@ -5081,16 +5138,19 @@ namespace HCResourceLibraryApp.DataHandling
                                 //Dbg.Log(ldx, $"Omitting L{lineNum} --> Block Omission: currently within line omission block.");
                                 Dbg.LogPart(ldx, $"{lineNum} ");
                             }
+                            else if (omitThisLine)
+                            {
+                                Dbg.Log(ldx, $"Omitting L{lineNum} --> Imparsable: Line starts with '{omit}'");
+                            }
                             else if (invalidLine)
                             {
                                 /// report invalid key issue
-                                DecodeInfo diMain = new($"L{lineNum}| {logDataLine}", sectionName_mainDecoding);
+                                DecodeInfo diMain = new($"L{lineNum}| {logDataLine}", SafeSectionName(sectionName_mainDecoding));
                                 diMain.NoteIssue(ldx, $"The '{Sep}' character is an invalid character and may not be placed within decodable log lines.");
                                 decodingInfoDock.Add(diMain);
 
                                 Dbg.Log(ldx, $"Skipping L{lineNum} --> Contains invalid character: '{Sep}'");
                             }
-                            else Dbg.Log(ldx, $"Omitting L{lineNum} --> Imparsable: Line starts with '{omit}'");
                         }
                     }
                     Dbg.NudgeIndent(ldx, false);
@@ -5099,7 +5159,7 @@ namespace HCResourceLibraryApp.DataHandling
                     // aka 'else'
                     if (logDataLine.IsNEW() && !endFileReading)
                     {
-                        // as weird as it may seem, checks for non-described or unnoted legend keys goes here
+                        // as weird as it may seem, checks for non-described or unnoted legend keys goes here (at end of legend section)
                         if (!ranLegendChecksQ && usedLegendKeys.HasElements() && usedLegendKeysSources.HasElements() && legendDatas.HasElements() && currentSectionName == kwL)
                         {
                             Dbg.NudgeIndent(ldx, true);
@@ -5298,23 +5358,18 @@ namespace HCResourceLibraryApp.DataHandling
                             ranLegendChecksQ = true;
                         }
 
+                        // relays number of issues for ended section to debug log
                         if (currentSectionNumber.IsWithin(0, (short)(countSectionIssues.Length - 1)) && currentSectionName.IsNotNE())
-                        {
                             Dbg.Log(ldx, $"..  Sec#{currentSectionNumber + 1} '{currentSectionName}' ended with [{countSectionIssues[currentSectionNumber]}] issues;");
-                        }
 
-                        if (!firstSearchingDbgRanQ && !withinOmitBlock)
-                        {
-                            //Dbg.LogPart(ldx, $"Searching for Sec#{nextSectionNumber + 1} ({nextSectionName})  //  ");
-                            Dbg.LogPart(ldx, $"Searching for another section...  //  ");
-                            Dbg.Log(ldx, $"L{lineNum,-2}| {ConditionalText(logDataLine.IsNEW(), $"<null>{(withinASectionQ ? $" ... (no longer within a section)" : "")}", logDataLine)}");
-                        }
-                        withinASectionQ = false;
+                        // ends a section, also notifies of an ended section to dbug log
+                        if (!withinOmitBlock)
+                            withinASectionQ = false;
                     }
 
 
                     // end file reading if (forced) else (pre-emptive)
-                    float capacityPercentage = (llx + 1) / (float)maxReadingLines;
+                    float capacityPercentage = (llx + 1) / (float)maxReadingLines * 100;
                     if ((llx + 1 >= logData.Length || llx + 1 >= maxReadingLines) && !endFileReading)
                     {
                         endFileReading = true;
@@ -5334,6 +5389,26 @@ namespace HCResourceLibraryApp.DataHandling
 
                     TaskNum++;
                     ProgressBarUpdate(TaskNum / TaskCount, true, endFileReading);
+
+
+                    // methods
+                    string SafeSectionName(string sectionName)
+                    {
+                        string safeSectName = sectionName switch
+                        {
+                            sectionName_mainDecoding => DecodedSection.MainDecoding.ToString(),
+                            kwV => DecodedSection.Version.ToString(),
+                            kwA => DecodedSection.Added.ToString(),
+                            kwD => DecodedSection.Additional.ToString(),
+                            kwT => DecodedSection.TTA.ToString(),
+                            kwT2 => DecodedSection.TTA.ToString(),
+                            kwU => DecodedSection.Updated.ToString(),
+                            kwL => DecodedSection.Legend.ToString(),
+                            kwS => DecodedSection.Summary.ToString(),
+                            _ => "n/a"
+                        };
+                        return safeSectName;
+                    }
                 }
                 Dbg.NudgeIndent(ldx, false);
 

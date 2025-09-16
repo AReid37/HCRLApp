@@ -142,6 +142,12 @@ namespace HCResourceLibraryApp.DataHandling
             get => _dimWidthScale;
             set => _dimWidthScale = value;
         }
+        // -- more that may possibly be added -- QoL(?) --
+        // > skipTitleScreen : bool
+        // > useStylishMainMenu : bool
+        // > skipLogSubmissionDoubleConfirmations : bool
+        // > startWithProfileSelection : bool
+        // > showIDsOnBaseSearchResult : bool
         #endregion
 
         public Preferences() : base()
