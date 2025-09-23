@@ -3,9 +3,10 @@ using System.Collections.Generic;
 using HCResourceLibraryApp.DataHandling;
 using static ConsoleFormat.Base;
 
-namespace HCResourceLibraryApp
+namespace HCResourceLibraryApp.Hidden
 {
-    /// <summary>
+
+  /// <summary>
     ///     DISCONTINUED  --  OBSOLETE <br></br>
     ///     An intermediary, more focused version of the Debug Logger to Output.
     /// </summary>

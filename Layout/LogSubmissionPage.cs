@@ -68,7 +68,7 @@ namespace HCResourceLibraryApp.Layout
                         - Processed version log review (decoded)
                  */
 
-                string input = null;
+                string input = LastInput;
                 Program.LogState(logStateParent + "|Submit A Log");
 
                 // initial introductory section  // skipped if library has at least 10 contents (easy pass)
@@ -82,7 +82,6 @@ namespace HCResourceLibraryApp.Layout
                     Format($"{Ind24}Enter any key to continue to log submission >> ", ForECol.Normal);
                     input = StyledInput(null);
                 }
-                else input = LastInput;
 
                 // log submission section
                 if (input.IsNotNEW())

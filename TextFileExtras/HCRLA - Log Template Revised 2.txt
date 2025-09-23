@@ -26,9 +26,9 @@ GUIDELINES
 		'&99' for '' (no character)
 
 SECTIONS AND NEW SYNTAX
-* Each section is called by name on their own line, no additional parameters. They are to remain in the order by which they are explained below.
+* Each section is called by name on their own line, no additional parameters. They are to remain in the order by which they are explained below.```
 * Fully capitalized words are keywords for logger to decode. Avoid using all capitals within your log that would match any of the keywords.
-* Each section must be preceeded and followed by an empty line.
+* Each section must be preceeded and followed by an empty line (comments do not count as empty lines).
 * For the syntaxes and explanations below: elements marked with '*' are required.
 * The following sections are not required for a complete log submission: Additional, Updated
 
@@ -99,6 +99,8 @@ LX : Repeatable additional content lines which adds the related to an existing c
 	NOTE FOR DATA IDS: Your data ID type must match with the items in the Legend section. Multiple ids are seperated by spaces, and groups of the same type can be condensed as 'x#,#' or 'x#~#'. Warning: Do NOT combine these grouping syntaxes (such as x#,#~#).
 	NOTE FOR OPTIONAL AND RELATED INTERNAL NAME: The logger will attempt to capitalize and space your internal content names. Using the '&99' before certain characters can be used to negate this effect.
 
+	NOTE: You may create an additional entry for any content that was added in the same version, although advised against (additionals are for extra contents added to things introduced in earlier versions). The decoder will automatically detect and notify of this possibility, however there will be no impact on the outcome of your logging.
+
 Example: 
 	ADDITIONAL
 	WaterMelonChunk AS Watermelon Chunk TO Watermelon BY i167
@@ -136,9 +138,9 @@ L1 : Updated section tag for identification.
 LX : Repeatable updated lines that identify the data ID and the related content name followed by a description of the changes made to that content
 	- {RelatedName} the related (internal) name of the content being updated, cannot be plain numbers.
 	- {RelatedDataID} the single data ID to which changes are being made, cannot be plain numbers.
-	- {ChangeDesc} a description of the change(s) made to this piece of content.
+	- {ChangeDesc} a description of the change(s) made to this piece of content, cannot be plain numbers.
 
-	NOTE: You may create an updated entry for any content that was added in the same version as its update, although advised against (updates usually follow after the initial addition, just an ethical warning). The decoder will automatically detect and notify of this possibility, however there will be no impact on the outcome of your logging.
+	NOTE: You may create an updated entry for any content that was added in the same version, although advised against (updates usually follow after the introductory version, just an ethical warning). The decoder will automatically detect and notify of this possibility, however there will be no impact on the outcome of your logging.
 
 Example: 
 	UPDATED
@@ -188,6 +190,24 @@ Example:
 	AS Brocolli, Cabbage, and few other green veggies, Veggie seeds (P1).
 	AS Carrot, Pumpkins (pumpkin, squash), soil (and variants).
 
+
+
+SECTIONS AND NEW SYNTAX: EXCEPTION (```)
+* Technically, the order of the sections can be changed, but there are too many dependencies between the sections that changing the order can break or invalidate your log.
+* The dependencies between sections are as follows: 
+	- Version (V) first
+	- Added (A) and Additional (D) before: TTA/TTC (T), Updated (U), Legend (L)
+	- Updated (U) before: Legend (L)
+	- TTA/TTC (T) before: Summary (S)
+* With the dependencies above in mind, the only other available orders of sections that will not break the decoding process are as follows: 
+	- V A D T S U L
+	- V A D T U S L
+	- V A D U T S L			
+	- V A D U T L S	
+	- V A D U L T S
+	For comparison, the current order is:  V A D T U L S
+* This section exception is for the awareness of this limited but available preference to organizing the logs.
+	
 -- !close --
 
 

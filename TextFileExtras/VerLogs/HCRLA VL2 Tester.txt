@@ -1,0 +1,393 @@
+﻿-- !open --
+HCRLA Version Log Syntax v2, Tester Log
+	PURPOSE: 
+	Testing for proper function of all logging syntax (all-tester) and testing error cases for robust data validation and user feedback.
+	This is mostly for testing error cases, all other valid logging conditions not tested here are tested with example logs
+
+	0th test
+-- !close --
+
+
+-- test invalid character: %
+%
+Data line %
+
+
+
+-- ------------------------- secVer ------------------------- --
+-- !open --
+VALID LINES
+	VERSION
+	MAJOR 1 MINOR 0
+	-- or --
+	VERSION
+	1.0	
+
+VERSION ERROR TESTING CASES
+	z: Version first section: other section tags should not parse
+	a: Ver syntax before section tag: should not parse
+	b: Version tag keyword: incorrect letter casing, not on lone line
+	c: -> Identify version tag 
+	c...: + 'already parsed tag' error
+	d: Expanded syntax: incorrect letter casing, missing one other keyword, incorrect order of keywords, missing arguements, too many keywords
+	e: Short syntax: missing arguements, missing short-syntax key
+	f: Both syntaxes: Incorrect arguements: NaN, "a < 0", "b > 99", "b < 0"
+	g: --> Get version number (test both syntaxes)
+	g...: + 'already got version number' error
+	h: Imparsible error: rubbish
+
+-- !close --
+
+-- z
+ADDED
+TTA
+LEGEND
+UPDATED
+
+-- a
+MAJOR 1 MINOR 0
+1.01
+
+-- b
+version
+Version
+vErsIon
+VERSION tag
+
+-- c
+VERSION
+VERSION
+--
+-- d
+major 1 minor 0
+MAJOR 1 minor 0
+major 1 MINOR 0
+MAJOR 1 0
+2 MINOR 0
+MINOR 0 MAJOR 1
+MAJOR MINOR 0
+MAJOR 1 MINOR
+MAJOR 1 MAJOR 1 MINOR 0
+MAJOR 1 MINOR 0 MINOR 0
+--
+-- e
+1.
+.0
+.
+100
+--
+-- f
+MAJOR x MINOR 0
+MAJOR 1 MINOR y
+x.0
+1.y
+MAJOR -1 MINOR 0
+MAJOR 1 MINOR -1
+MAJOR 1 MINOR 100
+-1.0
+1.-1
+1.100
+--
+-- g
+MAJOR 1 MINOR 0
+1.0
+--
+-- h
+this is not parsable: V
+
+-- ------------------------- END secVer ------------------------- --
+
+
+
+
+
+
+
+-- ========================= secAdd ========================= --
+-- !open --
+VALID LINES
+	ADDED
+	REPLACE i> WITH Item
+	Smoli> AS i10 t10 p10 d10
+	Bigi> AS i20 t20,21 p20~22 g20 d20
+
+ADDED ERROR TESTING CASES
+	z: Section already found (post parse): version
+	a: Add syntax before section tag: should not be parsed
+	b: Added tag keyword: incorrect letter casing, not on lone line
+	c: -> Identify added tag 
+	c...: + 'already parsed tag' error
+	d: Replacements: incorrect letter casing, missing one other keyword, incorrect order of keywords, too many keywords
+	e: Replacements: missing arguements, incorrect arguements: "#" (plain numbers), identical arguements
+	f: --> Get replacements - placeholder and substitution
+	f...: + 'duplicate placeholder' and 'duplicate replacement group' error
+	g: Content: incorrect letter casing, missing arguements, too many keywords, identical arguements
+	h: Content: Internal Name: incorrect arguements: '#', "Data IDs" (?)
+	i: Content: Data IDs: incorrect arguements: '#', "Internal Name" (?), grouping syntax issue (x#,#~#) 
+	j: --> Get added contents
+	j...: + 'duplicate content' error
+	k: Imparsible error: using version syntax, rubbish
+
+
+	At (?) - this may be omitted and left to user to correct any arising errors
+-- !close --
+
+-- z
+VERSION
+
+-- a
+REPLACE i> WITH Item
+SmolItem AS i10 t10 p10 d10
+BigItem AS i20 t20,21 p20~22 g20 d20
+
+-- b
+Added
+added
+AdDEd
+
+-- c
+ADDED
+ADDED
+--
+-- d
+replace i> With Item
+REPLACE i> Item
+i> WITH Item
+WITH Item REPLACE i>
+REPLACE i> REPLACE Item WITH i>
+REPLACE i> WITH i> WITH Item
+--
+-- e
+REPLACE WITH i>
+REPLACE i> WITH 
+REPLACE WITH
+REPLACE 9 WITH Item
+REPLACE i> WITH 6
+REPLACE i> WITH i>
+REPLACE Item WITH Item
+--
+-- f
+REPLACE i> WITH Item
+REPLACE i> WITH Item
+REPLACE i> WITH ItemFlame
+--
+-- g
+SmolItem as i10
+AS t10
+SmolItem AS 
+BigItem AS i20 AS t20
+SmolItem AS SmolItem
+i20 AS i20
+--
+-- h
+10 AS p10
+-- p10 AS p10
+--
+-- i
+BigItem AS 20
+SmolItem AS d20~22,23
+-- BigItem AS BigItem
+--
+-- j
+Smoli> AS i10 t10 p10 d10
+Bigi> AS i20 t20,21 p20~22 g20 d20
+Smoli> AS i10 t10 p10 d10
+Bigi> AS i20 t20,21 p20~22 g20 d20
+--
+-- k
+MAJOR 1 MINOR 0
+this is not parsable: A
+
+-- ========================= END secAdd ========================= --
+
+
+
+
+
+
+
+
+-- ------------------------- secAdt ------------------------- --
+-- !open --
+VALID LINES
+	ADDITIONAL
+	p15 d15 AS MidEffects TO MidItem BY i15
+	d11 AS SmolDust TO SmolItem BY i10
+	-- the above also tests for loose and ready-connect addits
+
+ADDITIONAL ERROR TESTING CASES
+	a: Section already found (post parse): added
+	b: Adt syntax before section tag: should not be parsed
+	c: Additional tag keyword: incorrect letter casing, not on lone line
+	d: --> Identify additional tag
+	d...: + 'already parsed tag' error
+	e: Full syntax: incorrect letter casing, missing one other keyword (only BY), incorrect order of keywords, too many keywords, duplicate arguements (?)
+	f: Full syntax: Data IDs: incorrect arguements: '#', "Related Data ID", grouping syntax issue (x#,#~#)
+	g: Full syntax: Opt Name: incorrect arguements: '#', "Related Internal Name", "&99"
+	h: Full syntax: Rel Name: incorrect arguements: '#', "Match with Rel ID", "&99"
+	i: Full syntax: Rel ID: incorrect arguements: '#', "Data IDs", only 1 ID, grouping syntax issue (x#,#~#), missing arguement
+	j: --> Get additional content (full and omitted syntax)
+	j...: + 'duplicate additional content' error
+	k: Imparsible error: using version syntax, rubbish
+
+
+	At (?) - this may be omitted and left to user to correct any arising errors
+-- !close --
+
+-- a
+ADDED
+
+-- b
+p15 d15 AS MidEffects TO MidItem BY i15
+d11 AS SmolDust TO SmolItem BY i10
+
+-- c
+Additional
+ADDITIONAL additional
+
+-- d 
+ADDITIONAL
+ADDITIONAL
+--
+-- e   
+p15 as mideffects to miditem by i15
+p15 AS MidEffects TO MidItem i15
+p15 TO MidEffects BY MidItem AS i15
+p15 TO MidEffects AS MidItem BY i15
+p15 AS MidEffects AS MidEffects TO MidItem BY i15
+p15 AS MidEffects TO MidItem TO MidItem BY i15
+p15 AS MidEffects TO MidItem BY i15 BY i15
+-- 
+-- f
+11 AS SmolDust TO SmolItem BY i10
+i10 AS SmolDust TO SmolItem BY i10
+d11,12~14 AS SmolDust TO SmolItem BY i10
+--
+-- g
+d11 AS 2345 TO SmolItem BY i10
+d11 AS SmolItem TO SmolItem BY i10
+d11 AS &99 TO SmolItem BY i10
+-- 
+-- h
+d11 AS SmolDust TO 10 BY i10
+p15 AS MidEffects TO i15 BY i15
+p15 AS MidEffects TO &99 BY i15
+-- 
+-- i
+p15 AS MidEffects TO MidItem BY 15
+p15 AS MidEffects TO MidItem BY p15
+p15 AS MidEffects TO MidItem BY i15,16 
+p15 AS MidEffects TO MidItem BY i15~17
+p15 AS MidEffects TO MidItem BY i15~17,18
+p15 AS MidEffects TO MidItem BY
+--
+-- j
+p15 d15 AS MidEffects TO MidItem BY i15
+d11 AS SmolDust TO SmolItem BY i10
+p15 d15 TO MidItem BY i15
+d11 TO SmolItem BY i10
+p15 d15 AS MidEffects BY i15
+d11 AS SmolDust BY i10
+p15 d15 BY i15
+d11 BY i10
+--
+-- k
+MAJOR 1 MINOR 0
+this is not parsable: D
+
+-- ------------------------- END secAdt ------------------------- --
+
+
+
+
+
+
+
+
+
+
+-- ========================= secTtaTca ========================= --
+-- !open --
+VALID LINES
+	TTA
+	2
+
+
+TTA/TCA ERROR TESTING CASES
+	a: Section already found (post parse): additional
+	b: Tta syntax before section tag: should not be parsed (is just numbers)
+	c: TTA tag keywords: incorrect letter casing, not on lone line
+	d: --> Identify tta/tca tag
+	d:...: + 'alrerady parsed tag' error with alternative keyword
+	e: TTA number: incorrect arguements: too many numbers (with spaces), NaN, "x < 0"
+	f: --> Get TTA Number
+	f...: + 'already got tta number' error
+	g: Imparsible error: using version syntax, rubbish
+
+-- !close --
+
+-- a
+ADDITIONAL
+
+-- b
+4
+
+-- c
+tta 
+ttc TTA
+
+-- d
+TTA 
+TTC
+
+-- e
+1 30  8
+2i
+-4
+
+-- f
+2
+2
+
+-- g
+MAJOR 1 MINOR 0
+this is not parsable: T
+
+-- ========================= END secTtaTca ========================= --
+
+
+
+
+
+
+
+
+
+
+-- ------------------------- secUpd ------------------------- --
+-- !open --
+VALID LINES
+	...
+	-- the above tests both loose and auto-connect updates
+
+UPDATED ERROR TESTING CASES
+	a: Section already found (post parse): tta (using alt keyword)
+	b: Upd syntax before section tag: should not be parsed
+	c: Updated tag keyword: incorrect letter casing, not on lone line
+	d: --> Identify updated tag
+	d...: + 'already parsed tag' error
+	e: Full syntax: incorrect letter casing, missing one other keyword (only WITH), incorrect order of keywords, too many keywords, duplicate arguements (?)
+	f: Full syntax: Rel Name: incorrect arguements: '#', "Match with Rel ID", "&99"
+	g: Full syntax: Rel ID: incorrect arguements: '#', "Data IDs", only 1 ID, grouping syntax issue (x#,#~#), missing arguement
+	h: Full syntax: Change Desc: '#', "Not Rel ID, "Not Rel Name", "&99"
+	i: --> Get updated content (full and omitted syntax)
+	i...: + 'duplicate updated content' error
+	j: Imparsible error: using version syntax, rubbish
+
+	At (?) - this may be omitted and left to user to correct any arising errors
+-- !close --
+
+-- a
+-- tbd after TTA/TCA has been fully tested...
+
+-- ------------------------- END secUpd ------------------------- --

@@ -3046,8 +3046,7 @@ namespace HCResourceLibraryApp.DataHandling
                 #region Decode - Tracking & Temporary Storage
                 bool endFileReading = false, ranLegendChecksQ = false;
                 List<string[]> addedPholderNSubTags = new();
-                List<string> addedContentsNames = new();
-                List<string> looseInfoRCDataIDs = new();
+                List<string> looseInfoRCDataIDs = new(), _additDupeMatchingList = new();
                 List<ContentAdditionals> looseConAddits = new();
                 List<ContentChanges> looseConChanges = new();
                 usedLegendKeys = new List<string>();
@@ -3115,8 +3114,8 @@ namespace HCResourceLibraryApp.DataHandling
                                 {
                                     /// ensures first section is "Version"
                                     if (!hasFoundFirstSection_VerQ)
-                                        hasFoundFirstSection_VerQ = sectionName == kwV;                                    
-                                    
+                                        hasFoundFirstSection_VerQ = sectionName == kwV;
+                                                                        
                                     if (hasFoundFirstSection_VerQ)
                                     {
                                         /// this ensures that the section hasn't already been found and parsed (no repeats)
@@ -3145,13 +3144,20 @@ namespace HCResourceLibraryApp.DataHandling
 
                                             Dbg.Log(ldx, $"Found section #{currentSectionNumber}: '{sectionName}';");
                                         }
-                                        else Dbg.Log(ldx, $"Section '{sectionName}' has already been found; ");
+                                        else
+                                        {
+                                            DecodeInfo diMain = new($"L{lineNum}| {logDataLine}", SafeSectionName(sectionName_mainDecoding));
+                                            diMain.NoteIssue(ldx, $"Section '{sectionName}' has already been found");
+                                            Dbg.Log(ldx, $"L{lineNum} --> Section '{sectionName}' has already been found; ");
+                                            decodingInfoDock.Add(diMain);
+                                        }
                                     }
                                 }
                                 /// just issue messages on detected keywords
                                 else if (ContainsKeywordQ(out bool isSectionKeywordQ))
                                 {
                                     DecodeInfo diMain = new($"L{lineNum}| {logDataLine}", SafeSectionName(sectionName_mainDecoding));
+                                    Dbg.LogPart(ldx, $"L{lineNum} --> ");
                                     if (isSectionKeywordQ)
                                     {
                                         diMain.NoteIssue(ldx, "Section keyword must be on its own line");
@@ -3175,28 +3181,6 @@ namespace HCResourceLibraryApp.DataHandling
                                 Dbg.NudgeIndent(ldx, true);
                                 bool sectionIssueQ = false, imparsibleIssueQ = false;
 
-                                /** SECTION DEPENDENCIES AND ORDERING
-                                 *      Goal: sections can be placed in any order except for Version at top (first)
-                                 *      
-                                 *      Section Dependencies
-                                 *      ---
-                                 *      Version: none, must be first
-                                 *      Added: none
-                                 *      Additional: none
-                                 *      TTA/TCA: Depends on Added and Additional for content count verification
-                                 *      Updated: Added and Additional for self-updating contents, otherwise none
-                                 *      Legend: none  
-                                 *          > LegendChecks: Dependes on Added, Additional, and Updated for confirming noted/generated legend keys
-                                 *      Summary: Depends on TTA/TCA for content number
-                                 *      
-                                 *      Feasible? It would take too much time. This choice of sections placement should be ditched. It was added on a whim not fully understanding/remebering the workings of the decoder
-                                 *      
-                                 *      
-                                 *      Omittable / Unrequired sections: Updated and Additional (this should work no problem)
-                                 *      
-                                 *      
-                                 *      Delete Later?
-                                 **/
 
                                 /// VERSION
                                 if (currentSectionKeyword == kwV)
@@ -3242,131 +3226,149 @@ namespace HCResourceLibraryApp.DataHandling
                                     {
                                         string argA = null, argBB = null;
 
-                                        /// using expanded syntax
-                                        if (logDataLine.StartsWith(kwMaj) && logDataLine.Contains(kwMin))
+                                        Dbg.LogPart(ldx, "Version content line ");
+                                        if (logDataLine.StartsWith(kwMaj) || logDataLine.Contains(kVerShort))
                                         {
-                                            /// that SnippetText method of mine is a bit bugged... and I'm scared that when i fix it, all of the SFormatter class breaks  (' ~ ')
-                                            /// I'm not quite ready or wanting to do all that all over again
-                                            //argA = logDataLine.SnippetText(kwMaj, kwMin, Snip.EndLast);
-                                            //argBB = logDataLine.SnippetText(kwMin, logDataLine[^1].ToString(), Snip.Inc).Replace(kwMin, "");
-                                            
-                                            string[] args = logDataLine.Replace(kwMaj, "").Split(kwMin);
-                                            if (args.Length == 2)
-                                            {
-                                                argA = args[0];
-                                                argBB = args[1];
-                                            }
-                                            Dbg.LogPart(ldx, "By expanded syntax: ");
-                                        }
-                                        /// using shortened syntax
-                                        else if (logDataLine.Contains(kVerShort))
-                                        {
-                                            string[] args = logDataLine.Split(kVerShort);
-                                            if (args.Length == 2)
-                                            {
-                                                argA = args[0];
-                                                argBB = args[1];
-                                            }
-                                            Dbg.LogPart(ldx, "By short syntax: ");
-                                        }
-                                        else imparsibleIssueQ = true;
-                                        Dbg.LogPart(ldx, $"retrieved arguments: [A] '{argA}',  [BB] '{argBB}'; ");
+                                            Dbg.LogPart(ldx, "identified; ");
 
-                                        /// validate arguements and parse for numerical values to generate VerNum instance
-                                        if (int.TryParse(argA, out int verA))
-                                        {
-                                            if (int.TryParse(argBB, out int verBB))
+                                            /// using expanded syntax
+                                            if (logDataLine.StartsWith(kwMaj) && logDataLine.Contains(kwMin))
                                             {
-                                                if (verA >= 0)
+                                                //string[] args = logDataLine.Replace(kwMaj, "").Split(kwMin);
+                                                string[] args = logDataLine[kwMaj.Length..].Split(kwMin);
+                                                if (args.Length == 2)
                                                 {
-                                                    if (verBB.IsWithin(0, 99))
+                                                    argA = args[0];
+                                                    argBB = args[1];
+                                                }
+                                                Dbg.LogPart(ldx, "By expanded syntax: ");
+                                            }
+                                            /// using shortened syntax
+                                            else if (logDataLine.Contains(kVerShort))
+                                            {
+                                                string[] args = logDataLine.Split(kVerShort);
+                                                if (args.Length == 2)
+                                                {
+                                                    argA = args[0];
+                                                    argBB = args[1];
+                                                }
+                                                Dbg.LogPart(ldx, "By short syntax: ");
+                                            }
+                                            else imparsibleIssueQ = true;
+                                            Dbg.LogPart(ldx, $"retrieved arguments: [A] '{argA}',  [BB] '{argBB}'; ");
+
+                                            /// validate arguements and parse for numerical values to generate VerNum instance
+                                            if (argA.IsNotNEW() && int.TryParse(argA, out int verA))
+                                            {
+                                                if (argBB.IsNotNEW() && int.TryParse(argBB, out int verBB))
+                                                {
+                                                    if (verA >= 0)
                                                     {
-                                                        /// generate version number instance
-                                                        VerNum verNum = new(verA, verBB);
-                                                        decodeInfo.NoteResult($"{decodeResult_genSuccess}{verNum}");
-                                                        Dbg.LogPart(ldx, $"--> Generated instance (VN): {verNum}");
-                                                        logVersion = verNum;
-                                                        sectionIssueQ = false;
-
-                                                        /// check for suggestions and potential overwritting
-                                                        if (latestLibVersion.HasValue() && earliestLibVersion.HasValue())
+                                                        if (verBB.IsWithin(0, 99))
                                                         {
-                                                            /// check if version exists (overwritting warning)
-                                                            if (logVersion.AsNumber.IsWithin(earliestLibVersion.AsNumber, latestLibVersion.AsNumber))
+                                                            /// generate version number instance
+                                                            VerNum verNum = new(verA, verBB);
+                                                            decodeInfo.NoteResult($"{decodeResult_genSuccess}{verNum}");
+                                                            Dbg.LogPart(ldx, $"--> Generated instance (VN): {verNum}");
+
+                                                            if (!logVersion.HasValue())
                                                             {
-                                                                Dbg.LogPart(ldx, $"; Version {logVersion.ToStringNums()} information already exists within library [OVERWRITE Warning]");
-                                                                decodeInfo.NoteIssue(ldx, $"Version {logVersion.ToStringNums()} information already exists in library (May be overwritten).");
-                                                                _versionAlreadyExistsQ = true;
-                                                            }
+                                                                logVersion = verNum;
+                                                                sectionIssueQ = false;
 
-                                                            /// suggest version number (first if: larger than latest, second if: smaller than earlier)
-                                                            if (logVersion.AsNumber > latestLibVersion.AsNumber && latestLibVersion.AsNumber + 1 != logVersion.AsNumber)
-                                                            {
-                                                                //bool nextMajor = latestLibVersion.MinorNumber + 1 >= 100;
-                                                                //VerNum suggestedVer;
-                                                                //if (nextMajor)
-                                                                //    suggestedVer = new VerNum(latestLibVersion.MajorNumber + 1, 0);
-                                                                //else suggestedVer = new VerNum(latestLibVersion.MajorNumber, latestLibVersion.MinorNumber + 1);
 
-                                                                VerNum suggestedVer = new(latestLibVersion.AsNumber + 1);
-                                                                Dbg.LogPart(ldx, $"; Suggesting version log number: {suggestedVer}");
-                                                                decodeInfo.NoteIssue(ldx, $"Suggesting version log number: {suggestedVer}");
-                                                            }
-                                                            else if (logVersion.AsNumber < earliestLibVersion.AsNumber && earliestLibVersion.AsNumber - 1 != logVersion.AsNumber)
-                                                            {
-                                                                //bool lowestVer = latestLibVersion.AsNumber - 1 == 0;
-                                                                //bool prevMajor = latestLibVersion.MinorNumber - 1 < 0 && latestLibVersion.MajorNumber >= 1;
-
-                                                                //if (!lowestVer)
-                                                                //{
-                                                                //    VerNum suggestedVer;
-                                                                //    if (prevMajor)
-                                                                //        suggestedVer = new VerNum(latestLibVersion.MajorNumber - 1, 99);
-                                                                //    else suggestedVer = new VerNum(latestLibVersion.MajorNumber, latestLibVersion.MinorNumber - 1);
-
-                                                                //    Dbg.LogPart(ldx, $"; Suggesting version log number: {suggestedVer}");
-                                                                //    decodeInfo.NoteIssue(ldx, $"Suggesting version log number: {suggestedVer}");
-                                                                //}
-
-                                                                //bool lowestVer = earliestLibVersion.AsNumber - 1 == 0;
-                                                                //bool prevMajor = earliestLibVersion.MinorNumber - 1 < 0 && latestLibVersion.MajorNumber >= 1;
-
-                                                                if (earliestLibVersion.AsNumber - 1 >= 0)
+                                                                /// check for suggestions and potential overwritting
+                                                                if (latestLibVersion.HasValue() && earliestLibVersion.HasValue())
                                                                 {
-                                                                    //VerNum suggestedVer;
-                                                                    //if (prevMajor)
-                                                                    //    suggestedVer = new VerNum(latestLibVersion.MajorNumber - 1, 99);
-                                                                    //else suggestedVer = new VerNum(latestLibVersion.MajorNumber, latestLibVersion.MinorNumber - 1);
+                                                                    /// check if version exists (overwritting warning)
+                                                                    if (logVersion.AsNumber.IsWithin(earliestLibVersion.AsNumber, latestLibVersion.AsNumber))
+                                                                    {
+                                                                        decodeInfo.NoteIssue(ldx, $"Version {logVersion.ToStringNums()} information already exists in library (May be overwritten).");
+                                                                        Dbg.LogPart(ldx, $"; Version {logVersion.ToStringNums()} information already exists within library [OVERWRITE Warning]");
+                                                                        _versionAlreadyExistsQ = true;
+                                                                    }
 
-                                                                    VerNum suggestedVer = new(earliestLibVersion.AsNumber - 1);
-                                                                    Dbg.LogPart(ldx, $"; Suggesting version log number: {suggestedVer}");
-                                                                    decodeInfo.NoteIssue(ldx, $"Suggesting version log number: {suggestedVer}");
+                                                                    /// suggest version number (first if: larger than latest, second if: smaller than earlier)
+                                                                    if (logVersion.AsNumber > latestLibVersion.AsNumber && latestLibVersion.AsNumber + 1 != logVersion.AsNumber)
+                                                                    {
+                                                                        //bool nextMajor = latestLibVersion.MinorNumber + 1 >= 100;
+                                                                        //VerNum suggestedVer;
+                                                                        //if (nextMajor)
+                                                                        //    suggestedVer = new VerNum(latestLibVersion.MajorNumber + 1, 0);
+                                                                        //else suggestedVer = new VerNum(latestLibVersion.MajorNumber, latestLibVersion.MinorNumber + 1);
+
+                                                                        VerNum suggestedVer = new(latestLibVersion.AsNumber + 1);
+                                                                        decodeInfo.NoteIssue(ldx, $"Suggesting version log number: {suggestedVer}");
+                                                                        Dbg.LogPart(ldx, $"; Suggesting version log number: {suggestedVer}");
+                                                                    }
+                                                                    else if (logVersion.AsNumber < earliestLibVersion.AsNumber && earliestLibVersion.AsNumber - 1 != logVersion.AsNumber)
+                                                                    {
+                                                                        //bool lowestVer = latestLibVersion.AsNumber - 1 == 0;
+                                                                        //bool prevMajor = latestLibVersion.MinorNumber - 1 < 0 && latestLibVersion.MajorNumber >= 1;
+
+                                                                        //if (!lowestVer)
+                                                                        //{
+                                                                        //    VerNum suggestedVer;
+                                                                        //    if (prevMajor)
+                                                                        //        suggestedVer = new VerNum(latestLibVersion.MajorNumber - 1, 99);
+                                                                        //    else suggestedVer = new VerNum(latestLibVersion.MajorNumber, latestLibVersion.MinorNumber - 1);
+
+                                                                        //    Dbg.LogPart(ldx, $"; Suggesting version log number: {suggestedVer}");
+                                                                        //    decodeInfo.NoteIssue(ldx, $"Suggesting version log number: {suggestedVer}");
+                                                                        //}
+
+                                                                        //bool lowestVer = earliestLibVersion.AsNumber - 1 == 0;
+                                                                        //bool prevMajor = earliestLibVersion.MinorNumber - 1 < 0 && latestLibVersion.MajorNumber >= 1;
+
+                                                                        if (earliestLibVersion.AsNumber - 1 >= 0)
+                                                                        {
+                                                                            //VerNum suggestedVer;
+                                                                            //if (prevMajor)
+                                                                            //    suggestedVer = new VerNum(latestLibVersion.MajorNumber - 1, 99);
+                                                                            //else suggestedVer = new VerNum(latestLibVersion.MajorNumber, latestLibVersion.MinorNumber - 1);
+
+                                                                            VerNum suggestedVer = new(earliestLibVersion.AsNumber - 1);
+                                                                            decodeInfo.NoteIssue(ldx, $"Suggesting version log number: {suggestedVer}");
+                                                                            Dbg.LogPart(ldx, $"; Suggesting version log number: {suggestedVer}");
+                                                                        }
+                                                                    }
                                                                 }
                                                             }
+                                                            else
+                                                            {
+                                                                Dbg.LogPart(ldx, "; ");
+                                                                decodeInfo.NoteIssue(ldx, "Version number already parsed");
+                                                                Dbg.LogPart(ldx, "Already parsed version number; ");
+                                                            }
+                                                        }
+                                                        else
+                                                        {
+                                                            decodeInfo.NoteIssue(ldx, "Minor version number cannot be negative or greater than 99");
+                                                            Dbg.LogPart(ldx, "Minor version number cannot be negative or greater than 99; ");
                                                         }
                                                     }
                                                     else
                                                     {
-                                                        decodeInfo.NoteIssue(ldx, "Minor version number cannot be negative or greater than 99");
-                                                        Dbg.LogPart(ldx, "Minor version number cannot be negative or greater than 99; ");
+                                                        decodeInfo.NoteIssue(ldx, "Major version number cannot be negative");
+                                                        Dbg.LogPart(ldx, "Major version number cannot be negative; ");
                                                     }
                                                 }
                                                 else
                                                 {
-                                                    decodeInfo.NoteIssue(ldx, "Major version number cannot be negative");
-                                                    Dbg.LogPart(ldx, "Major version number cannot be negative; ");
+                                                    decodeInfo.NoteIssue(ldx, "Could not get minor version number");
+                                                    Dbg.LogPart(ldx, "Could not get minor version number; ");
                                                 }
                                             }
                                             else
                                             {
-                                                decodeInfo.NoteIssue(ldx, "Could not get minor version number");
-                                                Dbg.LogPart(ldx, "Could not get minor version number; ");
+                                                decodeInfo.NoteIssue(ldx, "Could not get major version number");
+                                                Dbg.LogPart(ldx, "Could not get major version number; ");
                                             }
                                         }
-                                        else if (argA.IsNotNEW())
+                                        else
                                         {
-                                            decodeInfo.NoteIssue(ldx, "Could not get major version number");
-                                            Dbg.LogPart(ldx, "Could not get major version number; ");
+                                            imparsibleIssueQ = true;
+                                            Dbg.LogPart(ldx, "???; ");
                                         }
                                     }
                                     EndSectionDbugLog("version");
@@ -3429,16 +3431,17 @@ namespace HCResourceLibraryApp.DataHandling
                                         Dbg.LogPart(ldx, "Placeholder/substitution line identified; ");
                                         if (logDataLine.Contains(kwWit))
                                         {
-                                            /// that SnippetText method of mine is a bit bugged... and I'm scared that when i fix it, all of the SFormatter class breaks  (' ~ ')
-                                            /// I'm not quite ready or wanting to do all that all over again
-                                            //string argPh = logDataLine.SnippetText(kwRep, kwWit, Snip.EndAft);
-                                            //string argSub = logDataLine.SnippetText(kwWit, logDataLine[^1].ToString(), Snip.EndAft);
                                             string argPh = null, argSub = null;
-                                            string[] args = logDataLine.Replace(kwRep, "").Split(kwWit);
+                                            //string[] args = logDataLine.Replace(kwRep, "").Split(kwWit);
+                                            string[] args = logDataLine[kwRep.Length..].Split(kwWit);
                                             if (args.Length == 2)
                                             {
                                                 argPh = args[0].Trim();
                                                 argSub = args[1].Trim();
+
+                                                /// issue trigger in the case of too many REPLACE keywords
+                                                if (argPh.Contains(kwRep))
+                                                    argPh = null;
                                             }
 
                                             // validate and parse placeholder/substitute values then store them
@@ -3446,10 +3449,52 @@ namespace HCResourceLibraryApp.DataHandling
                                             {
                                                 if (!int.TryParse(argPh, out _) && !int.TryParse(argSub, out _))
                                                 {
-                                                    addedPholderNSubTags.Add(new string[] { argPh, argSub });
-                                                    decodeInfo.NoteResult($"Got placeholder/substitute group: '{argPh}' / '{argSub}'");
-                                                    Dbg.LogPart(ldx, $"Saved placeholder/substitute group as 'ph/sub': '{argPh}'/'{argSub}'; ");
-                                                    sectionIssueQ = false;
+                                                    /// check for duplicates: ph and ph/sub group
+                                                    bool dupeReplacementGroupQ = false, dupePlaceholderQ = false;
+                                                    if (addedPholderNSubTags.HasElements())
+                                                    {
+                                                        foreach (string[] repGroup in addedPholderNSubTags)
+                                                        {
+                                                            /// duplicate ph
+                                                            if (repGroup[0] == argPh)
+                                                            {
+                                                                dupePlaceholderQ = true;
+
+                                                                /// duplicate ph/sub
+                                                                if (repGroup[1] == argSub)
+                                                                {
+                                                                    dupeReplacementGroupQ = true;
+                                                                    break;
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+
+                                                    if (argPh != argSub && !dupeReplacementGroupQ && !dupePlaceholderQ)
+                                                    {
+                                                        addedPholderNSubTags.Add(new string[] { argPh, argSub });
+                                                        decodeInfo.NoteResult($"Got placeholder/substitute group: '{argPh}' / '{argSub}'");
+                                                        Dbg.LogPart(ldx, $"Saved placeholder/substitute group as 'ph/sub': '{argPh}'/'{argSub}'; ");
+                                                        sectionIssueQ = false;
+                                                    }
+                                                    else
+                                                    {
+                                                        if (dupeReplacementGroupQ)
+                                                        {
+                                                            decodeInfo.NoteIssue(ldx, "Placeholder/substitute group already exists");
+                                                            Dbg.LogPart(ldx, "Placeholder/substitute group already exists; ");
+                                                        }
+                                                        else if (dupePlaceholderQ)
+                                                        {
+                                                            decodeInfo.NoteIssue(ldx, $"The placeholder '{argPh}' is already being used");
+                                                            Dbg.LogPart(ldx, $"The placeholder '{argPh}' is already being used; ");
+                                                        }
+                                                        else
+                                                        {
+                                                            decodeInfo.NoteIssue(ldx, "Placeholder and substitute cannot be the same value");
+                                                            Dbg.LogPart(ldx, "Placeholder and substitute cannot be the same value; ");
+                                                        }
+                                                    }
                                                 }
                                                 else
                                                 {
@@ -3459,8 +3504,8 @@ namespace HCResourceLibraryApp.DataHandling
                                             }
                                             else
                                             {
-                                                decodeInfo.NoteIssue(ldx, $"Could not get {ConditionalText(argPh.IsNEW(), "substitute", "placeholder")} value");
-                                                Dbg.LogPart(ldx, $"Could not get {ConditionalText(argPh.IsNEW(), "substitute", "placeholder")} value ");
+                                                decodeInfo.NoteIssue(ldx, $"Could not get {ConditionalText(argPh.IsNotNEW(), "substitute", "placeholder")} value");
+                                                Dbg.LogPart(ldx, $"Could not get {ConditionalText(argPh.IsNotNEW(), "substitute", "placeholder")} value ");
                                             }
                                         }
                                         else
@@ -3484,10 +3529,19 @@ namespace HCResourceLibraryApp.DataHandling
                                             string[] addedParts = logDataLine.Split(kwAs);
                                             if (addedParts.Length == 2)
                                             {
+                                                bool noParsingIssuesOnRequiredQ = true;
                                                 string added_contName = addedParts[0], added_contIDs = addedParts[1];
 
+                                                /// check that they are not identical arguements
+                                                if (added_contName.Trim().Equals(added_contIDs.Trim()))
+                                                {
+                                                    decodeInfo.NoteIssue(ldx, "Content's internal name and data IDs cannot be the same value");
+                                                    Dbg.Log(ldx, "Internal name and data IDs cannot be the same value; ");
+                                                    noParsingIssuesOnRequiredQ = false;
+                                                }
+
                                                 // part 1 - the content/internal name
-                                                if (added_contName.IsNotNEW())
+                                                if (added_contName.IsNotNEW() && noParsingIssuesOnRequiredQ)
                                                 {
                                                     Dbg.LogPart(ldx, "Parsing content/internal name -- ");
                                                     added_contName = CharacterKeycodeSubstitution(FixContentName(ReplacePlaceholdersWithSubs(added_contName)));
@@ -3500,16 +3554,18 @@ namespace HCResourceLibraryApp.DataHandling
                                                     {
                                                         decodeInfo.NoteIssue(ldx, "Internal name cannot be plain numbers");
                                                         Dbg.Log(ldx, "Internal name cannot be plain numbers; ");
+                                                        noParsingIssuesOnRequiredQ = false;
                                                     }
                                                 }
-                                                else
+                                                else if (noParsingIssuesOnRequiredQ)
                                                 {
                                                     decodeInfo.NoteIssue(ldx, "Could not get content's internal name");
                                                     Dbg.Log(ldx, "Could not get content name; ");
+                                                    noParsingIssuesOnRequiredQ = false;
                                                 }
 
                                                 // part 2 - the content data IDs
-                                                if (added_contIDs.IsNotNEW())
+                                                if (added_contIDs.IsNotNEW() && noParsingIssuesOnRequiredQ)
                                                 {
                                                     Dbg.LogPart(ldx, "Parsing content data IDs -- ");
                                                     added_contIDs = CharacterKeycodeSubstitution(ReplacePlaceholdersWithSubs(added_contIDs));
@@ -3684,7 +3740,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                     addedDataIDs = addedDataIDs.ToArray().SortWords();
                                                     Dbg.LogPart(ldx, "Sorted data IDs; ");
                                                 }
-                                                else
+                                                else if (noParsingIssuesOnRequiredQ)
                                                 {
                                                     decodeInfo.NoteIssue(ldx, "Could not get content's data IDs");
                                                     Dbg.Log(ldx, "Could not get content data IDs; ");
@@ -3693,21 +3749,30 @@ namespace HCResourceLibraryApp.DataHandling
                                                 // compile added content
                                                 if (addedDataIDs.HasElements() && addedContentName.IsNotNEW())
                                                 {
-                                                    addedContentsNames.Add(addedContentName);
-                                                    Dbg.LogPart(ldx, $" --> Obtained content name ({addedContentName}) and data Ids (");
+                                                    Dbg.LogPart(ldx, $"Obtained content name ({addedContentName}) and data Ids (");
                                                     foreach (string datID in addedDataIDs)
                                                         Dbg.LogPart(ldx, $"{datID} ");
                                                     Dbg.LogPart(ldx, "); ");
 
                                                     // generate a content base group
                                                     ContentBaseGroup newContent = new(logVersion, addedContentName, addedDataIDs.ToArray());
-                                                    resourceContents.Add(new ResContents(newResConShelfNumber, newContent));
-                                                    decodeInfo.NoteResult($"{decodeResult_genSuccess}{CleanInfoDisplay(newContent)}");
-                                                    Dbg.LogPart(ldx, $"--> Generated instance (CBG) :: {newContent}; ");
+                                                    /// check for duplicate before giving the okay.
+                                                    ResContents dupeResCon = resourceContents.Find(rc => rc.ConBase.ToString() == newContent.ToString());
+                                                    if (dupeResCon is null)
+                                                    {
+                                                        resourceContents.Add(new ResContents(newResConShelfNumber, newContent));
+                                                        decodeInfo.NoteResult($"{decodeResult_genSuccess}{CleanInfoDisplay(newContent)}");
+                                                        Dbg.LogPart(ldx, $"--> Generated instance (CBG) :: {newContent}; ");
 
-                                                    sectionIssueQ = false;
+                                                        sectionIssueQ = false;
+                                                    }
+                                                    else
+                                                    {
+                                                        decodeInfo.NoteIssue(ldx, "This added content has already been parsed");
+                                                        Dbg.LogPart(ldx, "This added content has already been parsed; ");
+                                                    }
                                                 }
-                                                else
+                                                else if (noParsingIssuesOnRequiredQ)
                                                 {
                                                     decodeInfo.NoteIssue(ldx, "This added content could not be parsed");
                                                     Dbg.LogPart(ldx, "Failed to generate CBG instance from added content data; ");
@@ -3817,23 +3882,38 @@ namespace HCResourceLibraryApp.DataHandling
                                             {
                                                 /// start off by identifying 'related ID'
                                                 // gather any remaining data first
+                                                bool noParsingIssuesOnRequiredQ = true, noOtherParsingIssuesQ = true; 
                                                 string adt_relID = additParts[1], remainder = additParts[0];
                                                 string adt_contIDs = null, adt_optName = null, adt_relName = null;
 
                                                 /// for identifying 'related name'
                                                 if (remainder.Contains(kwTo))
-                                                {                                                    
+                                                {
+                                                    bool identifiedRelConNameQ = true;
                                                     string[] additSubParts = remainder.Split(kwTo);
                                                     if (additSubParts.Length == 2)
                                                     {
                                                         adt_relName = additSubParts[1];
                                                         remainder = additSubParts[0];
+
+                                                        /// for a specific error case where 'TO' and 'AS' keyword places are swapped
+                                                        if (adt_relName.IsNotNEW())
+                                                            if (adt_relName.Contains(kwAs))
+                                                            {
+                                                                identifiedRelConNameQ = false;
+                                                                adt_relName = null;
+                                                            }
                                                     }
-                                                    else
+                                                    else identifiedRelConNameQ = false;
+
+
+                                                    /// The original ELSE to the first IF above
+                                                    if (!identifiedRelConNameQ)
                                                     {
-                                                        /// in both cases where there is no 'TO' and there are too many 'TO's
+                                                        /// (also) in cases where there are too many 'TO's
                                                         decodeInfo.NoteIssue(ldx, "Could not identify related content name");
                                                         Dbg.LogPart(ldx, "Could not identify related content name; ");
+                                                        noParsingIssuesOnRequiredQ = false;
                                                     }
                                                 }
                                                 /// for identifying 'optional name'
@@ -3847,15 +3927,16 @@ namespace HCResourceLibraryApp.DataHandling
                                                     }
                                                     else
                                                     {
-                                                        /// in both cases where there is no 'AS' and there are too many 'AS's
+                                                        /// in cases where there are too many 'AS's
                                                         decodeInfo.NoteIssue(ldx, "Could not identify content's optional name");
                                                         Dbg.LogPart(ldx, "Could not identify content's optional name; ");
+                                                        noParsingIssuesOnRequiredQ = false;
                                                     }
                                                 }
 
 
                                                 // part 1 - the related data ID
-                                                if (adt_relID.IsNotNEW())
+                                                if (adt_relID.IsNotNEW() && noParsingIssuesOnRequiredQ)
                                                 {
                                                     Dbg.LogPart(ldx, "Parsing related data ID -- ");
                                                     string[] relID = ParseDataIDs(CharacterKeycodeSubstitution(adt_relID)).ToArray();
@@ -3869,16 +3950,18 @@ namespace HCResourceLibraryApp.DataHandling
                                                     {
                                                         decodeInfo.NoteIssue(ldx, "There cannot be more than one related data ID");
                                                         Dbg.LogPart(ldx, "There cannot be more than one related data ID; ");
+                                                        noParsingIssuesOnRequiredQ = false;
                                                     }
                                                 }
                                                 else
                                                 {
                                                     decodeInfo.NoteIssue(ldx, "Could not get related data ID");
                                                     Dbg.LogPart(ldx, "Could not get related data ID; ");
+                                                    noParsingIssuesOnRequiredQ = false;
                                                 }
 
                                                 // part 2 - the content IDs
-                                                if (remainder.IsNotNEW())
+                                                if (remainder.IsNotNEW() && noParsingIssuesOnRequiredQ)
                                                 {
                                                     Dbg.LogPart(ldx, "Parsing additional content data IDs -- ");
                                                     adt_contIDs = CharacterKeycodeSubstitution(remainder);
@@ -3893,39 +3976,57 @@ namespace HCResourceLibraryApp.DataHandling
 
                                                         additDataIDs = additDataIDs.ToArray().SortWords();
                                                         Dbg.LogPart(ldx, "Sorted data IDs; ");
+
+                                                        if (additDataIDs.Count == 0)
+                                                        {
+                                                            decodeInfo.NoteIssue(ldx, "Failed to get additional content's data IDs");
+                                                            Dbg.LogPart(ldx, "Failed to get additional content's data IDs; ");
+                                                            noParsingIssuesOnRequiredQ = false;
+                                                        }
                                                     }
                                                     else
                                                     {
                                                         decodeInfo.NoteIssue(ldx, $"Additional content data IDs cannot include the related data ID '{additRelatedDataID}'");
                                                         Dbg.LogPart(ldx, $"Data IDs contains related data ID '{additRelatedDataID}'; ");
+                                                        noParsingIssuesOnRequiredQ = false;
                                                     }                                                    
                                                 }
                                                 else
                                                 {
                                                     decodeInfo.NoteIssue(ldx, "Could not get additional content's data IDs");
                                                     Dbg.LogPart(ldx, "Could not get additional content's data IDs; ");
-                                                }                                                
+                                                    noParsingIssuesOnRequiredQ = false;
+                                                }
 
                                                 // part 3 - the related content name (not required)
-                                                if (adt_relName.IsNotNEW())
+                                                if (adt_relName.IsNotNEW() && noParsingIssuesOnRequiredQ)
                                                 {
                                                     Dbg.LogPart(ldx, "Parsing related content name -- ");
-                                                    adt_relName = CharacterKeycodeSubstitution(FixContentName(adt_relName));
-
-                                                    if (!int.TryParse(adt_relName, out _) && adt_relName.IsNotNEW())
+                                                    if (!adt_relName.Contains(additRelatedDataID))
                                                     {
-                                                        additRelatedName = adt_relName;
-                                                        Dbg.Log(ldx, $"Got final related content name :: {additRelatedName}");
+                                                        adt_relName = CharacterKeycodeSubstitution(FixContentName(adt_relName));
+                                                        if (!int.TryParse(adt_relName, out _) && adt_relName.IsNotNEW())
+                                                        {
+                                                            additRelatedName = adt_relName;
+                                                            Dbg.Log(ldx, $"Got final related content name :: {additRelatedName}");
+                                                        }
+                                                        else
+                                                        {
+                                                            decodeInfo.NoteIssue(ldx, $"Related internal name cannot be plain numbers or '{cks99[0..3]}'");
+                                                            Dbg.Log(ldx, $"Related internal name cannot be plain numbers or '{cks99[0..3]}'; ");
+                                                            noOtherParsingIssuesQ = false;
+                                                        }
                                                     }
                                                     else
                                                     {
-                                                        decodeInfo.NoteIssue(ldx, "Related internal name cannot be plain numbers");
-                                                        Dbg.Log(ldx, "Related internal name cannot be plain numbers; ");
+                                                        decodeInfo.NoteIssue(ldx, "Related internal name cannot be the related data ID");
+                                                        Dbg.Log(ldx, "Related internal name cannot equal related data ID; ");
+                                                        noOtherParsingIssuesQ = false;
                                                     }
                                                 }
 
                                                 // part 4 - the optional content name (not required)
-                                                if (adt_optName.IsNotNEW())
+                                                if (adt_optName.IsNotNEW() && noParsingIssuesOnRequiredQ)
                                                 {
                                                     Dbg.LogPart(ldx, "Parsing optional content name -- ");
                                                     adt_optName = CharacterKeycodeSubstitution(FixContentName(adt_optName));
@@ -3941,78 +4042,109 @@ namespace HCResourceLibraryApp.DataHandling
                                                         {
                                                             decodeInfo.NoteIssue(ldx, "Optional name cannot be the related internal name");
                                                             Dbg.Log(ldx, "Optional name cannot be the related name; ");
+                                                            noOtherParsingIssuesQ = false;
                                                         }                                                        
                                                     }
                                                     else
                                                     {
-                                                        decodeInfo.NoteIssue(ldx, "Optional name cannot be plain numbers");
-                                                        Dbg.Log(ldx, "Optional name cannot be plain numbers; ");
+                                                        decodeInfo.NoteIssue(ldx, $"Optional name cannot be plain numbers or '{cks99[0..3]}'");
+                                                        Dbg.Log(ldx, $"Optional name cannot be plain numbers or '{cks99[0..3]}'; ");
+                                                        noOtherParsingIssuesQ = false;
                                                     }
                                                 }
 
 
                                                 // compile additional content data
-                                                if (additDataIDs.HasElements() && additRelatedDataID.IsNotNEW())
+                                                if (additDataIDs.HasElements() && additRelatedDataID.IsNotNEW() && noOtherParsingIssuesQ)
                                                 {
                                                     /// generate additional content instance
                                                     ContentAdditionals newAdditCon = new(logVersion, additRelatedDataID, additOptionalName, additDataIDs.ToArray());
                                                     Dbg.LogPart(ldx, $"--> Generated instance (CA) :: {newAdditCon}; Searching for matching ConBase; ");
 
-                                                    /// search for matching resCon
-                                                    ResContents matchingResCon = null;
-                                                    if (resourceContents.HasElements() && newAdditCon.RelatedDataID != null)
+                                                    /// check for no duplicates (by DataIDs and RelID) before giving the okay   [check loose and connected; or put in a cumulative list]
+                                                    bool noDuplicatesQ = true;
+                                                    string dupeRepresentation = $"{logVersion}|{additRelatedDataID}|{string.Join(',', additDataIDs)}";
+                                                    if (_additDupeMatchingList.HasElements())
                                                     {
-                                                        // matching with contents in current log decode
-                                                        Dbg.LogPart(ldx, " in 'Decoded Library' -- ");
-                                                        foreach (ResContents resCon in resourceContents)
-                                                            if (resCon.ContainsDataID(newAdditCon.RelatedDataID, out RCFetchSource source))
-                                                            {
-                                                                if (source.Equals(RCFetchSource.ConBaseGroup))
+                                                        foreach (string dupeMatch in _additDupeMatchingList)
+                                                        {
+                                                            if (dupeMatch == dupeRepresentation)
+                                                                noDuplicatesQ = false;
+                                                        }
+
+                                                        if (noDuplicatesQ)
+                                                            _additDupeMatchingList.Add(dupeRepresentation);
+                                                    }     
+                                                    else _additDupeMatchingList.Add(dupeRepresentation);
+
+
+                                                    if (noDuplicatesQ)
+                                                    {
+                                                        /// search for matching resCon
+                                                        ResContents matchingResCon = null;
+                                                        if (resourceContents.HasElements() && newAdditCon.RelatedDataID != null)
+                                                        {
+                                                            // matching with contents in current log decode
+                                                            Dbg.LogPart(ldx, " in 'Decoded Library' -- ");
+                                                            foreach (ResContents resCon in resourceContents)
+                                                                if (resCon.ContainsDataID(newAdditCon.RelatedDataID, out RCFetchSource source))
                                                                 {
-                                                                    /// id only: save match, keep searching
-                                                                    /// id and name: save match, end searching
-                                                                    bool matchedNameQ = false;
-
-                                                                    Dbg.LogPart(ldx, $"; Got match ('{newAdditCon.RelatedDataID}'");
-                                                                    if (resCon.ContentName == additRelatedName)
+                                                                    if (source.Equals(RCFetchSource.ConBaseGroup))
                                                                     {
-                                                                        Dbg.LogPart(ldx, $", plus matched name '{resCon.ContentName}'");
-                                                                        matchedNameQ = true;
-                                                                    }
-                                                                    Dbg.LogPart(ldx, ")");
-                                                                    matchingResCon = resCon;
+                                                                        /// id only: save match, keep searching
+                                                                        /// id and name: save match, end searching
+                                                                        bool matchedNameQ = false;
 
-                                                                    if (matchedNameQ)
-                                                                    {
-                                                                        Dbg.LogPart(ldx, "; Search end");
-                                                                        break;
+                                                                        Dbg.LogPart(ldx, $"; Got match ('{newAdditCon.RelatedDataID}'");
+                                                                        if (resCon.ContentName == additRelatedName)
+                                                                        {
+                                                                            Dbg.LogPart(ldx, $", plus matched name '{resCon.ContentName}'");
+                                                                            matchedNameQ = true;
+                                                                        }
+                                                                        Dbg.LogPart(ldx, ")");
+                                                                        matchingResCon = resCon;
+
+                                                                        if (matchedNameQ)
+                                                                        {
+                                                                            Dbg.LogPart(ldx, "; Search end");
+                                                                            break;
+                                                                        }
+                                                                        else Dbg.LogPart(ldx, "; Search continue");
                                                                     }
-                                                                    else Dbg.LogPart(ldx, "; Search continue");
                                                                 }
-                                                            }
-                                                    }
-                                                    Dbg.Log(ldx, "; ");
+                                                        }
+                                                        Dbg.Log(ldx, "; ");
 
-                                                    // final steps...
-                                                    /// connect with ConBase from decoded
-                                                    if (matchingResCon != null)
-                                                    {
-                                                        matchingResCon.StoreConAdditional(newAdditCon);
-                                                        Dbg.LogPart(ldx, $"Completed connection of ConAddits ({newAdditCon}) to ConBase ({matchingResCon.ConBase}) [through ID '{newAdditCon.RelatedDataID}']; ");
-                                                        decodeInfo.NoteResult($"{decodeResult_genSuccess}{CleanInfoDisplay(newAdditCon)}, connected to '{matchingResCon.ConBase.ContentName}' by ID '{newAdditCon.RelatedDataID}'");
+                                                        // final steps...
+                                                        /// connect with ConBase from decoded
+                                                        if (matchingResCon != null)
+                                                        {
+                                                            matchingResCon.StoreConAdditional(newAdditCon);
+                                                            Dbg.LogPart(ldx, $"Completed connection of ConAddits ({newAdditCon}) to ConBase ({matchingResCon.ConBase}) [through ID '{newAdditCon.RelatedDataID}']; ");
+                                                            decodeInfo.NoteResult($"{decodeResult_genSuccess}{CleanInfoDisplay(newAdditCon)}, connected to '{matchingResCon.ConBase.ContentName}' by ID '{newAdditCon.RelatedDataID}'");
+
+                                                            /// technically, additionals on the same version can just be combined with previous added content lines
+                                                            decodeInfo.NoteIssue(ldx, $"Unneccessary additional line: Data IDs of this additional content can be transferred into the data IDs of the added content named '{matchingResCon.ConBase.ContentName}' since both are in the same version");
+                                                            Dbg.LogPart(ldx, "Creating additionals for a content that has just been added is unneccessary; ");
+                                                        }
+                                                        /// to be connected with ConBase from library
+                                                        else
+                                                        {
+                                                            looseConAddits.Add(newAdditCon);
+                                                            looseInfoRCDataIDs.Add(newAdditCon.RelatedDataID);
+                                                            Dbg.LogPart(ldx, $"No connection found: storing 'loose' ConAddits ({newAdditCon}) [using ID '{newAdditCon.RelatedDataID}']");
+                                                            decodeInfo.NoteResult($"{decodeResult_genSuccess}{CleanInfoDisplay(newAdditCon)}, storing as loose by ID '{newAdditCon.RelatedDataID}'");
+                                                        }
+
+                                                        sectionIssueQ = false;
                                                     }
-                                                    /// to be connected with ConBase from library
                                                     else
                                                     {
-                                                        looseConAddits.Add(newAdditCon);
-                                                        looseInfoRCDataIDs.Add(newAdditCon.RelatedDataID);
-                                                        Dbg.LogPart(ldx, $"No connection found: storing 'loose' ConAddits ({newAdditCon}) [using ID '{newAdditCon.RelatedDataID}']");
-                                                        decodeInfo.NoteResult($"{decodeResult_genSuccess}{CleanInfoDisplay(newAdditCon)}, storing as loose by ID '{newAdditCon.RelatedDataID}'");
-                                                    }
-
-                                                    sectionIssueQ = false;
+                                                        decodeInfo.NoteIssue(ldx, "A similar additional content has already been parsed");
+                                                        Dbg.LogPart(ldx, "A similar additional content has already been parsed; ");
+                                                    }                                                    
                                                 }
-                                                else
+                                                else if (noParsingIssuesOnRequiredQ)
                                                 {
                                                     decodeInfo.NoteIssue(ldx, "This additional content could not be parsed");
                                                     Dbg.LogPart(ldx, "Failed to generate CA instance from additional content data; ");
@@ -4761,7 +4893,7 @@ namespace HCResourceLibraryApp.DataHandling
                                 if (imparsibleIssueQ)
                                 {
                                     decodeInfo.NoteIssue(ldx, decodeIssue_imparsibleLine);
-                                    Dbug.Log(" <imparsible line>  // ");
+                                    Dbg.Log(ldx, " <imparsible line>  // ");
                                 }
                                 /// decoding info dock reports
                                 if (decodeInfo.IsSetup())
@@ -5014,7 +5146,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                     NoteLegendKey(sf, dataIDGroup);
 
                                                     parsedDataIDs.Add(dataIDGroup);
-                                                    Dbg.LogPart(ldx, $"Got and added wordy ID '{dataIDGroup}'");
+                                                    Dbg.LogPart(ldx, $"Got and added wordy ID '{dataIDGroup}'; ");
                                                 }
                                             }
                                         }
@@ -5360,11 +5492,14 @@ namespace HCResourceLibraryApp.DataHandling
 
                         // relays number of issues for ended section to debug log
                         if (currentSectionNumber.IsWithin(0, (short)(countSectionIssues.Length - 1)) && currentSectionName.IsNotNE())
-                            Dbg.Log(ldx, $"..  Sec#{currentSectionNumber + 1} '{currentSectionName}' ended with [{countSectionIssues[currentSectionNumber]}] issues;");
+                            Dbg.Log(ldx, $"..  Sec#{currentSectionNumber} '{currentSectionName}' ended with [{countSectionIssues[currentSectionNumber]}] issues;");
 
                         // ends a section, also notifies of an ended section to dbug log
                         if (!withinOmitBlock)
+                        {
                             withinASectionQ = false;
+                            currentSectionName = null;
+                        }
                     }
 
 
@@ -5543,7 +5678,7 @@ namespace HCResourceLibraryApp.DataHandling
 
                 if (dbgStr.IsNotNE())
                     Dbg.LogPart(ldx, $"CKS: {dbgStr.Trim()}; ");
-                    // ..; CKS: &00[-] &11[(]; ...
+                // ..; CKS: &00[-] &11[(]; ...
             }
             return subbedStr;
         }

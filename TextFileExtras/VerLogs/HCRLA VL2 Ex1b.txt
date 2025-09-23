@@ -56,10 +56,24 @@ Passion Fruit	AS i43 t31
 Strawberry		AS i115 t128
 -- from legacy additional section --
 -- Grains Biome Backgrounds AS b5,11`,13,19~21   
---		^^						^^ this is a grouping syntax error, should be noted and warned in decoding messages, proper way below
+--		^^						^^ this is a grouping syntax error, should be noted and warned in decoding messages, proper way below:
 Grains Biome Backgrounds AS b5,11`,13 b19~21
 -- Counted '12' ids from #21 to #24
 
+
+-- !open --
+technically, there shouldn't be anything in the additionals list
+instead, some added entries above would be modified as follows: 
+
+	p>				AS i34 "t23"
+	Garlic Clove	AS i69 d11",12,18" t46~"49"
+	AppleSauce Block AS i68 t68 "AppleSauce_Chunks"
+	Onion			AS i76 "t56"
+	t>				AS i101 t93 "d29,30"
+
+	I've placed double-quotes ("") around the 'modifications'
+
+-- !close --
 
 ADDITIONAL
 t23 AS Mashed Potato TO Potato BY i34

@@ -148,6 +148,8 @@ namespace HCResourceLibraryApp.DataHandling
         // > skipLogSubmissionDoubleConfirmations : bool
         // > startWithProfileSelection : bool
         // > showIDsOnBaseSearchResult : bool
+        // > noSearchResultsLimit : bool
+        // > hideActiveUserProfile : bool
         #endregion
 
         public Preferences() : base()

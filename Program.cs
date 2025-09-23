@@ -5,6 +5,7 @@ using static ConsoleFormat.Minimal;
 using HCResourceLibraryApp.DataHandling;
 using static HCResourceLibraryApp.Layout.PageBase;
 using HCResourceLibraryApp.Layout;
+using HCResourceLibraryApp.Hidden; // namespace of obsolete classes
 
 namespace HCResourceLibraryApp
 {
@@ -12,7 +13,7 @@ namespace HCResourceLibraryApp
     public class Program
     {
         static readonly string consoleTitle = "High Contrast Resource Library App";
-        static readonly string developmentVersion = "[v1.3.4c]";
+        static readonly string developmentVersion = "[v1.3.4d]";
         static readonly string lastPublishedVersion = "[v1.3.3e]";
         /// <summary>If <c>true</c>, the application launches for debugging/development. Otherwise, the application launches for the published version.</summary>
         public static readonly bool isDebugVersionQ = true;
@@ -333,7 +334,6 @@ namespace HCResourceLibraryApp
             Dbg.ShutDown();
             /// THE TO DO LIST    
             /// - FURTHER DEBUGGING and fixes from bug / idea submission system on published app (again)
-            /// - SHORTEN the time of the sort-words extension. It is eating ALOT of time for CIV and View Data IDs with big libraries
         }
 
 
@@ -442,8 +442,8 @@ namespace HCResourceLibraryApp
 
 
         // TESTING STUFF
-        static readonly bool runTest = false;
-        static readonly Tests testToRun = Tests.LogSubmissionPage_DisplayLogInfo_Ex1B;
+        static readonly bool runTest = true;
+        static readonly Tests testToRun = Tests.LogSubmissionPage_DisplayLogInfo_Tester;
         enum Tests
         {
             /// <summary>For random tests that need their own space, but no specific test name (variable tests)</summary>
@@ -462,6 +462,7 @@ namespace HCResourceLibraryApp
             LogSubmissionPage_DisplayLogInfo_Legacy_Ex3,
             LogSubmissionPage_DisplayLogInfo_Legacy_AllTester,
             LogSubmissionPage_DisplayLogInfo_Legacy_ErrorTester,
+            LogSubmissionPage_DisplayLogInfo_Tester,
             LogSubmissionPage_DisplayLogInfo_Ex1B,
 
             ContentValidator_Validate,
@@ -704,7 +705,7 @@ namespace HCResourceLibraryApp
                             logDecoder_.DecodeLogInfo(testLogData);
                 }
                 /// Log Submission Page
-                else if (testToRun.GetHashCode().IsWithin(Tests.LogSubmissionPage_DisplayLogInfo_Legacy_Ex1.GetHashCode(), Tests.LogSubmissionPage_DisplayLogInfo_Ex1B.GetHashCode()))
+                else if (testToRun.GetHashCode().IsWithin(Tests.LogSubmissionPage_DisplayLogInfo_Legacy_Ex1.GetHashCode(), Tests.ContentValidator_Validate.GetHashCode() - 1))
                 {
                     TextLine("Displays information from a log decoder", Color.DarkGray);
 
@@ -719,6 +720,8 @@ namespace HCResourceLibraryApp
 
                         /// syntax v2 tests
                         Tests.LogSubmissionPage_DisplayLogInfo_Ex1B => SetFileLocation(parentDir + "HCRLA VL2 Ex1b.txt"),
+
+                        Tests.LogSubmissionPage_DisplayLogInfo_Tester => SetFileLocation(parentDir + "HCRLA VL2 Tester.txt"),
 
                         _ => false
                     };
