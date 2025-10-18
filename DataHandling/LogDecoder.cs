@@ -3033,26 +3033,28 @@ namespace HCResourceLibraryApp.DataHandling
             {
                 Dbg.Log(ldx, $"Recieved {logData.Length} lines of log data; proceeding to decode information...");
                 const string decodeIssue_imparsibleLine = "Log data line is imparsible by current section's required syntax", 
+                    decodeIssue_rubbishLine = "Log data line is not a keyword line; imparsible",
                     decodeResult_genSuccess = "Generated info :: ", decodeResult_genSuccessSum = "Obtained summary part :: "; 
                 const int maxReadingLines = 1250, newResConShelfNumber = 0, maxSectionsCount = 7;
                 bool withinASectionQ = false, parsedSectionTagQ = false, withinOmitBlock = false;
                 string currentSectionName = null, currentSectionKeyword = null;
-                int[] countSectionIssues = new int[Enum.GetValues(typeof(DecodedSection)).Length];
-                short currentSectionNumber = 0;
+                //int[] countSectionIssues = new int[Enum.GetValues(typeof(DecodedSection)).Length];
+                short currentSectionNumber = 0, currentSectionIssuesCount = 0;
                 List<string> foundSectionsTracker = new();
-                List<DecodeInfo> decodingInfoDock = new(), prevDecodingInfoDock = new();
+                List<DecodeInfo> decodingInfoDock = new(); //, prevDecodingInfoDock = new();
 
 
                 #region Decode - Tracking & Temporary Storage
                 bool endFileReading = false, ranLegendChecksQ = false;
                 List<string[]> addedPholderNSubTags = new();
-                List<string> looseInfoRCDataIDs = new(), _additDupeMatchingList = new();
+                List<string> _additDupeMatchingList = new(), _updtDupeMatchingList = new();
                 List<ContentAdditionals> looseConAddits = new();
                 List<ContentChanges> looseConChanges = new();
                 usedLegendKeys = new List<string>();
                 usedLegendKeysSources = new List<string>();
                 // vv to be integrated into library later vv
                 VerNum logVersion = VerNum.None;
+                List<string> looseInfoRCDataIDs = new();
                 List<ResContents> resourceContents = new();
                 List<LegendData> legendDatas = new();
                 SummaryData summaryData = new();
@@ -3137,6 +3139,7 @@ namespace HCResourceLibraryApp.DataHandling
                                         if (!alreadyFoundThisSectionQ)
                                         {
                                             currentSectionNumber++;
+                                            currentSectionIssuesCount = 0;
                                             currentSectionName = SafeSectionName(sectionName);
                                             currentSectionKeyword = sectionName;
                                             withinASectionQ = true;
@@ -3153,22 +3156,33 @@ namespace HCResourceLibraryApp.DataHandling
                                         }
                                     }
                                 }
-                                /// just issue messages on detected keywords
-                                else if (ContainsKeywordQ(out bool isSectionKeywordQ))
+                                /// just issue messages on detected keywords and rubbish lines
+                                else
                                 {
                                     DecodeInfo diMain = new($"L{lineNum}| {logDataLine}", SafeSectionName(sectionName_mainDecoding));
                                     Dbg.LogPart(ldx, $"L{lineNum} --> ");
-                                    if (isSectionKeywordQ)
+
+                                    // IF (lines with keywords: ...) ELSE (lines with rubbish; imparsible)
+                                    if (ContainsKeywordQ(out bool isSectionKeywordQ))
                                     {
-                                        diMain.NoteIssue(ldx, "Section keyword must be on its own line");
-                                        Dbg.Log(ldx, "Section keyword is not on its own line (skip); ");
+                                        if (isSectionKeywordQ)
+                                        {
+                                            diMain.NoteIssue(ldx, "Section keyword must be on its own line");
+                                            Dbg.Log(ldx, "Section keyword is not on its own line (skip); ");
+                                        }
+                                        else
+                                        {
+                                            diMain.NoteIssue(ldx, "Log data line is not within an appropriate log section");
+                                            Dbg.Log(ldx, "Log data line is not in a section (skip); ");
+                                        }
+                                        decodingInfoDock.Add(diMain);
                                     }
                                     else
                                     {
-                                        diMain.NoteIssue(ldx, "Log data line is not within an appropriate log section");
-                                        Dbg.Log(ldx, "Log data line is not in a section (skip); ");
+                                        diMain.NoteIssue(ldx, decodeIssue_rubbishLine);
+                                        Dbg.Log(ldx, " <rubbish line, imparsible>; ");
+                                        decodingInfoDock.Add(diMain);
                                     }
-                                    decodingInfoDock.Add(diMain);
                                 }
                             }
 
@@ -3180,6 +3194,7 @@ namespace HCResourceLibraryApp.DataHandling
                                 logDataLine = RemoveEscapeCharacters(logDataLine);
                                 Dbg.NudgeIndent(ldx, true);
                                 bool sectionIssueQ = false, imparsibleIssueQ = false;
+                                bool prevParsedSectionTagQ = parsedSectionTagQ;
 
 
                                 /// VERSION
@@ -3268,7 +3283,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                         {
                                                             /// generate version number instance
                                                             VerNum verNum = new(verA, verBB);
-                                                            decodeInfo.NoteResult($"{decodeResult_genSuccess}{verNum}");
+                                                            decodeInfo.NoteResult($"{decodeResult_genSuccess}{verNum}", verNum.ToString());
                                                             Dbg.LogPart(ldx, $"--> Generated instance (VN): {verNum}");
 
                                                             if (!logVersion.HasValue())
@@ -3447,7 +3462,7 @@ namespace HCResourceLibraryApp.DataHandling
                                             // validate and parse placeholder/substitute values then store them
                                             if (argPh.IsNotNEW() && argSub.IsNotNEW())
                                             {
-                                                if (!int.TryParse(argPh, out _) && !int.TryParse(argSub, out _))
+                                                if (RemoveNumbers(argPh).IsNotNEW() && RemoveNumbers(argSub).IsNotNEW())
                                                 {
                                                     /// check for duplicates: ph and ph/sub group
                                                     bool dupeReplacementGroupQ = false, dupePlaceholderQ = false;
@@ -3470,7 +3485,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                         }
                                                     }
 
-                                                    if (argPh != argSub && !dupeReplacementGroupQ && !dupePlaceholderQ)
+                                                    if (!AreIdenticalArgs(out _, argPh, argSub) && !dupeReplacementGroupQ && !dupePlaceholderQ)
                                                     {
                                                         addedPholderNSubTags.Add(new string[] { argPh, argSub });
                                                         decodeInfo.NoteResult($"Got placeholder/substitute group: '{argPh}' / '{argSub}'");
@@ -3526,38 +3541,30 @@ namespace HCResourceLibraryApp.DataHandling
                                         {
                                             /// in the event where 'AS' is nautrally occuring in name, use &99 between each character (additionally, decoder will mistakenly correct it to 'A S'. Not too worried about that                                            
                                             Dbg.LogPart(ldx, "identified; ");
-                                            string[] addedParts = logDataLine.Split(kwAs);
+                                            string[] addedParts = logDataLine.Split(kwAs, StringSplitOptions.TrimEntries);
                                             if (addedParts.Length == 2)
                                             {
                                                 bool noParsingIssuesOnRequiredQ = true;
                                                 string added_contName = addedParts[0], added_contIDs = addedParts[1];
 
-                                                /// check that they are not identical arguements
-                                                if (added_contName.Trim().Equals(added_contIDs.Trim()))
-                                                {
-                                                    decodeInfo.NoteIssue(ldx, "Content's internal name and data IDs cannot be the same value");
-                                                    Dbg.Log(ldx, "Internal name and data IDs cannot be the same value; ");
-                                                    noParsingIssuesOnRequiredQ = false;
-                                                }
-
                                                 // part 1 - the content/internal name
-                                                if (added_contName.IsNotNEW() && noParsingIssuesOnRequiredQ)
+                                                if (added_contName.IsNotNEW())
                                                 {
                                                     Dbg.LogPart(ldx, "Parsing content/internal name -- ");
                                                     added_contName = CharacterKeycodeSubstitution(FixContentName(ReplacePlaceholdersWithSubs(added_contName)));
-                                                    if (!int.TryParse(added_contName, out _) && added_contName.IsNotNEW())
+                                                    if (added_contName.IsNotNEW() && RemoveNumbers(added_contName).IsNotNEW())
                                                     {
                                                         addedContentName = added_contName;
                                                         Dbg.Log(ldx, $"Got final content name :: {addedContentName}");
                                                     }
                                                     else
                                                     {
-                                                        decodeInfo.NoteIssue(ldx, "Internal name cannot be plain numbers");
-                                                        Dbg.Log(ldx, "Internal name cannot be plain numbers; ");
+                                                        decodeInfo.NoteIssue(ldx, $"Internal name cannot be plain numbers or '{cks99[0..3]}'");
+                                                        Dbg.Log(ldx, $"Internal name cannot be plain numbers or '{cks99[0..3]}'; ");
                                                         noParsingIssuesOnRequiredQ = false;
                                                     }
                                                 }
-                                                else if (noParsingIssuesOnRequiredQ)
+                                                else
                                                 {
                                                     decodeInfo.NoteIssue(ldx, "Could not get content's internal name");
                                                     Dbg.Log(ldx, "Could not get content name; ");
@@ -3740,7 +3747,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                     addedDataIDs = addedDataIDs.ToArray().SortWords();
                                                     Dbg.LogPart(ldx, "Sorted data IDs; ");
                                                 }
-                                                else if (noParsingIssuesOnRequiredQ)
+                                                else
                                                 {
                                                     decodeInfo.NoteIssue(ldx, "Could not get content's data IDs");
                                                     Dbg.Log(ldx, "Could not get content data IDs; ");
@@ -3761,7 +3768,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                     if (dupeResCon is null)
                                                     {
                                                         resourceContents.Add(new ResContents(newResConShelfNumber, newContent));
-                                                        decodeInfo.NoteResult($"{decodeResult_genSuccess}{CleanInfoDisplay(newContent)}");
+                                                        decodeInfo.NoteResult($"{decodeResult_genSuccess}{CleanInfoDisplay(newContent)}", newContent.ToString());
                                                         Dbg.LogPart(ldx, $"--> Generated instance (CBG) :: {newContent}; ");
 
                                                         sectionIssueQ = false;
@@ -3777,6 +3784,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                     decodeInfo.NoteIssue(ldx, "This added content could not be parsed");
                                                     Dbg.LogPart(ldx, "Failed to generate CBG instance from added content data; ");
                                                 }
+
 
 
                                                 /// local method
@@ -3890,7 +3898,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                 if (remainder.Contains(kwTo))
                                                 {
                                                     bool identifiedRelConNameQ = true;
-                                                    string[] additSubParts = remainder.Split(kwTo);
+                                                    string[] additSubParts = remainder.Split(kwTo, StringSplitOptions.TrimEntries);
                                                     if (additSubParts.Length == 2)
                                                     {
                                                         adt_relName = additSubParts[1];
@@ -3919,7 +3927,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                 /// for identifying 'optional name'
                                                 if (remainder.Contains(kwAs))
                                                 {
-                                                    string[] additSubParts = remainder.Split(kwAs);
+                                                    string[] additSubParts = remainder.Split(kwAs, StringSplitOptions.TrimEntries);
                                                     if (additSubParts.Length == 2)
                                                     {
                                                         adt_optName = additSubParts[1];
@@ -3948,8 +3956,8 @@ namespace HCResourceLibraryApp.DataHandling
                                                     }
                                                     else
                                                     {
-                                                        decodeInfo.NoteIssue(ldx, "There cannot be more than one related data ID");
-                                                        Dbg.LogPart(ldx, "There cannot be more than one related data ID; ");
+                                                        decodeInfo.NoteIssue(ldx, "There must be only one related data ID");
+                                                        Dbg.LogPart(ldx, "There must be only one related data ID; ");
                                                         noParsingIssuesOnRequiredQ = false;
                                                     }
                                                 }
@@ -3967,29 +3975,19 @@ namespace HCResourceLibraryApp.DataHandling
                                                     adt_contIDs = CharacterKeycodeSubstitution(remainder);
                                                     Dbg.Log(ldx, "; ");
 
-                                                    // check that the related ID is not in here
-                                                    if (!adt_contIDs.Contains(additRelatedDataID))
-                                                    {
-                                                        Dbg.NudgeIndent(ldx, true);
-                                                        additDataIDs = ParseDataIDs(adt_contIDs);
-                                                        Dbg.NudgeIndent(ldx, false);
+                                                    Dbg.NudgeIndent(ldx, true);
+                                                    additDataIDs = ParseDataIDs(adt_contIDs);
+                                                    Dbg.NudgeIndent(ldx, false);
 
-                                                        additDataIDs = additDataIDs.ToArray().SortWords();
-                                                        Dbg.LogPart(ldx, "Sorted data IDs; ");
+                                                    additDataIDs = additDataIDs.ToArray().SortWords();
+                                                    Dbg.LogPart(ldx, "Sorted data IDs; ");
 
-                                                        if (additDataIDs.Count == 0)
-                                                        {
-                                                            decodeInfo.NoteIssue(ldx, "Failed to get additional content's data IDs");
-                                                            Dbg.LogPart(ldx, "Failed to get additional content's data IDs; ");
-                                                            noParsingIssuesOnRequiredQ = false;
-                                                        }
-                                                    }
-                                                    else
+                                                    if (additDataIDs.Count == 0)
                                                     {
-                                                        decodeInfo.NoteIssue(ldx, $"Additional content data IDs cannot include the related data ID '{additRelatedDataID}'");
-                                                        Dbg.LogPart(ldx, $"Data IDs contains related data ID '{additRelatedDataID}'; ");
+                                                        decodeInfo.NoteIssue(ldx, "Failed to get additional content's data IDs");
+                                                        Dbg.LogPart(ldx, "Failed to get additional content's data IDs; ");
                                                         noParsingIssuesOnRequiredQ = false;
-                                                    }                                                    
+                                                    }
                                                 }
                                                 else
                                                 {
@@ -4002,48 +4000,30 @@ namespace HCResourceLibraryApp.DataHandling
                                                 if (adt_relName.IsNotNEW() && noParsingIssuesOnRequiredQ)
                                                 {
                                                     Dbg.LogPart(ldx, "Parsing related content name -- ");
-                                                    if (!adt_relName.Contains(additRelatedDataID))
+                                                    adt_relName = CharacterKeycodeSubstitution(FixContentName(adt_relName));
+                                                    if (RemoveNumbers(adt_relName).IsNotNEW())
                                                     {
-                                                        adt_relName = CharacterKeycodeSubstitution(FixContentName(adt_relName));
-                                                        if (!int.TryParse(adt_relName, out _) && adt_relName.IsNotNEW())
-                                                        {
-                                                            additRelatedName = adt_relName;
-                                                            Dbg.Log(ldx, $"Got final related content name :: {additRelatedName}");
-                                                        }
-                                                        else
-                                                        {
-                                                            decodeInfo.NoteIssue(ldx, $"Related internal name cannot be plain numbers or '{cks99[0..3]}'");
-                                                            Dbg.Log(ldx, $"Related internal name cannot be plain numbers or '{cks99[0..3]}'; ");
-                                                            noOtherParsingIssuesQ = false;
-                                                        }
+                                                        additRelatedName = adt_relName;
+                                                        Dbg.Log(ldx, $"Got final related content name :: {additRelatedName}");
                                                     }
                                                     else
                                                     {
-                                                        decodeInfo.NoteIssue(ldx, "Related internal name cannot be the related data ID");
-                                                        Dbg.Log(ldx, "Related internal name cannot equal related data ID; ");
+                                                        decodeInfo.NoteIssue(ldx, $"Related internal name cannot be plain numbers or '{cks99[0..3]}'");
+                                                        Dbg.Log(ldx, $"Related internal name cannot be plain numbers or '{cks99[0..3]}'; ");
                                                         noOtherParsingIssuesQ = false;
                                                     }
                                                 }
 
                                                 // part 4 - the optional content name (not required)
-                                                if (adt_optName.IsNotNEW() && noParsingIssuesOnRequiredQ)
+                                                if (adt_optName.IsNotNEW() && noParsingIssuesOnRequiredQ && noOtherParsingIssuesQ)
                                                 {
                                                     Dbg.LogPart(ldx, "Parsing optional content name -- ");
                                                     adt_optName = CharacterKeycodeSubstitution(FixContentName(adt_optName));
 
-                                                    if (!int.TryParse(adt_optName, out _) && adt_optName.IsNotNEW())
+                                                    if (RemoveNumbers(adt_optName).IsNotNEW())
                                                     {
-                                                        if (adt_optName != additRelatedName)
-                                                        {
-                                                            additOptionalName = adt_optName;
-                                                            Dbg.Log(ldx, $"Got final optional content name :: {additOptionalName}");
-                                                        }
-                                                        else
-                                                        {
-                                                            decodeInfo.NoteIssue(ldx, "Optional name cannot be the related internal name");
-                                                            Dbg.Log(ldx, "Optional name cannot be the related name; ");
-                                                            noOtherParsingIssuesQ = false;
-                                                        }                                                        
+                                                        additOptionalName = adt_optName;
+                                                        Dbg.Log(ldx, $"Got final optional content name :: {additOptionalName}");
                                                     }
                                                     else
                                                     {
@@ -4053,7 +4033,6 @@ namespace HCResourceLibraryApp.DataHandling
                                                     }
                                                 }
 
-
                                                 // compile additional content data
                                                 if (additDataIDs.HasElements() && additRelatedDataID.IsNotNEW() && noOtherParsingIssuesQ)
                                                 {
@@ -4061,7 +4040,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                     ContentAdditionals newAdditCon = new(logVersion, additRelatedDataID, additOptionalName, additDataIDs.ToArray());
                                                     Dbg.LogPart(ldx, $"--> Generated instance (CA) :: {newAdditCon}; Searching for matching ConBase; ");
 
-                                                    /// check for no duplicates (by DataIDs and RelID) before giving the okay   [check loose and connected; or put in a cumulative list]
+                                                    /// check for no duplicates (by DataIDs and RelID) before giving the okay
                                                     bool noDuplicatesQ = true;
                                                     string dupeRepresentation = $"{logVersion}|{additRelatedDataID}|{string.Join(',', additDataIDs)}";
                                                     if (_additDupeMatchingList.HasElements())
@@ -4121,7 +4100,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                         {
                                                             matchingResCon.StoreConAdditional(newAdditCon);
                                                             Dbg.LogPart(ldx, $"Completed connection of ConAddits ({newAdditCon}) to ConBase ({matchingResCon.ConBase}) [through ID '{newAdditCon.RelatedDataID}']; ");
-                                                            decodeInfo.NoteResult($"{decodeResult_genSuccess}{CleanInfoDisplay(newAdditCon)}, connected to '{matchingResCon.ConBase.ContentName}' by ID '{newAdditCon.RelatedDataID}'");
+                                                            decodeInfo.NoteResult($"{decodeResult_genSuccess}{CleanInfoDisplay(newAdditCon)}, connected to '{matchingResCon.ConBase.ContentName}' by ID '{newAdditCon.RelatedDataID}'", newAdditCon.ToString());
 
                                                             /// technically, additionals on the same version can just be combined with previous added content lines
                                                             decodeInfo.NoteIssue(ldx, $"Unneccessary additional line: Data IDs of this additional content can be transferred into the data IDs of the added content named '{matchingResCon.ConBase.ContentName}' since both are in the same version");
@@ -4133,7 +4112,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                             looseConAddits.Add(newAdditCon);
                                                             looseInfoRCDataIDs.Add(newAdditCon.RelatedDataID);
                                                             Dbg.LogPart(ldx, $"No connection found: storing 'loose' ConAddits ({newAdditCon}) [using ID '{newAdditCon.RelatedDataID}']");
-                                                            decodeInfo.NoteResult($"{decodeResult_genSuccess}{CleanInfoDisplay(newAdditCon)}, storing as loose by ID '{newAdditCon.RelatedDataID}'");
+                                                            decodeInfo.NoteResult($"{decodeResult_genSuccess}{CleanInfoDisplay(newAdditCon)}, storing as loose by ID '{newAdditCon.RelatedDataID}'", newAdditCon.ToString());
                                                         }
 
                                                         sectionIssueQ = false;
@@ -4212,7 +4191,7 @@ namespace HCResourceLibraryApp.DataHandling
                                         {
                                             Dbg.LogPart(ldx, "identified; ");
                                             Dbg.LogPart(ldx, $"Parsing TTA/TCA number -- got '{tNum}'");
-                                            if (tNum >= 0)
+                                            if (tNum > 0 && ttaNumber == 0)
                                             {
                                                 // count verification
                                                 bool ranVerificationCountQ = false, checkVerifiedQ = false;
@@ -4271,19 +4250,28 @@ namespace HCResourceLibraryApp.DataHandling
                                                     }
                                                     else
                                                     {
-                                                        Dbg.LogPart(ldx, $" [Check counted '{countedTTANum}' instead]");
                                                         decodeInfo.NoteIssue(ldx, $"TTA/TCA verification counted '{countedTTANum}' instead of obtained number '{tNum}'");
+                                                        Dbg.LogPart(ldx, $" [Check counted '{countedTTANum}' instead]");
                                                     }
                                                 }
-                                                decodeInfo.NoteResult($"{decodeResult_genSuccess}Total texture/content count of '{tNum}'");
+                                                decodeInfo.NoteResult($"{decodeResult_genSuccess}Total texture/content count of '{tNum}'", tNum.ToString());
 
                                                 ttaNumber = tNum;
                                                 sectionIssueQ = !checkVerifiedQ;
                                             }
                                             else
                                             {
-                                                decodeInfo.NoteIssue(ldx, "Total Texture/Content count number cannot be less than one");
-                                                Dbg.LogPart(ldx, "; TTA/TCA count number is negative or zero; ");
+                                                Dbg.LogPart(ldx, "; ");
+                                                if (ttaNumber != 0)
+                                                {
+                                                    decodeInfo.NoteIssue(ldx, "Total Texture/Content number already parsed");
+                                                    Dbg.LogPart(ldx, "TTA/TCA number already parsed; ");
+                                                }
+                                                else
+                                                {
+                                                    decodeInfo.NoteIssue(ldx, "Total Texture/Content count number cannot be less than one");
+                                                    Dbg.LogPart(ldx, "TTA/TCA count number is negative or zero; ");
+                                                }
                                             }
                                         }
                                         else
@@ -4354,13 +4342,14 @@ namespace HCResourceLibraryApp.DataHandling
                                             {
                                                 /// start off by identifying 'change description'
                                                 // gather any remaining data first
+                                                bool noParsingIssuesOnRequiredQ = true, noOtherParsingIssuesQ = true; 
                                                 string updt_desc = updatedParts[1], remainder = updatedParts[0];
                                                 string updt_relName = null, updt_relID = null;
 
                                                 /// for identifying 'related name'
                                                 if (remainder.Contains(kwBy))
                                                 {
-                                                    string[] updatedSubParts = remainder.Split(kwBy);
+                                                    string[] updatedSubParts = remainder.Split(kwBy, StringSplitOptions.TrimEntries);
                                                     if (updatedSubParts.Length == 2)
                                                     {
                                                         updt_relName = updatedSubParts[0];
@@ -4371,12 +4360,20 @@ namespace HCResourceLibraryApp.DataHandling
                                                         /// in both cases where there is no 'TO' and there are too many 'TO's
                                                         decodeInfo.NoteIssue(ldx, "Could not identify related content name");
                                                         Dbg.LogPart(ldx, "Could not identify related content name; ");
+                                                        noParsingIssuesOnRequiredQ = false;
                                                     }
+                                                }
+                                                /// for the case where keywords WITH and BY switch places
+                                                if (updt_desc.Contains(kwBy))
+                                                {
+                                                    decodeInfo.NoteIssue(ldx, "Change description could not be identified");
+                                                    Dbg.LogPart(ldx, "Change description could not be identified; ");
+                                                    noParsingIssuesOnRequiredQ = false;
                                                 }
 
 
                                                 // part 1 - the related ID
-                                                if (remainder.IsNotNEW())
+                                                if (remainder.IsNotNEW() && noParsingIssuesOnRequiredQ)
                                                 {
                                                     updt_relID = remainder;
                                                     Dbg.LogPart(ldx, "Parsing related data ID -- ");
@@ -4389,168 +4386,219 @@ namespace HCResourceLibraryApp.DataHandling
                                                     }
                                                     else
                                                     {
-                                                        decodeInfo.NoteIssue(ldx, "There cannot be more than one related data ID");
-                                                        Dbg.LogPart(ldx, "There cannot be more than one related data ID; ");
+                                                        decodeInfo.NoteIssue(ldx, "There must be only one related data ID");
+                                                        Dbg.LogPart(ldx, "There must be only one related data ID; ");
+                                                        noParsingIssuesOnRequiredQ = false;
                                                     }
                                                 }
                                                 else
                                                 {
                                                     decodeInfo.NoteIssue(ldx, "Could not get related data ID");
                                                     Dbg.LogPart(ldx, "Could not get related data ID; ");
+                                                    noParsingIssuesOnRequiredQ = false;
                                                 }
 
                                                 // part 2 - the related name (not required)
-                                                if (CharacterKeycodeSubstitution(updt_relName).IsNotNEW())
+                                                if (updt_relName.IsNotNEW() && noParsingIssuesOnRequiredQ)
                                                 {
-                                                    updatedRelatedName = CharacterKeycodeSubstitution(FixContentName(updt_relName));
-                                                    Dbg.Log(ldx, $"Got related content name :: {updatedDesc}");
+                                                    updt_relName = CharacterKeycodeSubstitution(FixContentName(updt_relName));
+                                                    if (updt_relName.IsNotNEW() && RemoveNumbers(updt_relName).IsNotNEW())
+                                                    {
+                                                        updatedRelatedName = updt_relName;
+                                                        Dbg.Log(ldx, $"Got related content name :: {updatedRelatedName}");
+                                                    }
+                                                    else
+                                                    {
+                                                        decodeInfo.NoteIssue(ldx, $"Related name cannot be plain numbers or '{cks99[0..3]}'");
+                                                        Dbg.Log(ldx, $"Related name cannot be plain numbers or '{cks99[0..3]}'; ");
+                                                        noOtherParsingIssuesQ = false;
+                                                    }
                                                 }
 
                                                 // part 3 - the change description
-                                                if (CharacterKeycodeSubstitution(updt_desc).IsNotNEW())
+                                                if (updt_desc.IsNotNEW() && noParsingIssuesOnRequiredQ)
                                                 {
-                                                    updatedDesc = FullstopCheck(CharacterKeycodeSubstitution(updt_desc));
-                                                    Dbg.Log(ldx, $"Got change description :: {updatedDesc}");
+                                                    updt_desc = CharacterKeycodeSubstitution(updt_desc);
+                                                    if (RemoveNumbers(updt_desc).IsNotNEW())
+                                                    {
+                                                        updatedDesc = FullstopCheck(updt_desc);
+                                                        Dbg.Log(ldx, $"Got change description :: {updatedDesc}");
+                                                    }
+                                                    else
+                                                    {
+                                                        decodeInfo.NoteIssue(ldx, $"Change description cannot be plain numbers or '{cks99[0..3]}'");
+                                                        Dbg.Log(ldx, $"Change description cannot be plain numbers or '{cks99[0..3]}'; ");
+                                                        noOtherParsingIssuesQ = false;
+                                                    }                                                    
                                                 }
                                                 else
                                                 {
                                                     decodeInfo.NoteIssue(ldx, "Could not get change description");
                                                     Dbg.LogPart(ldx, "Could not get change description; ");
+                                                    noParsingIssuesOnRequiredQ = false;
                                                 }
 
                                                 // compile updated data
-                                                if (updatedRelatedID.IsNotNEW() && updatedDesc.IsNotNEW())
+                                                if (updatedRelatedID.IsNotNEW() && updatedDesc.IsNotNEW() && noOtherParsingIssuesQ)
                                                 {
                                                     ContentChanges newConChanges = new(logVersion, updatedRelatedName, updatedRelatedID, updatedDesc);
                                                     Dbg.Log(ldx, $"--> Generated instance (CC) :: {newConChanges}; ");
-                                                    bool selfUpdatingAllowed = false;
 
-                                                    /// this checks for self-updating. In the event that it may have been intended but was not used. Force-enable
-                                                    if (enableSelfUpdatingFunction)
+                                                    /// check for no duplicates (by RelID and ChangeDesc) before giving the okay
+                                                    bool noDuplicatesQ = true;
+                                                    string dupeRepresentation = $"{logVersion}|{updatedRelatedID}|{updatedDesc}";
+                                                    if (_updtDupeMatchingList.HasElements())
                                                     {
-                                                        Dbg.LogPart(ldx, "Checking for self-updating; ");
-                                                        Dbg.LogPart(ldx, "In RContents? ");
-                                                        if (resourceContents.HasElements())
+                                                        foreach (string dupeMatch in _updtDupeMatchingList)
                                                         {
-                                                            foreach (ResContents resCon in resourceContents)
-                                                            {
-                                                                if (resCon.ContainsDataID(updatedRelatedID, out _))
-                                                                {
-                                                                    Dbg.LogPart(ldx, $"Yes  // Found in: '{resCon}'");
-                                                                    selfUpdatingAllowed = true;
-                                                                    break;
-                                                                }
-                                                            }
+                                                            if (dupeMatch == dupeRepresentation)
+                                                                noDuplicatesQ = false;
                                                         }
-                                                        if (looseConAddits.HasElements())
-                                                        {
-                                                            Dbg.LogPart(ldx, "No; In LooseAddits? ");
-                                                            foreach (ContentAdditionals conAddit in looseConAddits)
-                                                            {
-                                                                if (conAddit.ContainsDataID(updatedRelatedID))
-                                                                {
-                                                                    Dbg.LogPart(ldx, $"Yes  // Found in: '{conAddit}'");
-                                                                    selfUpdatingAllowed = true;
-                                                                    break;
-                                                                }
-                                                            }
-                                                        }
-                                                        if (selfUpdatingAllowed)
-                                                            decodeInfo.NoteIssue(ldx, "Self-updating content: updating content in its introduced version is advised against");
-                                                        Dbg.Log(ldx, $"{(!selfUpdatingAllowed ? "No (Pass)" : "")};");
+
+                                                        if (noDuplicatesQ)
+                                                            _updtDupeMatchingList.Add(dupeRepresentation);
                                                     }
+                                                    else _updtDupeMatchingList.Add(dupeRepresentation);
 
-                                                    // final steps...
-                                                    /// testing... and now enabled, self updating contents aren't loose
-                                                    bool isSelfConnected = false;
-                                                    if (enableSelfUpdatingFunction && selfUpdatingAllowed)
+                                                    if (noDuplicatesQ)
                                                     {
-                                                        Dbg.LogPart(ldx, "[SELF-UPDATING] Searching for connection in 'Decoded Library' -- ");
-
-                                                        ResContents matchingResCon = null;
-                                                        ContentAdditionals subMatchConAdd = new();
-                                                        /// should only be checking with existing library; *can't* update something that was just added
-                                                        if (resourceContents != null)
+                                                        bool selfUpdatingAllowed = false;
+                                                        /// this checks for self-updating. In the event that it may have been intended but was not used. Force-enable
+                                                        if (enableSelfUpdatingFunction)
                                                         {
+                                                            Dbg.LogPart(ldx, "Checking for self-updating; ");
+                                                            Dbg.LogPart(ldx, "In RContents? ");
                                                             if (resourceContents.HasElements())
+                                                            {
                                                                 foreach (ResContents resCon in resourceContents)
                                                                 {
-                                                                    if (resCon.ContainsDataID(updatedRelatedID, out RCFetchSource source, out DataHandlerBase conAddix))
+                                                                    if (resCon.ContainsDataID(updatedRelatedID, out _))
                                                                     {
-                                                                        subMatchConAdd = new ContentAdditionals();
-                                                                        if (source == RCFetchSource.ConAdditionals)
-                                                                            subMatchConAdd = (ContentAdditionals)conAddix;
-                                                                        matchingResCon = resCon;
-
-                                                                        /// id only: save match, keep searching
-                                                                        /// id and name: save match, end searching
-                                                                        bool matchedNameQ = false;
-
-                                                                        Dbg.LogPart(ldx, $" Got match ('{newConChanges.RelatedDataID}' from source '{source}'");
-                                                                        /// checks for matching content name against ConBase or ConAddits
-                                                                        if (source.Equals(RCFetchSource.ConBaseGroup))
-                                                                        {
-                                                                            if (resCon.ContentName == updatedRelatedName)
-                                                                            {
-                                                                                Dbg.LogPart(ldx, $", plus matched name '{resCon.ContentName}'");
-                                                                                matchedNameQ = true;
-                                                                            }
-                                                                        }
-                                                                        else if (subMatchConAdd.IsSetup() && source.Equals(RCFetchSource.ConAdditionals))
-                                                                        {
-                                                                            if (subMatchConAdd.OptionalName == updatedRelatedName)
-                                                                            {
-                                                                                Dbg.LogPart(ldx, $", plus matched name '{subMatchConAdd.OptionalName}'");
-                                                                                matchedNameQ = true;
-                                                                            }
-                                                                        }
-                                                                        Dbg.LogPart(ldx, ")");
-
-                                                                        if (matchedNameQ)
-                                                                        {
-                                                                            Dbg.LogPart(ldx, "; Search end");
-                                                                            break;
-                                                                        }
-                                                                        else Dbg.LogPart(ldx, "; Search continue");
+                                                                        Dbg.LogPart(ldx, $"Yes  // Found in: '{resCon}'");
+                                                                        selfUpdatingAllowed = true;
+                                                                        break;
                                                                     }
                                                                 }
-                                                            Dbg.Log(ldx, "; ");
+                                                            }
+                                                            if (looseConAddits.HasElements() && !selfUpdatingAllowed)
+                                                            {
+                                                                Dbg.LogPart(ldx, "No; In LooseAddits? ");
+                                                                foreach (ContentAdditionals conAddit in looseConAddits)
+                                                                {
+                                                                    if (conAddit.ContainsDataID(updatedRelatedID))
+                                                                    {
+                                                                        Dbg.LogPart(ldx, $"Yes  // Found in: '{conAddit}'");
+                                                                        selfUpdatingAllowed = true;
+                                                                        break;
+                                                                    }
+                                                                }
+                                                            }
+
+                                                            if (selfUpdatingAllowed)
+                                                            {
+                                                                Dbg.LogPart(ldx, "; ");
+                                                                decodeInfo.NoteIssue(ldx, "Self-updating content: updating content in its introduced version is advised against");
+                                                            }
+                                                            Dbg.Log(ldx, $"{(!selfUpdatingAllowed ? "No (Pass)" : "Self-updating content warning")};");
                                                         }
 
-                                                        /// matching self-updated content connection
-                                                        if (matchingResCon != null)
+                                                        // final steps...
+                                                        /// testing... and now enabled, self updating contents aren't loose
+                                                        bool isSelfConnected = false;
+                                                        if (enableSelfUpdatingFunction && selfUpdatingAllowed)
                                                         {
-                                                            matchingResCon.StoreConChanges(newConChanges);
-                                                            Dbg.LogPart(ldx, $"Completed connection of ConChanges ({newConChanges}) using ");
-                                                            if (subMatchConAdd.IsSetup())
-                                                                Dbg.LogPart(ldx, $"ConAddits ({subMatchConAdd})");
-                                                            else Dbg.LogPart(ldx, $"ConBase ({matchingResCon.ConBase})");
-                                                            Dbg.Log(ldx, $" [by ID '{newConChanges.RelatedDataID}'] (self-updated)");
+                                                            Dbg.LogPart(ldx, "[SELF-UPDATING] Searching for connection in 'Decoded Library' -- ");
 
-                                                            string additConnectionTxt = subMatchConAdd.IsSetup() && subMatchConAdd.OptionalName.IsNotNEW() ? $"'{subMatchConAdd.OptionalName}' from " : $"an additional content in ";
-                                                            decodeInfo.NoteResult($"{decodeResult_genSuccess}{CleanInfoDisplay(newConChanges)}, connected to {additConnectionTxt}'{matchingResCon.ConBase.ContentName}' by ID '{newConChanges.RelatedDataID}'");
-                                                            isSelfConnected = true;
+                                                            ResContents matchingResCon = null;
+                                                            ContentAdditionals subMatchConAdd = new();
+                                                            /// should only be checking with existing library; *can't* update something that was just added
+                                                            if (resourceContents != null)
+                                                            {
+                                                                if (resourceContents.HasElements())
+                                                                    foreach (ResContents resCon in resourceContents)
+                                                                    {
+                                                                        if (resCon.ContainsDataID(updatedRelatedID, out RCFetchSource source, out DataHandlerBase conAddix))
+                                                                        {
+                                                                            subMatchConAdd = new ContentAdditionals();
+                                                                            if (source == RCFetchSource.ConAdditionals)
+                                                                                subMatchConAdd = (ContentAdditionals)conAddix;
+                                                                            matchingResCon = resCon;
 
-                                                            // these actions just for the decode display on log submission page
-                                                            ContentChanges copy4NonLoose = new(logVersion, newConChanges.InternalName + Sep, updatedRelatedID, updatedDesc);
-                                                            looseConChanges.Add(copy4NonLoose);
-                                                            looseInfoRCDataIDs.Add(copy4NonLoose.RelatedDataID);
-                                                            Dbg.LogPart(ldx, $" Added ConChanges copy (IntNam: '{copy4NonLoose.InternalName}') to loose for decode display");
+                                                                            /// id only: save match, keep searching
+                                                                            /// id and name: save match, end searching
+                                                                            bool matchedNameQ = false;
+
+                                                                            Dbg.LogPart(ldx, $" Got match ('{newConChanges.RelatedDataID}' from source '{source}'");
+                                                                            /// checks for matching content name against ConBase or ConAddits
+                                                                            if (source.Equals(RCFetchSource.ConBaseGroup))
+                                                                            {
+                                                                                if (resCon.ContentName == updatedRelatedName)
+                                                                                {
+                                                                                    Dbg.LogPart(ldx, $", plus matched name '{resCon.ContentName}'");
+                                                                                    matchedNameQ = true;
+                                                                                }
+                                                                            }
+                                                                            else if (subMatchConAdd.IsSetup() && source.Equals(RCFetchSource.ConAdditionals))
+                                                                            {
+                                                                                if (subMatchConAdd.OptionalName == updatedRelatedName)
+                                                                                {
+                                                                                    Dbg.LogPart(ldx, $", plus matched name '{subMatchConAdd.OptionalName}'");
+                                                                                    matchedNameQ = true;
+                                                                                }
+                                                                            }
+                                                                            Dbg.LogPart(ldx, ")");
+
+                                                                            if (matchedNameQ)
+                                                                            {
+                                                                                Dbg.LogPart(ldx, "; Search end");
+                                                                                break;
+                                                                            }
+                                                                            else Dbg.LogPart(ldx, "; Search continue");
+                                                                        }
+                                                                    }
+                                                                Dbg.Log(ldx, "; ");
+                                                            }
+
+                                                            /// matching self-updated content connection
+                                                            if (matchingResCon != null)
+                                                            {
+                                                                matchingResCon.StoreConChanges(newConChanges);
+                                                                Dbg.LogPart(ldx, $"Completed connection of ConChanges ({newConChanges}) using ");
+                                                                if (subMatchConAdd.IsSetup())
+                                                                    Dbg.LogPart(ldx, $"ConAddits ({subMatchConAdd})");
+                                                                else Dbg.LogPart(ldx, $"ConBase ({matchingResCon.ConBase})");
+                                                                Dbg.Log(ldx, $" [by ID '{newConChanges.RelatedDataID}'] (self-updated)");
+
+                                                                string additConnectionTxt = subMatchConAdd.IsSetup() && subMatchConAdd.OptionalName.IsNotNEW() ? $"'{subMatchConAdd.OptionalName}' from " : $"an additional content in ";
+                                                                decodeInfo.NoteResult($"{decodeResult_genSuccess}{CleanInfoDisplay(newConChanges)}, connected to {additConnectionTxt}'{matchingResCon.ConBase.ContentName}' by ID '{newConChanges.RelatedDataID}'", newConChanges.ToString());
+                                                                isSelfConnected = true;
+
+                                                                // these actions just for the decode display on log submission page
+                                                                ContentChanges copy4NonLoose = new(logVersion, newConChanges.InternalName + Sep, updatedRelatedID, updatedDesc);
+                                                                looseConChanges.Add(copy4NonLoose);
+                                                                looseInfoRCDataIDs.Add(copy4NonLoose.RelatedDataID);
+                                                                Dbg.LogPart(ldx, $" Added ConChanges copy (IntNam: '{copy4NonLoose.InternalName}') to loose for decode display");
+                                                            }
                                                         }
+                                                        /// the normal function: updates are always loose contents
+                                                        if (!isSelfConnected)
+                                                        {
+                                                            looseConChanges.Add(newConChanges);
+                                                            looseInfoRCDataIDs.Add(newConChanges.RelatedDataID);
+
+                                                            Dbg.LogPart(ldx, $"Storing 'loose' ConChanges");
+                                                            decodeInfo.NoteResult($"{decodeResult_genSuccess}{CleanInfoDisplay(newConChanges)}, storing as loose by ID '{newConChanges.RelatedDataID}'", newConChanges.ToString());
+                                                        }
+
+                                                        sectionIssueQ = false;
                                                     }
-                                                    /// the normal function: updates are always loose contents
-                                                    if (!isSelfConnected)
+                                                    else
                                                     {
-                                                        looseConChanges.Add(newConChanges);
-                                                        looseInfoRCDataIDs.Add(newConChanges.RelatedDataID);
-
-                                                        Dbg.LogPart(ldx, $"Storing 'loose' ConChanges");
-                                                        decodeInfo.NoteResult($"{decodeResult_genSuccess}{CleanInfoDisplay(newConChanges)}, storing as loose by ID '{newConChanges.RelatedDataID}'");
+                                                        decodeInfo.NoteIssue(ldx, "A similar content update has already been parsed");
+                                                        Dbg.LogPart(ldx, "A similar content update has already been parsed; ");
                                                     }
-
-                                                    sectionIssueQ = false;
                                                 }
-                                                else
+                                                else if (noParsingIssuesOnRequiredQ)
                                                 {
                                                     decodeInfo.NoteIssue(ldx, "This updated content data could not be parsed");
                                                     Dbg.LogPart(ldx, "Failed to generate CC instance from updated content data; ");
@@ -4631,40 +4679,53 @@ namespace HCResourceLibraryApp.DataHandling
                                             string[] legendParts = logDataLine.Split(kwAs);
                                             if (legendParts.Length == 2)
                                             {
+                                                bool noParsingIssuesOnRequiredQ = true;
                                                 string leg_key = legendParts[0], leg_def = legendParts[1];
 
                                                 // part 1 - the legend key
                                                 if (leg_key.Trim().IsNotNEW())
                                                 {
                                                     leg_key = leg_key.Trim();
-                                                    if (!int.TryParse(leg_key, out _) && IsNumberless(leg_key))
+                                                    if (RemoveNumbers(leg_key).IsNotNEW() && IsNumberless(leg_key))
                                                     {
-                                                        legendKey = leg_key;
-                                                        Dbg.Log(ldx, $"Got legend key :: {legendKey}");
-
-                                                        if (legendKey.Replace(" ", "") != legendKey)
+                                                        if (leg_key.Equals(legRangeKey.ToString()))
                                                         {
-                                                            decodeInfo.NoteIssue(ldx, "Recommended to have no spaces within legend keys");
-                                                            Dbg.LogPart(ldx, "Legend key has spaces (warned); ");
+                                                            decodeInfo.NoteIssue(ldx, $"The numerical range key '{legRangeKey}' cannot be used");
+                                                            Dbg.LogPart(ldx, $"The numerical range key '{legRangeKey}' cannot be used; ");
+                                                            noParsingIssuesOnRequiredQ = false;
+
+                                                        }
+                                                        else if (leg_key.Replace(" ", "") != leg_key)
+                                                        {
+                                                            decodeInfo.NoteIssue(ldx, "Legend keys cannot include spaces");
+                                                            Dbg.LogPart(ldx, "Legend keys cannot include spaces; ");
+                                                            noParsingIssuesOnRequiredQ = false;
+                                                        }
+                                                        else
+                                                        {
+                                                            legendKey = leg_key;
+                                                            Dbg.Log(ldx, $"Got legend key :: {legendKey}");
                                                         }
                                                     }
                                                     else
                                                     {
                                                         decodeInfo.NoteIssue(ldx, "Legend key cannot contain any numbers");
                                                         Dbg.LogPart(ldx, "Legend key cannot contain any numbers; ");
+                                                        noParsingIssuesOnRequiredQ = false;
                                                     }                                                    
                                                 }
                                                 else
                                                 {
                                                     decodeInfo.NoteIssue(ldx, "Could not get legend key");
                                                     Dbg.LogPart(ldx, "Could not get legend key; ");
+                                                    noParsingIssuesOnRequiredQ = false;
                                                 }
 
                                                 // part 2 - the legend definition
-                                                if (leg_def.Trim().IsNotNEW())
+                                                if (leg_def.Trim().IsNotNEW() && noParsingIssuesOnRequiredQ)
                                                 {
                                                     leg_def = leg_def.Trim();
-                                                    if (!int.TryParse(leg_def, out _) && IsNumberless(leg_def))
+                                                    if (RemoveNumbers(leg_def).IsNotNEW() && IsNumberless(leg_def))
                                                     {
                                                         legendDefinition = leg_def;
                                                         Dbg.Log(ldx, $"Got legend definition :: {legendDefinition}");
@@ -4673,12 +4734,14 @@ namespace HCResourceLibraryApp.DataHandling
                                                     {
                                                         decodeInfo.NoteIssue(ldx, "Legend definition cannot contain any numbers");
                                                         Dbg.LogPart(ldx, "Legend definition cannot contain any numbers; ");
+                                                        noParsingIssuesOnRequiredQ = false;
                                                     }
                                                 }
                                                 else
                                                 {
                                                     decodeInfo.NoteIssue(ldx, "Could not get legend definition");
                                                     Dbg.LogPart(ldx, "Could not get legend definition; ");
+                                                    noParsingIssuesOnRequiredQ = false;
                                                 }
 
                                                 // compile legend data
@@ -4686,83 +4749,120 @@ namespace HCResourceLibraryApp.DataHandling
                                                 {
                                                     LegendData newLegData = new(legendKey, logVersion, legendDefinition);
                                                     Dbg.Log(ldx, $"--> Generated instance (LD) :: {newLegData}; ");
-                                                    decodeInfo.NoteResult($"{decodeResult_genSuccess}{CleanInfoDisplay(newLegData)}");
 
                                                     // final steps
-                                                    /// check for duplicate legend data in this log, edit by definition as required (including decode info)
-                                                    bool anyOtherIssues = false;
+                                                    /// check for duplicate legend key and reject if already being used, else add to legend datas
+                                                    bool anyDuplicateKeysQ = false, anyDuplicateDefsQ = false;
                                                     if (legendDatas.HasElements())
                                                     {
-                                                        Dbg.LogPart(ldx, "Searching for existing key; ");
-                                                        LegendData matchingLegDat = null;
-                                                        foreach (LegendData legDat in legendDatas)
+                                                        for (int lkx = 0; lkx < legendDatas.Count && !anyDuplicateKeysQ && !anyDuplicateDefsQ; lkx++)
                                                         {
-                                                            if (legDat.IsSetup())
-                                                                if (legDat.Key == newLegData.Key)
-                                                                {
-                                                                    Dbg.LogPart(ldx, $"Found matching key ({newLegData.Key}) in ({legDat}); ");
-                                                                    matchingLegDat = legDat;
-                                                                    break;
-                                                                }
-                                                        }
+                                                            LegendData legDat = legendDatas[lkx];
+                                                            if (legDat.Key == newLegData.Key)
+                                                                anyDuplicateKeysQ = true;
 
-                                                        /// a matching legend found
-                                                        if (matchingLegDat != null)
-                                                        {
-                                                            /// find matching decode issue
-                                                            int editDiIx = -1;
-                                                            DecodeInfo newDecInfo = new();
-                                                            for (int dx = 0; dx < decodingInfoDock.Count && editDiIx == -1; dx++)
+                                                            for (int ldx = 0; ldx < legDat.CountDefinitions; ldx++)
                                                             {
-                                                                DecodeInfo diToCheck = decodingInfoDock[dx];
-                                                                if (diToCheck.NotedResultQ)
-                                                                    if (diToCheck.resultingInfo.Contains(matchingLegDat.ToString()))
-                                                                    {
-                                                                        editDiIx = dx;
-                                                                        newDecInfo = new DecodeInfo($"{diToCheck.logLine}\n{logDataLine}", currentSectionName);
-                                                                        newDecInfo.NoteResult(diToCheck.resultingInfo);
-                                                                    }
+                                                                /// compares every definition (though realistically should always be 1) of other to this single new definition
+                                                                if (legDat[ldx] == newLegData[0])
+                                                                    anyDuplicateDefsQ = true;
                                                             }
-                                                                 
-                                                            /// results of adding a new definition
-                                                            bool addedDef = matchingLegDat.AddKeyDefinition(newLegData[0]);
-                                                            if (addedDef)
-                                                            {
-                                                                Dbg.LogPart(ldx, $"Expanded legend data :: {matchingLegDat}");
-                                                                newDecInfo.NoteResult($"Edited existing legend data (new definition) :: {matchingLegDat}");
-                                                            }
-                                                            else
-                                                            {
-                                                                Dbg.LogPart(ldx, $"New definition '{newLegData[0]}' could not be added (duplicate?)");
-                                                                newDecInfo.NoteIssue(ldx, $"New definition '{newLegData[0]}' could not be added (duplicate?)");
-                                                                anyOtherIssues = true;
-                                                            }
-
-                                                            /// replace and existing decode issue
-                                                            if (newDecInfo.IsSetup())
-                                                            {
-                                                                decodeInfo = new();
-                                                                decodingInfoDock[editDiIx] = newDecInfo;
-                                                            }
-                                                        }
-                                                        /// no matching legend, add
-                                                        else
-                                                        {
-                                                            Dbg.LogPart(ldx, "No similar key exists; ");
-                                                            legendDatas.Add(newLegData);
-                                                            Dbg.LogPart(ldx, "Added new legend data to decode library");
                                                         }
                                                     }
+
                                                     /// add new legend data
-                                                    else
+                                                    if (!anyDuplicateKeysQ && !anyDuplicateDefsQ)
                                                     {
                                                         legendDatas.Add(newLegData);
+                                                        decodeInfo.NoteResult($"{decodeResult_genSuccess}{CleanInfoDisplay(newLegData)}", newLegData.ToString());
                                                         Dbg.LogPart(ldx, "Added new legend data to decode library");
+
+                                                        sectionIssueQ = false;
+                                                    }
+                                                    /// reject any duplicates (on the same version), partial or full
+                                                    else
+                                                    {
+                                                        string dupeOfWhat_str = anyDuplicateKeysQ ? $"key '{legendKey}'" : $"definition '{legendDefinition}'";
+                                                        decodeInfo.NoteIssue(ldx, $"The legend {dupeOfWhat_str} has already been used");
+                                                        Dbg.LogPart(ldx, $"The legend {dupeOfWhat_str} has already been used; ");
                                                     }
 
-                                                    sectionIssueQ = anyOtherIssues;
+                                                    #region old_code
+                                                    //// final steps
+                                                    ///// check for duplicate legend data in this log, edit by definition as required (including decode info)
+                                                    //bool anyOtherIssues = false;
+                                                    //if (legendDatas.HasElements())
+                                                    //{
+                                                    //    Dbg.LogPart(ldx, "Searching for existing key; ");
+                                                    //    LegendData matchingLegDat = null;
+                                                    //    foreach (LegendData legDat in legendDatas)
+                                                    //    {
+                                                    //        if (legDat.IsSetup())
+                                                    //            if (legDat.Key == newLegData.Key)
+                                                    //            {
+                                                    //                Dbg.LogPart(ldx, $"Found matching key ({newLegData.Key}) in ({legDat}); ");
+                                                    //                matchingLegDat = legDat;
+                                                    //                break;
+                                                    //            }
+                                                    //    }
+
+                                                    //    /// a matching legend found
+                                                    //    if (matchingLegDat != null)
+                                                    //    {
+                                                    //        /// find matching decode issue
+                                                    //        int editDiIx = -1;
+                                                    //        DecodeInfo newDecInfo = new();
+                                                    //        for (int dx = 0; dx < decodingInfoDock.Count && editDiIx == -1; dx++)
+                                                    //        {
+                                                    //            DecodeInfo diToCheck = decodingInfoDock[dx];
+                                                    //            if (diToCheck.NotedResultQ)
+                                                    //                if (diToCheck.resultingInfo.Contains(matchingLegDat.ToString()))
+                                                    //                {
+                                                    //                    editDiIx = dx;
+                                                    //                    newDecInfo = new DecodeInfo($"{diToCheck.logLine}\n{logDataLine}", currentSectionName);
+                                                    //                    newDecInfo.NoteResult(diToCheck.resultingInfo);
+                                                    //                }
+                                                    //        }
+                                                                 
+                                                    //        /// results of adding a new definition
+                                                    //        bool addedDef = matchingLegDat.AddKeyDefinition(newLegData[0]);
+                                                    //        if (addedDef)
+                                                    //        {
+                                                    //            Dbg.LogPart(ldx, $"Expanded legend data :: {matchingLegDat}");
+                                                    //            newDecInfo.NoteResult($"Edited existing legend data (new definition) :: {matchingLegDat}");
+                                                    //        }
+                                                    //        else
+                                                    //        {
+                                                    //            Dbg.LogPart(ldx, $"New definition '{newLegData[0]}' could not be added (duplicate?)");
+                                                    //            newDecInfo.NoteIssue(ldx, $"New definition '{newLegData[0]}' could not be added (duplicate?)");
+                                                    //            anyOtherIssues = true;
+                                                    //        }
+
+                                                    //        /// replace an existing decode issue
+                                                    //        if (newDecInfo.IsSetup())
+                                                    //        {
+                                                    //            decodeInfo = new();
+                                                    //            decodingInfoDock[editDiIx] = newDecInfo;
+                                                    //        }
+                                                    //    }
+                                                    //    /// no matching legend, add
+                                                    //    else
+                                                    //    {
+                                                    //        Dbg.LogPart(ldx, "No similar key exists; ");
+                                                    //        legendDatas.Add(newLegData);
+                                                    //        Dbg.LogPart(ldx, "Added new legend data to decode library");
+                                                    //    }
+                                                    //}
+                                                    ///// add new legend data
+                                                    //else
+                                                    //{
+                                                    //    legendDatas.Add(newLegData);
+                                                    //    Dbg.LogPart(ldx, "Added new legend data to decode library");
+                                                    //}
+                                                    //sectionIssueQ = anyOtherIssues;
+                                                    #endregion
                                                 }
-                                                else
+                                                else if (noParsingIssuesOnRequiredQ)
                                                 {
                                                     decodeInfo.NoteIssue(ldx, "This legend content data could not be parsed");
                                                     Dbg.LogPart(ldx, "Failed to generate LD instance from legend content data; ");
@@ -4831,11 +4931,9 @@ namespace HCResourceLibraryApp.DataHandling
                                             if (sumParts.Length == 2)
                                             {
                                                 string sum_part = sumParts[1].Trim();
-                                                sum_part = FullstopCheck(sum_part);
-                                                
-                                                if (sum_part.IsNotNEW() && !int.TryParse(sum_part, out _))
+                                                if (RemoveNumbers(sum_part).IsNotNEW())
                                                 {
-                                                    string summaryPart = sum_part;
+                                                    string summaryPart = FullstopCheck(sum_part);
                                                     Dbg.Log(ldx, $"Got summary part :: '{summaryPart}'");
 
                                                     // final steps...
@@ -4861,9 +4959,14 @@ namespace HCResourceLibraryApp.DataHandling
                                                     {
                                                         summaryDataParts.Add(summaryPart);
                                                         Dbg.LogPart(ldx, $"--> Obtained summary part :: {summaryPart}");
-                                                        decodeInfo.NoteResult($"{decodeResult_genSuccessSum}{summaryPart}");
+                                                        decodeInfo.NoteResult($"{decodeResult_genSuccessSum}{summaryPart}", summaryPart);
 
                                                         sectionIssueQ = false;
+                                                    }
+                                                    else
+                                                    {
+                                                        decodeInfo.NoteIssue(ldx, "This summary part has already been parsed");
+                                                        Dbg.LogPart(ldx, "This summary part has already been parsed; ");
                                                     }
                                                 }
                                                 else
@@ -4895,70 +4998,88 @@ namespace HCResourceLibraryApp.DataHandling
                                     decodeInfo.NoteIssue(ldx, decodeIssue_imparsibleLine);
                                     Dbg.Log(ldx, " <imparsible line>  // ");
                                 }
+
+                                // this may be obsoleted due to the new syntax changes, affecting error proofing and how decode info's are assembled, no weird inserts and such
+                                #region outdated_code : decoding_info_dock_reports
                                 /// decoding info dock reports
+                                //if (decodeInfo.IsSetup())
+                                //{
+                                //    Dbg.LogPart(ldx, $"{Ind34}//{Ind34}{{DIDCheck}} ");
+                                //    /// check if any decoding infos have been inserted                                    
+                                //    if (prevDecodingInfoDock.HasElements())
+                                //    {
+                                //        //Dbg.LogPart(ldx, "      {DIDCheck} ");
+                                //        string changedIndex = "", changeType = "None";
+                                //        for (int px = 0; px < prevDecodingInfoDock.Count && changedIndex.IsNE(); px++)
+                                //        {
+                                //            /// determine if there has been a change
+                                //            DecodeInfo prevDI = prevDecodingInfoDock[px];
+                                //            if (px < decodingInfoDock.Count)
+                                //            {
+                                //                DecodeInfo dI = decodingInfoDock[px];
+                                //                if (!prevDI.Equals(dI))
+                                //                {
+                                //                    changedIndex = $"@{px}";
+                                //                    /// determine if changes is an insert or an edit
+                                //                    /// IF next DI is fetchable: (IF next DI is same as previous' DI: consider change 'insert'; ELSE consider change 'edit n add'); 
+                                //                    /// ELSE consider change 'edit'
+                                //                    if (px + 1 < decodingInfoDock.Count)
+                                //                    {
+                                //                        DecodeInfo dIAfter = decodingInfoDock[px + 1];
+                                //                        if (dIAfter.Equals(prevDI))
+                                //                            changeType = "Insert";
+                                //                        else
+                                //                        {
+                                //                            changeType = "Edit n Add";
+                                //                            changedIndex += $"~@{decodingInfoDock.Count - 1}";
+                                //                        }
+                                //                    }
+                                //                    else changeType = "Edit";
+                                //                }
+                                //            }
+                                //        }
+
+                                //        Dbg.LogPart(ldx, $"[{changeType}]{changedIndex}");
+                                //        Dbg.LogPart(ldx, ";  ");
+                                //        //Dbg.Log(ldx, ";  //  ");
+                                //    }
+
+                                //    /// add new decoding info dock
+                                //    if (decodeInfo.IsSetup())
+                                //    {
+                                //        Dbg.LogPart(ldx, $"[Added]@{decodingInfoDock.Count};  ");
+                                //        decodingInfoDock.Add(decodeInfo);
+                                //    }
+
+                                //    /// set previous decoding info dock
+                                //    if (decodingInfoDock.HasElements())
+                                //    {
+                                //        //Dbg.LogPart(ldx, $"[<]prevDID set;  ");
+                                //        prevDecodingInfoDock = new List<DecodeInfo>();
+                                //        prevDecodingInfoDock.AddRange(decodingInfoDock.ToArray());
+                                //    }
+                                //}
+                                //Dbg.Log(ldx, " // ");
+
+                                //if (sectionIssueQ || decodeInfo.NotedIssueQ)
+                                //    if (currentSectionNumber.IsWithin(0, (short)(countSectionIssues.Length - 1)))
+                                //        countSectionIssues[currentSectionNumber]++;
+                                #endregion
+
                                 if (decodeInfo.IsSetup())
                                 {
-                                    Dbg.LogPart(ldx, $"{Ind34}//{Ind34}{{DIDCheck}} ");
-                                    /// check if any decoding infos have been inserted                                    
-                                    if (prevDecodingInfoDock.HasElements())
-                                    {
-                                        //Dbg.LogPart(ldx, "      {DIDCheck} ");
-                                        string changedIndex = "", changeType = "None";
-                                        for (int px = 0; px < prevDecodingInfoDock.Count && changedIndex.IsNE(); px++)
-                                        {
-                                            /// determine if there has been a change
-                                            DecodeInfo prevDI = prevDecodingInfoDock[px];
-                                            if (px < decodingInfoDock.Count)
-                                            {
-                                                DecodeInfo dI = decodingInfoDock[px];
-                                                if (!prevDI.Equals(dI))
-                                                {
-                                                    changedIndex = $"@{px}";
-                                                    /// determine if changes is an insert or an edit
-                                                    /// IF next DI is fetchable: (IF next DI is same as previous' DI: consider change 'insert'; ELSE consider change 'edit n add'); 
-                                                    /// ELSE consider change 'edit'
-                                                    if (px + 1 < decodingInfoDock.Count)
-                                                    {
-                                                        DecodeInfo dIAfter = decodingInfoDock[px + 1];
-                                                        if (dIAfter.Equals(prevDI))
-                                                            changeType = "Insert";
-                                                        else
-                                                        {
-                                                            changeType = "Edit n Add";
-                                                            changedIndex += $"~@{decodingInfoDock.Count - 1}";
-                                                        }
-                                                    }
-                                                    else changeType = "Edit";
-                                                }
-                                            }
-                                        }
+                                    // Special: cross references for parsing section tags
+                                    if (parsedSectionTagQ != prevParsedSectionTagQ && parsedSectionTagQ == true)
+                                            decodeInfo.NoteResult(decodeInfo.resultingInfo, SafeSectionName(currentSectionKeyword));
 
-                                        Dbg.LogPart(ldx, $"[{changeType}]{changedIndex}");
-                                        Dbg.LogPart(ldx, ";  ");
-                                        //Dbg.Log(ldx, ";  //  ");
-                                    }
+                                    /// Adding decode info and tallying issues
+                                    decodingInfoDock.Add(decodeInfo);
 
-                                    /// add new decoding info dock
-                                    if (decodeInfo.IsSetup())
-                                    {
-                                        Dbg.LogPart(ldx, $"[Added]@{decodingInfoDock.Count};  ");
-                                        decodingInfoDock.Add(decodeInfo);
-                                    }
-
-                                    /// set previous decoding info dock
-                                    if (decodingInfoDock.HasElements())
-                                    {
-                                        //Dbg.LogPart(ldx, $"[<]prevDID set;  ");
-                                        prevDecodingInfoDock = new List<DecodeInfo>();
-                                        prevDecodingInfoDock.AddRange(decodingInfoDock.ToArray());
-                                    }
+                                    if (sectionIssueQ || decodeInfo.NotedIssueQ)
+                                        currentSectionIssuesCount++;
                                 }
-                                Dbg.Log(ldx, " // ");
 
 
-                                if (sectionIssueQ || decodeInfo.NotedIssueQ)
-                                    if (currentSectionNumber.IsWithin(0, (short)(countSectionIssues.Length - 1)))
-                                        countSectionIssues[currentSectionNumber]++;
 
                                 Dbg.NudgeIndent(ldx, false);
 
@@ -4968,6 +5089,7 @@ namespace HCResourceLibraryApp.DataHandling
                                 List<string> ParseDataIDs(string dataIdsLineGroup)
                                 {
                                     List<string> parsedDataIDs = new();
+                                    bool anyDuplicateIDsEncounteredQ = false;
                                     string[] dataIdGroups = dataIdsLineGroup.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
                                     if (dataIdGroups.HasElements())
@@ -5022,8 +5144,11 @@ namespace HCResourceLibraryApp.DataHandling
                                                                 string datToAdd = dataKey + dataBody + sfx;
                                                                 if (!IsNumberless(datToAdd))
                                                                 {
-                                                                    parsedDataIDs.Add(datToAdd);
-                                                                    Dbg.LogPart(ldx, $"Got and added '{datToAdd}'");
+                                                                    if (!DataIDExistsQ(datToAdd))
+                                                                    {
+                                                                        parsedDataIDs.Add(datToAdd);
+                                                                        Dbg.LogPart(ldx, $"Got and added '{datToAdd}'");
+                                                                    }
                                                                 }
                                                                 else
                                                                 {
@@ -5050,7 +5175,7 @@ namespace HCResourceLibraryApp.DataHandling
                                                 else if (dataIDGroup.Contains(legRangeKey))
                                                 {
                                                     Dbg.LogPart(ldx, $"Got range ID group '{dataIDGroup}'; ");
-                                                    NoteLegendKey(legRangeKey.ToString(), dataIDGroup);
+                                                    //NoteLegendKey(legRangeKey.ToString(), dataIDGroup); // ignore this key
 
                                                     string[] dataIdRng = dataIDGroup.Split(legRangeKey);
                                                     if (dataIdRng.HasElements() && dataIDGroup.CountOccuringCharacter(legRangeKey) == 1)
@@ -5082,8 +5207,11 @@ namespace HCResourceLibraryApp.DataHandling
                                                                     for (int rnix = lowBound; rnix <= highBound; rnix++)
                                                                     {
                                                                         string dataID = $"{dataKey}{rnix}{dkSuffix}".Trim();
-                                                                        parsedDataIDs.Add(dataID);
-                                                                        Dbg.LogPart(ldx, $"{dataID} - ");
+                                                                        if (!DataIDExistsQ(dataID))
+                                                                        {
+                                                                            parsedDataIDs.Add(dataID);
+                                                                            Dbg.LogPart(ldx, $"{dataID} - ");
+                                                                        }
                                                                     }
                                                                 }
                                                                 else
@@ -5136,8 +5264,11 @@ namespace HCResourceLibraryApp.DataHandling
                                                     NoteLegendKey(dataKey, dataIDGroup);
                                                     NoteLegendKey(suffix, dataIDGroup);
 
-                                                    parsedDataIDs.Add(dataIDGroup.Trim());
-                                                    Dbg.Log(ldx, $"Got and added ID '{dataIDGroup.Trim()}'; ");
+                                                    if (!DataIDExistsQ(dataIDGroup.Trim()))
+                                                    {
+                                                        parsedDataIDs.Add(dataIDGroup.Trim());
+                                                        Dbg.Log(ldx, $"Got and added ID '{dataIDGroup.Trim()}'; ");
+                                                    }
                                                 }
                                                 /// qes Codtail tunaChunks ...
                                                 else
@@ -5145,12 +5276,39 @@ namespace HCResourceLibraryApp.DataHandling
                                                     DisassembleDataID(dataIDGroup, out _, out _, out string sf);
                                                     NoteLegendKey(sf, dataIDGroup);
 
-                                                    parsedDataIDs.Add(dataIDGroup);
-                                                    Dbg.LogPart(ldx, $"Got and added wordy ID '{dataIDGroup}'; ");
+                                                    if (!DataIDExistsQ(dataIDGroup.Trim()))
+                                                    {
+                                                        parsedDataIDs.Add(dataIDGroup.Trim());
+                                                        Dbg.LogPart(ldx, $"Got and added wordy ID '{dataIDGroup}'; ");
+                                                    }
                                                 }
                                             }
                                         }
 
+
+                                    // nested local method
+                                    /// also handles decodeInfo.NoteIssue() and Dbg.LogPart()
+                                    bool DataIDExistsQ(string dataID)
+                                    {
+                                        bool dIDExistsQ = false;
+                                        if (dataID.IsNotNEW() && parsedDataIDs.HasElements())
+                                        {
+                                            for (int dx = 0; dx < parsedDataIDs.Count && !dIDExistsQ; dx++)
+                                            {
+                                                DisassembleDataIDQuiet(parsedDataIDs[dx], out string dupeDK, out string dupeDB, out _);
+                                                DisassembleDataIDQuiet(dataID, out string checkDK, out string checkDB, out _);
+                                                dIDExistsQ = dupeDK + dupeDB == checkDK + checkDB;
+                                            }
+                                        }
+
+                                        if (!anyDuplicateIDsEncounteredQ && dIDExistsQ)
+                                        {
+                                            anyDuplicateIDsEncounteredQ = dIDExistsQ;
+                                            decodeInfo.NoteIssue(ldx, $"Data ID '{dataID}' already parsed");
+                                            Dbg.Log(ldx, $"Data ID '{dataID}' already parsed; ");
+                                        }
+                                        return dIDExistsQ;
+                                    }
                                     return parsedDataIDs;
                                 }
                             }
@@ -5187,7 +5345,7 @@ namespace HCResourceLibraryApp.DataHandling
                             {
                                 string keyword = null;
                                 isSectionKeywordQ = false;
-                                foreach (string word in logDataLine.Split(' ', StringSplitOptions.TrimEntries))
+                                foreach (string word in logDataLine.Split(' ', StringSplitOptions.RemoveEmptyEntries))
                                 {
                                     int kIx = 0;
                                     while (keyword.IsNEW() && kIx < 16)
@@ -5224,11 +5382,12 @@ namespace HCResourceLibraryApp.DataHandling
                                             _ => null
                                         };
 
-                                        if (matchingOtherKeyword == word)
-                                        {
-                                            keyword = matchingOtherKeyword;
-                                            isSectionKeywordQ = kIx <= 7;
-                                        }
+                                        if (matchingOtherKeyword.IsNotNE())
+                                            if (word.Contains(matchingOtherKeyword))
+                                            {
+                                                keyword = matchingOtherKeyword;
+                                                isSectionKeywordQ = kIx <= 7;
+                                            }
                                         kIx++;
                                     }
 
@@ -5262,6 +5421,50 @@ namespace HCResourceLibraryApp.DataHandling
                                         cleanerData = $"\"{resultInfoFromRawData.ToString().Replace(";", " | ")}\"";
                                 return cleanerData;
                             }
+                            bool AreIdenticalArgs(out string identicalArg, params string[] arguements)
+                            {
+                                bool anyIdenticalArgsQ = false;
+                                identicalArg = null;
+                                if (arguements.HasElements())
+                                {
+                                    /** THE IDEA, PLAINLY
+                                     *  Arguements received: [4] { abc, def, ghi, jkl }
+                                     * 
+                                     *  Arguements matching (outer loop)
+                                     *  Round 1 :: match 'abc' to 'def', 'ghi', 'jkl'
+                                     *  Round 2 :: match 'def' to 'ghi', 'jkl'
+                                     *  Round 3 :: match 'ghi' to 'jkl'
+                                     *  
+                                     *  MATCH TABLE BY ROUND
+                                     *     |abc def ghi jkl
+                                     *  --------------------
+                                     *  abc| x   1   1   1
+                                     *  def| 1   x   2   2
+                                     *  ghi| 1   2   x   3
+                                     *  jkl| 1   2   3   x
+                                     *  
+                                     *  1~3 as the round which the match occurs
+                                     *  x - where no match is made
+                                     *  Column header (arg1) Row header (arg2)
+                                     * 
+                                     * **/
+                                    for (int a1x = 0; a1x < arguements.Length && !anyIdenticalArgsQ; a1x++)
+                                    {
+                                        string arg1 = arguements[a1x];
+                                        for (int a2x = a1x + 1; a2x < arguements.Length && !anyIdenticalArgsQ; a2x++)
+                                        {
+                                            string arg2 = arguements[a2x];
+                                            if (arg1.IsNotNEW() && arg2.IsNotNEW())
+                                            {
+                                                anyIdenticalArgsQ = arg1.Trim() == arg2.Trim();
+                                                if (anyIdenticalArgsQ)
+                                                    identicalArg = arg1.Trim();
+                                            }
+                                        }
+                                    }
+                                }
+                                return anyIdenticalArgsQ;
+                            }
                         }
                         else
                         {
@@ -5291,208 +5494,220 @@ namespace HCResourceLibraryApp.DataHandling
                     // aka 'else'
                     if (logDataLine.IsNEW() && !endFileReading)
                     {
-                        // as weird as it may seem, checks for non-described or unnoted legend keys goes here (at end of legend section)
-                        if (!ranLegendChecksQ && usedLegendKeys.HasElements() && usedLegendKeysSources.HasElements() && legendDatas.HasElements() && currentSectionName == kwL)
+                        // THIS LEGEND CHECKING SYSTEM WILL BE INTEGRATED RIGHT INTO THE LEGEND DECODING BLOCK AT SOME POINT
+                        /// as weird as it may seem, checks for non-described or unnoted legend keys goes here (at end of legend section)
+                        ///if (!ranLegendChecksQ && usedLegendKeys.HasElements() && usedLegendKeysSources.HasElements() && legendDatas.HasElements() && currentSectionName == kwL)
+                        if (!ranLegendChecksQ && foundSectionsTracker.Contains(kwL))
                         {
                             Dbg.NudgeIndent(ldx, true);
                             Dbg.Log(ldx, $"{{Legend_Checks}}");
                             const string clampSuffix = "...";
                             const int clampDistance = 7;
 
-                            Dbg.NudgeIndent(ldx, true);
-                            // get all keys
-                            /// from notes
-                            List<string> allKeys = new();
-                            List<string> allKeysSources = null;
-                            Dbg.LogPart(ldx, ">> Fetching used legend keys (and sources) :: ");
-                            if (usedLegendKeys.Count == usedLegendKeysSources.Count)
+                            if (usedLegendKeys.HasElements() && usedLegendKeysSources.HasElements())
                             {
-                                allKeysSources = new();
-                                for (int ukx = 0; ukx < usedLegendKeys.Count; ukx++)
+                                Dbg.NudgeIndent(ldx, true);
+                                // get all keys
+                                /// from notes
+                                List<string> allKeys = new();
+                                List<string> allKeysSources = null;
+                                Dbg.LogPart(ldx, ">> Fetching used legend keys (and sources) :: ");
+                                if (usedLegendKeys.Count == usedLegendKeysSources.Count)
                                 {
-                                    string usedKey = usedLegendKeys[ukx];
-                                    string ukSource = usedLegendKeysSources[ukx];
-
-                                    string addedQ = null;
-                                    if (!allKeys.Contains(usedKey))
+                                    allKeysSources = new();
+                                    for (int ukx = 0; ukx < usedLegendKeys.Count; ukx++)
                                     {
-                                        allKeys.Add(usedKey);
-                                        allKeysSources.Add(ukSource);
-                                        addedQ = "+";
-                                    }
-                                    Dbg.LogPart(ldx, $" {addedQ}'{usedKey}' ");
-                                }
-                            }
-                            else
-                            {
-                                /// backup - legkeys only
-                                Dbg.LogPart(ldx, "[aborted sources; UKLen!=UKSLen] :: ");
-                                foreach (string usedKey in usedLegendKeys)
-                                {
-                                    string addedQ = null;
-                                    if (!allKeys.Contains(usedKey))
-                                    {
-                                        allKeys.Add(usedKey);
-                                        addedQ = "+";
-                                    }
-                                    Dbg.LogPart(ldx, $" {addedQ}'{usedKey}' ");
-                                }
-                            }
-                            Dbg.Log(ldx, "; ");
-                            /// from generations
-                            Dbg.LogPart(ldx, ">> Fetching generated legend keys (& decInfoIx as '@#') :: ");
-                            List<int> decodeInfoIndicies = new();
-                            List<string> generatedKeys = new();
-                            foreach (LegendData legDat in legendDatas)
-                            {
-                                string addedQ = null;
-                                if (!allKeys.Contains(legDat.Key))
-                                {
-                                    allKeys.Add(legDat.Key);
-                                    addedQ = "+";
-                                }
+                                        string usedKey = usedLegendKeys[ukx];
+                                        string ukSource = usedLegendKeysSources[ukx];
 
-                                string diIx = "";
-                                for (int lix = 0; lix < decodingInfoDock.Count && addedQ.IsNotNE(); lix++)
-                                {
-                                    DecodeInfo lgdDi = decodingInfoDock[lix];
-                                    if (lgdDi.IsSetup() && lgdDi.sectionName == kwL)
-                                        if (lgdDi.NotedResultQ)
-                                            if (lgdDi.resultingInfo.Contains(legDat.ToString()))
-                                            {
-                                                diIx = $"@{lix}";
-                                                decodeInfoIndicies.Add(lix);
-                                            }
-                                }
-
-                                generatedKeys.Add(legDat.Key);
-                                Dbg.LogPart(ldx, $" {addedQ}'{legDat.Key}' {diIx} ");
-                            }
-                            Dbg.Log(ldx, "; ");
-
-                            // check all keys and determine if unnoted or unused
-                            Dbg.Log(ldx, "Checking all legend keys for possible issues; ");
-                            int getAccessIxFromListForOGdi = 0, usedSourceIx = 0;
-                            foreach (string aKey in allKeys)
-                            {
-                                bool issueWasTriggered = false;
-                                bool isUsed = usedLegendKeys.Contains(aKey);
-                                bool isGenerated = generatedKeys.Contains(aKey);
-                                DecodeInfo legCheckDi = new("<no source line>", kwL);
-
-                                if (isUsed || isGenerated)
-                                {
-                                    Dbg.LogPart(ldx, $"Checked: {(isUsed ? "  used" : "NO USE")}|{(isGenerated ? "gen'd " : "NO GEN")} // Result for key '{aKey}'  --> ");
-                                    //Dbg.LogPart(ldx, $"key [{aKey}]  |  used? [{isUsed}]  |  generated? [{isGenerated}]  -->  ");
-                                }
-
-                                /// unnnoted key issue
-                                if (isUsed && !isGenerated)
-                                {
-                                    /// grab from source
-                                    if (allKeysSources.HasElements())
-                                    {
-                                        bool haltSourceSearchQ = false;
-                                        for (int sx = 0; sx < decodingInfoDock.Count && !haltSourceSearchQ; sx++)
+                                        string addedQ = null;
+                                        if (!allKeys.Contains(usedKey))
                                         {
-                                            DecodeInfo di = decodingInfoDock[sx];
-                                            string ukSource = allKeysSources[usedSourceIx];
-                                            if (di.IsSetup())
-                                                if (di.logLine.Contains(ukSource))
-                                                {
-                                                    di.logLine = RemoveEscapeCharacters(di.logLine);
-                                                    haltSourceSearchQ = true;
-                                                    string newDiSourceLine = null;
-                                                    string focus = ukSource;
-                                                    string[] ukSourceSplit = ukSource.Split(aKey);
-
-                                                    string sourceOrigin = $"{Ind24}[from {di.sectionName}]";
-                                                    if (di.sectionName == kwA && di.logLine.Contains(kwD))
-                                                        sourceOrigin = $"{Ind24}[from {kwD} -> {di.sectionName}]";
-
-                                                    /// source style 2 -- focuses legend key in source only
-                                                    if (ukSourceSplit.HasElements(2))
-                                                    {
-                                                        focus = $"{{{aKey}}}";
-                                                        string fullLogLine = "";
-                                                        for (int c = 0; c < ukSourceSplit.Length; c++)
-                                                        {
-                                                            if (c == 0)
-                                                                fullLogLine += $"{ukSourceSplit[c]}{focus}";
-                                                            else
-                                                            {
-                                                                if (c + 1 == ukSourceSplit.Length)
-                                                                    fullLogLine += ukSourceSplit[c];
-                                                                else fullLogLine += $"{ukSourceSplit[c]}{aKey}";
-                                                            }
-                                                        }
-                                                        newDiSourceLine = di.logLine.Replace(ukSource, fullLogLine);
-                                                    }
-
-                                                    /// source style 1 -- focuses full source
-                                                    if (newDiSourceLine.IsNE())
-                                                        newDiSourceLine = di.logLine.Replace(ukSource, $"{{{ukSource}}}");
-                                                    newDiSourceLine = newDiSourceLine.Clamp(clampDistance + clampSuffix.Length, clampSuffix, focus, null) + sourceOrigin;
-                                                    legCheckDi = new DecodeInfo(newDiSourceLine, legCheckDi.sectionName);
-                                                }
+                                            allKeys.Add(usedKey);
+                                            allKeysSources.Add(ukSource);
+                                            addedQ = "+";
                                         }
+                                        Dbg.LogPart(ldx, $" {addedQ}'{usedKey}' ");
                                     }
-
-                                    /// issue reported here
-                                    Dbg.LogPart(ldx, "Unnoted Key Issue");
-                                    legCheckDi.NoteIssue(ldx, $"Key '{aKey}' was used but not described (Unnoted Legend Key)");
-                                    decodingInfoDock.Add(legCheckDi);
-                                    issueWasTriggered = true;
                                 }
-                                /// unused key issue
-                                else if (!isUsed && isGenerated)
+                                else
                                 {
-                                    Dbg.LogPart(ldx, "Unused Key Issue");
-                                    string diIssueMsg = $"Key '{aKey}' was described but not used (Unnecessary Legend Key)";
-
-                                    bool fetchedAndEditedOGDi = false;
-                                    if (decodeInfoIndicies.HasElements())
+                                    /// backup - legkeys only
+                                    Dbg.LogPart(ldx, "[aborted sources; UKLen!=UKSLen] :: ");
+                                    foreach (string usedKey in usedLegendKeys)
                                     {
-                                        int accessIx = decodeInfoIndicies[getAccessIxFromListForOGdi];
-                                        DecodeInfo ogDI = decodingInfoDock[accessIx];
-                                        getAccessIxFromListForOGdi++;
-
-                                        //decodingInfoDock[accessIx] = new DecodeInfo();
-                                        if (!ogDI.NotedIssueQ)
+                                        string addedQ = null;
+                                        if (!allKeys.Contains(usedKey))
                                         {
-                                            legCheckDi = new DecodeInfo(ogDI.logLine, ogDI.sectionName);
-                                            legCheckDi.NoteIssue(ldx, diIssueMsg);
-                                            legCheckDi.NoteResult(ogDI.resultingInfo);
-
-                                            decodingInfoDock[accessIx] = legCheckDi;
-                                            fetchedAndEditedOGDi = true;
+                                            allKeys.Add(usedKey);
+                                            addedQ = "+";
                                         }
+                                        Dbg.LogPart(ldx, $" {addedQ}'{usedKey}' ");
                                     }
-
-                                    if (!fetchedAndEditedOGDi)
-                                        legCheckDi.NoteIssue(ldx, diIssueMsg);
-
-                                    issueWasTriggered = true;
                                 }
-                                else if (isUsed && isGenerated)
-                                    Dbg.LogPart(ldx, "Key is okay");
-
-                                if (issueWasTriggered)
-                                    countSectionIssues[currentSectionNumber]++;
-
-                                usedSourceIx++;
                                 Dbg.Log(ldx, "; ");
+                                /// from generations
+                                Dbg.LogPart(ldx, ">> Fetching generated legend keys (& decInfoIx as '@#') :: ");
+                                List<int> decodeInfoIndicies = new();
+                                List<string> generatedKeys = new();
+                                foreach (LegendData legDat in legendDatas)
+                                {
+                                    string addedQ = null;
+                                    if (!allKeys.Contains(legDat.Key))
+                                    {
+                                        allKeys.Add(legDat.Key);
+                                        addedQ = "+";
+                                    }
+
+                                    string diIx = "";
+                                    for (int lix = 0; lix < decodingInfoDock.Count && addedQ.IsNotNE(); lix++)
+                                    {
+                                        DecodeInfo lgdDi = decodingInfoDock[lix];
+                                        if (lgdDi.IsSetup() && lgdDi.sectionName == kwL)
+                                            if (lgdDi.NotedResultQ)
+                                                if (lgdDi.resultingInfo.Contains(legDat.ToString()))
+                                                {
+                                                    diIx = $"@{lix}";
+                                                    decodeInfoIndicies.Add(lix);
+                                                }
+                                    }
+
+                                    generatedKeys.Add(legDat.Key);
+                                    Dbg.LogPart(ldx, $" {addedQ}'{legDat.Key}' {diIx} ");
+                                }
+                                Dbg.Log(ldx, "; ");
+
+                                // check all keys and determine if unnoted or unused
+                                Dbg.Log(ldx, "Checking all legend keys for possible issues; ");
+                                int getAccessIxFromListForOGdi = 0, usedSourceIx = 0;
+                                foreach (string aKey in allKeys)
+                                {
+                                    bool issueWasTriggered = false;
+                                    bool isUsed = usedLegendKeys.Contains(aKey);
+                                    bool isGenerated = generatedKeys.Contains(aKey);
+                                    DecodeInfo legCheckDi = new("<no source line>", kwL);
+
+                                    if (isUsed || isGenerated)
+                                    {
+                                        Dbg.LogPart(ldx, $"Checked: {(isUsed ? "  used" : "NO USE")}|{(isGenerated ? "gen'd " : "NO GEN")} // Result for key '{aKey}'  --> ");
+                                        //Dbg.LogPart(ldx, $"key [{aKey}]  |  used? [{isUsed}]  |  generated? [{isGenerated}]  -->  ");
+                                    }
+
+
+                                    /// unnnoted key issue
+                                    if (isUsed && !isGenerated)
+                                    {
+                                        /// grab from source
+                                        if (allKeysSources.HasElements())
+                                        {
+                                            bool haltSourceSearchQ = false;
+                                            for (int sx = 0; sx < decodingInfoDock.Count && !haltSourceSearchQ; sx++)
+                                            {
+                                                DecodeInfo di = decodingInfoDock[sx];
+                                                string ukSource = allKeysSources[usedSourceIx];
+                                                if (di.IsSetup())
+                                                    if (di.logLine.Contains(ukSource))
+                                                    {
+                                                        di.logLine = RemoveEscapeCharacters(di.logLine);
+                                                        haltSourceSearchQ = true;
+                                                        string newDiSourceLine = null;
+                                                        string focus = ukSource;
+                                                        string[] ukSourceSplit = ukSource.Split(aKey);
+
+                                                        string sourceOrigin = $"{Ind24}[from {di.sectionName}]";
+                                                        if (di.sectionName == kwA && di.logLine.Contains(kwD))
+                                                            sourceOrigin = $"{Ind24}[from {kwD} -> {di.sectionName}]";
+
+                                                        /// source style 2 -- focuses legend key in source only
+                                                        if (ukSourceSplit.HasElements(2))
+                                                        {
+                                                            focus = $"{{{aKey}}}";
+                                                            string fullLogLine = "";
+                                                            for (int c = 0; c < ukSourceSplit.Length; c++)
+                                                            {
+                                                                if (c == 0)
+                                                                    fullLogLine += $"{ukSourceSplit[c]}{focus}";
+                                                                else
+                                                                {
+                                                                    if (c + 1 == ukSourceSplit.Length)
+                                                                        fullLogLine += ukSourceSplit[c];
+                                                                    else fullLogLine += $"{ukSourceSplit[c]}{aKey}";
+                                                                }
+                                                            }
+                                                            newDiSourceLine = di.logLine.Replace(ukSource, fullLogLine);
+                                                        }
+
+                                                        /// source style 1 -- focuses full source
+                                                        if (newDiSourceLine.IsNE())
+                                                            newDiSourceLine = di.logLine.Replace(ukSource, $"{{{ukSource}}}");
+                                                        newDiSourceLine = newDiSourceLine.Clamp(clampDistance + clampSuffix.Length, clampSuffix, focus, null) + sourceOrigin;
+                                                        legCheckDi = new DecodeInfo(newDiSourceLine, legCheckDi.sectionName);
+
+
+                                                        /// issue reported here
+                                                        Dbg.LogPart(ldx, "Unnoted Key Issue");
+                                                        legCheckDi.NoteIssue(ldx, $"Key '{aKey}' was used but not described (Unnoted Legend Key)");
+                                                        decodingInfoDock[sx] = legCheckDi;
+                                                        //decodingInfoDock.Add(legCheckDi);
+                                                        issueWasTriggered = true;
+                                                    }
+                                            }
+                                        }
+                                    }
+                                    /// unused key issue
+                                    else if (!isUsed && isGenerated)
+                                    {
+                                        Dbg.LogPart(ldx, "Unused Key Issue");
+                                        string diIssueMsg = $"Key '{aKey}' was described but not used (Unnecessary Legend Key)";
+
+                                        bool fetchedAndEditedOGDi = false;
+                                        if (decodeInfoIndicies.HasElements())
+                                        {
+                                            int accessIx = decodeInfoIndicies[getAccessIxFromListForOGdi];
+                                            DecodeInfo ogDI = decodingInfoDock[accessIx];
+                                            getAccessIxFromListForOGdi++;
+
+                                            //decodingInfoDock[accessIx] = new DecodeInfo();
+                                            if (!ogDI.NotedIssueQ)
+                                            {
+                                                legCheckDi = new DecodeInfo(ogDI.logLine, ogDI.sectionName);
+                                                legCheckDi.NoteIssue(ldx, diIssueMsg);
+                                                legCheckDi.NoteResult(ogDI.resultingInfo);
+
+                                                decodingInfoDock[accessIx] = legCheckDi;
+                                                fetchedAndEditedOGDi = true;
+                                            }
+                                        }
+
+                                        if (!fetchedAndEditedOGDi)
+                                            legCheckDi.NoteIssue(ldx, diIssueMsg);
+
+                                        issueWasTriggered = true;
+                                    }
+                                    else if (isUsed && isGenerated)
+                                        Dbg.LogPart(ldx, "Key is okay");
+
+                                    /// we are still in the "Legend" section... 
+                                    ///     ... as *this* entire block runs immediately and only after the LEGEND section is complete, and the issue number is not reset until another section begins
+                                    if (issueWasTriggered)
+                                        currentSectionIssuesCount++;
+
+                                    usedSourceIx++;
+                                    Dbg.Log(ldx, "; ");
+                                }
+
+                                Dbg.NudgeIndent(ldx, false);
+                                ranLegendChecksQ = true;
                             }
-
+                            else Dbg.Log(ldx, "No legend keys available for a legend check; ");
                             Dbg.NudgeIndent(ldx, false);
-                            Dbg.NudgeIndent(ldx, false);
-
-                            ranLegendChecksQ = true;
                         }
 
                         // relays number of issues for ended section to debug log
-                        if (currentSectionNumber.IsWithin(0, (short)(countSectionIssues.Length - 1)) && currentSectionName.IsNotNE())
-                            Dbg.Log(ldx, $"..  Sec#{currentSectionNumber} '{currentSectionName}' ended with [{countSectionIssues[currentSectionNumber]}] issues;");
+                        if (currentSectionName.IsNotNE())
+                            Dbg.Log(ldx, $"..  Sec#{currentSectionNumber} '{currentSectionName}' ended with [{currentSectionIssuesCount}] issues; ");
+                        //if (currentSectionNumber.IsWithin(0, (short)(countSectionIssues.Length - 1)) && currentSectionName.IsNotNE())
+                        //    Dbg.Log(ldx, $"..  Sec#{currentSectionNumber} '{currentSectionName}' ended with [{countSectionIssues[currentSectionNumber]}] issues;");
 
                         // ends a section, also notifies of an ended section to dbug log
                         if (!withinOmitBlock)
@@ -5514,7 +5729,7 @@ namespace HCResourceLibraryApp.DataHandling
                         /// "File Too Long" issue
                         if (llx + 1 >= maxReadingLines)
                         {
-                            DecodeInfo tooLongDi = new("Decoder Issue; <no source line>", kwV);
+                            DecodeInfo tooLongDi = new("Decoder Issue; <no source line>", SafeSectionName(sectionName_mainDecoding));
                             tooLongDi.NoteIssue(ldx, $"File reading has been forced to end: Version Log is too long (limit of {maxReadingLines} lines)");
                             decodingInfoDock.Add(tooLongDi);
                         }
@@ -5879,10 +6094,12 @@ namespace HCResourceLibraryApp.DataHandling
             }
             return isNumless;
         }
-        /// <summary>Also partly logs "Noted legend key: {key} [+ID: {id}]; "</summary>
+        /// <summary>Also partly logs "Noted legend key: {key} [+Ref: {id}]; "</summary>
         void NoteLegendKey(string legKey, string sourceDataID)
         {
             if (usedLegendKeys != null && legKey.IsNotNEW())
+            {
+                legKey = legKey.Trim();
                 if (!usedLegendKeys.Contains(legKey))
                 {
                     usedLegendKeys.Add(legKey);
@@ -5895,11 +6112,12 @@ namespace HCResourceLibraryApp.DataHandling
                         if (usedLegendKeysSources.Count < usedLegendKeys.Count)
                         {
                             usedLegendKeysSources.Add(sourceDataID);
-                            Dbg.LogPart(ldx, $" [+ID: {sourceDataID}]");
+                            Dbg.LogPart(ldx, $" [+Ref: {sourceDataID}]");
                         }
                         Dbg.LogPart(ldx, "; ");
                     }
                 }
+            }
         }
         /// <summary>Also partly logs "GDnS: {dataKey}[{number}]{suffix}; " only when decoding a version log (retired)</summary>
         public static void GetDataKeyAndSuffix(string dataIDGroup, out string dataKey, out string suffix)
@@ -6060,7 +6278,7 @@ namespace HCResourceLibraryApp.DataHandling
                     sectionDecInfos.AddRange(sdi_issues);
                 
 
-                // get specific decode info
+                // get specific decode info (by index)
                 if (sectionDecInfos.HasElements())
                 {
                     if (infoIndex.IsWithin(0, sectionDecInfos.Count - 1))
@@ -6069,6 +6287,43 @@ namespace HCResourceLibraryApp.DataHandling
             }
             return decInfo;
         }        
+        public DecodeInfo GetDecodeInfo(DecodedSection sectionName, string crossRef, out int sectionIssueCount)
+        {
+            DecodeInfo decInfo = new();
+            sectionIssueCount = 0;
+            if (DecodeInfoDock.HasElements())
+            {
+                // get all section infos
+                List<DecodeInfo> sectionDecInfos = new();
+                /// separate results from issues, then append issues to the end of results
+                List<DecodeInfo> sdi_issues = new();
+                foreach (DecodeInfo dcI in DecodeInfoDock)
+                {
+                    if (dcI.IsSetup())
+                        if (dcI.sectionName == sectionName.ToString())
+                        {
+                            if (dcI.NotedIssueQ)
+                            {
+                                if (!dcI.NotedResultQ)
+                                    sdi_issues.Add(dcI);
+                                else sectionDecInfos.Add(dcI);
+                                sectionIssueCount++;
+                            }
+                            else sectionDecInfos.Add(dcI);
+                        }
+                }
+                if (sdi_issues.HasElements())
+                    sectionDecInfos.AddRange(sdi_issues);
 
+
+                // get specific decode info (by crossRef)
+                if (sectionDecInfos.HasElements())
+                {
+                    if (crossRef.IsNotNEW())
+                        decInfo = sectionDecInfos.Find(dci => dci.crossRef == crossRef);
+                }
+            }
+            return decInfo;
+        }
     }        
 }

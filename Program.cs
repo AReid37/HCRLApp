@@ -13,7 +13,7 @@ namespace HCResourceLibraryApp
     public class Program
     {
         static readonly string consoleTitle = "High Contrast Resource Library App";
-        static readonly string developmentVersion = "[v1.3.4d]";
+        static readonly string developmentVersion = "[v1.3.4e]";
         static readonly string lastPublishedVersion = "[v1.3.3e]";
         /// <summary>If <c>true</c>, the application launches for debugging/development. Otherwise, the application launches for the published version.</summary>
         public static readonly bool isDebugVersionQ = true;
@@ -34,6 +34,8 @@ namespace HCResourceLibraryApp
         static BugIdeaData bugIdeaData_;
         /// crash handling data
         static Exception crashExInfo;
+        /// random
+        static bool _firstHintReminderQ;
 
         // PUBLIC
         public static bool AllowProgramRestart { get => _programRestartQ; private set => _programRestartQ = value; }
@@ -415,15 +417,22 @@ namespace HCResourceLibraryApp
 
             /// bug/idea reports
             if (reminderHintRnd < 2)
-                reminderHintMessage = $"{Ind14}Report bugs or suggest ideas by entering the phrase '{openBugIdeaPagePhrase}' in any input.";
+                reminderHintMessage = $"Report bugs or suggest ideas by entering the phrase '{openBugIdeaPagePhrase}' in any input";
             /// f11 if displays are wonky
             if (reminderHintRnd == 5)
-                reminderHintMessage = "Double-press F11 to fix strange display issues on console.";
+                reminderHintMessage = "Double-press F11 to fix strange display issues on console";
+
+            /// i should have about page, but make it a hidden item
+            if (!_firstHintReminderQ || reminderHintRnd == 7)
+            {
+                _firstHintReminderQ = true;
+                reminderHintMessage = $"View the About page by entering the phrase '{{@abt}}' in any input";
+            }
 
 
             if (reminderHintMessage.IsNotNE())
             {
-                FormatLine(reminderHintMessage, ForECol.Accent);
+                FormatLine($"{Ind14}{reminderHintMessage}.", ForECol.Accent);
                 if (HSNL(1, 5) >= 2)
                     NewLine();
             }
@@ -463,6 +472,7 @@ namespace HCResourceLibraryApp
             LogSubmissionPage_DisplayLogInfo_Legacy_AllTester,
             LogSubmissionPage_DisplayLogInfo_Legacy_ErrorTester,
             LogSubmissionPage_DisplayLogInfo_Tester,
+            LogSubmissionPage_DisplayLogInfo_SectPrefs,
             LogSubmissionPage_DisplayLogInfo_Ex1B,
 
             ContentValidator_Validate,
@@ -720,8 +730,8 @@ namespace HCResourceLibraryApp
 
                         /// syntax v2 tests
                         Tests.LogSubmissionPage_DisplayLogInfo_Ex1B => SetFileLocation(parentDir + "HCRLA VL2 Ex1b.txt"),
-
                         Tests.LogSubmissionPage_DisplayLogInfo_Tester => SetFileLocation(parentDir + "HCRLA VL2 Tester.txt"),
+                        Tests.LogSubmissionPage_DisplayLogInfo_SectPrefs => SetFileLocation(parentDir + "HCRLA VL2 SectPrefsTest.txt"),
 
                         _ => false
                     };

@@ -26,6 +26,8 @@
 
         public string logLine, sectionName;
         public string decodeIssue, resultingInfo;
+        /// <summary>Tool for proper matching of decoding info with results to the appropriate item when displaying outcome of decoding.</summary>
+        public string crossRef;
 
         public bool NotedIssueQ { get => decodeIssue.IsNotNEW(); }
         public bool NotedResultQ { get => resultingInfo.IsNotNEW(); }
@@ -36,6 +38,7 @@
             sectionName = logSection;
             decodeIssue = null;
             resultingInfo = null;
+            crossRef = null;
         }
 
         /// <summary>Also partly logs ' &lt;!di&gt; ' when an issue has been noted.</summary>
@@ -50,21 +53,25 @@
             }
         }
         /// <param name="result">A period ('.') will be added at the end of this message.</param>
+        /// <param name="crossReference">A unique string for identifying and matching decoded contents and decode infos for displaying the results.</param>
         /// <remarks>The noted result may be overwritten.</remarks>
-        public void NoteResult(string result)
+        public void NoteResult(string result, string crossReference = null)
         {
             if (result.IsNotNE())
                 resultingInfo = result;
+
+            if (crossReference.IsNotNEW())
+                crossRef = crossReference;
         }
         /// <returns>A boolean relaying whether the log line, section name, and either the decode issue message or resulting info message have values.</returns>        
         public bool IsSetup()
         {
             return logLine.IsNotNEW() && sectionName.IsNotNEW() && (decodeIssue.IsNotNE() || resultingInfo.IsNotNE());
-        }
+        }        
         public bool Equals(DecodeInfo other)
         {
             bool areEquals = true;
-            for (int d = 0; d < 5 && areEquals; d++)
+            for (int d = 0; d < 6 && areEquals; d++)
             {
                 switch (d)
                 {
@@ -86,6 +93,10 @@
 
                     case 4:
                         areEquals = resultingInfo == other.resultingInfo;
+                        break;
+
+                    case 5:
+                        areEquals = crossRef == other.crossRef;
                         break;
                 }
             }

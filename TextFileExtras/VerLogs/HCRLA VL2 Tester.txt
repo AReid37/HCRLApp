@@ -13,6 +13,9 @@ HCRLA Version Log Syntax v2, Tester Log
 Data line %
 
 
+-- NO SERIOUSLY, I AM NOT DOING THIS IDENTICAL ARGUEMENT ERROR CHECKING SHIT. If you're so stupid that I need to do that then consider yourself too stupid to follow instructions and review your own paper work. This is just not going to work. There are too many conditions where arguements are okay to be matching and the log decoder will normally sort things out along the way. Too many flippin' conditions to be bothered with checking for 'IDENTICAL ARGUEMENTS'. That's enough. I don't want to be spending an extra one~two weeks having to debug a million and one conditions to find where arguements are actually not identical and actually are identical. Hell naw. SUE ME.
+
+
 
 -- ------------------------- secVer ------------------------- --
 -- !open --
@@ -121,12 +124,13 @@ ADDED ERROR TESTING CASES
 	e: Replacements: missing arguements, incorrect arguements: "#" (plain numbers), identical arguements
 	f: --> Get replacements - placeholder and substitution
 	f...: + 'duplicate placeholder' and 'duplicate replacement group' error
-	g: Content: incorrect letter casing, missing arguements, too many keywords, identical arguements
-	h: Content: Internal Name: incorrect arguements: '#', "Data IDs" (?)
-	i: Content: Data IDs: incorrect arguements: '#', "Internal Name" (?), grouping syntax issue (x#,#~#) 
+	g: Content: incorrect letter casing, missing arguements, too many keywords, identical arguements (?)
+	h: Content: Internal Name: incorrect arguements: '#', "Data IDs" (?), "&99"
+	i: Content: Data IDs: incorrect arguements: '#', "Internal Name" (?), grouping syntax issue (x#,#~#)
 	j: --> Get added contents
 	j...: + 'duplicate content' error
-	k: Imparsible error: using version syntax, rubbish
+	k: Content: Data IDs: incorrect arguements: duplicate IDs
+	l: Imparsible error: using version syntax, rubbish
 
 
 	At (?) - this may be omitted and left to user to correct any arising errors
@@ -176,17 +180,20 @@ SmolItem as i10
 AS t10
 SmolItem AS 
 BigItem AS i20 AS t20
-SmolItem AS SmolItem
-i20 AS i20
+-- SmolItem AS SmolItem <-- skip -->
+-- i20 AS i20 <-- skip -->
 --
 -- h
 10 AS p10
--- p10 AS p10
+&99 AS p10
+-- p10 AS p10,11 <-- skip -->
+-- p10 AS p10 <-- skip -->
 --
 -- i
 BigItem AS 20
 SmolItem AS d20~22,23
--- BigItem AS BigItem
+-- BigItem AS BigItem <-- skip -->
+-- p10 AS p10,11 <-- skip -->
 --
 -- j
 Smoli> AS i10 t10 p10 d10
@@ -195,8 +202,13 @@ Smoli> AS i10 t10 p10 d10
 Bigi> AS i20 t20,21 p20~22 g20 d20
 --
 -- k
+Smoli> AS i10 i10 t10 p10 d10
+Bigi> AS i20 t20,21 p21 p20~22 g20 d20
+--
+-- l
 MAJOR 1 MINOR 0
 this is not parsable: A
+
 
 -- ========================= END secAdd ========================= --
 
@@ -222,12 +234,13 @@ ADDITIONAL ERROR TESTING CASES
 	d: --> Identify additional tag
 	d...: + 'already parsed tag' error
 	e: Full syntax: incorrect letter casing, missing one other keyword (only BY), incorrect order of keywords, too many keywords, duplicate arguements (?)
-	f: Full syntax: Data IDs: incorrect arguements: '#', "Related Data ID", grouping syntax issue (x#,#~#)
-	g: Full syntax: Opt Name: incorrect arguements: '#', "Related Internal Name", "&99"
-	h: Full syntax: Rel Name: incorrect arguements: '#', "Match with Rel ID", "&99"
-	i: Full syntax: Rel ID: incorrect arguements: '#', "Data IDs", only 1 ID, grouping syntax issue (x#,#~#), missing arguement
+	f: Full syntax: Data IDs: incorrect arguements: '#', "Related Data ID" (?), grouping syntax issue (x#,#~#)
+	g: Full syntax: Opt Name: incorrect arguements: '#', "Related Internal Name", "Data ID" (?), "Rel ID" (?), "&99"
+	h: Full syntax: Rel Name: incorrect arguements: '#', "Match with Rel ID" (?), "&99"
+	i: Full syntax: Rel ID: incorrect arguements: '#', "Data IDs" (?), only 1 ID, grouping syntax issue (x#,#~#), missing arguement
 	j: --> Get additional content (full and omitted syntax)
 	j...: + 'duplicate additional content' error
+	k: Any syntax: Data IDs: incorrect arguements: duplicate IDs
 	k: Imparsible error: using version syntax, rubbish
 
 
@@ -260,26 +273,26 @@ p15 AS MidEffects TO MidItem BY i15 BY i15
 -- 
 -- f
 11 AS SmolDust TO SmolItem BY i10
-i10 AS SmolDust TO SmolItem BY i10
 d11,12~14 AS SmolDust TO SmolItem BY i10
+-- i10 AS SmolDust TO SmolItem BY i10 <-- skip -->
 --
 -- g
 d11 AS 2345 TO SmolItem BY i10
-d11 AS SmolItem TO SmolItem BY i10
 d11 AS &99 TO SmolItem BY i10
+-- d11 AS SmolItem TO SmolItem BY i10 <-- skip -->
 -- 
 -- h
 d11 AS SmolDust TO 10 BY i10
-p15 AS MidEffects TO i15 BY i15
 p15 AS MidEffects TO &99 BY i15
+-- p15 AS MidEffects TO i15 BY i15 <-- skip -->
 -- 
 -- i
 p15 AS MidEffects TO MidItem BY 15
-p15 AS MidEffects TO MidItem BY p15
 p15 AS MidEffects TO MidItem BY i15,16 
 p15 AS MidEffects TO MidItem BY i15~17
 p15 AS MidEffects TO MidItem BY i15~17,18
 p15 AS MidEffects TO MidItem BY
+-- p15 AS MidEffects TO MidItem BY p15 <-- skip -->
 --
 -- j
 p15 d15 AS MidEffects TO MidItem BY i15
@@ -292,6 +305,10 @@ p15 d15 BY i15
 d11 BY i10
 --
 -- k
+p15 d15 p15 AS MidEffects TO MidItem BY i15
+d11 d11 TO SmolItem BY i10
+--
+-- l
 MAJOR 1 MINOR 0
 this is not parsable: D
 
@@ -310,8 +327,10 @@ this is not parsable: D
 -- !open --
 VALID LINES
 	TTA
-	2
-
+	12
+	-- or --
+	TCA 
+	12
 
 TTA/TCA ERROR TESTING CASES
 	a: Section already found (post parse): additional
@@ -321,7 +340,7 @@ TTA/TCA ERROR TESTING CASES
 	d:...: + 'alrerady parsed tag' error with alternative keyword
 	e: TTA number: incorrect arguements: too many numbers (with spaces), NaN, "x < 0"
 	f: --> Get TTA Number
-	f...: + 'already got tta number' error
+	f...: + 'already got tta number' error, tta verification error (opt)
 	g: Imparsible error: using version syntax, rubbish
 
 -- !close --
@@ -338,17 +357,19 @@ ttc TTA
 
 -- d
 TTA 
-TTC
-
+TCA
+--
 -- e
 1 30  8
 2i
 -4
-
+0
+--
 -- f
-2
-2
-
+12
+12
+-- actually number is '15'
+--
 -- g
 MAJOR 1 MINOR 0
 this is not parsable: T
@@ -367,7 +388,9 @@ this is not parsable: T
 -- ------------------------- secUpd ------------------------- --
 -- !open --
 VALID LINES
-	...
+	UPDATED
+	SmolItem BY i10 WITH Sharpened the colors and shape of this item
+	MidItem BY i15 WITH Slightly softened the shape of this item
 	-- the above tests both loose and auto-connect updates
 
 UPDATED ERROR TESTING CASES
@@ -377,9 +400,9 @@ UPDATED ERROR TESTING CASES
 	d: --> Identify updated tag
 	d...: + 'already parsed tag' error
 	e: Full syntax: incorrect letter casing, missing one other keyword (only WITH), incorrect order of keywords, too many keywords, duplicate arguements (?)
-	f: Full syntax: Rel Name: incorrect arguements: '#', "Match with Rel ID", "&99"
-	g: Full syntax: Rel ID: incorrect arguements: '#', "Data IDs", only 1 ID, grouping syntax issue (x#,#~#), missing arguement
-	h: Full syntax: Change Desc: '#', "Not Rel ID, "Not Rel Name", "&99"
+	f: Full syntax: Rel Name: incorrect arguements: '#', "Match with Rel ID" (?), "&99"
+	g: Full syntax: Rel ID: incorrect arguements: '#', only 1 ID, grouping syntax issue (x#,#~#), missing arguement
+	h: Full syntax: Change Desc: '#', "Not Rel ID" (?), "Not Rel Name" (?), "&99", missing arguement
 	i: --> Get updated content (full and omitted syntax)
 	i...: + 'duplicate updated content' error
 	j: Imparsible error: using version syntax, rubbish
@@ -388,6 +411,208 @@ UPDATED ERROR TESTING CASES
 -- !close --
 
 -- a
--- tbd after TTA/TCA has been fully tested...
+TCA
+
+-- b
+SmolItem BY i10 WITH Sharpened the colors and shape of this item
+MidItem BY i15 WITH Slightly softened the shape of this item
+
+-- c
+updated
+UPDATED!
+
+-- d
+UPDATED
+UPDATED
+--
+-- e
+SmolItem by i10 with Sharpened~
+SmolItem BY i10 Sharpened~
+SmolItem WITH i10 BY Sharpened~
+SmolItem BY i10 BY i10 WITH Sharpened~
+SmolItem BY i10 WITH Sharpened~ WITH Sharpened~
+--
+-- f
+45 BY i15 WITH Slightly~
+&99 BY i15 WITH Slightly~
+-- i15 BY i15 WITH Slightly~ <-- skip -->
+--
+-- g
+MidItem BY 15 WITH Slightly~
+MidItem BY i15,16 WITH Slightly~
+MidItem BY i15~17 WITH Slightly~
+MidItem BY i15,16~18 WITH Slightly~
+MidItem BY WITH Slightly~
+-- 
+-- h
+SmolItem BY i10 WITH 1010 0100
+SmolItem BY i10 WITH &99
+SmolItem BY i10 WITH
+-- SmolItem BY i10 WITH SmolItem <-- skip --> 
+-- SmolItem BY i10 WITH i10 <-- skip -->
+--
+-- i
+SmolItem BY i10 WITH Sharpened the colors and shape of this item
+MidItem BY i15 WITH Slightly softened the shape of this item
+BY i10 WITH Sharpened the colors and shape of this item
+BY i15 WITH Slightly softened the shape of this item
+i10 WITH Sharpened the colors and shape of this item
+i15 WITH Slightly softened the shape of this item
+--
+-- j
+MAJOR 1 MINOR 0
+this is not parsable: U
 
 -- ------------------------- END secUpd ------------------------- --
+
+
+
+
+
+
+
+
+
+-- ========================= secLeg ========================= --
+-- !open --
+VALID LINES
+	LEGEND
+	i AS Item
+	t AS Tiles
+	p AS Projectile
+	g AS Glow
+	d AS Dust
+	-- omit one of the above and create an unused legend entry
+
+LEGEND ERROR TESTING CASES
+	a: Section already found (post parse): updated
+	b: Leg syntax before section tag: should not be parsed
+	c: Legend tag keyword: incorrect letter casing, not on lone line
+	d: --> Identify legend tag
+	d...: + 'already parsed tag' error
+	e: Legend: incorrect letter casing, missing keyword, too many keywords, identical arguements (?)
+	f: Legend: Key: neither is '#' or contains '#', '~', "no spaces warning", 3 or less chars (?)
+	g: Legend: Def: neither is '#' or contains '#', matches legend key (?)
+	h: --> Get legend content
+	h...: + 'duplicate legend key/definition' errors, unnoted / unneccessary legend entry errors
+	i: Imparsible error: using version syntax, rubbish
+
+	At (?) - this may be omitted and left to user to correct any arising errors
+-- !close --
+
+-- a
+UPDATED
+
+-- b
+i AS Item
+t AS Tiles
+
+-- c
+leg end
+L E G E N D
+
+-- d
+LEGEND
+LEGEND
+--
+-- e
+i as Item
+t Tiles
+i AS Item AS Item
+--
+-- f
+100 45 AS Item
+u5 AS Unknown
+~ AS NumRng
+i f AS Item Flame
+--
+-- g
+i AS 700
+t AS Tiles_3
+--
+-- h
+i AS Item
+t AS Tiles
+p AS Projectile
+g AS Glow
+-- next 2, dupe key and dupe definition
+i AS Items
+x AS Item
+-- vv  for 'unnecessary' warning
+tt AS Tree Tops
+-- d AS Dust -- hidden for 'unnoted' warning
+--
+-- i
+MAJOR 1 MINOR 0
+this is not parsable: L
+
+-- ========================= END secLeg ========================= --
+
+
+
+
+
+
+
+
+
+
+
+-- ------------------------- secSum ------------------------- --
+-- !open --
+VALID LINES
+	SUMMARY
+	AS Introduced Big and Smol items and textures
+	AS Modifications to Mid Item
+
+SUMMARY ERROR TESTING CASES
+	a: Section already found (post parse): legend (using alt keyword)
+	b: Sum syntax before section tag: should not be parsed
+	c: Summary tag keyword: incorrect letter casing, not on lone line
+	d: --> Identify summary tag
+	d...: + 'already parsed tag' error
+	e: Full syntax: incorrect letter casing, missing keyword, too many keywords
+	f: Full syntax: Summary Part: incorrect arguements: missing, '#'
+	g: --> Get summary content
+	g...: + 'duplicate summary part' error
+	h: Imparsible error: using version syntax, rubbish
+
+	At (?) - this may be omitted and left to user to correct any arising errors
+-- !close --
+
+-- a
+LEGEND
+
+-- b
+AS Introduced Big and Smol items and textures
+AS Modifications to Mid Item
+
+-- c
+summary SUMMARY
+SUMARY
+
+-- d
+SUMMARY
+SUMMARY
+--
+-- e
+as Introduced~
+Introduced~
+AS Big AS Introduced~
+--
+-- f
+AS 125 478
+AS 
+--
+-- g
+AS Introduced Big and Smol items and textures
+AS Modifications to Mid Item
+AS Introduced Big and Smol items and textures
+AS Modifications to Mid Item
+--
+-- h
+MAJOR 1 MINOR 0
+this is not parsable: S
+
+-- ------------------------- END secSum ------------------------- --
+

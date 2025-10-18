@@ -18,7 +18,7 @@ COMMENTING
 
 GUIDELINES
 * The '%' character is not accepted within logs; any log lines containing this symbol will be skipped.
-* Log decoding ends after every section has been identified and parsed.
+* Log decoding automatically ends after every section has been identified and parsed.
 * Each log has a line limit of 1250 lines. Smaller log batches are encouraged. 
 * Use the following to bypass syntax-regulated characters in Added, Additional, or Updated sections:
 		'&01' for ','
@@ -29,7 +29,8 @@ SECTIONS AND NEW SYNTAX
 * Each section is called by name on their own line, no additional parameters. They are to remain in the order by which they are explained below.```
 * Fully capitalized words are keywords for logger to decode. Avoid using all capitals within your log that would match any of the keywords.
 * Each section must be preceeded and followed by an empty line (comments do not count as empty lines).
-* For the syntaxes and explanations below: elements marked with '*' are required.
+* For the syntaxes and explanations below: elements marked with '*' are required. 
+* NOTE: the decoder does not check if any elements are duplicates for each section's syntax. Some instances are valid post-decode and error-checking these is nuanced, ultimately limiting to the user. Be sure to review the logs before and after submitting for any unintentional duplicate arguements to each element.
 * The following sections are not required for a complete log submission: Additional, Updated
 
 USING LEGACY DECODER SYNTAX
@@ -81,7 +82,7 @@ Example:
 	m> Chair		AS i345 #
 	m> Lantern		AS i351 f10,26
 	Feather Bill AS i890 t178,179 p60~62 p65,66
-	N&99P&99CTres AS n2 npc_two
+	N&99P&99CTres AS n2 npc_two n2_alt
 
 
 _____
@@ -157,15 +158,15 @@ L1  LEGEND
 LX  {Key}* AS {Definition}*
 
 L1 : Legend section tag for identification.
-LX : Repeatble legend lines of the symbol and the extended definition of the symbol that has been used within your log.
-	- {Key} the short string of characters used within your log. Cannot be plain numbers or contain numbers.
-	- {Definition} the extended description of which your legend Key represents. Cannot be plain number or contain numbers.
-	NOTE FOR DEFINITION: When using the legend to shorthand content IDs (data IDs), the definition of legend key should match the phrase which is replaced by your legend key. For example, if the common prefix of a set of data IDs is "Tree_Tops_", your legend key may be "tt" and your definition could be either "Tree Tops" or "Tree_Tops_". This simplifies and gives use to the content integrity verification feature of the logger application.
+LX : Repeatable legend lines of the symbol and the extended definition of the symbol that has been used within your log.
+	- {Key} the short string of letters used within your log to represent a legend definition. Cannot be plain numbers or contain numbers. Recommended to be no more than three (3) letters
+	- {Definition} the extended description of which your legend key represents. Cannot be plain number or contain numbers.
+	NOTE FOR DEFINITION: When using the legend to shorthand content IDs (data IDs), the definition of legend key should match the phrase which is replaced by your legend key. For example, if the common prefix of a set of data IDs is "Tree_Tops_", your legend key may be "tt" and your definition could be either "Tree Tops" or "Tree_Tops_". This simplifies and gives use to the content integrity verification feature of the logger application. 
 
 	NOTE ON BEST USE FOR LEGEND: The legend keys are used to represent numbered contents with a common prefix. Take for example the phrase "Item_"; this phrase prefixes an ascending number of contents in Terraria. Instead of listing "Item_1, Item_2, Item_4" you can create a legend key and shorten this listing to "i1, i2, i4". It simplifies the logging process.
-		- If it starts with a common phrase and ends with numbers, a legend entry may be ideal.
+		- If it starts with a common phrase and ends with numbers or includes number sequences, a legend entry may be ideal.
 		- Best to use letters as keys for common content prefixes and use symbols as keys for miscellaneous things such as labelling specific contents (suffix).
-		- The tilde symbol (~) may be troublesome to use as a legend key as it is already identified as a numeric range symbol in the log decoder. Not recommended for usage.
+		- The tilde symbol (~) is already identified as a numeric range symbol in the log decoder. Not recommended for usage.
 
 Example: 
 	LEGEND
@@ -183,7 +184,7 @@ LX  AS {SummaryPart}*
 
 L1 : Summary section tag for identification.
 LX : Repeatable summary lines that summarize the additions or changes made in a version log.
-	- {SummaryPart} a single line that describes (some of the) contents in a version log.
+	- {SummaryPart} a single line that describes (some of the) contents in a version log, cannot be plain numbers
 
 Example: 
 	SUMMARY
@@ -202,10 +203,11 @@ SECTIONS AND NEW SYNTAX: EXCEPTION (```)
 * With the dependencies above in mind, the only other available orders of sections that will not break the decoding process are as follows: 
 	- V A D T S U L
 	- V A D T U S L
+	- V A D U L T S
 	- V A D U T S L			
 	- V A D U T L S	
-	- V A D U L T S
-	For comparison, the current order is:  V A D T U L S
+	For comparison, the default order is:  V A D T U L S
+	VADTULS is also the order in which the results of decoding is displayed
 * This section exception is for the awareness of this limited but available preference to organizing the logs.
 	
 -- !close --

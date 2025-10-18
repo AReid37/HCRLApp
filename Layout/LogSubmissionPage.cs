@@ -666,6 +666,7 @@ namespace HCResourceLibraryApp.Layout
                         bool isUsingLegacyDecodeQ = logDecoder.LegacyDecoding;
                         const int sectionNewLines = 1;
                         const string looseContentIndicator = "{l~}";
+                        const string crossRefKey = "%%";
                         DecodedSection[] sections = (DecodedSection[])typeof(DecodedSection).GetEnumValues();
                         foreach (DecodedSection section in sections)
                         {
@@ -706,7 +707,8 @@ namespace HCResourceLibraryApp.Layout
                                  */
                                 if (isUsingLegacyDecodeQ)
                                     reviewTexts.Add($"Version Number: {decLibrary.Summaries[0].SummaryVersion.ToStringNums()}");
-                                else reviewTexts.Add(decLibrary.Summaries[0].SummaryVersion.ToStringNums());
+                                else reviewTexts.Add(decLibrary.Summaries[0].SummaryVersion.ToStringNums() 
+                                    + crossRefKey + decLibrary.Summaries[0].SummaryVersion.ToString());
                             }
                             /// ADDED
                             if (section == DecodedSection.Added)
@@ -718,9 +720,6 @@ namespace HCResourceLibraryApp.Layout
                                     #3 Almond	i77 t113
                                     #4 Large Macadamia Nut	i80 t117 t118
                                  */
-
-                                //if (isUsingLegacyDecodeQ)
-                                //    reviewTexts.Add(sectionName.ToUpper());
                                 /// getting added info
                                 int addedItemNum = 1;
                                 for (int aix = 0; aix < decLibrary.Contents.Count; aix++)
@@ -729,7 +728,10 @@ namespace HCResourceLibraryApp.Layout
                                     if (resCon.IsSetup())
                                         if (resCon.ContentName != ResLibrary.LooseResConName)
                                         {
-                                            reviewTexts.Add($"#{addedItemNum} {resCon.ContentName} {Ind14}{resCon.ConBase.DataIDString}");
+                                            if (isUsingLegacyDecodeQ)
+                                                reviewTexts.Add($"#{addedItemNum} {resCon.ContentName} {Ind14}{resCon.ConBase.DataIDString}");
+                                            else reviewTexts.Add($"#{addedItemNum} {resCon.ContentName} {Ind14}{resCon.ConBase.DataIDString}" 
+                                                + crossRefKey + resCon.ConBase.ToString());
                                             addedItemNum++;
                                         }
                                 }
@@ -742,13 +744,7 @@ namespace HCResourceLibraryApp.Layout
                                     > Turnip Dusts (d6 d7)
                                         related to Turnip (i14)
                                  */
-
                                 // connected ConAddits
-                                //reviewTexts.Add(sectionName.ToUpper());
-                                List<string> rTextsMatcher = new()
-                                {
-                                    sectionName.ToUpper()
-                                };
                                 foreach (ResContents resCon in decLibrary.Contents)
                                 {
                                     if (resCon.IsSetup() && resCon.ContentName != ResLibrary.LooseResConName)
@@ -757,8 +753,11 @@ namespace HCResourceLibraryApp.Layout
                                             foreach (ContentAdditionals rcConAdt in resCon.ConAddits)
                                             {
                                                 string partRt = $"> {(rcConAdt.OptionalName.IsNotNEW() ? $"{rcConAdt.OptionalName} " : "")}";
-                                                reviewTexts.Add($"{partRt}({rcConAdt.DataIDString}) - {resCon.ContentName} ({rcConAdt.RelatedDataID})");
-                                                rTextsMatcher.Add(rcConAdt.ToString());
+
+                                                if (isUsingLegacyDecodeQ)
+                                                    reviewTexts.Add($"{partRt}({rcConAdt.DataIDString}) - {resCon.ContentName} ({rcConAdt.RelatedDataID})");
+                                                else reviewTexts.Add($"{partRt}({rcConAdt.DataIDString}) - {resCon.ContentName} ({rcConAdt.RelatedDataID})"
+                                                    + crossRefKey + rcConAdt.ToString());
                                             }
                                     }
                                 }
@@ -770,55 +769,14 @@ namespace HCResourceLibraryApp.Layout
                                         foreach (ContentAdditionals rcConAdt in looseResCon.ConAddits)
                                         {
                                             string partRt = $"> {(rcConAdt.OptionalName.IsNotNEW() ? $"{rcConAdt.OptionalName} " : "")}";
-                                            reviewTexts.Add($"{partRt}({rcConAdt.DataIDString}) - ({rcConAdt.RelatedDataID}) {looseContentIndicator}");
-                                            rTextsMatcher.Add(rcConAdt.ToString());
+
+                                            if (isUsingLegacyDecodeQ)
+                                                reviewTexts.Add($"{partRt}({rcConAdt.DataIDString}) - ({rcConAdt.RelatedDataID}) {looseContentIndicator}");
+                                            else reviewTexts.Add($"{partRt}({rcConAdt.DataIDString}) - ({rcConAdt.RelatedDataID}) {looseContentIndicator}"
+                                                + crossRefKey + rcConAdt.ToString());
                                         }
                                 }
-
-                                /// can i just skip this if not legacy build, for the purpose of this is confusing... so confusing, it LOOKS REDUNDANT
-                                /// I suspect this is for conAddits that became conBase, which is no longer supported in log syntax v2
-                                #region what_is_this_region_of_redundancy_questionMark_?
-                                //// reorganize reviewTexts order just for additionals
-                                //string[] newReviewTexts = new string[reviewTexts.Count];
-                                //for (int nrx = 0; nrx < reviewTexts.Count && reviewTexts.Count == rTextsMatcher.Count; nrx++)
-                                //{
-                                //    string ogReviewText = reviewTexts[nrx];
-                                //    string rtMatcher = rTextsMatcher[nrx];
-
-                                //    bool foundMatch = false;
-                                //    int trueIx = -1;
-                                //    if (nrx != 0)
-                                //    {
-                                //        for (int dx = 0; !foundMatch; dx++)
-                                //        {
-                                //            DecodeInfo decodeInfo = logDecoder.GetDecodeInfo(section, dx, out _);
-                                //            if (decodeInfo.IsSetup())
-                                //            {
-                                //                if (decodeInfo.resultingInfo.Contains(rtMatcher))
-                                //                {
-                                //                    trueIx = dx;
-                                //                    foundMatch = true;
-                                //                }
-                                //            }
-                                //            else break; /// not sure what's happening here, with the entire loop
-                                //        }
-                                //    }
-                                //    else
-                                //    {
-                                //        // just for the header
-                                //        foundMatch = true;
-                                //        trueIx = 0;
-                                //    }
-
-                                //    if (foundMatch && trueIx.IsWithin(0, newReviewTexts.Length - 1))
-                                //        newReviewTexts[trueIx] = ogReviewText;
-                                //}
-                                //if (newReviewTexts.HasElements())
-                                //{
-                                //    reviewTexts.Clear();
-                                //    reviewTexts.AddRange(newReviewTexts);
-                                //}
-                                #endregion
+                                /// there, I made legacy even more unstable; I removed it, get with the change...
                             }
                             /// TTA
                             if (section == DecodedSection.TTA)
@@ -830,7 +788,7 @@ namespace HCResourceLibraryApp.Layout
                                 SummaryData summary = decLibrary.Summaries[0];
                                 if (isUsingLegacyDecodeQ)
                                     reviewTexts.Add($"TTA: {summary.TTANum}");
-                                else reviewTexts.Add(summary.TTANum.ToString());
+                                else reviewTexts.Add(summary.TTANum.ToString() + crossRefKey + summary.TTANum.ToString());
                             }
                             /// UPDATED
                             if (section == DecodedSection.Updated)
@@ -852,6 +810,8 @@ namespace HCResourceLibraryApp.Layout
                                     if (looseResCon.ConChanges.HasElements())
                                         foreach (ContentChanges rcConChg in looseResCon.ConChanges)
                                         {
+                                            ContentChanges rcConChg_Clean = new(rcConChg.VersionChanged, rcConChg.InternalName.Replace(DataHandlerBase.Sep, ""), rcConChg.RelatedDataID, rcConChg.ChangeDesc);
+
                                             string rtPart1 = $"> {(rcConChg.InternalName.IsNotNEW() ? $"{rcConChg.InternalName}{Ind24}" : "")}{rcConChg.RelatedDataID}";
                                             string rtPart2 = $"{Ind24}{rcConChg.ChangeDesc}";
                                             string rtPart3 = $" {looseContentIndicator}";
@@ -860,8 +820,13 @@ namespace HCResourceLibraryApp.Layout
                                                 {
                                                     rtPart1 = rtPart1.Replace(DataHandlerBase.Sep, "");
                                                     rtPart3 = "";
-                                                }                                            
-                                            reviewTexts.Add($"{rtPart1}\n{rtPart2}{rtPart3}");
+                                                }       
+                                            
+
+                                            if (isUsingLegacyDecodeQ)
+                                                reviewTexts.Add($"{rtPart1}\n{rtPart2}{rtPart3}");
+                                            else reviewTexts.Add($"{rtPart1}\n{rtPart2}{rtPart3}" + crossRefKey + rcConChg_Clean.ToString());
+
                                         }
                                 }
                             }
@@ -885,7 +850,10 @@ namespace HCResourceLibraryApp.Layout
                                         if (legDat.CountDefinitions > 0)
                                             for (int i = 0; i < legDat.CountDefinitions; i++)
                                                 legDefs += $"{legDat[i]}" + (i + 1 < legDat.CountDefinitions ? "/" : "");
-                                        reviewTexts.Add($"{legDat.Key}/{legDefs}");
+                                        
+                                        if (isUsingLegacyDecodeQ)
+                                            reviewTexts.Add($"{legDat.Key}/{legDefs}");
+                                        else reviewTexts.Add($"{legDat.Key}/{legDefs}" + crossRefKey + legDat.ToString());
                                     }
                                 }
                             }
@@ -902,7 +870,11 @@ namespace HCResourceLibraryApp.Layout
                                 if (summary.IsSetup())
                                 {
                                     foreach (string sumPart in summary.SummaryParts)
-                                        reviewTexts.Add($"- {sumPart}");
+                                    {
+                                        if (isUsingLegacyDecodeQ)
+                                            reviewTexts.Add($"- {sumPart}");
+                                        else reviewTexts.Add($"- {sumPart}" + crossRefKey + sumPart);
+                                    }
                                 }
                             }
 
@@ -912,11 +884,39 @@ namespace HCResourceLibraryApp.Layout
                             {
                                 /// text printing
                                 bool bypassLoopMax = showDecodeInfosQ == true, warnedOfLegacyQ = false;
-                                int rtxOffset = 0;
+                                int rtxOffset = 0, rtxCRefOffset = 0;
                                 for (int rtx = 0; rtx < reviewTexts.Count || bypassLoopMax; rtx++)
                                 {
-                                    DecodeInfo decodeInfo = logDecoder.GetDecodeInfo(section, rtx, out int issueCount);
-                                    
+                                    int issueCount;
+                                    DecodeInfo decodeInfo;
+                                    if (isUsingLegacyDecodeQ)
+                                        decodeInfo = logDecoder.GetDecodeInfo(section, rtx, out issueCount);
+                                    else
+                                    {
+                                        /// All results except for ADDED:replacements will have a cross reference. 
+                                        /// - If it is not a replacement line, then the IF statement will find the right decode info
+                                        /// - Otherwise (is a replacement line), the IF is skipped (goes to the single-line ELSE)
+
+                                        decodeInfo = logDecoder.GetDecodeInfo(section, rtx, out issueCount);
+                                        bool isReplacementLineQ = false;
+                                        if (decodeInfo.logLine.IsNotNEW())
+                                            isReplacementLineQ = section == DecodedSection.Added && decodeInfo.logLine.Trim().StartsWith(LogDecoder.Keyword_Replace);
+
+                                        if (!isReplacementLineQ)
+                                        {
+                                            if (rtx - rtxCRefOffset < reviewTexts.Count)
+                                            {
+                                                if (reviewTexts[rtx - rtxCRefOffset].Contains(crossRefKey))
+                                                {
+                                                    string[] review_x_crossRef = reviewTexts[rtx - rtxCRefOffset].Split(crossRefKey);
+                                                    decodeInfo = logDecoder.GetDecodeInfo(section, review_x_crossRef[1], out issueCount);
+                                                    reviewTexts[rtx - rtxCRefOffset] = review_x_crossRef[0];
+                                                }
+                                            }
+                                        }
+                                        else rtxCRefOffset += 1;
+                                    }
+
                                     /// legacy decoding issue, manual entry
                                     if (isUsingLegacyDecodeQ && !warnedOfLegacyQ && section == DecodedSection.MainDecoding)
                                     {
@@ -928,7 +928,7 @@ namespace HCResourceLibraryApp.Layout
                                     }
 
                                     /// special no-review-print cases (not legacy)
-                                    /// 1. Added: placehohlder/substituiton replacements
+                                    /// 1. Added: placehohlder/substitution replacements
                                     bool printNonReviewLineQ = false;
                                     if (decodeInfo.logLine.IsNotNEW() && !isUsingLegacyDecodeQ)
                                     { /// mostly just a wrapper
@@ -954,8 +954,8 @@ namespace HCResourceLibraryApp.Layout
                                     /// section issues count
                                     if (rtx == 0)
                                         Format($" {{!{issueCount}}}", colIssueNumber);
-                                    if (!printNonReviewLineQ) 
-                                        NewLine();
+                                    //if (!printNonReviewLineQ) 
+                                    NewLine();
 
                                     if (showDecodeInfosQ)
                                     {
