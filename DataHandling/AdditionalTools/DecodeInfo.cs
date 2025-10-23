@@ -102,5 +102,26 @@
             }
             return areEquals;
         }
+
+        public override string ToString()
+        {
+            const int dbgClamp = 25;
+            string dbgstr = "(DecodeInfo) ";
+            if (IsSetup())
+            {
+                dbgstr += $"{sectionName}, {logLine.Clamp(dbgClamp, "~~")}, ";
+                dbgstr += NotedResultQ ? "+ result " : "";
+                dbgstr += NotedIssueQ ? "- issue " : "";
+                if (crossRef.IsNotNEW())
+                    dbgstr += $", cref [{crossRef.Clamp(dbgClamp, "~~")}]";
+            }
+            else
+            {
+                if (sectionName.IsNotNEW() && logLine.IsNotNEW())
+                    dbgstr += $"{sectionName}, {logLine.Clamp(dbgClamp, "~~")}";
+                else dbgstr += "???";
+            }
+            return dbgstr;
+        }
     }
 }

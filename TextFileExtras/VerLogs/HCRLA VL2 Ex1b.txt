@@ -105,6 +105,7 @@ p AS Projectile
 b AS Background
 d AS Dust
 ` AS Layer of Translucent Black
+-- The range indicator cannot be used as a legend key with the upgraded syntax
 ~ AS Range of Numbers
 
 SUMMARY

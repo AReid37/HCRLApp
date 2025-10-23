@@ -1,5 +1,39 @@
 ﻿## [HCRLA EXTRA INFORMATION] ##
++++++++++++++++++
+   L A T E S T
++++++++++++++++++
+
+ List of logs testing the latest log decoding syntax. Besides the first 3 tester logs, each log is intended to be small and efficient -- ~10 items added, and much less scattered around and about
+	Log 0 - Ex1b: A translation of legacy Example Log 1 to latest syntax
+	Log 1 - Full error-testing kit for every section and scenario
+	Log 2 - Testing section preferences
+	Log 3 - Ex1: Straight log, no addits or updates
+	Log 4 - Ex2: Updated and Addits, includes self-updating, and suffix legends
+	Log 5 - Ex3: Regular log but with odd data IDs (wordy IDs)
+	Log 6 - Ex4: Regular with focus on short-hand or alternate syntaxes
+
+ Keeping tabs on the data IDs being used in example logs; sequential, as it should be.
+ Glow :: - / - / 0 1
+ Item :: 0~9 / 10~19 / 20~27
+ Projectile :: - / 0 / 1~4
+ Tiles :: 0~3 / 4~12 / 12 12_radiated 13 13_radiated
+ Wall :: 0 0_aged 1 / 2 / - 
  
+ Wordy :: Flowers FlowerSeeds FlowersTall Nugget_TynRad TRadBits WeedsAll WeedSeeds
+
+ Where '*** ::' is the category, and '/' is a divider between version logs
+
+
+
+
+
+
+
+
++++++++++++++++++++
+	L E G A C Y 
++++++++++++++++++++
+
 ----------
 Example 1 & 2 Version Log
 	PURPOSE

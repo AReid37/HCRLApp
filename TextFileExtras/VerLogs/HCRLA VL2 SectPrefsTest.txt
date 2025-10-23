@@ -16,41 +16,35 @@ The dependencies between sections:
 
 The available orders of sections that should not break the decoder
 	- V A D T U L S    [default]	[DEFINITELY WORKS]
-	- V A D T S U L					[ ? ]
-	- V A D T U S L					[ ? ]
-	- V A D U L T S					[ ? ]
-	- V A D U T S L					[ ? ]
-	- V A D U T L S					[ ? ]
+	- V A D T S U L					[WORKS]
+	- V A D T U S L					[WORKS]
+	- V A D U L T S					[WORKS]
+	- V A D U T S L					[WORKS]
+	- V A D U T L S					[WORKS]
 
-The default organization of sections definitely works, so it won't be included in these tests
+The default organization of sections definitely works, so it won't be necessary in these tests
 -- !close --
 
 
 
-
--- ----------------- TESTING FORMAT :: V A D T S U L ----------------- --
+-- ----------------- TESTING FORMAT :: V A D U T L S ----------------- --
 VERSION
 1.0	
 
 ADDED
 REPLACE i> WITH Item
-Smoli> AS i10 t10 p10 d10
+Smoli> AS i10 t10 p10 d10,11
 Bigi> AS i20 t20,21 p20~22 g20 d20
 
 ADDITIONAL
 p15 d15 AS MidEffects TO MidItem BY i15
-d11 AS SmolDust TO SmolItem BY i10
-
-TTA
-15 
-
-SUMMARY
-AS Introduced Big and Smol items and textures
-AS Modifications to Mid Item
 
 UPDATED
 SmolItem BY i10 WITH Sharpened the colors and shape of this item
 MidItem BY i15 WITH Slightly softened the shape of this item
+
+TTA
+15 
 
 LEGEND
 i AS Item
@@ -58,10 +52,11 @@ t AS Tiles
 p AS Projectile
 g AS Glow
 d AS Dust
+
+SUMMARY
+AS Introduced Big and Smol items and textures
+AS Modifications to Mid Item
 -- ----------------- ***** ----------------- --
-
-
-
 
 
 
@@ -77,19 +72,18 @@ VERSION
 
 ADDED
 REPLACE i> WITH Item
-Smoli> AS i10 t10 p10 d10
+Smoli> AS i10 t10 p10 d10,11
 Bigi> AS i20 t20,21 p20~22 g20 d20
 
 ADDITIONAL
 p15 d15 AS MidEffects TO MidItem BY i15
-d11 AS SmolDust TO SmolItem BY i10
 
 TTA
 15   
 
 UPDATED
 SmolItem BY i10 WITH Sharpened the colors and shape of this item
-MidItem BY i20 WITH Slightly softened the shape of this item
+MidItem BY i15 WITH Slightly softened the shape of this item
 
 LEGEND
 i AS Item
@@ -103,4 +97,5 @@ AS Introduced Big and Smol items and textures
 AS Modifications to Mid Item
 
 -- TTA number was originally '12' but that's for testing's sake
+-- Some other sections were removed/changed as they also were for error checking
 -- !close --

@@ -215,26 +215,27 @@ namespace HCResourceLibraryApp.Layout
                             {
                                 if (logLines.HasElements())
                                 {
-                                    //FormatLine($"Below sourced from :: \n{Ind14}{pathToVersionLog}", ForECol.Accent);
-                                    //NewLine();
-
                                     // display file info
                                     bool omitBlock = false;
                                     for (int lx = 0; lx < logLines.Length; lx++)
                                     {
                                         string line = logLines[lx];
+                                        bool sectionDetect_legacy = line.StartsWith("[") && line.EndsWith("]");
+                                        bool sectionDetect_latest = line.IsNotNEW() && line.ToUpper() == line && LogDecoder.RemoveNumbers(line.Replace(".", "")) == line;
+
+                                        /// omit line detect
+                                        bool omit = line.StartsWith(LogDecoder.omit);
+                                        bool invalidLine = line.Contains(DataHandlerBase.Sep);
                                         /// omit block detect
                                         if (line.StartsWith(LogDecoder.omitBlockOpen))
                                             omitBlock = true;
                                         if (line.StartsWith(LogDecoder.omitBlockClose))
                                             omitBlock = false;
                                         /// section detect
-                                        if (line.StartsWith("[") && line.EndsWith("]") && lx != 0 && !omitBlock)
+                                        if ((sectionDetect_latest || sectionDetect_legacy) && lx != 0 && !omitBlock && !omit)
                                             NewLine();
-                                        /// omit line detect
-                                        bool omit = line.StartsWith(LogDecoder.omit);
-                                        bool invalidLine = line.Contains(DataHandlerBase.Sep);
 
+                                        // print!
                                         FormatLine(line, invalidLine ? ForECol.Incorrection : (omit || omitBlock ? ForECol.Normal : ForECol.Highlight));
                                     }
                                     HorizontalRule(minorChar, 1);
@@ -810,7 +811,10 @@ namespace HCResourceLibraryApp.Layout
                                     if (looseResCon.ConChanges.HasElements())
                                         foreach (ContentChanges rcConChg in looseResCon.ConChanges)
                                         {
-                                            ContentChanges rcConChg_Clean = new(rcConChg.VersionChanged, rcConChg.InternalName.Replace(DataHandlerBase.Sep, ""), rcConChg.RelatedDataID, rcConChg.ChangeDesc);
+                                            string clean_intName = rcConChg.InternalName;
+                                            if (clean_intName.IsNotNEW())
+                                                clean_intName = rcConChg.InternalName.Replace(DataHandlerBase.Sep, "");
+                                            ContentChanges rcConChg_Clean = new(rcConChg.VersionChanged, clean_intName, rcConChg.RelatedDataID, rcConChg.ChangeDesc);
 
                                             string rtPart1 = $"> {(rcConChg.InternalName.IsNotNEW() ? $"{rcConChg.InternalName}{Ind24}" : "")}{rcConChg.RelatedDataID}";
                                             string rtPart2 = $"{Ind24}{rcConChg.ChangeDesc}";
@@ -884,11 +888,12 @@ namespace HCResourceLibraryApp.Layout
                             {
                                 /// text printing
                                 bool bypassLoopMax = showDecodeInfosQ == true, warnedOfLegacyQ = false;
-                                int rtxOffset = 0, rtxCRefOffset = 0;
+                                int rtxOffset = 0; //, rtxCRefOffset = 0;
                                 for (int rtx = 0; rtx < reviewTexts.Count || bypassLoopMax; rtx++)
                                 {
                                     int issueCount;
                                     DecodeInfo decodeInfo;
+                                    bool isReplacementLineQ = false;
                                     if (isUsingLegacyDecodeQ)
                                         decodeInfo = logDecoder.GetDecodeInfo(section, rtx, out issueCount);
                                     else
@@ -898,23 +903,26 @@ namespace HCResourceLibraryApp.Layout
                                         /// - Otherwise (is a replacement line), the IF is skipped (goes to the single-line ELSE)
 
                                         decodeInfo = logDecoder.GetDecodeInfo(section, rtx, out issueCount);
-                                        bool isReplacementLineQ = false;
                                         if (decodeInfo.logLine.IsNotNEW())
                                             isReplacementLineQ = section == DecodedSection.Added && decodeInfo.logLine.Trim().StartsWith(LogDecoder.Keyword_Replace);
 
-                                        if (!isReplacementLineQ)
+                                        if (!isReplacementLineQ || !bypassLoopMax)
                                         {
-                                            if (rtx - rtxCRefOffset < reviewTexts.Count)
+                                            if (rtx - rtxOffset < reviewTexts.Count)
                                             {
-                                                if (reviewTexts[rtx - rtxCRefOffset].Contains(crossRefKey))
+                                                if (reviewTexts[rtx - rtxOffset].Contains(crossRefKey))
                                                 {
-                                                    string[] review_x_crossRef = reviewTexts[rtx - rtxCRefOffset].Split(crossRefKey);
+                                                    string[] review_x_crossRef = reviewTexts[rtx - rtxOffset].Split(crossRefKey);
                                                     decodeInfo = logDecoder.GetDecodeInfo(section, review_x_crossRef[1], out issueCount);
-                                                    reviewTexts[rtx - rtxCRefOffset] = review_x_crossRef[0];
+                                                    reviewTexts[rtx - rtxOffset] = review_x_crossRef[0];
                                                 }
                                             }
                                         }
-                                        else rtxCRefOffset += 1;
+                                        //if (!isReplacementLineQ)
+                                        //{
+                                            
+                                        //}
+                                        //else rtxCRefOffset += 1;
                                     }
 
                                     /// legacy decoding issue, manual entry
@@ -934,7 +942,7 @@ namespace HCResourceLibraryApp.Layout
                                     { /// mostly just a wrapper
 
                                         // for Added: PH/SUB lines
-                                        if (showDecodeInfosQ && section == DecodedSection.Added && decodeInfo.logLine.Trim().StartsWith(LogDecoder.Keyword_Replace))
+                                        if (showDecodeInfosQ && isReplacementLineQ)
                                             printNonReviewLineQ = true;
 
 

@@ -1,0 +1,43 @@
+﻿-- !open --
+HCRLA Version Log Syntax v2, Example Log 1
+	PURPOSE: 
+	General example log. Straight addition of contents; no updates, no additionals
+
+	3rd test
+-- !close --
+
+-- section format: V A D U T S L
+
+VERSION
+MAJOR 0 MINOR 0
+
+ADDED
+REPLACE i> WITH Item
+i>Zero		AS i0
+i>Uno		AS i1
+i>Two		AS i2 t0
+REPLACE ! WITH Leyvwood
+! Block		AS i3 t1
+! Wall		AS i4 w0 w0_aged
+! Platform	AS i5 t2
+REPLACE @ WITH Marshwood
+@Block		AS i6 t3
+@Platform	AS i7 t2
+@Wall		AS i8 w1
+i>Three		AS i9
+-- max of 10 items
+
+-- No additionals
+-- No updates
+
+TCA
+17
+
+SUMMARY
+AS Addition of Items Zero through Three
+AS Basic items of Leyvwood and Marshwood
+
+LEGEND
+i AS Item
+t AS Tiles
+w AS Wall

@@ -215,7 +215,7 @@ namespace HCResourceLibraryApp
         /// <remarks>Does nothing if the thread is already deactivated and reset.</remarks>
         public static void EndLogging(int threadIx)
         {
-            if (threadIx != noIndex)
+            if (threadIx > noIndex)
             {
                 DbgThread currThread = FindThread(threadIx);
                 if (currThread is not null)
@@ -419,7 +419,7 @@ namespace HCResourceLibraryApp
         static DbgThread FindThread(int threadIx)
         {
             DbgThread thread = null;
-            if (threadIx != noIndex && Threads.HasElements())
+            if (threadIx > noIndex && Threads.HasElements())
             {
                 for (int tx = 0; tx < Threads.Count && thread == null; tx++)
                 {

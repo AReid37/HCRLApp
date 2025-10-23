@@ -1,0 +1,48 @@
+﻿-- !open --
+HCRLA Version Log Syntax v2, Example Log 3
+	PURPOSE: 
+	General example log. Full log focusing on odd / wordy IDs
+
+	5th test
+-- !close --
+
+-- section format: V A D U T S L
+
+VERSION 
+MAJOR 0 MINOR 2
+
+ADDED
+TynbrusOre		AS i20 t12,12_radiated g0'
+TynbrusBar		AS i21 t13,13_radiated g1'
+REPLACE t> WITH Tynbrus
+REPLACE * WITH TynRadBits
+t>Pickaxe		AS i22 *
+t>Axe			AS i23 *
+t>Broadsword	AS i24 *
+t>Bow			AS i25 * p1
+t>Shortsword	AS i26 *
+t>Nugget		AS i27 Nugget_TynRad' p2,3
+--- eh, not many ideas short 2 for 10
+
+ADDITIONAL
+FlowerSeeds WeedSeeds AS Flower+ Seeds	TO Seeds BY i19
+Flowers FlowersTall WeedsAll AS Flowers+	TO Seeds BY i19
+p4 AS	TO Seeds BY p0
+
+UPDATED
+Seeds BY t9 WITH Extended sprite sheet with other grass variations
+Seeds BY t10 WITH Replaced grass variations with multiple flowers
+Seeds BY t11 WITH Replaced grass variations with multiple weeds
+
+TCA
+25
+
+SUMMARY
+AS Introduced the Tynbrus ore and item series, with several additions to seeds.
+
+LEGEND
+i AS Item
+t AS Tiles
+p AS Projectile
+g AS Glow
+' AS Translucent Layer

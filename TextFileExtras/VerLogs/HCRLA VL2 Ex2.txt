@@ -1,0 +1,53 @@
+﻿-- !open --
+HCRLA Version Log Syntax v2, Example Log 2
+	PURPOSE: 
+	General example log. Full log including updates (loose & self-updating) and additionals, also using suffix legends
+
+	4th test
+-- !close --
+
+-- section format: V A D T U S L
+
+VERSION
+0.1
+
+ADDED
+-- that's a lot a replacements
+REPLACE ! WITH Leyvwood
+REPLACE @ WITH Marshwood
+REPLACE /a WITH t4
+REPLACE /b WITH t5
+REPLACE /c WITH t6
+--
+!WorkBench	AS i10 /a
+@WorkBench	AS i11 /a
+!Table		AS i12 /b
+@Table		AS i13 /b
+!Chair		AS i14 /c
+@Chair		AS i15 /c
+REPLACE g> WITH Graestone
+g> Block	AS i16' t7
+g> Wall		AS i17' w2
+g> Platform AS i18' t8
+Seeds		AS i19 t9~11 p0
+
+ADDITIONAL
+t12 AS ThreePlaceable TO ItemThree BY i9
+
+TTA
+21
+
+UPDATED
+Work Benches BY t4 WITH Altered each sprite with unique designs.
+Marshwood Platform BY t2 WITH Small adjustments to sprite shapes
+
+SUMMARY 
+AS First of furniture from Leyvwood and Marshwood sets
+AS Added Graestone items and Item Three placeable sprite, and seeds!
+
+LEGEND
+i AS Item
+t AS Tiles
+p AS Projectile
+w AS Wall
+' AS Translucent Layers
