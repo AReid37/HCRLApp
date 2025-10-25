@@ -247,12 +247,12 @@ namespace HCResourceLibraryApp.DataHandling
             }
             return lineData;
         }
+
+        // Group Info Methods
         /// <summary>Creates a new line group for a given formatting profile.</summary>
         /// <param name="groupName">Name of group.</param>
         /// <param name="startLine">Starting line of group line.</param>
         /// <param name="endLine">Ending line of group line.</param>
-        
-        // Group Info Methods
         public void CreateGroup(string groupName, int startLine, int endLine)
         {
             SfdGroupInfo newGroup = new(groupName, startLine, endLine);

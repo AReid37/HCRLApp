@@ -3754,7 +3754,8 @@ namespace HCResourceLibraryApp.DataHandling
                                                     ContentBaseGroup newContent = new(logVersion, addedContentName, addedDataIDs.ToArray());
                                                     /// check for duplicate before giving the okay.
                                                     ResContents dupeResCon = resourceContents.Find(rc => rc.ConBase.ToString() == newContent.ToString());
-                                                    if (dupeResCon is null)
+                                                    ResContents partialDupeResCon = resourceContents.Find(rc2 => rc2.ConBase.DataIDString == newContent.DataIDString);
+                                                    if (dupeResCon is null && partialDupeResCon is null)
                                                     {
                                                         resourceContents.Add(new ResContents(newResConShelfNumber, newContent));
                                                         decodeInfo.NoteResult($"{decodeResult_genSuccess}{CleanInfoDisplay(newContent)}", newContent.ToString());
@@ -3764,8 +3765,16 @@ namespace HCResourceLibraryApp.DataHandling
                                                     }
                                                     else
                                                     {
-                                                        decodeInfo.NoteIssue(ldx, "This added content has already been parsed");
-                                                        Dbg.LogPart(ldx, "This added content has already been parsed; ");
+                                                        if (dupeResCon is not null)
+                                                        {
+                                                            decodeInfo.NoteIssue(ldx, "This added content has already been parsed");
+                                                            Dbg.LogPart(ldx, "This added content has already been parsed; ");
+                                                        }
+                                                        else
+                                                        {
+                                                            decodeInfo.NoteIssue(ldx, "This added content's data IDs were already used by another added content");
+                                                            Dbg.LogPart(ldx, "This added content's data IDs were already used by another added content; ");
+                                                        }
                                                     }
                                                 }
                                                 else if (noParsingIssuesOnRequiredQ)

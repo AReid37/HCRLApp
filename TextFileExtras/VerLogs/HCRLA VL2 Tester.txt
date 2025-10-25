@@ -128,7 +128,7 @@ ADDED ERROR TESTING CASES
 	h: Content: Internal Name: incorrect arguements: '#', "Data IDs" (?), "&99"
 	i: Content: Data IDs: incorrect arguements: '#', "Internal Name" (?), grouping syntax issue (x#,#~#)
 	j: --> Get added contents
-	j...: + 'duplicate content' error
+	j...: + 'duplicate content' errors (full duplicate, partial by IDs)
 	k: Content: Data IDs: incorrect arguements: duplicate IDs
 	l: Imparsible error: using version syntax, rubbish
 
@@ -200,6 +200,8 @@ Smoli> AS i10 t10 p10 d10
 Bigi> AS i20 t20,21 p20~22 g20 d20
 Smoli> AS i10 t10 p10 d10
 Bigi> AS i20 t20,21 p20~22 g20 d20
+Smoli>Copy AS i10 t10 p10 d10
+Bigi>Copy AS i20 t20,21 p20~22 g20 d20
 --
 -- k
 Smoli> AS i10 i10 t10 p10 d10

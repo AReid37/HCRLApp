@@ -617,7 +617,7 @@ namespace HCResourceLibraryApp.Layout
                             // center align style                            
                             int bufferWidth = Console.WindowWidth;
                             int lineWidth = chosenStyle[csi].Length * 2;
-                            int padding = (bufferWidth - lineWidth) / 2 - (foolProofPrintingQ ? 1 : 0); //(int)((bufferWidth - lineWidth) / 4f);
+                            int padding = (bufferWidth - lineWidth) / 2 - (foolProofPrintingQ ? 2 : 0); //(int)((bufferWidth - lineWidth) / 4f);
                             string styleLine;
                             /// indent
                             if (padding > 0)
@@ -636,7 +636,7 @@ namespace HCResourceLibraryApp.Layout
                             for (int csix = 0; csix < styleLine.Length; csix++)
                             {
                                 if (csix == 0 && foolProofPrintingQ)
-                                    Text(" "); // Text(">");
+                                    Text("  "); // Text(">-");
 
                                 HPInk? inkToUse = GetInk(styleLine[csix].ToString());
                                 if (inkToUse.HasValue)

@@ -137,7 +137,9 @@
     DEV_NOTE I'll just count the number of log submission made and let it disappear after the first few submission (after 3 submits you've definitely got the idea!). The enter to continue exists to safegaurd accidental doubled-inputs on "Enter". I'll look into a way to alleviate this issue across the whole program (Idea, delay after pressing "Enter", lol). 
     DEV_NOTE Nevermind, this will be added to preferences settings
 
-[ ] 27# ...
+[ ] 27# Content Integrity giving me the option to chose which legends (and therefore, the data IDs) that i want to have verified, or which ones to omit from verification.
+
+[ ] 28# ...
 
 
 ----- F R O M   B U G / I D E A   S U B M I S S I O N   S Y S T E M -----

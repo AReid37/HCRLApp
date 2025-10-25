@@ -52,6 +52,9 @@
     <None Update="TextFileExtras\HCRLA - Log Template, Revised.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="TextFileExtras\HCRLA - Steam Formatter Syntaxes.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

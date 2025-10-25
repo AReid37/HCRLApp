@@ -21,23 +21,24 @@ The available orders of sections that should not break the decoder
 	- V A D U L T S					[WORKS]
 	- V A D U T S L					[WORKS]
 	- V A D U T L S					[WORKS]
+	- V D A ...						[WORKS* - has a cost: noted in revised template v2]
 
 The default organization of sections definitely works, so it won't be necessary in these tests
 -- !close --
 
 
 
--- ----------------- TESTING FORMAT :: V A D U T L S ----------------- --
+-- ----------------- TESTING FORMAT :: V D A U T L S ----------------- --
 VERSION
 1.0	
+
+ADDITIONAL
+p15 d15 AS MidEffects TO MidItem BY i15
 
 ADDED
 REPLACE i> WITH Item
 Smoli> AS i10 t10 p10 d10,11
 Bigi> AS i20 t20,21 p20~22 g20 d20
-
-ADDITIONAL
-p15 d15 AS MidEffects TO MidItem BY i15
 
 UPDATED
 SmolItem BY i10 WITH Sharpened the colors and shape of this item

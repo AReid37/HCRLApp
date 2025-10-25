@@ -1,0 +1,284 @@
+﻿HCRLA - STEAM FORMATTER SYNTAXES
+================================
+
+# E d i t o r   C o m m a n d s
+COMMAND               :  USAGE
+----------------------:------------------------------------------------------------
+    rename {newName}  :  Allows renaming this formatting profile to value
+                      :  'newName'.
+----------------------:------------------------------------------------------------
+    add#              :  Inserts a new line before line number '#'. No provided
+                      :  line number will add a new line to bottom of code view.
+                      :  Line limit of 290.
+----------------------:------------------------------------------------------------
+    edit#             :  Opens editing area on line number '#', allowing for an
+                      :  edit.
+----------------------:------------------------------------------------------------
+    copy#,#           :  Copies the line data of a given line to another line.
+----------------------:------------------------------------------------------------
+    delete#           :  Deletes line number '#'.
+----------------------:------------------------------------------------------------
+    <                 :  Undoes an available editor action in history (limit of
+                      :  24).
+----------------------:------------------------------------------------------------
+    >                 :  Redoes an available editor action in history (limit of
+                      :  24).
+----------------------:------------------------------------------------------------
+    group#,#,{name}   :  Allows labelling a sequence of lines with given value
+                      :  'name'. Calling an existing group by 'name' will toggle
+                      :  its expansion. Name cannot contain '%' character. To
+                      :  remove a group, precede the group name with '0,0'. Minimum
+                      :  size of '2' lines.
+----------------------:------------------------------------------------------------
+    NOTE              :    BEWARE: Having groups too close to boundaries, too close
+                      :  to each other, or too small may unexpectedly and
+                      :  unrecoverably break or alter them. In worst of cases, a
+                      :  file reversion is your best recovery.
+----------------------:------------------------------------------------------------
+End of Editor Commands
+
+
+
+
++++++++++++++++++++++++++++  FORMATTING LANGUAGE SYNTAX  +++++++++++++++++++++++++++
+
+# G E N E R A L   S Y N T A X
+    This functional language is case-sensitive.
+    A value describes any input that derives from: a number, plain text, or (the
+    property of) a library reference.
+
+SYNTAX                :  OUTCOME
+----------------------:------------------------------------------------------------
+  // text             :  Line comment. Must be placed at the start of the line.
+                      :  Commenting renders a line imparsable.
+----------------------:------------------------------------------------------------
+  text                :  Code. Anything that is not commented is code and is
+                      :  parsable on steam log generation.
+----------------------:------------------------------------------------------------
+  "text"              :  Plain text. Represents any text that will be parsed into
+                      :  the generated steam log.
+----------------------:------------------------------------------------------------
+  &##;                :  Escape character. Used within plain text to print a
+                      :  syntax-regulated character.
+                      :    Use '&00;' for double quote character ("). Use '&01;'
+                      :  for hashtag / pound symbol (#).
+----------------------:------------------------------------------------------------
+  {text}              :  Library reference. References a value based on the
+                      :  information received from a submitted version log.
+                      :    Refer to 'Library Reference' below for more information.
+----------------------:------------------------------------------------------------
+  $text               :  Steam format reference. References a styling element to
+                      :  use against plain text or another value when generating
+                      :  steam log.
+                      :    Refer to 'Steam Format References' below for more
+                      :  information.
+----------------------:------------------------------------------------------------
+  if # = #;           :  Keyword. Must be placed at the start of the line.
+                      :    A control command that compares two values for a true or
+                      :  false condition. If the condition is 'true' then the
+                      :  line's remaining data will be parsed into the formatting
+                      :  string.
+                      :    Operators and their comparisons:
+                      :      Equal to '=', Unequal to '!='
+                      :      Greater than '>', Lesser than '<'
+                      :      Greater than or equal to '>='
+                      :      Lesser than or equal to '<='
+----------------------:------------------------------------------------------------
+  else;               :  Keyword. Must be placed at the start of the line. Must be
+                      :  placed following an 'if' keyword line.
+                      :    A control command that will parse the line's remaining
+                      :  data when the condition of a preceding 'if' command is
+                      :  false.
+----------------------:------------------------------------------------------------
+  repeat #;           :  Keyword. Must be placed at the start of the line.
+                      :    A control command that repeats a line's remaining data
+                      :  '#' number of times. An incrementing number from one to
+                      :  given number '#' will replace any occuring '#' in the
+                      :  line's remaining data.
+----------------------:------------------------------------------------------------
+  jump #;             :  Keyword. Can only be placed following an 'if' or 'else'
+                      :  keyword.
+                      :    A control command the allows skipping ahead to a given
+                      :  line. Only direct numbers are accepted as a value.
+                      :  Providing a line number beyond final line will skip all
+                      :  remaining lines.
+----------------------:------------------------------------------------------------
+  next;               :  Keyword. Can only be placed following an 'if', 'else', or
+                      :  'repeat' keyword.
+                      :    A control command that subtitutes the next line as the
+                      :  current line. The next line may not contain any keywords.
+                      :    Keyword lines ending with this keyword may be placed
+                      :  within table blocks and list blocks (see 'Steam Format
+                      :  References').
+----------------------:------------------------------------------------------------
+
+
+# L I B R A R Y   R E F E R E N C E S
+    Library reference values are provided by information obtained from the
+    version log submitted for steam log generation.
+    Values returned from library references are as plain text. The value '/?' is
+    returned when a given reference has no value.
+
+SYNTAX                :  OUTCOME
+----------------------:------------------------------------------------------------
+  {Version}           :  Value. Gets the log version number (ex 1.00).
+----------------------:------------------------------------------------------------
+  {AddedCount}        :  Value. Gets the number of added item entries available.
+----------------------:------------------------------------------------------------
+  {Added:#,prop}      :  Value Array. Gets value 'prop' from one-based added entry
+                      :  number '#'.
+                      :    Values for 'prop': ids, name.
+----------------------:------------------------------------------------------------
+  {AdditCount}        :  Value. Gets the number of additional item entries
+                      :  available.
+----------------------:------------------------------------------------------------
+  {Addit:#,prop}      :  Value Array. Gets value 'prop' from one-based additional
+                      :  entry number '#'.
+                      :    Values for 'prop': ids, optionalName, relatedContent,
+                      :  relatedID.
+                      :    Property 'optionalName' may not have a value.
+----------------------:------------------------------------------------------------
+  {TTA}               :  Value. Gets the number of total textures/contents added.
+----------------------:------------------------------------------------------------
+  {UpdatedCount}      :  Value. Gets the number of updated item entries available.
+----------------------:------------------------------------------------------------
+  {Updated:#,prop}    :  Value Array. Gets value 'prop' from one-based updated
+                      :  entry number '#'.
+                      :    Values for 'prop': changeDesc, id, relatedContent.
+----------------------:------------------------------------------------------------
+  {LegendCount}       :  Value. Gets the number of legend entries available.
+----------------------:------------------------------------------------------------
+  {Legend:#,prop}     :  Value Array. Gets value 'prop' from one-based legend entry
+                      :  number '#'.
+                      :    Values for 'prop': definition, key
+----------------------:------------------------------------------------------------
+  {SummaryCount}      :  Value. Gets the number of summary parts available.
+----------------------:------------------------------------------------------------
+  {Summary:#}         :  Value Array. Gets the value for one-based summary part
+                      :  number '#'.
+----------------------:------------------------------------------------------------
+
+
+# S T E A M   F O R M A T   R E F E R E N C E S
+    Steam format references are styling element calls that will affect the look
+    of any text or value placed after it on log generation.
+    Simple command references may be combined with other simple commands unless
+    otherwise unpermitted.
+    Complex commands require a text or value to be placed in a described
+    parameter surrounded by single quote characters (').
+
+SYNTAX                :  OUTCOME
+----------------------:------------------------------------------------------------
+  $h                  :  Simple command. Header text. Must be placed at the start
+                      :  of the line. May not be combined with other simple
+                      :  commands.
+                      :    There are three levels of header text. The header level
+                      :  follows the number of 'h's in reference. Example, a level
+                      :  three header text is '$hhh'.
+----------------------:------------------------------------------------------------
+  $b                  :  Simple command. Bold text.
+----------------------:------------------------------------------------------------
+  $u                  :  Simple command. Underlined text.
+----------------------:------------------------------------------------------------
+  $i                  :  Simple command. Italicized text.
+----------------------:------------------------------------------------------------
+  $s                  :  Simple command. Strikethrough text.
+----------------------:------------------------------------------------------------
+  $sp                 :  Simple command. Spoiler text.
+----------------------:------------------------------------------------------------
+  $np                 :  Simple command. No parse. Doesn't parse steam format tags
+                      :  when generating steam log.
+----------------------:------------------------------------------------------------
+  $c                  :  Simple command. Code text. Fixed width font, preserves
+                      :  space.
+----------------------:------------------------------------------------------------
+  $hr                 :  Simple command. Horizontal rule. Must be placed on its own
+                      :  line. May not be combined with other simple commands.
+----------------------:------------------------------------------------------------
+  $nl                 :  Simple command. New line. Does not require a value.
+----------------------:------------------------------------------------------------
+  $d                  :  Simple command. Indent. Does not require a value.
+                      :    There are four indentation levels which relates to the
+                      :  number of 'd's in reference. Example, a level 2 indent is
+                      :  '$dd'.
+                      :    An indentation is the equivalent of two spaces (' 'x2).
+----------------------:------------------------------------------------------------
+  $r                  :  Simple command. Regular. Used to negate the effects of
+                      :  preceding simple commands.
+----------------------:------------------------------------------------------------
+  $url=               :  Complex command. Must be placed on its own line.
+'link':'name'         :
+                      :    Creates a website link by using URL address 'link' to
+                      :  create a hyperlink text described as 'name'.
+----------------------:------------------------------------------------------------
+  $list[or]           :  Complex command. Must be placed on its own line.
+                      :    Starts a list block. The optional parameter within
+                      :  square brackets, 'or', will initiate an ordered (numbered)
+                      :  list. Otherwise, an unordered list is initiated.
+----------------------:------------------------------------------------------------
+  $*                  :  Simple command. Must be placed at the start of the line.
+                      :    Used within a list block to create a list item. Simple
+                      :  commands may follow to style the list item value or text.
+----------------------:------------------------------------------------------------
+  $q=                 :  Complex command. Must be placed on its own line.
+'author':'quote'      :
+                      :    Generates a quote block that will reference an 'author'
+                      :  and display their original text 'quote'.
+----------------------:------------------------------------------------------------
+  $table[nb,ec]       :  Complex command. Must be placed on its own line.
+                      :    Starts a table block. There are two optional parameters
+                      :  within square brackets: parameter 'nb' will generate a
+                      :  table with no borders, parameter 'ec' will generate a
+                      :  table with equal cells.
+----------------------:------------------------------------------------------------
+  $th= 'clm1','clm2'  :  Complex command. Must be placed on its own line.
+                      :    Used within a table block to create a table header row.
+                      :  Separate multiple columns of data with ','. Must follow
+                      :  immediately after a table block has started.
+----------------------:------------------------------------------------------------
+  $td= 'clm1','clm2'  :  Complex command. Must be placed on its own line.
+                      :    Used within a table block to create a table data row.
+                      :  Separate multiple columns of data with ','.
+----------------------:------------------------------------------------------------
+
+LINK TO STEAM TEXT FORMATTING
+https://steamcommunity.com/comment/Guide/formattinghelp
+
+
+
+# S Y N T A X   E X C E P T I O N S
+SYNTAX                :  OUTCOME
+----------------------:------------------------------------------------------------
+  if # = #; if # =    :  The keyword 'if' may follow after another 'if' keyword
+#;                    :  once more. The second 'if' may trigger a following 'else'
+                      :  keyword line.
+----------------------:------------------------------------------------------------
+  else; if # = #;     :  The keyword 'else' may precede the keyword 'if'. This 'if'
+                      :  keyword may trigger a following 'else' keyword line.
+----------------------:------------------------------------------------------------
+  repeat#; if # = #;  :  The keyword 'repeat' may precede the keyword 'if'. This
+                      :  'if' keyword cannot trigger an 'else' keyword line.
+----------------------:------------------------------------------------------------
+  else; if # = #;     :  The keywords 'next' and 'jump' may follow after a second
+next;                 :  'if' keyword.
+----------------------:------------------------------------------------------------
+
+
+# E D I T I N G   S U P P L E M E N T
+    The following only applies to the editing area when editing a line.
+
+SYNTAX                :  OUTCOME
+----------------------:------------------------------------------------------------
+  ~~                  :  Appendder supplement. Allows adding or inserting code into
+                      :  the currently edited line. There are four functions:
+                      :    Append the new edit to the end of the line: '~~text'.
+                      :    Insert the new edit to the start of the line: 'text~~'.
+                      :    Insert the new edit between two words within the line:
+                      :  'word1~~text~~word2'.
+                      :    Insert and replace occuring word in the line:
+                      :  'word~~text'.
+----------------------:------------------------------------------------------------
+End of Formatting Language Syntax
+
+
+-- This file is included in publish --

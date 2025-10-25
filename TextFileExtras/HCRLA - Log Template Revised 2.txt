@@ -14,12 +14,12 @@ The original (legacy) syntax will remain functional but is highly advised agains
 -- !open --
 COMMENTING
 * A single line log comment starts with '--'.
-* A multiline log comment starts with '-- !open --' and ends with '-- !close --', each on a line of their own.
+* A multiline log comment starts with '-- !open --' and ends with '-- !close --', each on their own line.
 
 GUIDELINES
-* The '%' character is not accepted within logs; any log lines containing this symbol will be skipped.
-* Log decoding automatically ends after every section has been identified and parsed.
 * Each log has a line limit of 1250 lines. Smaller log batches are encouraged. 
+* The '%' character is not accepted within logs; any parsable log lines containing this symbol will be skipped.
+* Log decoding automatically ends after every section has been identified and parsed.
 * Use the following to bypass syntax-regulated characters in Added, Additional, or Updated sections:
 		'&01' for ','
 		'&03' for '~'
@@ -30,7 +30,7 @@ SECTIONS AND NEW SYNTAX
 * Fully capitalized words are keywords for logger to decode. Avoid using all capitals within your log that would match any of the keywords.
 * Each section must be preceeded and followed by an empty line (comments do not count as empty lines).
 * For the syntaxes and explanations below: elements marked with '*' are required. 
-* NOTE: the decoder does not check if any elements are duplicates for each section's syntax. Some instances are valid post-decode and error-checking these is nuanced, ultimately limiting to the user. Be sure to review the logs before and after submitting for any unintentional duplicate arguements to each element.
+* NOTE: the decoder does not check if any elements are duplicates for each section's syntax. Some instances are valid post-decode. Error-checking these is nuanced and is ultimately limiting to the user. Be sure to review the logs before and after submitting for any unintentional duplicate arguements.
 * The following sections are not required for a complete log submission: Additional, Updated
 
 USING LEGACY DECODER SYNTAX
@@ -58,7 +58,7 @@ Example:
 
 
 -----
-"Added": For all contents regarding this version of the log.
+"Added": For all contents introduced in this version of the log.
 Syntax for Added Section:
 L1  ADDED
 LN  REPLACE {placeholder}* WITH {substitute}*
@@ -73,7 +73,7 @@ LX : Repeatable added content lines which adds the new content by internal name 
 	- {DataIDs} the data ids that identify this added content, cannot be plain numbers and must not be internal name.
 	NOTE: You may use any {placeholders} defined earlier within either of the two parameters above. 
 	NOTE FOR DATA IDS: Your data ID type must match with the items in the Legend section. Multiple ids are seperated by spaces, and groups of the same type can be condensed as 'x#,#' or 'x#~#'. Warning: Do NOT combine these grouping syntaxes (such as x#,#~#).
-	NOTE FOR INTERNAL NAME: The logger will attempt to capitalize and space your internal content names. Using the '&99' before certain characters can be used to negate this effect.
+	NOTE FOR INTERNAL NAME: The logger will attempt to capitalize and space your internal content names. Using '&99' between certain characters can be used to negate this effect.
 
 Example:
 	ADDED
@@ -83,22 +83,23 @@ Example:
 	m> Lantern		AS i351 f10,26
 	Feather Bill AS i890 t178,179 p60~62 p65,66
 	N&99P&99CTres AS n2 npc_two n2_alt
+	-- Internal name "N&99P&99CTres" will result in "NPC Tres". Without '&99', it will be "N P C Tres" 
 
 
 _____
-"Additional": For any contents relating to contents of previous log versions.
+"Additional": For any contents relating to the contents of previous log versions.
 Syntax for Additional Section:
 L1  ADDITIONAL
 LX  {DataIDs}* AS {OptName} TO {RelatedInternalName} BY {RelatedDataID}*
 
 L1 : Additional section tag for identification.
-LX : Repeatable additional content lines which adds the related to an existing content using mainly the related data ID.	
+LX : Repeatable additional content lines which adds the related content to an existing content using mainly the related data ID.	
 	- {DataIDs} the data ids relating to a previous content, cannot be plain numbers and must not be the related data id.
-	- {OptName} an optional name for this group of additional content, cannot be related internal name or plain numbers.
-	- {RelatedInternalName} the internal name of the existing object the data IDs are to be paired with, cannot be plain numbers and must match with related data ID provided.
+	- {OptName} an optional name for this group of additional contents, cannot be related internal name or plain numbers.
+	- {RelatedInternalName} the internal name of the existing content which the data IDs are related, cannot be plain numbers and should confirm the content of related data ID.
 	- {RelatedDataID} the single data ID which the additional data IDs are related, cannot be plain numbers.
 	NOTE FOR DATA IDS: Your data ID type must match with the items in the Legend section. Multiple ids are seperated by spaces, and groups of the same type can be condensed as 'x#,#' or 'x#~#'. Warning: Do NOT combine these grouping syntaxes (such as x#,#~#).
-	NOTE FOR OPTIONAL AND RELATED INTERNAL NAME: The logger will attempt to capitalize and space your internal content names. Using the '&99' before certain characters can be used to negate this effect.
+	NOTE FOR OPTIONAL AND RELATED INTERNAL NAME: The logger will attempt to capitalize and space your internal content names. Using '&99' between certain characters can be used to negate this effect.
 
 	NOTE: You may create an additional entry for any content that was added in the same version, although advised against (additionals are for extra contents added to things introduced in earlier versions). The decoder will automatically detect and notify of this possibility, however there will be no impact on the outcome of your logging.
 
@@ -122,7 +123,7 @@ L1 : Total Texture/Content count section tag for identification.
 	 Using either "TTA" or "TCA" will count as identification for this tag.
 L2 : The number of new contents that have been added through this version log.
 	- {Texture/ContentCountNumber} can only be plain numbers and must be greater than 0.
-		NOTE: This number is required as the logger will attempt to tally contents added for verification. It will be incorrect in instances such as referencing data IDs from previous versions which do not count towards the actual number of contents added in a version log.
+		NOTE: The logger will attempt to verify your content count number. It may be incorrect in instances such as referencing data IDs from previous versions which do not count towards the actual number of new contents added in a version log.
 
 Example:
 	TCA
@@ -130,24 +131,24 @@ Example:
 
 
 _____
-"Updated": The changes made to (previously) introduced contents
+"Updated": For any changes made to previously introduced contents
 Syntax for Updated Section:
 L1  UPDATED
 LX  {RelatedName} BY {RelatedDataID}* WITH {ChangeDesc}*
 
 L1 : Updated section tag for identification.
-LX : Repeatable updated lines that identify the data ID and the related content name followed by a description of the changes made to that content
+LX : Repeatable update lines that identify the data ID and the related content name followed by a description of the changes made to that content
 	- {RelatedName} the related (internal) name of the content being updated, cannot be plain numbers.
 	- {RelatedDataID} the single data ID to which changes are being made, cannot be plain numbers.
-	- {ChangeDesc} a description of the change(s) made to this piece of content, cannot be plain numbers.
+	- {ChangeDesc} a single-line description of the change(s) made to this piece of content, cannot be plain numbers.
 
-	NOTE: You may create an updated entry for any content that was added in the same version, although advised against (updates usually follow after the introductory version, just an ethical warning). The decoder will automatically detect and notify of this possibility, however there will be no impact on the outcome of your logging.
+	NOTE: You may create an updated entry for any content that was added in the same version, although advised against (updates usually follow after the introductory version). The decoder will automatically detect and notify of this possibility, however there will be no impact on the outcome of your logging.
 
 Example: 
 	UPDATED
 	PotPie BY i42 WITH Crispier looking surface and creamier filling
-	PotPie BY t23 WITH Changed texture to match new item design
-	t23 WITH Fixed an issue where parts of the texture were missing
+	PotPie BY t23 WITH Changed texture to match new item design. Also fixed an issue where parts of the texture were missing
+	t46 WITH Edited to convey sharper lighting effects on the texture.
 
 	NOTE: Keywords that don't have an arguement can be either included or omitted. Encouraged to include until having a good understanding of syntax.
 
@@ -161,7 +162,7 @@ L1 : Legend section tag for identification.
 LX : Repeatable legend lines of the symbol and the extended definition of the symbol that has been used within your log.
 	- {Key} the short string of letters used within your log to represent a legend definition. Cannot be plain numbers or contain numbers. Recommended to be no more than three (3) letters
 	- {Definition} the extended description of which your legend key represents. Cannot be plain number or contain numbers.
-	NOTE FOR DEFINITION: When using the legend to shorthand content IDs (data IDs), the definition of legend key should match the phrase which is replaced by your legend key. For example, if the common prefix of a set of data IDs is "Tree_Tops_", your legend key may be "tt" and your definition could be either "Tree Tops" or "Tree_Tops_". This simplifies and gives use to the content integrity verification feature of the logger application. 
+	NOTE FOR DEFINITION: When using the legend to shorthand content IDs (data IDs), the definition of legend key should match the phrase which is replaced by your legend key. For example, if the common prefix of a set of data IDs is "Tree_Tops_", your legend key may be "tt" and your definition could be either "Tree Tops" or "Tree_Tops_".
 
 	NOTE ON BEST USE FOR LEGEND: The legend keys are used to represent numbered contents with a common prefix. Take for example the phrase "Item_"; this phrase prefixes an ascending number of contents in Terraria. Instead of listing "Item_1, Item_2, Item_4" you can create a legend key and shorten this listing to "i1, i2, i4". It simplifies the logging process.
 		- If it starts with a common phrase and ends with numbers or includes number sequences, a legend entry may be ideal.
@@ -197,18 +198,19 @@ SECTIONS AND NEW SYNTAX: EXCEPTION (```)
 * Technically, the order of the sections can be changed, but there are too many dependencies between the sections that changing the order can break or invalidate your log.
 * The dependencies between sections are as follows: 
 	- Version (V) first
-	- Added (A) and Additional (D) before: TTA/TTC (T), Updated (U), Legend (L)
+	- Added (A) and Additional (D) before: TTA/TCA (T), Updated (U), Legend (L)
 	- Updated (U) before: Legend (L)
-	- TTA/TTC (T) before: Summary (S)
+	- TTA/TCA (T) before: Summary (S)
 * With the dependencies above in mind, the only other available orders of sections that will not break the decoding process are as follows: 
 	- V A D T S U L
 	- V A D T U S L
 	- V A D U L T S
-	- V A D U T S L			
-	- V A D U T L S	
+	- V A D U T S L
+	- V A D U T L S
 	For comparison, the default order is:  V A D T U L S
 	VADTULS is also the order in which the results of decoding is displayed
-* This section exception is for the awareness of this limited but available preference to organizing the logs.
+	NOTE: The Added (A) and Additional (D) sections technically can be swapped as well, such as: V D A T U L S. This breaks the decoder slightly however, by bypassing the warning about additional entries to contents added in the same version (since by changing the order, there are no added contents for detecting this warning).
+* This section exception is for the awareness of this limited but available preference to organizing the logs, which there are 12 (6 safe, 6 unsafe) to chose from!
 	
 -- !close --
 
@@ -224,12 +226,6 @@ UPDATED
 LEGEND
 SUMMARY
 
--- !close --
-
-
--- !open -- 
-LINK TO STEAM TEXT FORMATTING
-https://steamcommunity.com/comment/Guide/formattinghelp
 -- !close --
 
 -- This file is included in publish --

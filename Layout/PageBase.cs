@@ -105,7 +105,6 @@ namespace HCResourceLibraryApp.Layout
                 /// tbd...
                 _preferencesRef.GetScreenDimensions(out int tHeight, out int tWidth);
                 Console.SetWindowSize(tWidth, tHeight);
-                //Console.SetBufferSize(tWidth, 9001); /// this, while the library search page is in WIP version
                 Console.SetBufferSize(tWidth, PageSizeLimit);
 
                 // minimal customization
